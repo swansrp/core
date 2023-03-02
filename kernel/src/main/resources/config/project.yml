@@ -1,0 +1,28 @@
+my:
+  project:
+    name:
+  db:
+    config:
+      master-db:
+      url: localhost
+      username: dbAdmin
+      password: Adm!n123
+swagger: # ????swagger
+  enabled: true
+  # ????
+  pathMapping:
+app:
+  log:
+    projectId: devOps
+    moduleId: jira
+
+### xxl-job admin address list, such as "http://address" or "http://address01,http://address02"
+xxl-job:
+  access-token: default_token
+  admin:
+    addresses: http://127.0.0.1:9999/xxl-job-admin
+  executor:
+    app-name: ${my.project.name}
+    port: 28180
+    log-path: /data/applogs/xxl-job/jobhandler
+    log-retention-days: 30

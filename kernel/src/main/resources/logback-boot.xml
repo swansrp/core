@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false" scan="false">
+
+
+	<!-- 动态属性，读取自application.yml -->
+	<springProperty scop="context" name="projectId" source="app.log.projectId" defaultValue="unknown-projectId"/>
+	<springProperty scop="context" name="moduleId" source="app.log.moduleId" defaultValue="unknown-moduleId"/>
+	<springProperty scop="context" name="appLogPath" source="app.log.path" defaultValue="/data/log"/>
+
+	<!--
+        日志输出格式：
+            %d表示日期时间，
+            %thread表示线程名，
+            %-5level：级别从左显示5个字符宽度
+            %logger{50} 表示logger名字最长50个字符，否则按照句点分割。
+            %msg：日志消息，
+            %n是换行符
+    -->
+	<property name="LOG_PATTERN"
+			  value="${projectId}|${moduleId}|%d{yyyy-MM-dd HH:mm:ss.SSS}|%level|%X{REQUEST_ID}|%X{TRACE_ID}|%X{REQUEST_IP}|%X{USER_IP}|%X{SERVER_IP}|%X{SERVER_PORT}|%X{SERVER_PID}|%thread|%logger{50}|%m%n"/>
+	<property name="CONSOLE_LOG_PATTERN"
+			  value="%d{yyyy-MM-dd HH:mm:ss.SSS}|%level|%X{REQUEST_ID}|%X{TRACE_ID}|%X{REQUEST_IP}|%X{USER_IP}|%X{SERVER_IP}|%X{SERVER_PORT}|%X{SERVER_PID}|%thread|%logger{50}|\(%file:%line\\) %m%n"/>
+	<!-- ============================= ↓↓↓↓ 输出器 ↓↓↓↓ ================================= -->
+	<!-- 控制台日志输出器 -->
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<!-- 日志格式 -->
+		<encoder>
+			<pattern>${CONSOLE_LOG_PATTERN}</pattern>
+			<charset>UTF-8</charset>
+		</encoder>
+	</appender>
+
+	<!--file日志输出器-->
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<!--记录的日志文件的路径及文件名-->
+		<file>${appLogPath}/${appName}.log</file>
+		<!--日志文件输出格式-->
+		<encoder>
+			<pattern>${LOG_PATTERN}</pattern>
+			<charset>UTF-8</charset>
+		</encoder>
+
+		<!--日志记录器的滚动策略，按日期，按大小记录-->
+		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<fileNamePattern>${appLogPath}/%d{yyyy-MM,aux}/${appName}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+			<maxFileSize>50MB</maxFileSize>
+		</rollingPolicy>
+	</appender>
+	<!-- 异步输出 -->
+	<appender name="ASYNC-FILE" class="ch.qos.logback.classic.AsyncAppender">
+		<!-- 不丢失日志.默认的,如果队列的80%已满,则会丢弃TRACT、DEBUG、INFO级别的日志 -->
+		<discardingThreshold>0</discardingThreshold>
+		<!-- 更改默认的队列的深度,该值会影响性能.默认值为256 -->
+		<queueSize>256</queueSize>
+		<!-- 添加附加的appender,最多只能添加一个 -->
+		<appender-ref ref="FILE"/>
+	</appender>
+
+
+	<!-- ============================= ↓↓↓↓ 按环境进行配置 ↓↓↓↓ ================================= -->
+
+	<springProfile name="local, dev,test">
+		<root level="INFO">
+			<appender-ref ref="STDOUT"/>
+		</root>
+		<logger name="com.bidr" level="TRACE" additivity="false">
+			<appender-ref ref="STDOUT"/>
+		</logger>
+	</springProfile>
+
+	<springProfile name="pre,prod">
+		<root level="INFO">
+			<appender-ref ref="STDOUT"/>
+			<appender-ref ref="ASYNC-FILE"/>
+		</root>
+	</springProfile>
+
+</configuration>

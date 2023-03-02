@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <!-- 设置MyBatis全局变量 -->
+    <properties>
+        <property name="dbType" value="mysql"/>
+    </properties>
+    <settings>
+        <setting name="cacheEnabled" value="false"/>
+        <setting name="lazyLoadingEnabled" value="false"/>
+        <setting name="localCacheScope" value="STATEMENT"/>
+        <setting name="jdbcTypeForNull" value="OTHER"/>
+    </settings>
+    <plugins>
+        <plugin interceptor="com.bidr.kernel.mybatis.intercept.MybatisInterceptManager"/>
+        <plugin interceptor="com.github.yulichang.injector.MPJSqlInjector"/>
+    </plugins>
+    <databaseIdProvider type="DB_VENDOR">
+        <!-- 为不同的数据库厂商起别名 -->
+        <property name="MySQL" value="mysql"/>
+        <property name="Oracle" value="oracle"/>
+        <property name="SQL Server" value="sqlserver"/>
+    </databaseIdProvider>
+    <mappers>
+        <!-- 为xml复用配置mapper包名 -->
+        <package name="com.bidr"/>
+    </mappers>
+</configuration>
