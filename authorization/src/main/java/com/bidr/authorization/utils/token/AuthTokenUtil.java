@@ -1,12 +1,12 @@
-package com.sharp.authorization.utils.token;
+package com.bidr.authorization.utils.token;
 
 
-import com.sharp.authorization.constants.common.RequestConst;
-import com.sharp.kernel.constant.err.ErrCodeSys;
-import com.sharp.kernel.exception.ServiceException;
-import com.sharp.kernel.utils.Base64Util;
-import com.sharp.kernel.utils.BeanUtil;
-import com.sharp.kernel.utils.HttpUtil;
+import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
+import com.bidr.kernel.utils.Base64Util;
+import com.bidr.kernel.utils.BeanUtil;
+import com.bidr.kernel.utils.HttpUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;

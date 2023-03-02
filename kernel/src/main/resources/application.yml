@@ -14,9 +14,9 @@ server: # 服务器的HTTP端口，默认为8080
       min-spare: 100
 # 日志配置
 logging:
-  config: classpath:logback-spring.xml
+  config: classpath:logback-boot.xml
   level:
-    com.bidr.devops.jira.dao: trace
+    com.bidr: trace
     org.springframework: warn
 bidr:
   result:

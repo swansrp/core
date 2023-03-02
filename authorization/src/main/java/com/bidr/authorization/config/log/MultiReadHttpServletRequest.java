@@ -1,6 +1,6 @@
-package com.sharp.authorization.config.log;
+package com.bidr.authorization.config.log;
 
-import com.sharp.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.servlet.ReadListener;

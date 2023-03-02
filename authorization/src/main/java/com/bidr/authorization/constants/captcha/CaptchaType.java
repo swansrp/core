@@ -1,6 +1,6 @@
-package com.sharp.authorization.constants.captcha;
+package com.bidr.authorization.constants.captcha;
 
-import com.sharp.authorization.config.captcha.ICaptchaVerification;
+import com.bidr.authorization.config.captcha.ICaptchaVerification;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

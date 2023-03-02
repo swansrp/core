@@ -1,12 +1,12 @@
 /**
  * Bhfae.com Inc. Copyright (c) 2004-2020 All Rights Reserved.
  */
-package com.sharp.authorization.config.log;
+package com.bidr.authorization.config.log;
 
 
-import com.sharp.authorization.constants.common.RequestConst;
-import com.sharp.authorization.utils.token.AuthTokenUtil;
-import com.sharp.kernel.utils.RandomUtil;
+import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.utils.RandomUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;

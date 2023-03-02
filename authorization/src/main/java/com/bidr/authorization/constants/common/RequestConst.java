@@ -5,7 +5,7 @@
  * @author Sharp
  * @date 2019-7-28 8:03
  */
-package com.sharp.authorization.constants.common;
+package com.bidr.authorization.constants.common;
 
 public class RequestConst {
     public static final String TOKEN = "x-access-token";

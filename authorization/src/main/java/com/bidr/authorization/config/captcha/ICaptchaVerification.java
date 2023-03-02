@@ -1,4 +1,4 @@
-package com.sharp.authorization.config.captcha;
+package com.bidr.authorization.config.captcha;
 
 /**
  * Title: ICaptchaVerification

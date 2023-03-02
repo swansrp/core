@@ -6,7 +6,7 @@
  * @author: ruopeng.sha
  * @date: 2018-07-20 15:01
  */
-package com.sharp.authorization.config.security;
+package com.bidr.authorization.config.security;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;

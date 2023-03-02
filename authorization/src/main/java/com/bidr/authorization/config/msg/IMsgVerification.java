@@ -1,4 +1,4 @@
-package com.sharp.authorization.config.msg;
+package com.bidr.authorization.config.msg;
 
 /**
  * Title: IMsgVerification

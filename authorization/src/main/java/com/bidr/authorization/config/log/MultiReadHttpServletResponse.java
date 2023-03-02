@@ -1,4 +1,4 @@
-package com.sharp.authorization.config.log;
+package com.bidr.authorization.config.log;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

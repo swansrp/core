@@ -1,4 +1,4 @@
-package com.sharp.authorization.utils.captcha;
+package com.bidr.authorization.utils.captcha;
 
 import org.springframework.core.io.DefaultResourceLoader;
 

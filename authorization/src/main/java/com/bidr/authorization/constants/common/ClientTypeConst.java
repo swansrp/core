@@ -1,7 +1,7 @@
-package com.sharp.authorization.constants.common;
+package com.bidr.authorization.constants.common;
 
-import com.sharp.kernel.constant.dict.Dict;
-import com.sharp.kernel.constant.dict.MetaDict;
+import com.bidr.kernel.constant.dict.Dict;
+import com.bidr.kernel.constant.dict.MetaDict;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

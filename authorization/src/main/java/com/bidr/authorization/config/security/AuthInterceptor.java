@@ -1,7 +1,7 @@
-package com.sharp.authorization.config.security;
+package com.bidr.authorization.config.security;
 
-import com.sharp.authorization.constants.common.RequestConst;
-import com.sharp.kernel.utils.HttpUtil;
+import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.kernel.utils.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
