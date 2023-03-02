@@ -21,7 +21,7 @@
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
-            <artifactId>framework</artifactId>
+            <artifactId>platform</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
