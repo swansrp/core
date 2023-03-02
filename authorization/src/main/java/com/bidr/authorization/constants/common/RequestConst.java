@@ -1,0 +1,41 @@
+/**
+ * Title: RequestConst.java
+ * Description: Copyright: Copyright (c) 2019 Company: BHFAE
+ *
+ * @author Sharp
+ * @date 2019-7-28 8:03
+ */
+package com.sharp.authorization.constants.common;
+
+public class RequestConst {
+    public static final String TOKEN = "x-access-token";
+    public static final String API_VERSION = "api-version";
+    public static final String USER_ID = "user-id";
+    public static final String AUTHORIZATION = "authorization";
+    public static final String CLIENT_TYPE = "client-type";
+    public static final String X_REQUESTED = "X-Requested-With";
+
+    public static final String GET = "GET";
+    public static final String POST = "POST";
+    public static final String PUT = "PUT";
+    public static final String DELETE = "DELETE";
+    public static final String OPTIONS = "OPTIONS";
+
+
+    public static final String APP_KEY = "appKey";
+    public static final String APP_SECRET = "appSecret";
+
+    public static final String CONTENT_TYPE = "content-type";
+
+    public static final String SERVICE_API = "serviceApi";
+    public static final String OBJECT = "object";
+
+    public static String getAllHeader() {
+        return TOKEN + ", " + API_VERSION + ", " + USER_ID + ", " + AUTHORIZATION + ", " + CLIENT_TYPE + ", "
+                + CONTENT_TYPE + ", " + X_REQUESTED;
+    }
+
+    public static String getAllMethod() {
+        return GET + ", " + PUT + ", " + POST + ", " + OPTIONS + ", " + DELETE;
+    }
+}
