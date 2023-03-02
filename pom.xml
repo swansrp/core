@@ -8,7 +8,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<modules>
 		<module>kernel</module>
-		<module>framework</module>
+		<module>platform</module>
 		<module>redis</module>
 		<module>xxl-job</module>
     </modules>
