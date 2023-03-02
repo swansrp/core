@@ -5,6 +5,7 @@ import com.bidr.kernel.cache.MemoryCacheInf;
 import com.diboot.core.cache.DynamicMemoryCacheManager;
 import com.diboot.core.cache.StaticMemoryCacheManager;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,10 +24,10 @@ import java.util.Map;
  */
 @Configuration
 public class MemoryCacheConfig {
-    @Resource
+    @Autowired(required = false)
     private List<DynamicMemoryCacheInf<?>> dynamicMemoryCacheList;
 
-    @Resource
+    @Autowired(required = false)
     private List<MemoryCacheInf<?>> staticMemoryCacheList;
 
     @Bean

@@ -32,7 +32,7 @@ user:
 # Spring配置
 spring:
   profiles:
-    active: dev
+    active: local
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
