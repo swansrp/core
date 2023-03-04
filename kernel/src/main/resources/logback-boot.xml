@@ -39,7 +39,7 @@
 
 		<!--日志记录器的滚动策略，按日期，按大小记录-->
 		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-			<fileNamePattern>%d.%i.log.gz</fileNamePattern>
+			<fileNamePattern>${appLogPath}/${projectName}/%d.%i.log.gz</fileNamePattern>
 			<maxFileSize>50MB</maxFileSize>
 		</rollingPolicy>
 	</appender>
