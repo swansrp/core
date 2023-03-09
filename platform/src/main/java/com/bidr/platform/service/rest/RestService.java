@@ -24,156 +24,174 @@ public interface RestService {
     /**
      * Get t.
      *
-     * @param <T>   the type parameter
-     * @param url   the url
-     * @param clazz the clazz
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T get(String url, Class<T> clazz);
+    <T> T get(String url, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Get t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param header the header
-     * @param clazz  the clazz
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T get(String url, HttpHeaders header, Class<T> clazz);
+    <T> T get(String url, HttpHeaders header, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Get t.
      *
-     * @param <T>   the type parameter
-     * @param url   the url
-     * @param param the param
-     * @param clazz the clazz
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param param           the param
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T get(String url, Object param, Class<T> clazz);
+    <T> T get(String url, Object param, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Get t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param header the header
-     * @param param  the param
-     * @param clazz  the clazz
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param param           the param
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T get(String url, HttpHeaders header, Object param, Class<T> clazz);
+    <T> T get(String url, HttpHeaders header, Object param, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>   the type parameter
-     * @param url   the url
-     * @param clazz the clazz
-     * @param body  the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, Class<T> clazz, Object body);
+    <T> T post(String url, Object body, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>   the type parameter
-     * @param url   the url
-     * @param clazz the clazz
-     * @param body  the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, Class<T> clazz, LinkedMultiValueMap body);
+    <T> T post(String url, LinkedMultiValueMap body, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param header the header
-     * @param clazz  the clazz
-     * @param body   the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, HttpHeaders header, Class<T> clazz, Object body);
+    <T> T post(String url, HttpHeaders header, Object body, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param header the header
-     * @param clazz  the clazz
-     * @param body   the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, HttpHeaders header, Class<T> clazz, LinkedMultiValueMap body);
+    <T> T post(String url, HttpHeaders header, LinkedMultiValueMap body, Class<?> collectionClass,
+               Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>   the type parameter
-     * @param url   the url
-     * @param clazz the clazz
-     * @param param the param
-     * @param body  the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, Class<T> clazz, Object param, Object body);
+    <T> T post(String url, Object param, Object body, Class<?> collectionClass, Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>   the type parameter
-     * @param url   the url
-     * @param clazz the clazz
-     * @param param the param
-     * @param body  the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, Class<T> clazz, Object param, LinkedMultiValueMap body);
+    <T> T post(String url, Object param, LinkedMultiValueMap body, Class<?> collectionClass,
+               Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param header the header
-     * @param clazz  the clazz
-     * @param param  the param
-     * @param body   the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, HttpHeaders header, Class<T> clazz, Object param, Object body);
+    <T> T post(String url, HttpHeaders header, Object param, Object body, Class<?> collectionClass,
+               Class<?>... elementClasses);
 
     /**
      * Post t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param header the header
-     * @param clazz  the clazz
-     * @param param  the param
-     * @param body   the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T post(String url, HttpHeaders header, Class<T> clazz, Object param, LinkedMultiValueMap body);
+    <T> T post(String url, HttpHeaders header, Object param, LinkedMultiValueMap body, Class<?> collectionClass,
+               Class<?>... elementClasses);
 
     /**
      * Exec t.
      *
-     * @param <T>    the type parameter
-     * @param url    the url
-     * @param method the method
-     * @param header the header
-     * @param clazz  the clazz
-     * @param param  the param
-     * @param body   the body
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param method          the method
+     * @param header          the header
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
      * @return the t
      */
-    <T> T exec(String url, HttpMethod method, HttpHeaders header, Class<T> clazz, Object param, Object body);
+    <T> T exec(String url, HttpMethod method, HttpHeaders header, Object param, Object body, Class<?> collectionClass,
+               Class<?>... elementClasses);
 
     /**
      * save file from url
