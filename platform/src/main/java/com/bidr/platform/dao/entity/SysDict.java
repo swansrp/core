@@ -6,44 +6,71 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import java.util.Date;
 import lombok.Data;
 
-import java.util.Date;
-
  /**
- * Title: SysDictType
+ * Title: SysDict
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/30 11:00
+ * @date 2023/03/09 11:40
  */
 /**
-    * 字典类型表
+    * 字典数据表
     */
-@ApiModel(value="字典类型表")
+@ApiModel(value="字典数据表")
 @Data
-@TableName(value = "sys_dict_type")
-public class SysDictType {
+@TableName(value = "sys_dict")
+public class SysDict {
     /**
-     * 字典主键
+     * 字典编码
      */
-    @TableId(value = "dict_id", type = IdType.AUTO)
-    @ApiModelProperty(value="字典主键")
+    @TableId(value = "dict_id", type = IdType.INPUT)
+    @ApiModelProperty(value="字典编码")
     private Long dictId;
 
     /**
-     * 字典名称
+     * 字典父节点
      */
-    @TableField(value = "dict_name")
-    @ApiModelProperty(value="字典名称")
-    private String dictName;
+    @TableField(value = "dict_pid")
+    @ApiModelProperty(value="字典父节点")
+    private Long dictPid;
+
+    /**
+     * 字典排序
+     */
+    @TableField(value = "dict_sort")
+    @ApiModelProperty(value="字典排序")
+    private Integer dictSort;
+
+    /**
+     * 字典标签
+     */
+    @TableField(value = "dict_label")
+    @ApiModelProperty(value="字典标签")
+    private String dictLabel;
+
+    /**
+     * 字典键值
+     */
+    @TableField(value = "dict_value")
+    @ApiModelProperty(value="字典键值")
+    private String dictValue;
 
     /**
      * 字典类型
      */
-    @TableField(value = "dict_type")
+    @TableField(value = "dict_name")
     @ApiModelProperty(value="字典类型")
-    private String dictType;
+    private String dictName;
+
+    /**
+     * 是否默认（1是 0否）
+     */
+    @TableField(value = "is_default")
+    @ApiModelProperty(value="是否默认（1是 0否）")
+    private String isDefault;
 
     /**
      * 状态（0正常 1停用）
@@ -51,6 +78,13 @@ public class SysDictType {
     @TableField(value = "`status`")
     @ApiModelProperty(value="状态（0正常 1停用）")
     private String status;
+
+    /**
+     * 是否显示
+     */
+    @TableField(value = "`show`")
+    @ApiModelProperty(value="是否显示")
+    private String show;
 
     /**
      * 创建者
@@ -89,11 +123,21 @@ public class SysDictType {
 
     public static final String COL_DICT_ID = "dict_id";
 
+    public static final String COL_DICT_PID = "dict_pid";
+
+    public static final String COL_DICT_SORT = "dict_sort";
+
+    public static final String COL_DICT_LABEL = "dict_label";
+
+    public static final String COL_DICT_VALUE = "dict_value";
+
     public static final String COL_DICT_NAME = "dict_name";
 
-    public static final String COL_DICT_TYPE = "dict_type";
+    public static final String COL_IS_DEFAULT = "is_default";
 
     public static final String COL_STATUS = "status";
+
+    public static final String COL_SHOW = "show";
 
     public static final String COL_CREATE_BY = "create_by";
 

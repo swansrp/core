@@ -26,8 +26,9 @@ public class JsonUtil {
     private JsonUtil() {
     }
 
-    public static String toJsonString(Object object, boolean needOrder, boolean ignoreEmpty, boolean ignoreIndent) {
-        return generateJsonString(object, needOrder, ignoreEmpty, ignoreIndent, DATE_FORMAT);
+    public static String toJson(Object object, boolean needOrder, boolean ignoreEmpty, boolean ignoreIndent,
+                                String dateFormat) {
+        return generateJsonString(object, needOrder, ignoreEmpty, ignoreIndent, dateFormat);
     }
 
     private static String generateJsonString(Object object, boolean needOrder, boolean ignoreEmpty,
@@ -55,10 +56,6 @@ public class JsonUtil {
 
         }
         return result;
-    }
-
-    public static String toJson(Object object, boolean needOrder, boolean ignoreEmpty, boolean ignoreIndent, String dateFormat) {
-        return generateJsonString(object, needOrder, ignoreEmpty, ignoreIndent, dateFormat);
     }
 
     public static <T> T readJson(Object obj, Class<?> collectionClass, Class<?>... elementClasses) {
@@ -109,7 +106,8 @@ public class JsonUtil {
         return generateJsonString(object, needOrder, ignoreEmpty, ignoreIndent, DATE_FORMAT);
     }
 
-    public static <T> T readDateJson(Object obj, String dateFormat, Class<?> collectionClass, Class<?>... elementClasses) {
+    public static <T> T readDateJson(Object obj, String dateFormat, Class<?> collectionClass,
+                                     Class<?>... elementClasses) {
         if (obj == null) {
             return null;
         }
@@ -117,7 +115,8 @@ public class JsonUtil {
         return readDateJson(jsonStr, dateFormat, collectionClass, elementClasses);
     }
 
-    public static <T> T readDateJson(String jsonStr, String dateFormat, Class<?> collectionClass, Class<?>... elementClasses) {
+    public static <T> T readDateJson(String jsonStr, String dateFormat, Class<?> collectionClass,
+                                     Class<?>... elementClasses) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         if (StringUtils.isNotBlank(dateFormat)) {
@@ -147,5 +146,13 @@ public class JsonUtil {
 
     public static String toJson(Date object, String dateFormat) {
         return generateJsonString(object, false, false, false, dateFormat);
+    }
+
+    public static String toJson(Object object, boolean needOrder, boolean ignoreEmpty, boolean ignoreIndent) {
+        return toJsonString(object, needOrder, ignoreEmpty, ignoreIndent);
+    }
+
+    public static String toJsonString(Object object, boolean needOrder, boolean ignoreEmpty, boolean ignoreIndent) {
+        return generateJsonString(object, needOrder, ignoreEmpty, ignoreIndent, DATE_FORMAT);
     }
 }

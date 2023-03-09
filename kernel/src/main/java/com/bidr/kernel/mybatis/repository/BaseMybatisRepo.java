@@ -1,5 +1,6 @@
 package com.bidr.kernel.mybatis.repository;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -92,13 +93,21 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     @NotNull
-    private static <T> Map<String, Object> buildPropertiesMap(T entity, String[] fieldNameArray) {
+    private <T> Map<String, Object> buildPropertiesMap(T entity, String[] fieldNameArray) {
         Map<String, Object> properties = new HashMap<>(fieldNameArray.length);
         for (String field : fieldNameArray) {
             Field validField = ReflectionUtil.getField(entity.getClass(), field);
             Validator.assertNotNull(validField, ErrCodeSys.SYS_ERR_MSG, "对象属性:" + field + "不存在");
             Object value = ReflectionUtil.getValue(entity, validField);
-            properties.put(field, value);
+            String col;
+            if (validField.isAnnotationPresent(TableField.class)) {
+                col = validField.getAnnotation(TableField.class).value();
+            } else if (validField.isAnnotationPresent(TableId.class)) {
+                col = validField.getAnnotation(TableId.class).value();
+            } else {
+                col = field;
+            }
+            properties.put(col, value);
         }
         return properties;
     }

@@ -1,11 +1,16 @@
 package com.bidr.kernel.cache;
 
+import com.bidr.kernel.cache.exception.DynamicMemoryCacheExpiredException;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.diboot.core.cache.DynamicMemoryCacheManager;
+import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.retry.annotation.Retryable;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * Title: DynamicMemoryCache
@@ -21,12 +26,16 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     @Lazy
     @Resource
     protected DynamicMemoryCacheManager dynamicMemoryCacheManager;
+    @Value("${my.cache.expired}")
+    private Integer dynamicMemoryExpiredMinutes;
 
+
+    @Retryable(value = DynamicMemoryCacheExpiredException.class, maxAttempts = 2)
     public T getCache(Object key) {
         if (key != null) {
             if (dynamicMemoryCacheManager.isExpired(getCacheName(), key)) {
                 refresh();
-                return getCacheExpired(key);
+                throw new DynamicMemoryCacheExpiredException();
             } else {
                 return dynamicMemoryCacheManager.getCacheObj(getCacheName(), key, entityClass);
             }
@@ -44,12 +53,34 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
         init();
     }
 
+    @Override
+    public void init() {
+        List<T> cacheDataList = getCacheData();
+        if (CollectionUtils.isNotEmpty(cacheDataList)) {
+            for (T cacheData : cacheDataList) {
+                dynamicMemoryCacheManager.putCacheObj(this.getCacheName(), getCacheKey(cacheData), cacheData);
+            }
+        }
+
+    }
+
     /**
-     * 过期处理办法
+     * 获取缓存数据列表
      *
-     * @param key
      * @return
      */
+    protected abstract List<T> getCacheData();
 
-    protected abstract T getCacheExpired(Object key);
+    /**
+     * 获取缓存id
+     *
+     * @param obj
+     * @return
+     */
+    protected abstract Object getCacheKey(T obj);
+
+    @Override
+    public int getExpired() {
+        return dynamicMemoryExpiredMinutes;
+    }
 }

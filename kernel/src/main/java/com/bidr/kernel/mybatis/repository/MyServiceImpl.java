@@ -1,5 +1,6 @@
 package com.bidr.kernel.mybatis.repository;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.core.enums.SqlMethod;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
@@ -27,56 +28,20 @@ import java.util.*;
 public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl<K, T> implements IMppService<T>,
         MPJJoinService<T>, BaseService<T> {
 
-    private String getCol(List<TableFieldInfo> fieldList, String attrName) {
-        Iterator var3 = fieldList.iterator();
-
-        TableFieldInfo tableFieldInfo;
-        String prop;
-        do {
-            if (!var3.hasNext()) {
-                throw new RuntimeException("not found column for " + attrName);
-            }
-
-            tableFieldInfo = (TableFieldInfo)var3.next();
-            prop = tableFieldInfo.getProperty();
-        } while(!prop.equals(attrName));
-
-        return tableFieldInfo.getColumn();
-    }
-
-    private Map checkIdCol(Class<?> modelClass, TableInfo tableInfo) {
-        List<TableFieldInfo> fieldList = tableInfo.getFieldList();
-        Map<String, String> idMap = new HashMap();
-        Iterator var5 = fieldList.iterator();
-
-        while(var5.hasNext()) {
-            TableFieldInfo fieldInfo = (TableFieldInfo)var5.next();
-            Field field = fieldInfo.getField();
-            MppMultiId mppMultiId = (MppMultiId)field.getAnnotation(MppMultiId.class);
-            if (mppMultiId != null) {
-                String attrName = field.getName();
-                String colName = this.getCol(fieldList, attrName);
-                idMap.put(attrName, colName);
-            }
-        }
-
-        return idMap;
-    }
-
     public boolean saveOrUpdateByMultiId(T entity) {
         if (null == entity) {
             return false;
         } else {
             Class<?> cls = entity.getClass();
             TableInfo tableInfo = TableInfoHelper.getTableInfo(cls);
-            Assert.notNull(tableInfo, "error: can not execute. because can not find cache of TableInfo for entity!", new Object[0]);
+            Assert.notNull(tableInfo, "error: can not execute. because can not find cache of TableInfo for entity!");
             Map<String, String> idMap = this.checkIdCol(cls, tableInfo);
-            Assert.notEmpty(idMap, "entity {} not contain MppMultiId anno", new Object[]{cls.getName()});
+            Assert.notEmpty(idMap, "entity {} not contain MppMultiId anno", cls.getName());
             boolean updateFlag = true;
             Iterator var6 = idMap.keySet().iterator();
 
-            while(var6.hasNext()) {
-                String attr = (String)var6.next();
+            while (var6.hasNext()) {
+                String attr = (String) var6.next();
                 if (com.baomidou.mybatisplus.core.toolkit.StringUtils.checkValNull(attr)) {
                     updateFlag = false;
                     break;
@@ -94,17 +59,36 @@ public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl
         }
     }
 
+    private Map checkIdCol(Class<?> modelClass, TableInfo tableInfo) {
+        List<TableFieldInfo> fieldList = tableInfo.getFieldList();
+        Map<String, String> idMap = new HashMap();
+        Iterator var5 = fieldList.iterator();
+
+        while (var5.hasNext()) {
+            TableFieldInfo fieldInfo = (TableFieldInfo) var5.next();
+            Field field = fieldInfo.getField();
+            MppMultiId mppMultiId = field.getAnnotation(MppMultiId.class);
+            if (mppMultiId != null) {
+                String attrName = field.getName();
+                String colName = field.getAnnotation(TableField.class).value();
+                idMap.put(attrName, colName);
+            }
+        }
+
+        return idMap;
+    }
+
     public boolean saveOrUpdateBatchByMultiId(Collection<T> entityList, int batchSize) {
         TableInfo tableInfo = TableInfoHelper.getTableInfo(this.entityClass);
-        Assert.notNull(tableInfo, "error: can not execute. because can not find cache of TableInfo for entity!", new Object[0]);
+        Assert.notNull(tableInfo, "error: can not execute. because can not find cache of TableInfo for entity!");
         Map<String, String> idMap = this.checkIdCol(this.entityClass, tableInfo);
-        Assert.notEmpty(idMap, "entity {} not contain MppMultiId anno", new Object[]{this.entityClass.getName()});
+        Assert.notEmpty(idMap, "entity {} not contain MppMultiId anno", this.entityClass.getName());
         return this.executeBatch(entityList, batchSize, (sqlSession, entity) -> {
             boolean updateFlag = true;
             Iterator var6 = idMap.keySet().iterator();
 
-            while(var6.hasNext()) {
-                String attr = (String)var6.next();
+            while (var6.hasNext()) {
+                String attr = (String) var6.next();
                 if (com.baomidou.mybatisplus.core.toolkit.StringUtils.checkValNull(attr)) {
                     updateFlag = false;
                     break;

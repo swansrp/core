@@ -3,7 +3,15 @@ server:
 
   # db configurations
 my:
-  db:
+  master-db:
+    config:
+      username: root
+      password:
+      driver: com.mysql.cj.jdbc.Driver
+      url: localhost
+      port: 3306
+      property: useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+  slave-db:
     config:
       username: root
       password:

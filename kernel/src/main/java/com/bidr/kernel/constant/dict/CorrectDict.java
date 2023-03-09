@@ -2,7 +2,6 @@ package com.bidr.kernel.constant.dict;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Title: CorrectDict
@@ -13,6 +12,7 @@ import lombok.Setter;
  * @description Project Name: Seed
  * @Package: com.srct.service.constant.dict
  */
+@Getter
 @MetaDict("CORRECT_DICT")
 @AllArgsConstructor
 public enum CorrectDict implements Dict {
@@ -22,15 +22,9 @@ public enum CorrectDict implements Dict {
     CORRECT("1", 1, "正确"),
     INCORRECT("0", 2, "错误");
 
-    @Getter
-    @Setter
-    private String value;
-    @Getter
-    @Setter
-    private Integer order;
-    @Getter
-    @Setter
-    private String label;
+    private final String value;
+    private final Integer order;
+    private final String label;
 
 
 }

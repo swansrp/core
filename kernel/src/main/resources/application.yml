@@ -68,18 +68,17 @@ spring:
       primary: master
       strict: false
       datasource:
-      # 主库数据源
         master:
           driverClassName: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://${my.db.config.url}:${my.db.config.port}/${my.db.config.master-db}?${my.db.config.property}
-          username: ${my.db.config.username}
-          password: ${my.db.config.password}
+          url: jdbc:mysql://${my.master-db.config.url}:${my.master-db.config.port}/${my.master-db.config.db}?${my.master-db.config.property}
+          username: ${my.master-db.config.username}
+          password: ${my.master-db.config.password}
         # 从库数据源
         slave:
           driverClassName: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://${my.db.config.url}:${my.db.config.port}/${my.db.config.master-db}?${my.db.config.property}
-          username: ${my.db.config.username}
-          password: ${my.db.config.password}
+          url: jdbc:mysql://${my.slave-db.config.url}:${my.slave-db.config.port}/${my.slave-db.config.db}?${my.slave-db.config.property}
+          username: ${my.slave-db.config.username}
+          password: ${my.slave-db.config.password}
   # redis 配置
   redis: # 地址
     host: localhost
@@ -143,6 +142,8 @@ xss: # 过滤开关
   urlPatterns: /system/*,/monitor/*,/tool/*
 
 my:
+  cache:
+    expired: 10
   rest:
     proxy:
       enable: false
