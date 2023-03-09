@@ -13,7 +13,7 @@ public interface ErrCode {
      *
      * @return 错误码
      */
-    String getErrCode();
+    Integer getErrCode();
 
     /**
      * 错误名称

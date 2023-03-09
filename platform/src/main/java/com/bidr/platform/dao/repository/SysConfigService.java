@@ -1,9 +1,12 @@
 package com.bidr.platform.dao.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.mapper.SysConfigDao;
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Title: SysConfigService
@@ -15,4 +18,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class SysConfigService extends BaseSqlRepo<SysConfigDao, SysConfig> {
 
+    public List<SysConfig> getSysConfigCache() {
+        LambdaQueryWrapper<SysConfig> wrapper = super.getQueryWrapper()
+                .select(SysConfig::getConfigKey, SysConfig::getConfigName, SysConfig::getConfigValue,
+                        SysConfig::getRemark);
+        return super.select(wrapper);
+    }
 }
+

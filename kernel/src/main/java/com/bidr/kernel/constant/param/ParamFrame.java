@@ -11,8 +11,8 @@ package com.bidr.kernel.constant.param;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
+@Getter
 @AllArgsConstructor
 public enum ParamFrame implements Param {
     /**
@@ -20,11 +20,7 @@ public enum ParamFrame implements Param {
      */
     CACHE_INIT_MODE("1", "缓存加载模式");
 
-    @Getter
-    @Setter
-    private String defaultValue;
 
-    @Getter
-    @Setter
-    private String remark;
+    private final String defaultValue;
+    private final String remark;
 }

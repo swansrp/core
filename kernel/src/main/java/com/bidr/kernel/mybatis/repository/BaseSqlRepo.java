@@ -212,10 +212,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     @Override
     public boolean updateById(T entity, boolean ignoreNull) {
         UpdateWrapper<T> wrapper = super.getIdWrapper(entity);
-        if (!ignoreNull) {
-            super.fillUpdateWrapper(entity, wrapper);
-        }
-        return update(entity, wrapper);
+        return update(entity, wrapper, ignoreNull);
     }
 
     @Override
