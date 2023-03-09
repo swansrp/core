@@ -7,11 +7,11 @@
  */
 package com.bidr.platform.service.rest;
 
-import com.bidr.kernel.utils.BeanUtil;
+import cn.hutool.core.util.RandomUtil;
 import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.Resource;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -40,114 +41,123 @@ public class RestServiceImpl implements RestService {
 
     @Autowired
     private RestTemplate restTemplate;
-//    @Resource
-//    private PushGatewayService pushGatewayService;
+
+    @Lazy
+    @Resource
+    private RestServiceImpl restServiceImpl;
 
     @Override
-    public <T> T get(String url, Class<T> clazz) {
-        return getSelf().exec(url, HttpMethod.GET, new HttpHeaders(), clazz, null, null);
+    public <T> T get(String url, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.GET, new HttpHeaders(), null, null, collectionClass, elementClasses);
     }
 
     private RestService getSelf() {
-        return BeanUtil.getBean(this.getClass());
+        return restServiceImpl;
     }
 
     @Override
-    public <T> T get(String url, HttpHeaders header, Class<T> clazz) {
-        return getSelf().exec(url, HttpMethod.GET, header, clazz, null, null);
+    public <T> T get(String url, HttpHeaders header, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.GET, header, null, null, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T get(String url, Object param, Class<T> clazz) {
-        return getSelf().exec(url, HttpMethod.GET, new HttpHeaders(), clazz, param, null);
+    public <T> T get(String url, Object param, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.GET, new HttpHeaders(), param, null, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T get(String url, HttpHeaders header, Object param, Class<T> clazz) {
-        return getSelf().exec(url, HttpMethod.GET, header, clazz, param, null);
+    public <T> T get(String url, HttpHeaders header, Object param, Class<?> collectionClass,
+                     Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.GET, header, param, null, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, Class<T> clazz, Object body) {
-        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), clazz, null, body);
+    public <T> T post(String url, Object body, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), null, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, Class<T> clazz, LinkedMultiValueMap body) {
-        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), clazz, null, body);
+    public <T> T post(String url, LinkedMultiValueMap body, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), null, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, HttpHeaders header, Class<T> clazz, Object body) {
-        return getSelf().exec(url, HttpMethod.POST, header, clazz, null, body);
+    public <T> T post(String url, HttpHeaders header, Object body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, header, null, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, HttpHeaders header, Class<T> clazz, LinkedMultiValueMap body) {
-        return getSelf().exec(url, HttpMethod.POST, header, clazz, null, body);
+    public <T> T post(String url, HttpHeaders header, LinkedMultiValueMap body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, header, null, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, Class<T> clazz, Object param, Object body) {
-        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), clazz, param, body);
+    public <T> T post(String url, Object param, Object body, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), param, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, Class<T> clazz, Object param, LinkedMultiValueMap body) {
-        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), clazz, param, body);
+    public <T> T post(String url, Object param, LinkedMultiValueMap body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, new HttpHeaders(), param, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, HttpHeaders header, Class<T> clazz, Object param, Object body) {
-        return getSelf().exec(url, HttpMethod.POST, header, clazz, param, body);
+    public <T> T post(String url, HttpHeaders header, Object param, Object body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, header, param, body, collectionClass, elementClasses);
     }
 
     @Override
-    public <T> T post(String url, HttpHeaders header, Class<T> clazz, Object param, LinkedMultiValueMap body) {
-        return getSelf().exec(url, HttpMethod.POST, header, clazz, param, body);
+    public <T> T post(String url, HttpHeaders header, Object param, LinkedMultiValueMap body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(url, HttpMethod.POST, header, param, body, collectionClass, elementClasses);
     }
 
     @Override
-    @Retryable(value = {Exception.class}, maxAttempts = 4, backoff = @Backoff(delay = 1000L, multiplier = 1))
-    public <T> T exec(String url, HttpMethod method, HttpHeaders header, Class<T> clazz, Object param, Object body) {
+    @Retryable(value = {Exception.class}, maxAttempts = 4, backoff = @Backoff(delay = 1000L, multiplier = 2))
+    public <T> T exec(String url, HttpMethod method, HttpHeaders header, Object param, Object body,
+                      Class<?> collectionClass, Class<?>... elementClasses) {
         ResponseEntity<T> response;
         ParameterizedTypeReference<T> parameter = new ParameterizedTypeReference<T>() {
         };
         if (param != null) {
             url = buildUrl(url, param);
         }
-        log.debug("[{}] ==> {}", method, url);
-        log.debug("[header] : {}", JsonUtil.toJson(header));
+        String transactionId = RandomUtil.randomString(7);
+        log.debug("[{}][{}] ==> {}", transactionId, method, url);
+        log.debug("[{}][header] : {}", transactionId, JsonUtil.toJson(header));
         HttpEntity<Object> entity = new HttpEntity<>(body, header);
         try {
-            log.debug("==> {}", JsonUtil.toJson(body));
+            log.debug("[{}]==> {}", transactionId, JsonUtil.toJson(body));
             long startTime = System.currentTimeMillis();
             response = restTemplate.exchange(url, method, entity, parameter);
             long endTime = System.currentTimeMillis();
             String duration = String.valueOf(endTime - startTime);
-//            pushGatewayService.pushGateWay(
-//                    new RestTemplatePrometheusBO(url.split("\\?")[0], CommonConst.YES), Double.parseDouble(duration),
-//                    true);
             try {
-                log.debug("<== {}", JsonUtil.toJson(response.getBody()));
-                return JsonUtil.readJson(JsonUtil.toJson(response.getBody()), clazz);
+                log.debug("[{}]<== {}", transactionId, JsonUtil.toJson(response.getBody()));
+                return JsonUtil.readJson(response.getBody(), collectionClass, elementClasses);
             } catch (Exception e) {
                 return response.getBody();
             }
         } catch (Exception e) {
-//            pushGatewayService.pushGateWay(new RestTemplatePrometheusBO(url, CommonConst.NO));
-            log.error(e.getMessage());
-            return null;
+            log.error("[{}]通信异常", transactionId);
+            throw e;
         }
     }
 
     public String buildUrl(String url, Object param) {
         String paramUrl = url.contains("?") ? "&" : "?";
-        Map<String, Object> paramMap = ReflectionUtil.getHashMap(param);
+        Map<String, Object> paramMap = JsonUtil.readJson(param, Map.class, String.class, Object.class);
         for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
             try {
-                paramUrl =
-                        paramUrl + entry.getKey() + "=" + URLEncoder.encode(entry.getValue().toString(), "UTF-8") + "&";
+                if (entry.getValue() != null) {
+                    paramUrl =
+                            paramUrl + entry.getKey() + "=" + URLEncoder.encode(entry.getValue().toString(), "UTF-8") +
+                                    "&";
+                }
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -173,8 +183,7 @@ public class RestServiceImpl implements RestService {
         bis = new BufferedInputStream(httpconn.getInputStream());
         // 建立文件
         fos = new FileOutputStream(file);
-        log.debug("download[" + destUrl + "]to save the file[" + file.getName()
-                + "]");
+        log.debug("download[" + destUrl + "]to save the file[" + file.getName() + "]");
 
         // 保存文件
         while ((size = bis.read(buf)) != -1) {
