@@ -8,17 +8,18 @@ import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
- * Title: BaseAppliction
+ * Title: BaseApplication
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
  * @date 2023/03/09 13:20
  */
+
 @EnableRetry
 @ServletComponentScan
 @SpringBootApplication
 @EnableTransactionManagement
 @MapperScan({"com.bidr.**.dao.**.mapper"})
 @ComponentScan(basePackages = {"com.bidr", "com.diboot"})
-public class BaseApplication {
+public abstract class BaseApplication {
 }
