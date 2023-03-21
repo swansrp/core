@@ -65,7 +65,7 @@ public class JsonUtil {
         try {
             result = objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
+            log.error("JSON转换失败", e);
         }
         return result;
     }

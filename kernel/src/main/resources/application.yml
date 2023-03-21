@@ -75,6 +75,7 @@ spring:
           password: ${my.master-db.config.password}
         # 从库数据源
         slave:
+          lazy: true
           driverClassName: com.mysql.cj.jdbc.Driver
           url: jdbc:mysql://${my.slave-db.config.url}:${my.slave-db.config.port}/${my.slave-db.config.db}?${my.slave-db.config.property}
           username: ${my.slave-db.config.username}

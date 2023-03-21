@@ -1,12 +1,12 @@
 my:
   project:
     name:
-  db:
+  master-db:
     config:
-      master-db:
+      db:
       url: localhost
-      username: dbAdmin
-      password: Adm!n123
+      username: 
+      password:
 swagger: # ????swagger
   enabled: true
   # ????
