@@ -26,6 +26,7 @@ import java.util.Locale;
 
 public class DateUtil {
     public static final String DATE = "yyyyMMdd";
+    public static final String MONTH = "yyyyMM";
     public static final String DATE_DOT = "yyyy.MM.dd";
     public static final String TIME = "HHmmss";
     public static final String DATE_TIME = "yyyyMMddHHmmss";
