@@ -3,6 +3,8 @@ package com.bidr.kernel.constant.err;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.HashMap;
+
 /**
  * Title: ErrCodeSys
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE

@@ -1,16 +1,16 @@
 package com.bidr.authorization.dao.mapper;
 
-import com.bidr.authorization.dao.entity.AcPermit;
+import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * Title: AcPermitDao
+ * Title: AcRoleDao
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/13 15:03
+ * @date 2023/03/17 10:02
  */
 @Mapper
-public interface AcPermitDao extends MyBaseMapper<AcPermit> {
+public interface AcRoleDao extends MyBaseMapper<AcRole> {
 }

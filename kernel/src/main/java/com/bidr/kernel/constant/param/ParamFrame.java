@@ -23,4 +23,5 @@ public enum ParamFrame implements Param {
 
     private final String defaultValue;
     private final String remark;
+
 }

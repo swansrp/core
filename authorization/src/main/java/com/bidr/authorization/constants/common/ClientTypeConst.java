@@ -4,7 +4,8 @@ import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
+
+import java.util.HashMap;
 
 /**
  * Title: ClientTypeConst.java
@@ -13,6 +14,7 @@ import lombok.Setter;
  * @author Sharp
  * @date 2019-7-28 21:18
  */
+@Getter
 @AllArgsConstructor
 @MetaDict("CLIENT_TYPE_DICT")
 public enum ClientTypeConst implements Dict {
@@ -26,11 +28,10 @@ public enum ClientTypeConst implements Dict {
     PLATFORM("8", "对接平台"),
     IOT("9", "IOT设备");
 
-    @Getter
-    @Setter
-    private String value;
-    @Getter
-    @Setter
-    private String label;
+
+    private final String value;
+    private final String label;
+    private final HashMap<Object, Enum<?>> map = new HashMap<>();
+
 
 }

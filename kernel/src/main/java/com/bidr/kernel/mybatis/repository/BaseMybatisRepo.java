@@ -61,7 +61,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     public UpdateWrapper<T> getIdWrapper(T entity) {
-        Field[] fieldArray = entityClass.getDeclaredFields();
+        List<Field> fieldArray = ReflectionUtil.getFields(entity);
         List<String> multiIdFieldNameList = new ArrayList<>();
         String idFieldName = null;
         for (Field field : fieldArray) {
@@ -142,7 +142,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     public void fillUpdateWrapper(T entity, UpdateWrapper<T> wrapper) {
-        Map<String, Object> map = ReflectionUtil.getHashMap(entity);
+        Map<String, Object> map = super.getHashMap(entity);
         fillUpdateWrapper(map, wrapper);
     }
 

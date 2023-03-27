@@ -2,7 +2,8 @@ package com.bidr.kernel.constant.err;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
+
+import java.util.HashMap;
 
 /**
  * Title: ErrCodeLevel
@@ -11,6 +12,7 @@ import lombok.Setter;
  * @author Sharp
  * @date 2022/6/6 11:27
  */
+@Getter
 @AllArgsConstructor
 public enum ErrCodeLevel {
     /**
@@ -23,7 +25,5 @@ public enum ErrCodeLevel {
     DEBUG("1"),
     TRACE("0");
 
-    @Getter
-    @Setter
-    private String value;
+    private final String value;
 }

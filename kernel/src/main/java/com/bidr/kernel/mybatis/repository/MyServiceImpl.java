@@ -8,14 +8,18 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.diboot.core.service.BaseService;
 import com.diboot.core.service.impl.BaseServiceImpl;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.jeffreyning.mybatisplus.service.IMppService;
 import com.github.yulichang.base.service.MPJJoinService;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.binding.MapperMethod;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**
@@ -121,5 +125,25 @@ public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl
             sqlSession.update(sqlStatement, param);
         });
     }
+
+    protected Map<String, Object> getHashMap(T obj) {
+        Class<?> aClass = obj.getClass();
+        List<Field> fieldList = ReflectionUtil.getFields(aClass);
+        LinkedHashMap<String, Object> res = new LinkedHashMap<>(fieldList.size());
+        for (Field field : fieldList) {
+            if (Modifier.isFinal(field.getModifiers())) {
+                continue;
+            }
+            TableField annotation = field.getAnnotation(TableField.class);
+            if (annotation != null) {
+                String name = annotation.value();
+                Object value = ReflectionUtil.getValue(obj, field);
+                res.put(name, value);
+            }
+
+        }
+        return res;
+    }
+
 
 }

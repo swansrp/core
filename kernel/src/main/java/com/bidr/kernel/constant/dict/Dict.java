@@ -10,6 +10,7 @@ import com.bidr.kernel.constant.CommonConst;
  * @date 2019-7-26 22:16
  */
 public interface Dict {
+
     /**
      * 字典值
      *
@@ -32,4 +33,6 @@ public interface Dict {
     default String getShow() {
         return CommonConst.YES;
     }
+
+
 }

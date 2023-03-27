@@ -2,7 +2,8 @@ package com.bidr.kernel.constant.dict;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
+
+import java.util.HashMap;
 
 /**
  * Title: BoolDict
@@ -15,23 +16,16 @@ import lombok.Setter;
  */
 
 @MetaDict("BOOLEAN_DICT")
+@Getter
 @AllArgsConstructor
 public enum BoolDict implements Dict {
     /**
      * 是非字典表
      */
-    YES("1", 1, "是"),
-    NO("0", 2, "否");
+    YES("1", "是", 1),
+    NO("0", "否", 2);
 
-    @Getter
-    @Setter
-    private String value;
-    @Getter
-    @Setter
-    private Integer order;
-    @Getter
-    @Setter
-    private String label;
-
-
+    private final String value;
+    private final String label;
+    private final Integer order;
 }

@@ -85,7 +85,7 @@ public class Validator {
     }
 
     public static void assertTrue(Boolean param, ErrCode code, String... parameters) {
-        if (true != param) {
+        if (!param) {
             throw new ServiceException(code, parameters);
         }
     }

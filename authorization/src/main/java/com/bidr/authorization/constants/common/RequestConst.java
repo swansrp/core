@@ -7,8 +7,12 @@
  */
 package com.bidr.authorization.constants.common;
 
+import com.bidr.kernel.utils.StringUtil;
+
 public class RequestConst {
     public static final String TOKEN = "x-access-token";
+
+    public static final String ID_TOKEN = "id_token";
     public static final String API_VERSION = "api-version";
     public static final String USER_ID = "user-id";
     public static final String AUTHORIZATION = "authorization";
@@ -31,11 +35,11 @@ public class RequestConst {
     public static final String OBJECT = "object";
 
     public static String getAllHeader() {
-        return TOKEN + ", " + API_VERSION + ", " + USER_ID + ", " + AUTHORIZATION + ", " + CLIENT_TYPE + ", "
-                + CONTENT_TYPE + ", " + X_REQUESTED;
+        return StringUtil.joinWith(",", TOKEN, ID_TOKEN, API_VERSION, USER_ID, AUTHORIZATION, CLIENT_TYPE, CONTENT_TYPE,
+                X_REQUESTED);
     }
 
     public static String getAllMethod() {
-        return GET + ", " + PUT + ", " + POST + ", " + OPTIONS + ", " + DELETE;
+        return StringUtil.joinWith(",", GET, PUT, POST, OPTIONS, DELETE);
     }
 }

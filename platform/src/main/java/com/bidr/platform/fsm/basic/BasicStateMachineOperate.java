@@ -1,10 +1,11 @@
 package com.bidr.platform.fsm.basic;
 
-import com.bidr.platform.fsm.bo.operate.MachineOperate;
 import com.bidr.kernel.constant.dict.Dict;
+import com.bidr.platform.fsm.bo.operate.MachineOperate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
+
+import java.util.HashMap;
 
 /**
  * Title: BasicStateMachineOperate
@@ -13,6 +14,7 @@ import lombok.Setter;
  * @author Sharp
  * @date 2021/4/2 14:03
  */
+@Getter
 @AllArgsConstructor
 public enum BasicStateMachineOperate implements Dict, MachineOperate {
     /**
@@ -25,13 +27,10 @@ public enum BasicStateMachineOperate implements Dict, MachineOperate {
     CLOSE("5", 5, "关闭"),
     FINISH("6", 6, "完成");
 
-    @Getter
-    @Setter
-    private String value;
-    @Getter
-    @Setter
-    private Integer order;
-    @Getter
-    @Setter
-    private String label;
+
+    private final String value;
+    private final Integer order;
+    private final String label;
+    private final HashMap<Object, Enum<?>> map = new HashMap<>();
+
 }

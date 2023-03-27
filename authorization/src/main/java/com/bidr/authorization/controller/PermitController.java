@@ -1,8 +1,9 @@
 package com.bidr.authorization.controller;
 
-import com.bidr.authorization.service.permit.PermitService;
-import com.bidr.authorization.vo.permit.PermitTreeItem;
-import com.bidr.authorization.vo.permit.PermitTreeRes;
+import com.bidr.authorization.service.permit.MenuService;
+import com.bidr.authorization.vo.menu.MenuTreeItem;
+import com.bidr.authorization.vo.menu.MenuTreeReq;
+import com.bidr.authorization.vo.menu.MenuTreeRes;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,18 +25,48 @@ import java.util.List;
 @RequestMapping(value = "")
 public class PermitController {
     @Resource
-    private PermitService permitService;
+    private MenuService menuService;
 
-    @ApiOperation(value = "权限树", notes = "登录后准入")
-    @RequestMapping(value = "/permitTree", method = RequestMethod.GET)
-    public List<PermitTreeRes> getPermitTree() {
-        return permitService.getPermitTree();
+    @ApiOperation(value = "获取主菜单树", notes = "登录后准入")
+    @RequestMapping(value = "/menu/main", method = RequestMethod.GET)
+    public List<MenuTreeRes> getMainMenuTree() {
+        return menuService.getMenuTree();
     }
 
-    @ApiOperation(value = "权限列表", notes = "登录后准入")
-    @RequestMapping(value = "/permitList", method = RequestMethod.GET)
-    public List<PermitTreeItem> getPermitList() {
-        return permitService.getPermitList();
+    @ApiOperation(value = "获取主菜单列表", notes = "登录后准入")
+    @RequestMapping(value = "/menu/main/list", method = RequestMethod.GET)
+    public List<MenuTreeItem> getMainMenuList() {
+        return menuService.getMenuList();
+    }
+
+    @ApiOperation(value = "获取子菜单树", notes = "登录后准入")
+    @RequestMapping(value = "/menu/sub/tree", method = RequestMethod.GET)
+    public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
+        return menuService.getSubMenuTree(req);
+    }
+
+    @ApiOperation(value = "获取子菜单列表", notes = "登录后准入")
+    @RequestMapping(value = "/menu/sub/list", method = RequestMethod.GET)
+    public List<MenuTreeItem> getSubMenuList(MenuTreeReq req) {
+        return menuService.getSubMenuList(req);
+    }
+
+    @ApiOperation(value = "获取目录树", notes = "登录后准入")
+    @RequestMapping(value = "/content/tree", method = RequestMethod.GET)
+    public List<MenuTreeRes> getContentTree(MenuTreeReq req) {
+        return menuService.getContentTree(req);
+    }
+
+    @ApiOperation(value = "获取目录列表", notes = "登录后准入")
+    @RequestMapping(value = "/content/list", method = RequestMethod.GET)
+    public List<MenuTreeItem> getContentList(MenuTreeReq req) {
+        return menuService.getContentList(req);
+    }
+
+    @ApiOperation(value = "获取权限列表", notes = "登录后准入")
+    @RequestMapping(value = "/permit/list", method = RequestMethod.GET)
+    public List<MenuTreeItem> getPermitList() {
+        return menuService.getAll();
     }
 
 }

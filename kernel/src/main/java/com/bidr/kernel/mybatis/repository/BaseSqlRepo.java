@@ -225,7 +225,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         if (!ignoreNull) {
             super.fillUpdateWrapper(entity, wrapper);
         }
-        return super.update(entity, wrapper);
+        return super.update(wrapper);
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.bidr.authorization.vo.permit;
+package com.bidr.authorization.vo.menu;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Title: PermitTreeRes
+ * Title: MenuTreeRes
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
@@ -15,10 +15,10 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class PermitTreeRes extends PermitTreeItem {
-    private List<PermitTreeItem> children;
+public class MenuTreeRes extends MenuTreeItem {
+    private List<MenuTreeRes> children;
 
-    public void PermitTreeItem() {
+    public void MenuTreeRes() {
         children = new ArrayList<>();
     }
 }

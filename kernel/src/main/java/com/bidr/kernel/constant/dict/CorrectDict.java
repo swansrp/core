@@ -3,6 +3,9 @@ package com.bidr.kernel.constant.dict;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Title: CorrectDict
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
@@ -19,12 +22,11 @@ public enum CorrectDict implements Dict {
     /**
      * 正误字典表
      */
-    CORRECT("1", 1, "正确"),
-    INCORRECT("0", 2, "错误");
+    CORRECT(1, "正确", 1),
+    INCORRECT(0, "错误", 2);
 
-    private final String value;
-    private final Integer order;
+    private final Integer value;
     private final String label;
-
-
+    private final Integer order;
+    private final HashMap<Object, Enum<?>> map = new HashMap<>();
 }

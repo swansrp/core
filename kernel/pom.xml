@@ -99,6 +99,12 @@
             <artifactId>commons-collections4</artifactId>
             <version>4.4</version>
         </dependency>
+        <!-- 反射框架 0.9.12 jar编译运行失败 -->
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.9.11</version>
+        </dependency>
 
         <!-- swagger3-->
         <dependency>

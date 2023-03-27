@@ -1,5 +1,7 @@
 package com.bidr.kernel.utils;
 
+import com.bidr.kernel.common.func.GetFunc;
+import com.bidr.kernel.common.func.SetFunc;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.validate.Validator;
@@ -58,21 +60,38 @@ public class ReflectionUtil {
         return res;
     }
 
-    private static <R, T> R buildTree(Class<R> resultClazz, Field children, T parentData, List<T> dataList, Field field,
-                                      Field parentField) {
+    public static <T, R> List<R> buildTree(SetFunc<R, List<R>> setChildrenFunc, List<T> dataList,
+                                           GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc) {
+        return buildTree(setChildrenFunc, dataList, getIdFunc, getPidFunc, null);
+    }
+
+    public static <T, R> List<R> buildTree(SetFunc<R, List<R>> setChildrenFunc, List<T> dataList,
+                                           GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc, Object pidValue) {
+        LambdaUtil.getRealClass(setChildrenFunc);
+        List<T> parentDataList = dataList.stream().filter(data -> Objects.equals(getPidFunc.apply(data), (pidValue)))
+                .collect(Collectors.toList());
+        List<R> res = new ArrayList<>();
+        parentDataList.forEach(
+                parentData -> res.add(buildTree(setChildrenFunc, parentData, dataList, getIdFunc, getPidFunc)));
+        return res;
+    }
+
+    private static <R, T> R buildTree(SetFunc<R, List<R>> setChildrenFunc, T parentData, List<T> dataList,
+                                      GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc) {
+        Class<R> resultClazz = LambdaUtil.getRealClass(setChildrenFunc);
         R res = ReflectionUtil.copy(parentData, resultClazz);
         List<T> list = dataList.stream()
-                .filter(data -> Objects.equals(getValue(parentData, field), getValue(data, parentField)))
+                .filter(data -> Objects.equals(getIdFunc.apply(parentData), getPidFunc.apply(data)))
                 .collect(Collectors.toList());
 
         if (CollectionUtils.isEmpty(list)) {
-            setValue(children, res, null);
+            setChildrenFunc.apply(res, null);
         } else {
             List<R> childrenList = new ArrayList<>();
             for (T childrenData : list) {
-                childrenList.add(buildTree(resultClazz, children, childrenData, dataList, field, parentField));
+                childrenList.add(buildTree(setChildrenFunc, childrenData, dataList, getIdFunc, getPidFunc));
             }
-            setValue(children, res, childrenList);
+            setChildrenFunc.apply(res, childrenList);
         }
         return res;
     }
@@ -90,6 +109,25 @@ public class ReflectionUtil {
             return Object.class;
         }
         return (Class<?>) params[index];
+    }
+
+    private static <R, T> R buildTree(Class<R> resultClazz, Field children, T parentData, List<T> dataList, Field field,
+                                      Field parentField) {
+        R res = ReflectionUtil.copy(parentData, resultClazz);
+        List<T> list = dataList.stream()
+                .filter(data -> Objects.equals(getValue(parentData, field), getValue(data, parentField)))
+                .collect(Collectors.toList());
+
+        if (CollectionUtils.isEmpty(list)) {
+            setValue(children, res, null);
+        } else {
+            List<R> childrenList = new ArrayList<>();
+            for (T childrenData : list) {
+                childrenList.add(buildTree(resultClazz, children, childrenData, dataList, field, parentField));
+            }
+            setValue(children, res, childrenList);
+        }
+        return res;
     }
 
     public static <T> T copyProperties(Object source, Class<T> targetClazz) {

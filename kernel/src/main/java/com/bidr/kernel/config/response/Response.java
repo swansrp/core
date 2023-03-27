@@ -23,7 +23,7 @@ public class Response<T> {
     @SuppressWarnings("unchecked")
     public Response(ServiceException exception) {
         ErrCode errCode = exception.getErrCode();
-        this.status = new ApiResultStatus(errCode.getErrCode(), errCode.name(), errCode.getErrText());
+        this.status = new ApiResultStatus(errCode.getErrCode(), errCode.name(), exception.getMessage());
         this.payload = (T) new ExceptionResponse(errCode.getErrLevel(), errCode.getErrType(), exception.getMessage());
     }
 

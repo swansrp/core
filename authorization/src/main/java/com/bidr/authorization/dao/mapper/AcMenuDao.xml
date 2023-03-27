@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.authorization.dao.mapper.AcMenuDao">
+  <resultMap id="BaseResultMap" type="com.bidr.authorization.dao.entity.AcMenu">
+    <!--@mbg.generated-->
+    <!--@Table ac_menu-->
+    <id column="menu_id" jdbcType="BIGINT" property="menuId" />
+    <result column="pid" jdbcType="BIGINT" property="pid" />
+    <result column="grand_id" jdbcType="BIGINT" property="grandId" />
+    <result column="key" jdbcType="BIGINT" property="key" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="show_order" jdbcType="INTEGER" property="showOrder" />
+    <result column="path" jdbcType="VARCHAR" property="path" />
+    <result column="component" jdbcType="VARCHAR" property="component" />
+    <result column="query" jdbcType="VARCHAR" property="query" />
+    <result column="is_frame" jdbcType="CHAR" property="isFrame" />
+    <result column="is_cache" jdbcType="CHAR" property="isCache" />
+    <result column="menu_type" jdbcType="INTEGER" property="menuType" />
+    <result column="visible" jdbcType="CHAR" property="visible" />
+    <result column="status" jdbcType="CHAR" property="status" />
+    <result column="perms" jdbcType="VARCHAR" property="perms" />
+    <result column="icon" jdbcType="VARCHAR" property="icon" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="remark" jdbcType="VARCHAR" property="remark" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    menu_id, pid, grand_id, `key`, title, show_order, `path`, component, query, is_frame, 
+    is_cache, menu_type, visible, `status`, perms, icon, create_by, create_time, update_by, 
+    update_time, remark
+  </sql>
+</mapper>

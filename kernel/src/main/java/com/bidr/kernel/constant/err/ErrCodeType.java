@@ -2,7 +2,8 @@ package com.bidr.kernel.constant.err;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
+
+import java.util.HashMap;
 
 /**
  * Title: ErrCodeType
@@ -11,6 +12,7 @@ import lombok.Setter;
  * @author Sharp
  * @date 2022/6/6 11:27
  */
+@Getter
 @AllArgsConstructor
 public enum ErrCodeType {
     /**
@@ -23,7 +25,6 @@ public enum ErrCodeType {
     VIEW("4"),
     THIRD_PARTY("5");
 
-    @Getter
-    @Setter
-    private String value;
+    private final String value;
+    private final HashMap<Object, Enum<?>> map = new HashMap<>();
 }

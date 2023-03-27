@@ -4,12 +4,13 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.err.ErrCodeType;
 import com.bidr.kernel.exception.ServiceException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +23,8 @@ import java.util.Map;
  * @date 2022/6/6 15:54
  */
 @Slf4j
-@RestControllerAdvice
+@Order(-1)
+@ControllerAdvice
 public class ResponseExceptionHandler {
 
     private static final Map<String, HttpStatus> STATUS_MAP = new HashMap<>(ErrCodeType.values().length);
