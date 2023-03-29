@@ -14,7 +14,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/09 11:36
+ * @date 2023/03/27 23:06
  */
 
 /**
@@ -24,10 +24,11 @@ import lombok.Data;
 @Data
 @TableName(value = "sys_config")
 public class SysConfig {
+    public static final String COL_TITLE = "title";
     /**
      * 参数主键
      */
-    @TableId(value = "config_id", type = IdType.INPUT)
+    @TableId(value = "config_id", type = IdType.AUTO)
     @ApiModelProperty(value = "参数主键")
     private Integer configId;
 
@@ -53,10 +54,10 @@ public class SysConfig {
     private String configValue;
 
     /**
-     * 系统内置（Y是 N否）
+     * 系统内置
      */
     @TableField(value = "config_type")
-    @ApiModelProperty(value = "系统内置（Y是 N否）")
+    @ApiModelProperty(value = "系统内置")
     private String configType;
 
     /**

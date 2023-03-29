@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.retry.annotation.Retryable;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -29,6 +31,37 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     @Value("${my.cache.expired}")
     private Integer dynamicMemoryExpiredMinutes;
 
+    @Retryable(value = DynamicMemoryCacheExpiredException.class, maxAttempts = 2)
+    public List<T> getAllCache() {
+        List<T> resList = new ArrayList<>();
+        Collection<String> cacheNames = dynamicMemoryCacheManager.getCacheNames();
+        if (CollectionUtils.isNotEmpty(cacheNames)) {
+            for (String key : cacheNames) {
+                if (dynamicMemoryCacheManager.isExpired(getCacheName(), key)) {
+                    refresh();
+                    throw new DynamicMemoryCacheExpiredException();
+                } else {
+                    resList.add(dynamicMemoryCacheManager.getCacheObj(getCacheName(), key, entityClass));
+                }
+            }
+        }
+        return resList;
+    }
+
+    /**
+     * 获取缓存数据列表
+     *
+     * @return
+     */
+    protected abstract Collection<T> getCacheData();
+
+    /**
+     * 获取缓存id
+     *
+     * @param obj
+     * @return
+     */
+    protected abstract Object getCacheKey(T obj);
 
     @Retryable(value = DynamicMemoryCacheExpiredException.class, maxAttempts = 2)
     public T getCache(Object key) {
@@ -55,7 +88,7 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
 
     @Override
     public void init() {
-        List<T> cacheDataList = getCacheData();
+        Collection<T> cacheDataList = getCacheData();
         if (CollectionUtils.isNotEmpty(cacheDataList)) {
             for (T cacheData : cacheDataList) {
                 dynamicMemoryCacheManager.putCacheObj(this.getCacheName(), getCacheKey(cacheData), cacheData);
@@ -63,21 +96,6 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
         }
 
     }
-
-    /**
-     * 获取缓存数据列表
-     *
-     * @return
-     */
-    protected abstract List<T> getCacheData();
-
-    /**
-     * 获取缓存id
-     *
-     * @param obj
-     * @return
-     */
-    protected abstract Object getCacheKey(T obj);
 
     @Override
     public int getExpired() {

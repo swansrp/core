@@ -16,7 +16,7 @@ import java.util.Map;
  * @Package: com.srct.service.constant.dict
  */
 @Getter
-@MetaDict("CORRECT_DICT")
+@MetaDict(value = "CORRECT_DICT", remark = "真假字典")
 @AllArgsConstructor
 public enum CorrectDict implements Dict {
     /**

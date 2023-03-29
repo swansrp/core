@@ -69,15 +69,15 @@ spring:
       strict: false
       datasource:
         master:
-          driverClassName: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://${my.master-db.config.url}:${my.master-db.config.port}/${my.master-db.config.db}?${my.master-db.config.property}
+          driverClassName: ${my.master-db.config.driver}
+          url: jdbc:${my.master-db.config.type}://${my.master-db.config.url}:${my.master-db.config.port}/${my.master-db.config.db}?${my.master-db.config.property}
           username: ${my.master-db.config.username}
           password: ${my.master-db.config.password}
         # 从库数据源
         slave:
           lazy: true
-          driverClassName: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://${my.slave-db.config.url}:${my.slave-db.config.port}/${my.slave-db.config.db}?${my.slave-db.config.property}
+          driverClassName: ${my.slave-db.config.driver}
+          url: jdbc:${my.slave-db.config.type}://${my.slave-db.config.url}:${my.slave-db.config.port}/${my.slave-db.config.db}?${my.slave-db.config.property}
           username: ${my.slave-db.config.username}
           password: ${my.slave-db.config.password}
   # redis 配置

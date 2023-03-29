@@ -14,13 +14,15 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
+@MetaParam
 public enum ParamFrame implements Param {
     /**
      * 系统参数
      */
-    CACHE_INIT_MODE("1", "缓存加载模式");
+    CACHE_INIT_MODE("缓存加载模式", "1", "1:redis, 0:内存");
 
 
+    private final String title;
     private final String defaultValue;
     private final String remark;
 

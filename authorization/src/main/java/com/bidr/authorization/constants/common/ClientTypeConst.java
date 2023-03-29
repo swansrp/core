@@ -16,7 +16,7 @@ import java.util.HashMap;
  */
 @Getter
 @AllArgsConstructor
-@MetaDict("CLIENT_TYPE_DICT")
+@MetaDict(value = "CLIENT_TYPE_DICT", remark = "客户端类型")
 public enum ClientTypeConst implements Dict {
     /**
      *

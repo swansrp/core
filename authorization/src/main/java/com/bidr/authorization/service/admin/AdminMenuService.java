@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.repository.AcMenuService;
 import com.bidr.kernel.constant.CommonConst;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Title: AdminMenuService
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AdminMenuService extends AcMenuService {
 
+    @Transactional(rollbackFor = Exception.class)
     public void addMenu(AcMenu entity, MenuTypeDict menuType) {
         entity.setMenuType(menuType.getValue());
         entity.setStatus(CommonConst.YES);

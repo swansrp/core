@@ -9,9 +9,11 @@
  */
 package com.bidr.kernel.validate;
 
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.Map;
@@ -20,7 +22,7 @@ public class Validator {
 
     private static final String YES = "1";
 
-    public static void assertException(ErrCode code, String... parameters) {
+    public static <T> T assertException(ErrCode code, String... parameters) {
         throw new ServiceException(code, parameters);
     }
 
@@ -95,7 +97,7 @@ public class Validator {
     }
 
     public static void assertFalse(Boolean param, ErrCode code, String... parameters) {
-        if (true == param) {
+        if (param) {
             throw new ServiceException(code, parameters);
         }
     }

@@ -26,3 +26,7 @@ public class SysConfigService extends BaseSqlRepo<SysConfigDao, SysConfig> {
     }
 }
 
+
+
+
+

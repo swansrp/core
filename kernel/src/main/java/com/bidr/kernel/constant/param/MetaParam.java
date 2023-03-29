@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MetaParam {
     /**
-     * 字典名
+     * 参数名
      */
-    String value();
+    String value() default "";
 }

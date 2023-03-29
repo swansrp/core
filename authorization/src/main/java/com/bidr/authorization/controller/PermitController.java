@@ -22,31 +22,31 @@ import java.util.List;
  */
 @Api(value = "权限操作", tags = "权限操作")
 @RestController("PermitController")
-@RequestMapping(value = "")
+@RequestMapping(value = "/menu")
 public class PermitController {
     @Resource
     private MenuService menuService;
 
     @ApiOperation(value = "获取主菜单树", notes = "登录后准入")
-    @RequestMapping(value = "/menu/main", method = RequestMethod.GET)
+    @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getMainMenuTree() {
         return menuService.getMenuTree();
     }
 
     @ApiOperation(value = "获取主菜单列表", notes = "登录后准入")
-    @RequestMapping(value = "/menu/main/list", method = RequestMethod.GET)
+    @RequestMapping(value = "/main/list", method = RequestMethod.GET)
     public List<MenuTreeItem> getMainMenuList() {
         return menuService.getMenuList();
     }
 
     @ApiOperation(value = "获取子菜单树", notes = "登录后准入")
-    @RequestMapping(value = "/menu/sub/tree", method = RequestMethod.GET)
+    @RequestMapping(value = "/sub/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
         return menuService.getSubMenuTree(req);
     }
 
     @ApiOperation(value = "获取子菜单列表", notes = "登录后准入")
-    @RequestMapping(value = "/menu/sub/list", method = RequestMethod.GET)
+    @RequestMapping(value = "/sub/list", method = RequestMethod.GET)
     public List<MenuTreeItem> getSubMenuList(MenuTreeReq req) {
         return menuService.getSubMenuList(req);
     }

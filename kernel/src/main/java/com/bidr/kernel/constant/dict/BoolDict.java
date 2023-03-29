@@ -15,7 +15,7 @@ import java.util.HashMap;
  * @Package: com.srct.service.constant.dict
  */
 
-@MetaDict("BOOLEAN_DICT")
+@MetaDict(value = "BOOLEAN_DICT", remark = "是否字典")
 @Getter
 @AllArgsConstructor
 public enum BoolDict implements Dict {

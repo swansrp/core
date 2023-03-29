@@ -14,111 +14,127 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/09 11:40
+ * @date 2023/03/29 13:23
  */
+
 /**
-    * 字典数据表
-    */
-@ApiModel(value="字典数据表")
+ * 字典数据表
+ */
+@ApiModel(value = "字典数据表")
 @Data
 @TableName(value = "sys_dict")
 public class SysDict {
+    public static final String COL_TITLE = "title";
     /**
      * 字典编码
      */
-    @TableId(value = "dict_id", type = IdType.INPUT)
-    @ApiModelProperty(value="字典编码")
+    @TableId(value = "dict_id", type = IdType.AUTO)
+    @ApiModelProperty(value = "字典编码")
     private Long dictId;
 
     /**
      * 字典父节点
      */
     @TableField(value = "dict_pid")
-    @ApiModelProperty(value="字典父节点")
+    @ApiModelProperty(value = "字典父节点")
     private Long dictPid;
 
     /**
      * 字典排序
      */
     @TableField(value = "dict_sort")
-    @ApiModelProperty(value="字典排序")
+    @ApiModelProperty(value = "字典排序")
     private Integer dictSort;
-
-    /**
-     * 字典标签
-     */
-    @TableField(value = "dict_label")
-    @ApiModelProperty(value="字典标签")
-    private String dictLabel;
-
-    /**
-     * 字典键值
-     */
-    @TableField(value = "dict_value")
-    @ApiModelProperty(value="字典键值")
-    private String dictValue;
 
     /**
      * 字典类型
      */
     @TableField(value = "dict_name")
-    @ApiModelProperty(value="字典类型")
+    @ApiModelProperty(value = "字典类型")
     private String dictName;
+
+    /**
+     * 字典显示名称
+     */
+    @TableField(value = "dict_title")
+    @ApiModelProperty(value = "字典显示名称")
+    private String dictTitle;
+
+    /**
+     * 字典项名称
+     */
+    @TableField(value = "dict_item")
+    @ApiModelProperty(value = "字典项名称")
+    private String dictItem;
+
+    /**
+     * 字典键值
+     */
+    @TableField(value = "dict_value")
+    @ApiModelProperty(value = "字典键值")
+    private String dictValue;
+
+    /**
+     * 字典标签
+     */
+    @TableField(value = "dict_label")
+    @ApiModelProperty(value = "字典标签")
+    private String dictLabel;
 
     /**
      * 是否默认（1是 0否）
      */
     @TableField(value = "is_default")
-    @ApiModelProperty(value="是否默认（1是 0否）")
+    @ApiModelProperty(value = "是否默认（1是 0否）")
     private String isDefault;
 
     /**
      * 状态（0正常 1停用）
      */
     @TableField(value = "`status`")
-    @ApiModelProperty(value="状态（0正常 1停用）")
+    @ApiModelProperty(value = "状态（0正常 1停用）")
     private String status;
 
     /**
      * 是否显示
      */
     @TableField(value = "`show`")
-    @ApiModelProperty(value="是否显示")
+    @ApiModelProperty(value = "是否显示")
     private String show;
 
     /**
      * 创建者
      */
     @TableField(value = "create_by")
-    @ApiModelProperty(value="创建者")
+    @ApiModelProperty(value = "创建者")
     private String createBy;
 
     /**
      * 创建时间
      */
     @TableField(value = "create_time")
-    @ApiModelProperty(value="创建时间")
+    @ApiModelProperty(value = "创建时间")
     private Date createTime;
 
     /**
      * 更新者
      */
     @TableField(value = "update_by")
-    @ApiModelProperty(value="更新者")
+    @ApiModelProperty(value = "更新者")
     private String updateBy;
 
     /**
      * 更新时间
      */
     @TableField(value = "update_time")
-    @ApiModelProperty(value="更新时间")
+    @ApiModelProperty(value = "更新时间")
     private Date updateTime;
 
     /**
      * 备注
      */
     @TableField(value = "remark")
-    @ApiModelProperty(value="备注")
+    @ApiModelProperty(value = "备注")
     private String remark;
 
     public static final String COL_DICT_ID = "dict_id";
@@ -127,11 +143,15 @@ public class SysDict {
 
     public static final String COL_DICT_SORT = "dict_sort";
 
-    public static final String COL_DICT_LABEL = "dict_label";
+    public static final String COL_DICT_NAME = "dict_name";
+
+    public static final String COL_DICT_TITLE = "dict_title";
+
+    public static final String COL_DICT_ITEM = "dict_item";
 
     public static final String COL_DICT_VALUE = "dict_value";
 
-    public static final String COL_DICT_NAME = "dict_name";
+    public static final String COL_DICT_LABEL = "dict_label";
 
     public static final String COL_IS_DEFAULT = "is_default";
 

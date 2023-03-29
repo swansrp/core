@@ -5,15 +5,19 @@ import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.param.MetaParam;
 import com.bidr.kernel.constant.param.Param;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
+import com.bidr.platform.constant.err.ConfigErrorCode;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.repository.SysConfigService;
+import com.diboot.core.util.D;
+import org.apache.commons.collections4.CollectionUtils;
+import org.jetbrains.annotations.NotNull;
 import org.reflections.Reflections;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: SysConfigCacheService
@@ -26,9 +30,12 @@ import java.util.Set;
 public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
     @Resource
     private SysConfigService sysConfigService;
+    @Lazy
+    @Resource
+    private SysConfigCacheService self;
 
     @Override
-    protected List<SysConfig> getCacheData() {
+    protected Collection<SysConfig> getCacheData() {
         List<SysConfig> list = sysConfigService.getSysConfigCache();
         addDefaultParameter(list);
         return list;
@@ -36,20 +43,17 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
 
     @SuppressWarnings("rawtypes")
     private void addDefaultParameter(List<SysConfig> list) {
-        Map<String, SysConfig> map = ReflectionUtil.reflectToMap(list, "configName");
+        Map<String, SysConfig> map = ReflectionUtil.reflectToMap(list, "configKey");
         Reflections reflections = new Reflections("com.bidr");
         Set<Class<?>> metaParamClass = reflections.getTypesAnnotatedWith(MetaParam.class);
         for (Class<?> clazz : metaParamClass) {
             if (Enum.class.isAssignableFrom(clazz) && Param.class.isAssignableFrom(clazz)) {
                 for (Object enumItem : clazz.getEnumConstants()) {
-                    String paramId = ((Enum) enumItem).name();
-                    if (map.get(paramId) == null) {
+                    String configKey = ((Enum) enumItem).name();
+                    if (map.get(configKey) == null) {
                         Param param = (Param) enumItem;
-                        SysConfig item = new SysConfig();
-                        item.setConfigName(clazz.getAnnotation(MetaDict.class).value());
-                        item.setConfigKey(paramId);
-                        item.setConfigValue(param.getDefaultValue());
-                        item.setRemark(param.getRemark());
+                        SysConfig item = buildSysConfig(clazz, configKey, param);
+                        sysConfigService.insert(item);
                         list.add(item);
                     }
                 }
@@ -57,9 +61,27 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
         }
     }
 
+    private SysConfig buildSysConfig(Class<?> clazz, String configKey, Param param) {
+        SysConfig item = new SysConfig();
+        item.setConfigName(param.getTitle());
+        item.setConfigKey(configKey);
+        item.setConfigValue(param.getDefaultValue());
+        item.setRemark(param.getRemark());
+        item.setCreateTime(new Date());
+        item.setUpdateTime(new Date());
+        return item;
+    }
+
     @Override
     protected Object getCacheKey(SysConfig config) {
-        return config.getConfigName() + config.getConfigKey();
+        return config.getConfigKey();
+    }
+
+
+    public String getSysConfigValue(String configKey) {
+        SysConfig cache = self.getCache(configKey);
+        Validator.assertNotNull(cache, ConfigErrorCode.PARAM_IS_NOT_EXISTED, configKey);
+        return cache.getConfigValue();
     }
 
 }

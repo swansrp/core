@@ -1,5 +1,6 @@
 package com.bidr.platform.dao.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.platform.dao.entity.SysConfig;
 import org.apache.ibatis.annotations.Mapper;
@@ -9,7 +10,7 @@ import org.apache.ibatis.annotations.Mapper;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/09 11:36
+ * @date 2023/03/27 23:06
  */
 @Mapper
 public interface SysConfigDao extends MyBaseMapper<SysConfig> {

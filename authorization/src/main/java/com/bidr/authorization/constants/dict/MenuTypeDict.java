@@ -14,7 +14,7 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-@MetaDict("MENU_TYPE_DICT")
+@MetaDict(value = "MENU_TYPE_DICT", remark = "菜单类型")
 public enum MenuTypeDict implements Dict {
     /**
      * 菜单类型

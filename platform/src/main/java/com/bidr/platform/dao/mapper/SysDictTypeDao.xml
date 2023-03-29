@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.platform.dao.mapper.SysDictTypeDao">
+  <resultMap id="BaseResultMap" type="com.bidr.platform.dao.entity.SysDictType">
+    <!--@mbg.generated-->
+    <!--@Table sys_dict_type-->
+    <id column="dict_name" jdbcType="VARCHAR" property="dictName" />
+    <result column="dict_title" jdbcType="VARCHAR" property="dictTitle" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    dict_name, dict_title
+  </sql>
+</mapper>

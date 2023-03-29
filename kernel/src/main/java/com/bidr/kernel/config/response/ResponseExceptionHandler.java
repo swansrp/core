@@ -30,7 +30,7 @@ public class ResponseExceptionHandler {
     private static final Map<String, HttpStatus> STATUS_MAP = new HashMap<>(ErrCodeType.values().length);
 
     static {
-        STATUS_MAP.put(ErrCodeType.SYSTEM.getValue(), HttpStatus.INTERNAL_SERVER_ERROR);
+        STATUS_MAP.put(ErrCodeType.SYSTEM.getValue(), HttpStatus.OK);
         STATUS_MAP.put(ErrCodeType.BIZ.getValue(), HttpStatus.OK);
         STATUS_MAP.put(ErrCodeType.AUTH.getValue(), HttpStatus.UNAUTHORIZED);
     }

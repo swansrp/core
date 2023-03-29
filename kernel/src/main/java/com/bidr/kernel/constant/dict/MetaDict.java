@@ -19,4 +19,11 @@ public @interface MetaDict {
      * 字典名
      */
     String value();
+
+    /**
+     * 中文名
+     */
+    String remark();
+
+
 }

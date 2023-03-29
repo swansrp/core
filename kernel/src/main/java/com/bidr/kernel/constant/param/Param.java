@@ -9,15 +9,26 @@ package com.bidr.kernel.constant.param;
  */
 public interface Param {
     /**
+     * 参数名称
+     *
+     * @return
+     */
+    String getTitle();
+
+    /**
      * 默认值
      *
      * @return
      */
     String getDefaultValue();
+
     /**
      * 参数注释
      *
      * @return
      */
-    String getRemark();
+    default String getRemark() {
+        return "";
+    }
+
 }

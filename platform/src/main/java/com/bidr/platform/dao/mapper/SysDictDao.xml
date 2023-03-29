@@ -7,9 +7,11 @@
     <id column="dict_id" jdbcType="BIGINT" property="dictId" />
     <result column="dict_pid" jdbcType="BIGINT" property="dictPid" />
     <result column="dict_sort" jdbcType="INTEGER" property="dictSort" />
-    <result column="dict_label" jdbcType="VARCHAR" property="dictLabel" />
-    <result column="dict_value" jdbcType="VARCHAR" property="dictValue" />
     <result column="dict_name" jdbcType="VARCHAR" property="dictName" />
+    <result column="dict_title" jdbcType="VARCHAR" property="dictTitle" />
+    <result column="dict_item" jdbcType="VARCHAR" property="dictItem" />
+    <result column="dict_value" jdbcType="VARCHAR" property="dictValue" />
+    <result column="dict_label" jdbcType="VARCHAR" property="dictLabel" />
     <result column="is_default" jdbcType="CHAR" property="isDefault" />
     <result column="status" jdbcType="CHAR" property="status" />
     <result column="show" jdbcType="CHAR" property="show" />
@@ -21,7 +23,7 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    dict_id, dict_pid, dict_sort, dict_label, dict_value, dict_name, is_default, `status`, 
-    `show`, create_by, create_time, update_by, update_time, remark
+    dict_id, dict_pid, dict_sort, dict_name, dict_title, dict_item, dict_value, dict_label, 
+    is_default, `status`, `show`, create_by, create_time, update_by, update_time, remark
   </sql>
 </mapper>
