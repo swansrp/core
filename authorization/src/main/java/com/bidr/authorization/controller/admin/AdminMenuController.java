@@ -3,6 +3,9 @@ package com.bidr.authorization.controller.admin;
 import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.service.admin.AdminMenuService;
+import com.bidr.authorization.vo.menu.MenuTreeItem;
+import com.bidr.authorization.vo.menu.MenuTreeReq;
+import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
@@ -11,6 +14,7 @@ import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.IdPidReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +40,18 @@ public class AdminMenuController extends BaseAdminController<AcMenu> {
     @Resource
     private AdminMenuService adminMenuService;
 
+    @ApiOperation(value = "获取主菜单树", notes = "登录后准入")
+    @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
+    public List<MenuTreeRes> getMainMenuTree() {
+        return adminMenuService.getMenuTree();
+    }
+
+    @ApiOperation(value = "获取子菜单树", notes = "登录后准入")
+    @RequestMapping(value = "/sub/tree", method = RequestMethod.GET)
+    public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
+        return adminMenuService.getSubMenuTree(req);
+    }
+
     @RequestMapping(value = "/add/main", method = RequestMethod.POST)
     public Boolean addMainMenu(@RequestBody AcMenu entity) {
         adminMenuService.addMenu(entity, MenuTypeDict.MENU);
@@ -60,11 +76,6 @@ public class AdminMenuController extends BaseAdminController<AcMenu> {
         entity.setMenuType(MenuTypeDict.BUTTON.getValue());
         entity.setKey(entity.getMenuId());
         return getRepo().updateById(entity);
-    }
-
-    @Override
-    protected BaseSqlRepo getRepo() {
-        return adminMenuService;
     }
 
     @RequestMapping(value = "/enable", method = RequestMethod.POST)
