@@ -9,8 +9,8 @@
  */
 package com.bidr.kernel.utils;
 
-import com.bidr.kernel.constant.db.SqlConstant;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.constant.db.SqlConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -75,7 +75,7 @@ public class DbUtil {
         Map<T, List<Object>> map = new LinkedHashMap<>();
         if (dataList.get(0) instanceof Map) {
             for (Object data : dataList) {
-                T parentObj = (T) ReflectionUtil.copy( (Map) data, targetClass);
+                T parentObj = (T) ReflectionUtil.copy((Map) data, targetClass);
                 List<Object> many = map.getOrDefault(parentObj, new ArrayList<>());
                 many.add(data);
                 map.put(parentObj, many);
@@ -124,6 +124,12 @@ public class DbUtil {
 
     public static <T> T buildEntity(Map<String, Object> entityMap, Class<T> clazz) {
         return ReflectionUtil.copy(entityMap, clazz);
+    }
+
+    public static <T, R> Page<R> page(Page<T> page, List<R> targetList) {
+        Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        res.setRecords(targetList);
+        return res;
     }
 
     @Retention(RetentionPolicy.RUNTIME)

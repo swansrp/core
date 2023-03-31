@@ -11,6 +11,7 @@ import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
 import com.bidr.platform.vo.dict.UpdateDictDefaultReq;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,16 +38,19 @@ public class AdminDictController extends BaseAdminController<SysDict> {
     private final DictService dictService;
     private final SysDictService sysDictService;
 
+    @ApiOperation("根据字典中文名模糊查询")
     @RequestMapping(path = {"/list/dictTitle"}, method = {RequestMethod.GET})
     public List<KeyValueResVO> getDictNameList(String name) {
         return dictService.getNameList(name);
     }
 
+    @ApiOperation("根据字典名查询")
     @RequestMapping(path = {"/list/dictName"}, method = {RequestMethod.GET})
     public List<SysDict> getDictByName(String dictName) {
         return dictService.getSysDictByName(dictName);
     }
 
+    @ApiOperation("添加字典项")
     @RequestMapping(path = {"/add"}, method = {RequestMethod.POST})
     public Boolean addDict(@RequestBody AddDictItemReq req) {
         boolean result = dictService.addDictItem(req);
@@ -54,6 +58,7 @@ public class AdminDictController extends BaseAdminController<SysDict> {
         return null;
     }
 
+    @ApiOperation("字典项顺序更新")
     @RequestMapping(value = "/order/update", method = RequestMethod.POST)
     public Boolean updateOrder(@RequestBody List<IdOrderReqVO> idOrderReqVOList) {
         List<SysDict> entityList = new ArrayList<>();
@@ -68,7 +73,7 @@ public class AdminDictController extends BaseAdminController<SysDict> {
         }
         return null;
     }
-
+    @ApiOperation("默认字典项更新")
     @RequestMapping(value = "/default/item/update", method = RequestMethod.POST)
     public Boolean updateDefault(@RequestBody UpdateDictDefaultReq vo) {
         dictService.replaceDefaultDictItem(vo);

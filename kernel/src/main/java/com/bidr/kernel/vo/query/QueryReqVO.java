@@ -17,8 +17,8 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class QueryReqVO extends ReqBaseVO {
     @ApiModelProperty("当前页")
-    private Long currentPage;
+    private Long currentPage = 1L;
     @ApiModelProperty("每页大小")
-    private Long pageSize;
+    private Long pageSize = 20L;
 
 }

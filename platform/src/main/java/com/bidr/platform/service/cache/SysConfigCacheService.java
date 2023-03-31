@@ -1,17 +1,14 @@
 package com.bidr.platform.service.cache;
 
 import com.bidr.kernel.cache.DynamicMemoryCache;
-import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.param.MetaParam;
 import com.bidr.kernel.constant.param.Param;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.constant.err.ConfigErrorCode;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.repository.SysConfigService;
-import com.diboot.core.util.D;
-import org.apache.commons.collections4.CollectionUtils;
-import org.jetbrains.annotations.NotNull;
 import org.reflections.Reflections;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -77,6 +74,19 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
         return config.getConfigKey();
     }
 
+    public Boolean getSysConfigBool(Param param) {
+        return StringUtil.convertSwitch(getSysConfigValue(param));
+    }
+
+    public String getSysConfigValue(Param param) {
+        SysConfig cache = self.getCache(param.name());
+        Validator.assertNotNull(cache, ConfigErrorCode.PARAM_IS_NOT_EXISTED, param.getTitle());
+        return cache.getConfigValue();
+    }
+
+    public Boolean getSysConfigBool(String configKey) {
+        return StringUtil.convertSwitch(getSysConfigValue(configKey));
+    }
 
     public String getSysConfigValue(String configKey) {
         SysConfig cache = self.getCache(configKey);

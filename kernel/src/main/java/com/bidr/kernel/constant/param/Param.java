@@ -9,6 +9,13 @@ package com.bidr.kernel.constant.param;
  */
 public interface Param {
     /**
+     * 参数key
+     *
+     * @return
+     */
+    String name();
+
+    /**
      * 参数名称
      *
      * @return

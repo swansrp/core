@@ -80,7 +80,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(int currentPage, int pageSize) {
+    public Page<T> select(long currentPage, long pageSize) {
         return super.page(new Page<>(currentPage, pageSize));
     }
 
@@ -90,7 +90,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(Wrapper<T> wrapper, int currentPage, int pageSize) {
+    public Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize) {
         return super.page(new Page<>(currentPage, pageSize), wrapper);
     }
 
@@ -101,7 +101,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(Map<String, Object> propertyMap, int currentPage, int pageSize) {
+    public Page<T> select(Map<String, Object> propertyMap, long currentPage, long pageSize) {
         QueryWrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
         return super.page(new Page<>(currentPage, pageSize), wrapper);
     }
@@ -113,7 +113,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(String propertyName, List<?> propertyList, int currentPage, int pageSize) {
+    public Page<T> select(String propertyName, List<?> propertyList, long currentPage, long pageSize) {
         QueryWrapper<T> wrapper = super.getQueryWrapper(propertyName, propertyList);
         return super.page(new Page<>(currentPage, pageSize), wrapper);
     }
