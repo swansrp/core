@@ -4,6 +4,7 @@ import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.DictCacheService;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,6 +28,7 @@ public class SystemDictController {
 
 
     @RequestMapping(path = {""}, method = {RequestMethod.GET})
+    @ApiOperation(value = "获取字典")
     public List<KeyValueResVO> getDict(String dictName) {
         return dictCacheService.getKeyValue(dictName);
     }

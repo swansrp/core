@@ -88,13 +88,14 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
 
     @Override
     public void init() {
-        Collection<T> cacheDataList = getCacheData();
-        if (CollectionUtils.isNotEmpty(cacheDataList)) {
-            for (T cacheData : cacheDataList) {
-                dynamicMemoryCacheManager.putCacheObj(this.getCacheName(), getCacheKey(cacheData), cacheData);
+        synchronized (this) {
+            Collection<T> cacheDataList = getCacheData();
+            if (CollectionUtils.isNotEmpty(cacheDataList)) {
+                for (T cacheData : cacheDataList) {
+                    dynamicMemoryCacheManager.putCacheObj(this.getCacheName(), getCacheKey(cacheData), cacheData);
+                }
             }
         }
-
     }
 
     @Override

@@ -16,7 +16,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MetaTreeDict {
     /**
-     * 字典树名
+     * 字典名
      */
     String value();
+
+    /**
+     * 中文名
+     */
+    String remark();
 }
