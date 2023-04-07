@@ -472,6 +472,17 @@ public class ReflectionUtil {
         return (T) object;
     }
 
+    public static <T, R> List<R> getFieldList(List<T> list, GetFunc<T, R> getFunc) {
+        if (CollectionUtils.isEmpty(list)) {
+            return new ArrayList<>();
+        }
+        List<R> res = new ArrayList<>();
+        list.forEach(item -> {
+            res.add(getFunc.apply(item));
+        });
+        return res;
+    }
+
     public static Map<String, String> getFieldDisplayMap(@NotNull Object obj) {
         Class<?> aClass = obj.getClass();
         return getFieldDisplayMap(aClass);

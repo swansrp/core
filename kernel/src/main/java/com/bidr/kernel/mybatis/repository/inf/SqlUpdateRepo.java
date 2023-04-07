@@ -31,4 +31,8 @@ public interface SqlUpdateRepo<T> {
 
     boolean insertOrUpdate(Collection<T> entity, UpdateWrapper<T> wrapper);
 
+    boolean insertOrUpdate(T entity);
+
+    boolean insertOrUpdate(Collection<T> entity);
+
 }

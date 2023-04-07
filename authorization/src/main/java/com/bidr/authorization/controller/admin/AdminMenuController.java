@@ -6,7 +6,6 @@ import com.bidr.authorization.service.admin.AdminMenuService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.controller.AdminController;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.vo.common.IdOrderReqVO;

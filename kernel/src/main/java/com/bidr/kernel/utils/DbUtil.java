@@ -132,6 +132,13 @@ public class DbUtil {
         return res;
     }
 
+    public static <T, R> Page<R> page(Page<T> page, Class<R> clazz) {
+        Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        List<R> targetList = ReflectionUtil.copyList(page.getRecords(), clazz);
+        res.setRecords(targetList);
+        return res;
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ElementType.FIELD})
     public @interface MyResultMap {

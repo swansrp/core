@@ -25,7 +25,6 @@ import java.util.List;
 public class DictBindProvider implements DictionaryServiceExtProvider {
 
     private final DictCacheService dictCacheService;
-    private final SysDictService sysDictService;
 
     @Override
     public void bindItemLabel(List voList, String setFieldName, String getFieldName, String type) {

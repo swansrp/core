@@ -1,6 +1,5 @@
 package com.bidr.kernel.mybatis.repository;
 
-import com.bidr.kernel.mybatis.repository.inf.*;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -205,11 +204,6 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public long count(Wrapper<T> wrapper) {
-        return super.getBaseMapper().selectCount(wrapper);
-    }
-
-    @Override
     public boolean updateById(T entity, boolean ignoreNull) {
         UpdateWrapper<T> wrapper = super.getIdWrapper(entity);
         return update(entity, wrapper, ignoreNull);
@@ -245,8 +239,12 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public boolean insertOrUpdate(T entity, UpdateWrapper<T> wrapper) {
-        if (super.multiIdExisted()) {
-            return super.saveOrUpdateByMultiId(entity);
+        if (wrapper == null) {
+            if (super.multiIdExisted()) {
+                return super.saveOrUpdateByMultiId(entity);
+            } else {
+                return super.saveOrUpdate(entity);
+            }
         } else {
             return super.saveOrUpdate(entity, wrapper);
         }
@@ -254,7 +252,30 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public boolean insertOrUpdate(Collection<T> entity, UpdateWrapper<T> wrapper) {
-        return false;
+        if (wrapper == null) {
+            if (super.multiIdExisted()) {
+                return super.saveOrUpdateBatchByMultiId(entity);
+            } else {
+                return super.saveOrUpdateBatch(entity);
+            }
+        } else {
+            return super.saveOrUpdateBatch(entity);
+        }
+    }
+
+    @Override
+    public boolean insertOrUpdate(T entity) {
+        return insertOrUpdate(entity, null);
+    }
+
+    @Override
+    public boolean insertOrUpdate(Collection<T> entity) {
+        return insertOrUpdate(entity, null);
+    }
+
+    @Override
+    public long count(Wrapper<T> wrapper) {
+        return super.getBaseMapper().selectCount(wrapper);
     }
 
 
