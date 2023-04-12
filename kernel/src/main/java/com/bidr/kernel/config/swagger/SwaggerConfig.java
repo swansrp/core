@@ -36,7 +36,6 @@ import java.util.List;
  * @author ruoyi
  */
 @Configuration
-@Profile(value = {"local", "dev", "stg"})
 @EnableOpenApi
 @EnableSwagger2
 public class SwaggerConfig {
