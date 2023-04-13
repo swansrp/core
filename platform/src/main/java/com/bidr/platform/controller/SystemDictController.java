@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Api(tags = {"系统基础接口"})
 @RestController
-@RequestMapping(path = {"/dict"})
+@RequestMapping(path = {"/web/dict"})
 public class SystemDictController {
     @Resource
     private DictCacheService dictCacheService;

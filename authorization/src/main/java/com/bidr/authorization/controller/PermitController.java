@@ -22,7 +22,7 @@ import java.util.List;
  */
 @Api(value = "权限操作", tags = "权限操作")
 @RestController("PermitController")
-@RequestMapping(value = "/menu")
+@RequestMapping(value = "/web/menu")
 public class PermitController {
     @Resource
     private MenuService menuService;

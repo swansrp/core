@@ -3,8 +3,6 @@ package com.bidr.kernel.constant.err;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.HashMap;
-
 /**
  * Title: ErrCodeSys
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
@@ -20,6 +18,7 @@ public enum ErrCodeSys implements ErrCode {
      * 系统错误值
      */
     SUCCESS(0, "SUCCESS"),
+    NOTICE(0, "%s"),
 
     SYS_ERR(100, "系统错误"),
     SYS_ERR_MSG(101, "%s"),

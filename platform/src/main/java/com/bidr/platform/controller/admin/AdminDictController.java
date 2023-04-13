@@ -32,7 +32,7 @@ import java.util.List;
 @Api(tags = {"系统字典管理"})
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = {"/dict/item/admin"})
+@RequestMapping(path = {"/web/dict/item/admin"})
 public class AdminDictController extends BaseAdminController<SysDict> {
 
     private final DictService dictService;

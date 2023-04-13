@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = {"系统字典管理"})
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = {"/dict/admin"})
+@RequestMapping(path = {"/web/dict/admin"})
 public class AdminDictTypeController extends BaseAdminController<SysDictType> {
     private final DictService dictService;
 

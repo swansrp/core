@@ -2,6 +2,7 @@ package com.bidr.kernel.config.response;
 
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.err.ErrCodeType;
+import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.exception.ServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -41,6 +42,14 @@ public class ResponseExceptionHandler {
         log.error("", ex);
         Response<String> res = new Response(new ServiceException(ErrCodeSys.SYS_ERR));
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        return new ResponseEntity<>(res, status);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(value = NoticeException.class)
+    public static ResponseEntity<Response<String>> errorHandler(NoticeException ex) {
+        Response<String> res = new Response<>(null, ex.getMessage());
+        HttpStatus status = HttpStatus.OK;
         return new ResponseEntity<>(res, status);
     }
 

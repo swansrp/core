@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Api(tags = {"系统基础接口"})
 @RestController
-@RequestMapping(path = {"/tree"})
+@RequestMapping(path = {"/web/tree"})
 public class SystemTreeDictController {
     @Resource
     private DictTreeCacheService dictTreeCacheService;

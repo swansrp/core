@@ -31,4 +31,9 @@ public class Response<T> {
         this.status = new ApiResultStatus(ErrCodeSys.SUCCESS.getErrCode(), ErrCodeSys.SUCCESS.name(), null);
         this.payload = data;
     }
+
+    public Response(T data, String details) {
+        this.status = new ApiResultStatus(ErrCodeSys.SUCCESS.getErrCode(), ErrCodeSys.SUCCESS.name(), details);
+        this.payload = data;
+    }
 }

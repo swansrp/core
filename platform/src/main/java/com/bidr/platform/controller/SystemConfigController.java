@@ -18,7 +18,7 @@ import javax.annotation.Resource;
  */
 @Api(tags = {"系统基础接口"})
 @RestController
-@RequestMapping(path = {"/config"})
+@RequestMapping(path = {"'/web/config"})
 public class SystemConfigController {
     @Resource
     private SysConfigCacheService sysConfigCacheService;
