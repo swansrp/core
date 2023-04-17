@@ -6,9 +6,10 @@
     <!--@Table sys_dict_type-->
     <id column="dict_name" jdbcType="VARCHAR" property="dictName" />
     <result column="dict_title" jdbcType="VARCHAR" property="dictTitle" />
+    <result column="read_only" jdbcType="CHAR" property="readOnly" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    dict_name, dict_title
+    dict_name, dict_title, read_only
   </sql>
 </mapper>

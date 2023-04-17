@@ -2,6 +2,7 @@ package com.bidr.platform.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.dao.mapper.SysDictTypeDao;
 import org.apache.commons.lang3.StringUtils;
@@ -24,4 +25,12 @@ public class SysDictTypeService extends BaseSqlRepo<SysDictTypeDao, SysDictType>
                 .like(StringUtils.isNotEmpty(title), SysDictType::getDictTitle, title);
         return super.select(wrapper);
     }
+
+    public void deleteByDictTypeList(List<String> dictTypeList) {
+        LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()
+                .in(FuncUtil.isNotEmpty(dictTypeList), SysDictType::getDictName, dictTypeList);
+        super.delete(wrapper);
+    }
 }
+
+

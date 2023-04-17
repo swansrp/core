@@ -15,6 +15,7 @@
     <result column="is_default" jdbcType="CHAR" property="isDefault" />
     <result column="status" jdbcType="CHAR" property="status" />
     <result column="show" jdbcType="CHAR" property="show" />
+    <result column="read_only" jdbcType="CHAR" property="readOnly" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
@@ -24,6 +25,7 @@
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     dict_id, dict_pid, dict_sort, dict_name, dict_title, dict_item, dict_value, dict_label, 
-    is_default, `status`, `show`, create_by, create_time, update_by, update_time, remark
+    is_default, `status`, `show`, read_only, create_by, create_time, update_by, update_time, 
+    remark
   </sql>
 </mapper>

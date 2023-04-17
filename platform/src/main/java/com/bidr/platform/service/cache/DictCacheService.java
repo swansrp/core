@@ -37,6 +37,8 @@ import java.util.*;
  */
 @Service
 public class DictCacheService extends DynamicMemoryCache<Map<String, LinkedHashMap<String, SysDict>>> {
+
+    private static final Integer DICT_CACHE_EXPIRED = 60 * 24;
     @Resource
     private SysDictService sysDictService;
     @Resource
@@ -61,7 +63,6 @@ public class DictCacheService extends DynamicMemoryCache<Map<String, LinkedHashM
                     LinkedHashMap<String, SysDict> typeMap = map.getOrDefault(value.name(), new LinkedHashMap<>());
                     typeMap.put(value.getFunc.apply(dict), dict);
                     map.put(value.name(), typeMap);
-
                 }
                 resMap.put(dict.getDictName(), map);
             }
@@ -71,50 +72,34 @@ public class DictCacheService extends DynamicMemoryCache<Map<String, LinkedHashM
 
     @SuppressWarnings("rawtypes")
     private void addDictEnum(List<SysDict> list) {
-        Set<String> sysDictInDb = new TreeSet<>();
-        if (CollectionUtils.isNotEmpty(list)) {
-            for (SysDict sysDict : list) {
-                sysDictInDb.add(StringUtil.join(sysDict.getDictName(), sysDict.getDictValue()));
-            }
-        }
-        List<SysDictType> sysDictTypeList = sysDictTypeService.list();
-        Set<SysDictType> sysDictTypeSet = new HashSet<>();
-        if (CollectionUtils.isNotEmpty(sysDictTypeList)) {
-            sysDictTypeSet.addAll(sysDictTypeList);
-        }
-        Set<SysDictType> syncSysDictTypeSet = new HashSet<>();
-        Set<SysDict> syncSysDictSet = new HashSet<>();
         Reflections reflections = new Reflections("com.bidr");
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaDict.class);
+        Set<SysDictType> syncSysDictTypeSet = new HashSet<>();
+        Set<SysDict> syncSysDictSet = new HashSet<>();
         for (Class<?> clazz : metaDictClass) {
             if (Enum.class.isAssignableFrom(clazz) && Dict.class.isAssignableFrom(clazz) &&
                     clazz.isAnnotationPresent(MetaDict.class)) {
                 String dictName = clazz.getAnnotation(MetaDict.class).value();
                 String dictTitle = clazz.getAnnotation(MetaDict.class).remark();
                 SysDictType sysDictType = buildSysDictType(dictName, dictTitle);
-                if (!sysDictTypeSet.contains(sysDictType)) {
-                    syncSysDictTypeSet.add(sysDictType);
-                }
+                syncSysDictTypeSet.add(sysDictType);
                 for (Object enumItem : clazz.getEnumConstants()) {
                     SysDict item = buildSysDict(dictName, dictTitle, enumItem);
-                    if (!(sysDictInDb.contains(StringUtil.join(item.getDictName(), item.getDictValue())))) {
-                        syncSysDictSet.add(item);
-                        list.add(item);
-                    }
+                    list.add(item);
+                    syncSysDictSet.add(item);
                 }
             } else if (IDynamicDict.class.isAssignableFrom(clazz) && clazz.isAnnotationPresent(MetaDict.class)) {
                 String dictName = clazz.getAnnotation(MetaDict.class).value();
                 String dictTitle = clazz.getAnnotation(MetaDict.class).remark();
                 SysDictType sysDictType = buildSysDictType(dictName, dictTitle);
-                if (!sysDictTypeSet.contains(sysDictType)) {
-                    syncSysDictTypeSet.add(sysDictType);
-                }
+                syncSysDictTypeSet.add(sysDictType);
                 try {
                     IDynamicDict dynamicDictService = (IDynamicDict) webApplicationContext.getBean(clazz);
-                    List<SysDict> dynamicDictList = dynamicDictService.generate();
+                    Collection<SysDict> dynamicDictList = dynamicDictService.generate();
                     CollectionUtil.sort(dynamicDictList, Comparator.comparingInt(SysDict::getDictSort));
                     if (CollectionUtils.isNotEmpty(dynamicDictList)) {
                         list.addAll(dynamicDictList);
+                        syncSysDictSet.addAll(dynamicDictList);
                     }
                 } catch (BeansException e) {
                     e.printStackTrace();
@@ -129,6 +114,7 @@ public class DictCacheService extends DynamicMemoryCache<Map<String, LinkedHashM
         SysDictType sysDictType = new SysDictType();
         sysDictType.setDictName(dictName);
         sysDictType.setDictTitle(dictTitle);
+        sysDictType.setReadOnly(CommonConst.YES);
         return sysDictType;
     }
 
@@ -145,16 +131,27 @@ public class DictCacheService extends DynamicMemoryCache<Map<String, LinkedHashM
         item.setShow(dict.getShow());
         item.setDictSort(order);
         item.setStatus(CommonConst.YES);
+        item.setReadOnly(CommonConst.YES);
         item.setRemark(ReflectionUtil.getValue(enumItem, "label", String.class));
         return item;
     }
 
-    private void syncSysDictType(Collection<SysDictType> sysDictType) {
-        sysDictTypeService.saveBatch(sysDictType);
+    private void syncSysDictType(Collection<SysDictType> sysDictTypeList) {
+        List<String> dictTypeList = new ArrayList<>();
+        for (SysDictType dictType : sysDictTypeList) {
+            dictTypeList.add(dictType.getDictName());
+        }
+        sysDictTypeService.deleteByDictTypeList(dictTypeList);
+        sysDictTypeService.saveBatch(sysDictTypeList);
     }
 
-    private void syncSysDict(Collection<SysDict> item) {
-        sysDictService.saveBatch(item);
+    private void syncSysDict(Collection<SysDict> sysDictList) {
+        List<String> dictList = new ArrayList<>();
+        for (SysDict sysDict : sysDictList) {
+            dictList.add(sysDict.getDictName());
+        }
+        sysDictService.deleteByDictList(dictList);
+        sysDictService.saveBatch(sysDictList);
     }
 
     @Override
@@ -164,6 +161,11 @@ public class DictCacheService extends DynamicMemoryCache<Map<String, LinkedHashM
             return entry.getValue().getDictName();
         }
         return null;
+    }
+
+    @Override
+    public int getExpired() {
+        return DICT_CACHE_EXPIRED;
     }
 
     public SysDict getDictByName(String dictName, String name) {

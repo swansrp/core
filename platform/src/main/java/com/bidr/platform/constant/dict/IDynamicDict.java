@@ -5,7 +5,7 @@ import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.platform.dao.entity.SysDict;
 
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Title: IDynamicDict
@@ -20,7 +20,7 @@ public interface IDynamicDict {
      *
      * @return 字典列表
      */
-    List<SysDict> generate();
+    Collection<SysDict> generate();
 
     /**
      * 生成字典条目
@@ -33,6 +33,9 @@ public interface IDynamicDict {
     default SysDict buildSysDict(Object value, String display, Integer order) {
         SysDict item = new SysDict();
         String dictName = this.getClass().getAnnotation(MetaDict.class).value();
+        String title = this.getClass().getAnnotation(MetaDict.class).remark();
+        item.setReadOnly(CommonConst.YES);
+        item.setDictTitle(title);
         item.setDictName(dictName);
         item.setDictValue(StringUtil.parse(value));
         item.setDictLabel(display);

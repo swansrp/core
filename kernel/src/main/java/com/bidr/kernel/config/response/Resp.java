@@ -1,7 +1,11 @@
 package com.bidr.kernel.config.response;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.exception.NoticeException;
+import com.diboot.core.binding.Binder;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * Title: R
@@ -14,5 +18,20 @@ import lombok.Data;
 public class Resp {
     public static void notice(String noticeFormat, Object... parameter) {
         throw new NoticeException(String.format(noticeFormat, parameter));
+    }
+
+    public static <T, VO> VO convert(T entity, Class<VO> voClass) {
+        return Binder.convertAndBindRelations(entity, voClass);
+    }
+
+    public static <T, VO> List<VO> convert(List<T> entity, Class<VO> voClass) {
+        return Binder.convertAndBindRelations(entity, voClass);
+    }
+
+    public static <T, R> Page<R> convert(Page<T> page, Class<R> clazz) {
+        Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        List<R> targetList = Binder.convertAndBindRelations(page.getRecords(), clazz);
+        res.setRecords(targetList);
+        return res;
     }
 }

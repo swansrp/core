@@ -320,7 +320,7 @@ public class ReflectionUtil {
     }
 
     public static boolean setFieldValue(@NotNull Object target, @NotNull String fieldName, @NotNull Object value) {
-        return setFieldValue(target, fieldName, value, false);
+        return setFieldValue(target, fieldName, value, true);
     }
 
     public static boolean setFieldValue(@NotNull Object target, @NotNull String fieldName, @NotNull Object value,

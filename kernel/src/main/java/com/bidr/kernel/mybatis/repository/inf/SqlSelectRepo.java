@@ -25,13 +25,19 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
 
+    Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize, boolean searchCount);
+
     List<T> select(Map<String, Object> propertyMap);
 
     Page<T> select(Map<String, Object> propertyMap, long currentPage, long pageSize);
 
+    Page<T> select(Map<String, Object> propertyMap, long currentPage, long pageSize, boolean searchCount);
+
     List<T> select(String propertyName, List<?> propertyList);
 
     Page<T> select(String propertyName, List<?> propertyList, long currentPage, long pageSize);
+
+    Page<T> select(String propertyName, List<?> propertyList, long currentPage, long pageSize, boolean searchCount);
 
     T selectOne(Wrapper<T> wrapper);
 

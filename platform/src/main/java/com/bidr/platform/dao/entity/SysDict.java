@@ -14,7 +14,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/29 13:23
+ * @date 2023/04/14 09:01
  */
 
 /**
@@ -103,6 +103,13 @@ public class SysDict {
     private String show;
 
     /**
+     * 只读
+     */
+    @TableField(value = "read_only")
+    @ApiModelProperty(value = "只读")
+    private String readOnly;
+
+    /**
      * 创建者
      */
     @TableField(value = "create_by")
@@ -158,6 +165,8 @@ public class SysDict {
     public static final String COL_STATUS = "status";
 
     public static final String COL_SHOW = "show";
+
+    public static final String COL_READ_ONLY = "read_only";
 
     public static final String COL_CREATE_BY = "create_by";
 

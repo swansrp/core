@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.mapper.SysDictDao;
 import org.apache.commons.lang3.StringUtils;
@@ -64,7 +65,14 @@ public class SysDictService extends BaseSqlRepo<SysDictDao, SysDict> {
         LambdaUpdateWrapper<SysDict> wrapper = super.getUpdateWrapper().eq(SysDict::getDictName, dictName);
         return super.delete(wrapper);
     }
+
+    public void deleteByDictList(List<String> dictList) {
+        LambdaQueryWrapper<SysDict> wrapper = super.getQueryWrapper()
+                .in(FuncUtil.isNotEmpty(dictList), SysDict::getDictName, dictList);
+        super.delete(wrapper);
+    }
 }
+
 
 
 

@@ -2,6 +2,7 @@ package com.bidr.kernel.controller;
 
 import cn.hutool.core.util.StrUtil;
 import com.bidr.kernel.common.func.SetFunc;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -59,7 +60,7 @@ public abstract class AdminController<ENTITY, VO> {
     @ApiOperation("根据id获取详情")
     @RequestMapping(value = "/id", method = RequestMethod.GET)
     public VO queryById(IdReqVO req) {
-        return Binder.convertAndBindRelations(getRepo().selectById(req.getId()), voClass);
+        return Resp.convert(getRepo().selectById(req.getId()), voClass);
     }
 
 }
