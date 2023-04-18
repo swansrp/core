@@ -114,6 +114,7 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
         ctx = (WebApplicationContext) applicationContext;
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T invoke(String beanName, String methodName, Class<T> clazz, Object... parameterArray) {
         if (FuncUtil.isNotEmpty(parameterArray)) {
             List<Class<?>> classList = new ArrayList<>();
@@ -121,9 +122,9 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
                 classList.add(param.getClass());
             }
             validateBeanFunction(beanName, methodName, classList.toArray(new Class<?>[0]));
-            return (T) ReflectionUtil.invoke(beanName, methodName, parameterArray);
+            return (T) ReflectionUtil.invoke(BeanUtil.getBean(beanName), methodName, parameterArray);
         } else {
-            return (T) ReflectionUtil.invoke(beanName, methodName);
+            return (T) ReflectionUtil.invoke(BeanUtil.getBean(beanName), methodName);
         }
     }
 
