@@ -27,6 +27,8 @@ import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.ServletRequestHandledEvent;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 工具类-spring bean
@@ -40,10 +42,8 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
     private static final ScopeMetadataResolver scopeMetadataResolver = new AnnotationScopeMetadataResolver();
 
     private static final BeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
-
-    private static WebApplicationContext ctx = null;
-
     private static final String[] BLOCK_DISPLAY_REQUEST_URL = {"/actuator/prometheus"};
+    private static WebApplicationContext ctx = null;
 
     /**
      * 根据bean Class获取
@@ -112,6 +112,19 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
     public static void setContext(ApplicationContext applicationContext) {
         log.info("setApplicationContext");
         ctx = (WebApplicationContext) applicationContext;
+    }
+
+    public static <T> T invoke(String beanName, String methodName, Class<T> clazz, Object... parameterArray) {
+        if (FuncUtil.isNotEmpty(parameterArray)) {
+            List<Class<?>> classList = new ArrayList<>();
+            for (Object param : parameterArray) {
+                classList.add(param.getClass());
+            }
+            validateBeanFunction(beanName, methodName, classList.toArray(new Class<?>[0]));
+            return (T) ReflectionUtil.invoke(beanName, methodName, parameterArray);
+        } else {
+            return (T) ReflectionUtil.invoke(beanName, methodName);
+        }
     }
 
     public static void validateBeanFunction(String beanName, String methodName, Class<?>... parameterArray) {

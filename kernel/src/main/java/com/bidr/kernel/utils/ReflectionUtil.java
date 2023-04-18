@@ -624,8 +624,24 @@ public class ReflectionUtil {
         return map;
     }
 
-    public static Object invoke(Object obj, String methodName, Object... param) {
-        return ReflectionUtils.invokeMethod(getMethod(obj.getClass(), methodName), obj, param);
+    public static Object invoke(Object obj, String methodName, Object... paramArray) {
+        List<Class<?>> classList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(paramArray)) {
+            for (Object param : paramArray) {
+                classList.add(param.getClass());
+            }
+        }
+        if (FuncUtil.isNotEmpty(classList)) {
+            return ReflectionUtils.invokeMethod(
+                    getMethod(obj.getClass(), methodName, classList.toArray(new Class<?>[0])), obj, paramArray);
+        } else {
+            return ReflectionUtils.invokeMethod(getMethod(obj.getClass(), methodName), obj, paramArray);
+        }
+
+    }
+
+    public static Method getMethod(Class<?> clazz, String methodName, Class<?>... paramTypeArr) {
+        return ReflectionUtils.findMethod(clazz, methodName, paramTypeArr);
     }
 
     @SuppressWarnings("rawtypes")
@@ -637,7 +653,7 @@ public class ReflectionUtil {
         return ReflectionUtils.invokeMethod(method, obj, param);
     }
 
-    public static Method getMethod(Class<?> clazz, String methodName, Class<?>... paramTypeArr) {
-        return ReflectionUtils.findMethod(clazz, methodName, paramTypeArr);
+    public static Method getMethod(Object obj, String methodName, Class<?>... paramTypeArr) {
+        return ReflectionUtils.findMethod(obj.getClass(), methodName, paramTypeArr);
     }
 }
