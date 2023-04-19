@@ -34,4 +34,10 @@ public class Resp {
         res.setRecords(targetList);
         return res;
     }
+
+    public static <T, R> Page<R> convert(Page<T> page, List<R> targetList) {
+        Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        res.setRecords(targetList);
+        return res;
+    }
 }
