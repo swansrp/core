@@ -1,6 +1,7 @@
 package com.bidr.kernel.cache;
 
 import com.bidr.kernel.cache.exception.DynamicMemoryCacheExpiredException;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.diboot.core.cache.DynamicMemoryCacheManager;
 import org.apache.commons.collections4.CollectionUtils;
@@ -66,15 +67,21 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     @Retryable(value = DynamicMemoryCacheExpiredException.class, maxAttempts = 2)
     public T getCache(Object key) {
         if (key != null) {
-            if (dynamicMemoryCacheManager.isExpired(getCacheName(), key)) {
-                refresh();
-                throw new DynamicMemoryCacheExpiredException();
-            } else {
-                return dynamicMemoryCacheManager.getCacheObj(getCacheName(), key, entityClass);
+            synchronized (DynamicMemoryCache.class) {
+                if (FuncUtil.isEmpty(dynamicMemoryCacheManager.getCache(getCacheName()))) {
+                    refresh();
+                    throw new DynamicMemoryCacheExpiredException();
+                } else if (dynamicMemoryCacheManager.isExpired(getCacheName(), key)) {
+                    refresh();
+                    throw new DynamicMemoryCacheExpiredException();
+                } else {
+                    return dynamicMemoryCacheManager.getCacheObj(getCacheName(), key, entityClass);
+                }
             }
         } else {
             return null;
         }
+
     }
 
     @Override
