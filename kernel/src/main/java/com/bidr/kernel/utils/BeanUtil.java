@@ -124,6 +124,7 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
             validateBeanFunction(beanName, methodName, classList.toArray(new Class<?>[0]));
             return (T) ReflectionUtil.invoke(BeanUtil.getBean(beanName), methodName, parameterArray);
         } else {
+            validateBeanFunction(beanName, methodName);
             return (T) ReflectionUtil.invoke(BeanUtil.getBean(beanName), methodName);
         }
     }
