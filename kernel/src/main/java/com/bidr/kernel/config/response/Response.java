@@ -4,7 +4,9 @@ import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import io.swagger.annotations.ApiModelProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Title: Response
@@ -14,6 +16,7 @@ import lombok.Data;
  * @date 2021/1/2 21:26
  */
 @Data
+@NoArgsConstructor
 public class Response<T> {
     @ApiModelProperty("返回状态")
     private ApiResultStatus status;

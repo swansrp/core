@@ -7,7 +7,8 @@ import java.util.List;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.mapper.AcRoleDao;
- /**
+
+/**
  * Title: AcRoleService
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
@@ -18,3 +19,4 @@ import com.bidr.authorization.dao.mapper.AcRoleDao;
 public class AcRoleService extends BaseSqlRepo<AcRoleDao, AcRole> {
 
 }
+

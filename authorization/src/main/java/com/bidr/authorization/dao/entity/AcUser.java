@@ -15,7 +15,11 @@ import java.util.Date;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/17 10:02
+ * @date 2023/04/23 11:31
+ */
+
+/**
+ * 用户信息表
  */
 @ApiModel(value = "用户信息表")
 @Data
@@ -37,15 +41,15 @@ public class AcUser {
     public static final String COL_LOGIN_IP = "login_ip";
     public static final String COL_LOGIN_DATE = "login_date";
     public static final String COL_CREATE_BY = "create_by";
-    public static final String COL_CREATE_TIME = "create_time";
+    public static final String COL_CREATE_AT = "create_at";
     public static final String COL_UPDATE_BY = "update_by";
-    public static final String COL_UPDATE_TIME = "update_time";
+    public static final String COL_UPDATE_AT = "update_at";
     public static final String COL_REMARK = "remark";
     public static final String COL_VALID = "valid";
     /**
      * 用户ID
      */
-    @TableId(value = "user_id", type = IdType.INPUT)
+    @TableId(value = "user_id", type = IdType.AUTO)
     @ApiModelProperty(value = "用户ID")
     private Long userId;
     /**
@@ -141,9 +145,9 @@ public class AcUser {
     /**
      * 创建时间
      */
-    @TableField(value = "create_time")
+    @TableField(value = "create_at")
     @ApiModelProperty(value = "创建时间")
-    private Date createTime;
+    private Date createAt;
     /**
      * 更新者
      */
@@ -153,9 +157,9 @@ public class AcUser {
     /**
      * 更新时间
      */
-    @TableField(value = "update_time")
+    @TableField(value = "update_at")
     @ApiModelProperty(value = "更新时间")
-    private Date updateTime;
+    private Date updateAt;
     /**
      * 备注
      */

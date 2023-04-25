@@ -1,19 +1,19 @@
 package com.bidr.authorization.dao.mapper;
 
-import com.bidr.authorization.dao.entity.AcDept;
+import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Update;
 
 /**
- * Title: AcDeptDao
+ * Title: AcAccountDao
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/23 13:45
+ * @date 2023/04/23 13:34
  */
 @Mapper
-public interface AcDeptDao extends MyBaseMapper<AcDept> {
-    @Update("truncate table `ac_dept`")
+public interface AcAccountDao extends MyBaseMapper<AcAccount> {
+    @Update("truncate table `ac_account`")
     void truncate();
 }

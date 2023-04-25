@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -186,5 +187,21 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         return Arrays.stream(columns)
                 .map(c -> StringUtil.camelToUnderline(LambdaUtils.getName(c)) + " as " + LambdaUtils.getName(c))
                 .collect(Collectors.joining(StringPool.COMMA, StringPool.SPACE, StringPool.SPACE));
+    }
+
+    protected String getSelectSql() {
+        StringBuffer sb = new StringBuffer();
+        Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
+        map.forEach((name, field) -> {
+            if (!Modifier.isFinal(field.getModifiers())) {
+                sb.append(" `").append(StringUtil.camelToUnderline(name)).append("` as ").append(name).append(" ,");
+            }
+        });
+        String sql = sb.toString();
+        return sql.substring(0, sql.length() - 1);
+    }
+
+    protected String getSelectSqlName(SFunction<T, ?> column) {
+        return LambdaUtils.getName(column);
     }
 }

@@ -13,15 +13,15 @@
     <result column="dept_check_strictly" jdbcType="BOOLEAN" property="deptCheckStrictly" />
     <result column="status" jdbcType="CHAR" property="status" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
-    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
     <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
-    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     role_id, role_name, role_key, role_sort, data_scope, menu_check_strictly, dept_check_strictly, 
-    `status`, create_by, create_time, update_by, update_time, remark, `valid`
+    `status`, create_by, create_at, update_by, update_at, remark, `valid`
   </sql>
 </mapper>

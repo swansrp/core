@@ -2,6 +2,7 @@ package com.bidr.kernel.config.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Title: ApiResultStatus
@@ -12,6 +13,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class ApiResultStatus {
     private Integer code;
     private String msg;

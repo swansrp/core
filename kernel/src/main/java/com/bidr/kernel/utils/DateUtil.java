@@ -28,11 +28,13 @@ public class DateUtil {
     public static final String DATE = "yyyyMMdd";
     public static final String MONTH = "yyyyMM";
     public static final String DATE_DOT = "yyyy.MM.dd";
+
     public static final String TIME = "HHmmss";
     public static final String DATE_TIME = "yyyyMMddHHmmss";
     public static final String DATE_NORMAL = "yyyy-MM-dd";
     public static final String TIME_NORMAL = "HH:mm:ss";
     public static final String DATE_TIME_NORMAL = "yyyy-MM-dd HH:mm:ss";
+    public static final String DATE_TIME_T = "yyyy-MM-dd'T'HH:mm:ss";
     public static final String DATE_SLANT = "yyyy/MM/dd";
     public static final String DATE_DEFAULT = "EEE MMM dd HH:mm:ss zzz yyyy";
     public static final int QUANTUM_WEEK_DAY = 7;

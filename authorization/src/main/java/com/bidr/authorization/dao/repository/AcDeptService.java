@@ -1,12 +1,12 @@
 package com.bidr.authorization.dao.repository;
 
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import org.springframework.stereotype.Service;
-import javax.annotation.Resource;
-import java.util.List;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.mapper.AcDeptDao;
+import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Title: AcDeptService
@@ -17,6 +17,19 @@ import com.bidr.authorization.dao.mapper.AcDeptDao;
  */
 @Service
 public class AcDeptService extends BaseSqlRepo<AcDeptDao, AcDept> {
+    @Override
+    public void truncate() {
+        super.baseMapper.truncate();
+    }
 
+    public List<AcDept> getDepartmentByStatus(Integer status) {
+        LambdaQueryWrapper<AcDept> wrapper = super.getQueryWrapper().eq(AcDept::getStatus, status)
+                .orderByAsc(AcDept::getShowOrder);
+        return select(wrapper);
+    }
 }
+
+
+
+
 

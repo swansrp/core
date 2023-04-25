@@ -1,7 +1,6 @@
 package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.mapper.AcMenuDao;
@@ -21,12 +20,16 @@ import java.util.List;
 @Service
 public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
 
-    public List<AcMenu> getAllMenu() {
-        LambdaQueryWrapper wrapper1 = Wrappers.lambdaQuery(AcMenu.class).eq(AcMenu::getMenuType, 1);
-
-
+    public List<AcMenu> getMainMenu() {
         LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper()
                 .eq(AcMenu::getMenuType, MenuTypeDict.MENU.getValue()).eq(AcMenu::getStatus, CommonConst.YES)
+                .eq(AcMenu::getVisible, CommonConst.YES).orderBy(true, true, AcMenu::getShowOrder);
+        return super.select(wrapper);
+    }
+
+    public List<AcMenu> getAllMenu() {
+        LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper()
+                .eq(AcMenu::getStatus, CommonConst.YES)
                 .eq(AcMenu::getVisible, CommonConst.YES).orderBy(true, true, AcMenu::getShowOrder);
         return super.select(wrapper);
     }
@@ -45,6 +48,7 @@ public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
         return super.select(wrapper);
     }
 }
+
 
 
 

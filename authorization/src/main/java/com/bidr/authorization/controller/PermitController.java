@@ -30,7 +30,7 @@ public class PermitController {
     @ApiOperation(value = "获取主菜单树", notes = "登录后准入")
     @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getMainMenuTree() {
-        return menuService.getMenuTree();
+        return menuService.getMainMenuTree();
     }
 
     @ApiOperation(value = "获取主菜单列表", notes = "登录后准入")
@@ -63,10 +63,16 @@ public class PermitController {
         return menuService.getContentList(req);
     }
 
+    @ApiOperation(value = "获取权限书", notes = "登录后准入")
+    @RequestMapping(value = "/tree", method = RequestMethod.GET)
+    public List<MenuTreeRes> getMenu() {
+        return menuService.getMenuTree();
+    }
+
     @ApiOperation(value = "获取权限列表", notes = "登录后准入")
-    @RequestMapping(value = "/permit/list", method = RequestMethod.GET)
+    @RequestMapping(value = "/list", method = RequestMethod.GET)
     public List<MenuTreeItem> getPermitList() {
-        return menuService.getAll();
+        return menuService.getMenuList();
     }
 
 }

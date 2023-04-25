@@ -20,9 +20,9 @@
     <result column="login_ip" jdbcType="VARCHAR" property="loginIp" />
     <result column="login_date" jdbcType="TIMESTAMP" property="loginDate" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
-    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
     <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
-    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>
@@ -30,6 +30,6 @@
     <!--@mbg.generated-->
     user_id, dept_id, user_name, nick_name, user_type, email, phonenumber, sex, avatar, 
     `password`, password_error_time, password_last_time, `status`, login_ip, login_date, 
-    create_by, create_time, update_by, update_time, remark, `valid`
+    create_by, create_at, update_by, update_at, remark, `valid`
   </sql>
 </mapper>

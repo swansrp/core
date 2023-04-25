@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.authorization.dao.mapper.AcAccountDao">
+  <resultMap id="BaseResultMap" type="com.bidr.authorization.dao.entity.AcAccount">
+    <!--@mbg.generated-->
+    <!--@Table ac_account-->
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="gender" jdbcType="VARCHAR" property="gender" />
+    <result column="nationality" jdbcType="VARCHAR" property="nationality" />
+    <result column="native_place" jdbcType="VARCHAR" property="nativePlace" />
+    <result column="political_outlook" jdbcType="VARCHAR" property="politicalOutlook" />
+    <result column="work_date" jdbcType="TIMESTAMP" property="workDate" />
+    <result column="id_number" jdbcType="VARCHAR" property="idNumber" />
+    <result column="profession" jdbcType="VARCHAR" property="profession" />
+    <result column="talent" jdbcType="VARCHAR" property="talent" />
+    <result column="email" jdbcType="VARCHAR" property="email" />
+    <result column="mobile" jdbcType="VARCHAR" property="mobile" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="department" jdbcType="VARCHAR" property="department" />
+    <result column="org" jdbcType="VARCHAR" property="org" />
+    <result column="user_name" jdbcType="VARCHAR" property="userName" />
+    <result column="picture_link" jdbcType="VARCHAR" property="pictureLink" />
+    <result column="signature_link" jdbcType="VARCHAR" property="signatureLink" />
+    <result column="employ_status" jdbcType="VARCHAR" property="employStatus" />
+    <result column="status" jdbcType="INTEGER" property="status" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, `name`, gender, nationality, native_place, political_outlook, work_date, id_number, 
+    profession, talent, email, mobile, category, department, org, user_name, picture_link, 
+    signature_link, employ_status, `status`, create_at
+  </sql>
+</mapper>

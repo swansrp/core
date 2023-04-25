@@ -34,6 +34,17 @@ public class MenuService {
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }
 
+    public List<MenuTreeRes> getMainMenuTree() {
+        List<AcMenu> menuList = acMenuService.getMainMenu();
+        return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
+
+    }
+
+    public List<MenuTreeItem> getMainMenuList() {
+        List<AcMenu> allPermit = acMenuService.getMainMenu();
+        return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
+    }
+
     public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
         List<AcMenu> menuList = acMenuService.getSubMenu(req.getMenuId());
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
@@ -53,11 +64,6 @@ public class MenuService {
 
     public List<MenuTreeItem> getContentList(MenuTreeReq req) {
         List<AcMenu> allPermit = acMenuService.getContent(req.getMenuId());
-        return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
-    }
-
-    public List<MenuTreeItem> getAll() {
-        List<AcMenu> allPermit = acMenuService.select();
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }
 }

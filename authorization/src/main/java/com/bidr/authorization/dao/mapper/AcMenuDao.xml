@@ -21,15 +21,15 @@
     <result column="perms" jdbcType="VARCHAR" property="perms" />
     <result column="icon" jdbcType="VARCHAR" property="icon" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
-    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
     <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
-    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     menu_id, pid, grand_id, `key`, title, show_order, `path`, component, query, is_frame, 
-    is_cache, menu_type, visible, `status`, perms, icon, create_by, create_time, update_by, 
-    update_time, remark
+    is_cache, menu_type, visible, `status`, perms, icon, create_by, create_at, update_by, 
+    update_at, remark
   </sql>
 </mapper>
