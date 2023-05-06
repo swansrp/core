@@ -3,8 +3,6 @@ package com.bidr.kernel.constant.err;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.HashMap;
-
 /**
  * Title: ErrCodeLevel
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE

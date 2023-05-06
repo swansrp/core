@@ -63,7 +63,7 @@ public class PermitController {
         return menuService.getContentList(req);
     }
 
-    @ApiOperation(value = "获取权限书", notes = "登录后准入")
+    @ApiOperation(value = "获取权限树", notes = "登录后准入")
     @RequestMapping(value = "/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getMenu() {
         return menuService.getMenuTree();

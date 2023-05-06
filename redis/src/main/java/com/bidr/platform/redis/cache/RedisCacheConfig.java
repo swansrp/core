@@ -6,6 +6,7 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheWriter;
@@ -123,6 +124,7 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
      * @return 构造cacheManager
      */
     @Bean
+    @Primary
     CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
         // Init RedisCacheWriter
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory);

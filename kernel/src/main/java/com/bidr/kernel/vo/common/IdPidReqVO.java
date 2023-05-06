@@ -4,8 +4,6 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.io.Serializable;
-
 /**
  * Title: IdPidReqVO
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.

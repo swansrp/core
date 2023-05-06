@@ -12,7 +12,6 @@ import org.springframework.boot.actuate.endpoint.web.annotation.ServletEndpoints
 import org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RestController;
@@ -96,7 +95,8 @@ public class SwaggerConfig {
      */
     private List<SecurityScheme> securitySchemes() {
         List<SecurityScheme> apiKeyList = new ArrayList<SecurityScheme>();
-        apiKeyList.add(new ApiKey("Authorization", "Authorization", In.HEADER.toValue()));
+        apiKeyList.add(new ApiKey("Authorization", "authorization", In.HEADER.toValue()));
+        apiKeyList.add(new ApiKey("Bear Token", "x-access-token", In.HEADER.toValue()));
         return apiKeyList;
     }
 

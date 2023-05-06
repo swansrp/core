@@ -3,8 +3,6 @@ package com.bidr.kernel.vo.common;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import java.io.Serializable;
-
 /**
  * Title: IdOrderReqVO
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.

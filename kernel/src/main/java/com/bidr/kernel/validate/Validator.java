@@ -9,13 +9,14 @@
  */
 package com.bidr.kernel.validate;
 
-import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import org.apache.commons.lang3.StringUtils;
+import com.bidr.kernel.exception.ServiceException;
+import com.bidr.kernel.utils.FuncUtil;
+import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class Validator {
@@ -76,8 +77,32 @@ public class Validator {
         }
     }
 
+    public static void assertAllNotNull(List<Object> param, ErrCode code, String... parameters) {
+        if (ObjectUtils.allNull(param.toArray(new Object[]{}))) {
+            throw new ServiceException(code, parameters);
+        }
+    }
+
+    public static void assertAnyNotNull(List<Object> param, ErrCode code, String... parameters) {
+        if (ObjectUtils.anyNull(param.toArray(new Object[]{}))) {
+            throw new ServiceException(code, parameters);
+        }
+    }
+
     public static void assertNull(Object param, ErrCode code, String... parameters) {
         if (param != null) {
+            throw new ServiceException(code, parameters);
+        }
+    }
+
+    public static void assertAllNull(List<Object> param, ErrCode code, String... parameters) {
+        if (ObjectUtils.allNotNull(param.toArray(new Object[]{}))) {
+            throw new ServiceException(code, parameters);
+        }
+    }
+
+    public static void assertAnyNull(List<Object> param, ErrCode code, String... parameters) {
+        if (ObjectUtils.anyNotNull(param.toArray(new Object[]{}))) {
             throw new ServiceException(code, parameters);
         }
     }
@@ -106,4 +131,11 @@ public class Validator {
         assertTrue(param.matches(pattern), code, parameters);
     }
 
+    public static void assertEquals(Object obj1, Object obj2, ErrCode code, String... parameters) {
+        assertTrue(FuncUtil.equals(obj1, obj2), code, parameters);
+    }
+
+    public static void assertNotEquals(Object obj1, Object obj2, ErrCode code, String... parameters) {
+        assertFalse(FuncUtil.equals(obj1, obj2), code, parameters);
+    }
 }

@@ -22,7 +22,12 @@
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
-            <artifactId>kernel</artifactId>
+            <artifactId>platform</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>redis</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>

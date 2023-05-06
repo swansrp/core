@@ -5,12 +5,14 @@ import cn.hutool.core.map.WeakConcurrentMap;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.common.func.SetFunc;
 
 import java.io.Serializable;
 import java.lang.invoke.MethodHandleInfo;
 import java.lang.invoke.SerializedLambda;
+import java.lang.reflect.Field;
 
 /**
  * Title: LambdaUtil
@@ -23,6 +25,7 @@ import java.lang.invoke.SerializedLambda;
 public class LambdaUtil {
 
     private static final WeakConcurrentMap<String, SerializedLambda> cache = new WeakConcurrentMap<>();
+    private static final String FUNCTION_PREFIX = "()L";
 
     /**
      * 通过对象的方法或类的静态方法引用，获取lambda实现类
@@ -74,12 +77,11 @@ public class LambdaUtil {
      * 解析lambda表达式,加了缓存。
      * 该缓存可能会在任意不定的时间被清除
      *
-     * @param <R>  Lambda返回类型
+     * @param <T,  R>  Lambda类型
      * @param func 需要解析的 lambda 对象（无参方法）
      * @return 返回解析后的结果
-     * @since 5.7.23
      */
-    public static <T, R> SerializedLambda resolve(GetFunc<T, R> func) {
+    public static <T, R> SerializedLambda resolve(SetFunc<T, ?> func) {
         return _resolve(func);
     }
 
@@ -143,18 +145,6 @@ public class LambdaUtil {
     }
 
     /**
-     * 解析lambda表达式,加了缓存。
-     * 该缓存可能会在任意不定的时间被清除
-     *
-     * @param <T, R>  Lambda类型
-     * @param func 需要解析的 lambda 对象（无参方法）
-     * @return 返回解析后的结果
-     */
-    public static <T, R> SerializedLambda resolve(SetFunc<T, ?> func) {
-        return _resolve(func);
-    }
-
-    /**
      * 获取lambda表达式Getter或Setter函数（方法）对应的字段名称，规则如下：
      * <ul>
      *     <li>getXxxx获取为xxxx，如getName得到name。</li>
@@ -163,7 +153,7 @@ public class LambdaUtil {
      *     <li>其它不满足规则的方法名抛出{@link IllegalArgumentException}</li>
      * </ul>
      *
-     * @param <T, R>  Lambda类型
+     * @param <T,  R>  Lambda类型
      * @param func 函数（无参方法）
      * @return 方法名称
      * @throws IllegalArgumentException 非Getter或Setter方法
@@ -184,7 +174,10 @@ public class LambdaUtil {
         return resolve(func).getImplMethodName();
     }
 
-    //region Private methods
+    public static <T, R> Field getField(SetFunc<T, ?> func) throws IllegalArgumentException {
+        String fieldName = BeanUtil.getFieldName(getMethodName(func));
+        return ReflectionUtil.getField(getRealClass(func), fieldName);
+    }
 
     /**
      * 获取lambda表达式Getter或Setter函数（方法）对应的字段名称，规则如下：
@@ -195,7 +188,7 @@ public class LambdaUtil {
      *     <li>其它不满足规则的方法名抛出{@link IllegalArgumentException}</li>
      * </ul>
      *
-     * @param <T, R>  Lambda类型
+     * @param <T,  R>  Lambda类型
      * @param func 函数（无参方法）
      * @return 方法名称
      * @throws IllegalArgumentException 非Getter或Setter方法
@@ -204,6 +197,8 @@ public class LambdaUtil {
     public static <T, R> String getFieldName(GetFunc<T, R> func) throws IllegalArgumentException {
         return BeanUtil.getFieldName(getMethodName(func));
     }
+
+    //region Private methods
 
     /**
      * 获取lambda表达式函数（方法）名称
@@ -216,6 +211,64 @@ public class LambdaUtil {
     public static <T, R> String getMethodName(GetFunc<T, R> func) {
         return resolve(func).getImplMethodName();
     }
-    //endregion
+
+    /**
+     * 解析lambda表达式,加了缓存。
+     * 该缓存可能会在任意不定的时间被清除
+     *
+     * @param <R>  Lambda返回类型
+     * @param func 需要解析的 lambda 对象（无参方法）
+     * @return 返回解析后的结果
+     * @since 5.7.23
+     */
+    public static <T, R> SerializedLambda resolve(GetFunc<T, R> func) {
+        return _resolve(func);
+    }
+
+    public static <T, R> Field getField(GetFunc<T, R> func) throws IllegalArgumentException {
+        String fieldName = BeanUtil.getFieldName(getMethodName(func));
+        return ReflectionUtil.getField(getRealClass(func), fieldName);
+    }
+
+    public static <T, R> String getFieldName(SFunction<T, ?> func) throws IllegalArgumentException {
+        return BeanUtil.getFieldName(getMethodName(func));
+    }
+
+    public static <T, R> String getMethodName(SFunction<T, R> func) {
+        return resolveSFunction(func).getImplMethodName();
+    }
+
+    public static <T, R> SerializedLambda resolveSFunction(SFunction<T, R> func) {
+        return _resolve(func);
+    }
+
+    public static <T, R> R getValue(SFunction<T, R> func, Object obj) {
+        if (FuncUtil.isNotEmpty(obj)) {
+            Class<R> clazz = LambdaUtil.getMethodSignatureClass(func);
+            return JsonUtil.readJson(obj, clazz);
+        }
+        return null;
+    }
+
+    /**
+     * 类型String ()L 开头 ;结尾 不能解析
+     *
+     * @param func lambda 函数
+     * @param <T>  实体类型
+     * @param <R>  字段类型
+     * @return 字段类型Class
+     */
+    public static <T, R> Class<R> getMethodSignatureClass(SFunction<T, R> func) {
+        final SerializedLambda lambda = resolveSFunction(func);
+        checkLambdaTypeCanGetClass(lambda.getImplMethodKind());
+        String name = lambda.getImplMethodSignature();
+        Class<R> res;
+        try {
+            res = ClassUtil.loadClass(name);
+        } catch (Exception e) {
+            res = ClassUtil.loadClass(name.substring(FUNCTION_PREFIX.length(), name.length() - 1));
+        }
+        return res;
+    }
 }
 

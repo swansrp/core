@@ -32,7 +32,7 @@ public enum ErrCodeSys implements ErrCode {
 
     SYS_CONFIG_NOT_EXIST(20, "当前配置不支持该%s"),
     SYS_SESSION_NOT_SAME(21, "登录超时,%s不一致"),
-    SYS_SESSION_TIME_OUT(22, "登录信息已过期,请重新登录"),
+    SYS_SESSION_TIME_OUT(401, "登录信息已过期,请重新登录"),
     SYS_PERMIT_ERROR(23, "权限错误:%s"),
 
     STATE_MACHINE_TRANSFER_NOT_ALLOW(30, "当前状态%s不支持%s操作"),

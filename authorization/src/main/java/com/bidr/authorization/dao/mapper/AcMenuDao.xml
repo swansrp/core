@@ -8,6 +8,7 @@
     <result column="pid" jdbcType="BIGINT" property="pid" />
     <result column="grand_id" jdbcType="BIGINT" property="grandId" />
     <result column="key" jdbcType="BIGINT" property="key" />
+    <result column="client_type" jdbcType="VARCHAR" property="clientType" />
     <result column="title" jdbcType="VARCHAR" property="title" />
     <result column="show_order" jdbcType="INTEGER" property="showOrder" />
     <result column="path" jdbcType="VARCHAR" property="path" />
@@ -28,8 +29,8 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    menu_id, pid, grand_id, `key`, title, show_order, `path`, component, query, is_frame, 
-    is_cache, menu_type, visible, `status`, perms, icon, create_by, create_at, update_by, 
-    update_at, remark
+    menu_id, pid, grand_id, `key`, client_type, title, show_order, `path`, component, 
+    query, is_frame, is_cache, menu_type, visible, `status`, perms, icon, create_by, 
+    create_at, update_by, update_at, remark
   </sql>
 </mapper>

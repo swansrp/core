@@ -1,6 +1,5 @@
 package com.bidr.platform.controller;
 
-import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.bo.tree.TreeDict;
 import com.bidr.platform.service.cache.DictTreeCacheService;
 import io.swagger.annotations.Api;

@@ -1,9 +1,9 @@
 package com.bidr.platform.controller.admin;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.controller.BaseAdminController;
+import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.repository.SysDictService;
@@ -13,13 +13,11 @@ import com.bidr.platform.vo.dict.UpdateDictDefaultReq;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,7 +31,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dict/item/admin"})
-public class AdminDictController extends BaseAdminController<SysDict> {
+public class AdminDictController extends BaseAdminOrderController<SysDict, SysDict> {
 
     private final DictService dictService;
     private final SysDictService sysDictService;
@@ -58,21 +56,6 @@ public class AdminDictController extends BaseAdminController<SysDict> {
         return null;
     }
 
-    @ApiOperation("字典项顺序更新")
-    @RequestMapping(value = "/order/update", method = RequestMethod.POST)
-    public Boolean updateOrder(@RequestBody List<IdOrderReqVO> idOrderReqVOList) {
-        List<SysDict> entityList = new ArrayList<>();
-        if (CollectionUtils.isNotEmpty(idOrderReqVOList)) {
-            for (IdOrderReqVO acMenu : idOrderReqVOList) {
-                SysDict entity = new SysDict();
-                entity.setDictId(Long.valueOf(acMenu.getId().toString()));
-                entity.setDictSort(acMenu.getShowOrder());
-                entityList.add(entity);
-            }
-            getRepo().updateBatchById(entityList);
-        }
-        return null;
-    }
     @ApiOperation("默认字典项更新")
     @RequestMapping(value = "/default/item/update", method = RequestMethod.POST)
     public Boolean updateDefault(@RequestBody UpdateDictDefaultReq vo) {
@@ -80,4 +63,14 @@ public class AdminDictController extends BaseAdminController<SysDict> {
         return null;
     }
 
+
+    @Override
+    protected SFunction<SysDict, ?> id() {
+        return SysDict::getDictId;
+    }
+
+    @Override
+    protected SFunction<SysDict, Integer> order() {
+        return SysDict::getDictSort;
+    }
 }

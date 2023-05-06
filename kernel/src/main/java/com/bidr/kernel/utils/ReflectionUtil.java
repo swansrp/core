@@ -624,6 +624,15 @@ public class ReflectionUtil {
         return map;
     }
 
+    public static <T, K> Map<K, T> reflectToMap(Collection<T> list, GetFunc<T, K> getFunc) {
+        Map<K, T> map = new HashMap<>(list.size());
+        for (T t : list) {
+            K key = getFunc.apply(t);
+            map.put(key, t);
+        }
+        return map;
+    }
+
     public static Object invoke(Object obj, String methodName, Object... paramArray) {
         List<Class<?>> classList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(paramArray)) {
@@ -635,7 +644,7 @@ public class ReflectionUtil {
             return ReflectionUtils.invokeMethod(
                     getMethod(obj.getClass(), methodName, classList.toArray(new Class<?>[0])), obj, paramArray);
         } else {
-            return ReflectionUtils.invokeMethod(getMethod(obj.getClass(), methodName), obj, paramArray);
+            return ReflectionUtils.invokeMethod(getMethod(obj.getClass(), methodName), obj);
         }
 
     }

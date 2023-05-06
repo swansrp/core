@@ -1,6 +1,5 @@
 package com.bidr.platform.dao.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.platform.dao.entity.SysConfig;
 import org.apache.ibatis.annotations.Mapper;

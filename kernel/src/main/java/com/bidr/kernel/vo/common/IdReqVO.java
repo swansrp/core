@@ -3,8 +3,6 @@ package com.bidr.kernel.vo.common;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
-import java.io.Serializable;
-
 /**
  * Title: IdReqVO
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
@@ -15,5 +13,5 @@ import java.io.Serializable;
 @Data
 public class IdReqVO {
     @ApiModelProperty("id")
-    private Serializable id;
+    private String id;
 }

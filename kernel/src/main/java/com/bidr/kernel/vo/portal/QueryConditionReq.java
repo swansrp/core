@@ -1,0 +1,24 @@
+package com.bidr.kernel.vo.portal;
+
+import com.bidr.kernel.vo.query.QueryReqVO;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Title: QueryConditionReq
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ *
+ * @author Sharp
+ * @date 2023/05/05 15:41
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
+public class QueryConditionReq extends QueryReqVO {
+    private List<ConditionVO> conditionList = new ArrayList<>();
+    private SortVO sort;
+}

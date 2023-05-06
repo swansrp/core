@@ -1,6 +1,7 @@
 package com.bidr.platform.service.cache;
 
 import com.bidr.kernel.cache.DynamicMemoryCache;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.param.MetaParam;
 import com.bidr.kernel.constant.param.Param;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -32,10 +33,10 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
     private SysConfigCacheService self;
 
     @Override
-    protected Collection<SysConfig> getCacheData() {
+    protected Map<String, SysConfig> getCacheData() {
         List<SysConfig> list = sysConfigService.getSysConfigCache();
         addDefaultParameter(list);
-        return list;
+        return ReflectionUtil.reflectToMap(list, SysConfig::getConfigKey);
     }
 
     @SuppressWarnings("rawtypes")
@@ -43,6 +44,7 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
         Map<String, SysConfig> map = ReflectionUtil.reflectToMap(list, "configKey");
         Reflections reflections = new Reflections("com.bidr");
         Set<Class<?>> metaParamClass = reflections.getTypesAnnotatedWith(MetaParam.class);
+        List<SysConfig> sysConfigList = new ArrayList<>();
         for (Class<?> clazz : metaParamClass) {
             if (Enum.class.isAssignableFrom(clazz) && Param.class.isAssignableFrom(clazz)) {
                 for (Object enumItem : clazz.getEnumConstants()) {
@@ -50,12 +52,13 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
                     if (map.get(configKey) == null) {
                         Param param = (Param) enumItem;
                         SysConfig item = buildSysConfig(clazz, configKey, param);
-                        sysConfigService.insert(item);
+                        sysConfigList.add(item);
                         list.add(item);
                     }
                 }
             }
         }
+        sysConfigService.saveBatch(sysConfigList);
     }
 
     private SysConfig buildSysConfig(Class<?> clazz, String configKey, Param param) {
@@ -69,11 +72,6 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
         return item;
     }
 
-    @Override
-    protected Object getCacheKey(SysConfig config) {
-        return config.getConfigKey();
-    }
-
     public Boolean getSysConfigBool(Param param) {
         return StringUtil.convertSwitch(getSysConfigValue(param));
     }
@@ -84,14 +82,47 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
         return cache.getConfigValue();
     }
 
-    public Boolean getSysConfigBool(String configKey) {
-        return StringUtil.convertSwitch(getSysConfigValue(configKey));
+    public boolean getParamSwitch(Param param) {
+        return StringUtil.convertSwitch(getSysConfigValue(param));
     }
 
-    public String getSysConfigValue(String configKey) {
-        SysConfig cache = self.getCache(configKey);
-        Validator.assertNotNull(cache, ConfigErrorCode.PARAM_IS_NOT_EXISTED, configKey);
+    public boolean getParamSwitch(String param) {
+        return StringUtil.convertSwitch(getSysConfigValue(param));
+    }
+
+    public String getSysConfigValue(String param) {
+        SysConfig cache = self.getCache(param);
+        Validator.assertNotNull(cache, ConfigErrorCode.PARAM_IS_NOT_EXISTED, param);
         return cache.getConfigValue();
     }
+
+    public String getParamValueAvail(Param param) {
+        String res = getSysConfigValue(param);
+        Validator.assertNotBlank(res, ErrCodeSys.PA_DATA_NOT_EXIST, param.getTitle());
+        return res;
+    }
+
+    public String getParamValueAvail(String param) {
+        String res = getSysConfigValue(param);
+        Validator.assertNotBlank(res, ErrCodeSys.PA_DATA_NOT_EXIST, param);
+        return res;
+    }
+
+    public int getParamInt(Param param) {
+        return Integer.parseInt(getSysConfigValue(param));
+    }
+
+    public int getParamInt(String param) {
+        return Integer.parseInt(getSysConfigValue(param));
+    }
+
+    public Long getParamLong(Param param) {
+        return Long.parseLong(getSysConfigValue(param));
+    }
+
+    public Long getParamLong(String param) {
+        return Long.parseLong(getSysConfigValue(param));
+    }
+
 
 }

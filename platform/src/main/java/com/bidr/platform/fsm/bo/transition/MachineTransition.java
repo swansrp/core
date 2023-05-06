@@ -1,9 +1,9 @@
 package com.bidr.platform.fsm.bo.transition;
 
-import com.bidr.platform.fsm.bo.operate.MachineOperate;
-import com.bidr.platform.fsm.bo.state.MachineState;
 import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.utils.StringUtil;
+import com.bidr.platform.fsm.bo.operate.MachineOperate;
+import com.bidr.platform.fsm.bo.state.MachineState;
 import lombok.Data;
 
 /**

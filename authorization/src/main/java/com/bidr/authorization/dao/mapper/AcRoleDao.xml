@@ -7,11 +7,8 @@
     <id column="role_id" jdbcType="BIGINT" property="roleId" />
     <result column="role_name" jdbcType="VARCHAR" property="roleName" />
     <result column="role_key" jdbcType="VARCHAR" property="roleKey" />
-    <result column="role_sort" jdbcType="INTEGER" property="roleSort" />
-    <result column="data_scope" jdbcType="CHAR" property="dataScope" />
-    <result column="menu_check_strictly" jdbcType="BOOLEAN" property="menuCheckStrictly" />
-    <result column="dept_check_strictly" jdbcType="BOOLEAN" property="deptCheckStrictly" />
-    <result column="status" jdbcType="CHAR" property="status" />
+    <result column="status" jdbcType="INTEGER" property="status" />
+    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
     <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
     <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
@@ -21,7 +18,7 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    role_id, role_name, role_key, role_sort, data_scope, menu_check_strictly, dept_check_strictly, 
-    `status`, create_by, create_at, update_by, update_at, remark, `valid`
+    role_id, role_name, role_key, `status`, display_order, create_by, create_at, update_by, 
+    update_at, remark, `valid`
   </sql>
 </mapper>

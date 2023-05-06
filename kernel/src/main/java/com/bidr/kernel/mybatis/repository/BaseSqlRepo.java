@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
+import com.bidr.kernel.vo.query.QueryReqVO;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.CacheConfig;
 
@@ -24,7 +25,7 @@ import java.util.Map;
 
 @CacheConfig(cacheNames = "DB-CACHE", keyGenerator = "cacheKeyByParam")
 public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K, T> implements SqlCountRepo<T>,
-        SqlSelectRepo<T>, SqlInsertRpo<T>, SqlUpdateRepo<T>, SqlDeleteRepo<T> {
+        SqlSelectRepo<T>, SqlInsertRpo<T>, SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo {
 
     @Override
     public long count(T entity) {
@@ -84,6 +85,11 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
+    public Page<T> select(QueryReqVO req) {
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize()));
+    }
+
+    @Override
     public List<T> select(Wrapper<T> wrapper) {
         return super.list(wrapper);
     }
@@ -94,8 +100,18 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
+    public Page<T> select(Wrapper<T> wrapper, QueryReqVO req) {
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize()), wrapper);
+    }
+
+    @Override
     public Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize, boolean searchCount) {
         return super.page(new Page<>(currentPage, pageSize, searchCount), wrapper);
+    }
+
+    @Override
+    public Page<T> select(Wrapper<T> wrapper, QueryReqVO req, boolean searchCount) {
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize(), searchCount), wrapper);
     }
 
     @Override
@@ -111,9 +127,21 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
+    public Page<T> select(Map<String, Object> propertyMap, QueryReqVO req) {
+        QueryWrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize()), wrapper);
+    }
+
+    @Override
     public Page<T> select(Map<String, Object> propertyMap, long currentPage, long pageSize, boolean searchCount) {
         QueryWrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
         return super.page(new Page<>(currentPage, pageSize, searchCount), wrapper);
+    }
+
+    @Override
+    public Page<T> select(Map<String, Object> propertyMap, QueryReqVO req, boolean searchCount) {
+        QueryWrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize(), searchCount), wrapper);
     }
 
     @Override
@@ -129,10 +157,22 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
+    public Page<T> select(String propertyName, List<?> propertyList, QueryReqVO req) {
+        QueryWrapper<T> wrapper = super.getQueryWrapper(propertyName, propertyList);
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize()), wrapper);
+    }
+
+    @Override
     public Page<T> select(String propertyName, List<?> propertyList, long currentPage, long pageSize,
                           boolean searchCount) {
         QueryWrapper<T> wrapper = super.getQueryWrapper(propertyName, propertyList);
         return super.page(new Page<>(currentPage, pageSize, searchCount), wrapper);
+    }
+
+    @Override
+    public Page<T> select(String propertyName, List<?> propertyList, QueryReqVO req, boolean searchCount) {
+        QueryWrapper<T> wrapper = super.getQueryWrapper(propertyName, propertyList);
+        return super.page(new Page<>(req.getCurrentPage(), req.getPageSize(), searchCount), wrapper);
     }
 
     @Override

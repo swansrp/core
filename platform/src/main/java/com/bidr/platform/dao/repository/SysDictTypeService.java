@@ -26,11 +26,18 @@ public class SysDictTypeService extends BaseSqlRepo<SysDictTypeDao, SysDictType>
         return super.select(wrapper);
     }
 
-    public void deleteByDictTypeList(List<String> dictTypeList) {
+    public void deleteByDictNameList(List<String> dictNameList) {
         LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()
-                .in(FuncUtil.isNotEmpty(dictTypeList), SysDictType::getDictName, dictTypeList);
+                .in(FuncUtil.isNotEmpty(dictNameList), SysDictType::getDictName, dictNameList);
+        super.delete(wrapper);
+    }
+
+    public void deleteByDictName(String dictName) {
+        LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()
+                .eq(FuncUtil.isNotEmpty(dictName), SysDictType::getDictName, dictName);
         super.delete(wrapper);
     }
 }
+
 
 

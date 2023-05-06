@@ -1,6 +1,5 @@
 package com.bidr.kernel.mybatis.repository.inf;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 
 import java.util.Collection;

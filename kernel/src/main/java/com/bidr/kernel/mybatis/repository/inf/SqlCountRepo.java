@@ -1,10 +1,8 @@
 package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 
 /**

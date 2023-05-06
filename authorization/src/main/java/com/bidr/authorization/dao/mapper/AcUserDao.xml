@@ -5,18 +5,20 @@
     <!--@mbg.generated-->
     <!--@Table ac_user-->
     <id column="user_id" jdbcType="BIGINT" property="userId" />
-    <result column="dept_id" jdbcType="BIGINT" property="deptId" />
+    <result column="customer_number" jdbcType="VARCHAR" property="customerNumber" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="dept_id" jdbcType="VARCHAR" property="deptId" />
     <result column="user_name" jdbcType="VARCHAR" property="userName" />
     <result column="nick_name" jdbcType="VARCHAR" property="nickName" />
     <result column="user_type" jdbcType="VARCHAR" property="userType" />
     <result column="email" jdbcType="VARCHAR" property="email" />
-    <result column="phonenumber" jdbcType="VARCHAR" property="phonenumber" />
+    <result column="phone_number" jdbcType="VARCHAR" property="phoneNumber" />
     <result column="sex" jdbcType="CHAR" property="sex" />
     <result column="avatar" jdbcType="VARCHAR" property="avatar" />
     <result column="password" jdbcType="VARCHAR" property="password" />
     <result column="password_error_time" jdbcType="INTEGER" property="passwordErrorTime" />
     <result column="password_last_time" jdbcType="TIMESTAMP" property="passwordLastTime" />
-    <result column="status" jdbcType="CHAR" property="status" />
+    <result column="status" jdbcType="INTEGER" property="status" />
     <result column="login_ip" jdbcType="VARCHAR" property="loginIp" />
     <result column="login_date" jdbcType="TIMESTAMP" property="loginDate" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
@@ -28,8 +30,8 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    user_id, dept_id, user_name, nick_name, user_type, email, phonenumber, sex, avatar, 
-    `password`, password_error_time, password_last_time, `status`, login_ip, login_date, 
-    create_by, create_at, update_by, update_at, remark, `valid`
+    user_id, customer_number, `name`, dept_id, user_name, nick_name, user_type, email,
+    phone_number, sex, avatar, `password`, password_error_time, password_last_time, `status`,
+    login_ip, login_date, create_by, create_at, update_by, update_at, remark, `valid`
   </sql>
 </mapper>

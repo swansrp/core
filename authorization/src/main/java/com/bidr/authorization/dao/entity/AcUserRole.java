@@ -1,7 +1,6 @@
 package com.bidr.authorization.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import io.swagger.annotations.ApiModel;
@@ -10,10 +9,14 @@ import lombok.Data;
 
 /**
  * Title: AcUserRole
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/17 10:02
+ * @date 2023/04/28 13:38
+ */
+
+/**
+ * 用户和角色关联表
  */
 @ApiModel(value = "用户和角色关联表")
 @Data
@@ -24,13 +27,15 @@ public class AcUserRole {
     /**
      * 用户ID
      */
-    @MppMultiId(value = "user_id")
+    @MppMultiId
+    @TableField(value = "user_id")
     @ApiModelProperty(value = "用户ID")
     private Long userId;
     /**
      * 角色ID
      */
-    @MppMultiId(value = "role_id")
+    @MppMultiId
+    @TableField(value = "role_id")
     @ApiModelProperty(value = "角色ID")
     private Long roleId;
 }

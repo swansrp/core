@@ -1,9 +1,9 @@
 package com.bidr.kernel.mybatis.dao.repository;
 
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.kernel.mybatis.dao.entity.Columns;
 import com.bidr.kernel.mybatis.dao.mapper.ColumnsMapper;
+import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

@@ -6,10 +6,10 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * Title: AcUserRoleDao
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/17 10:02
+ * @date 2023/04/28 13:38
  */
 @Mapper
 public interface AcUserRoleDao extends MyBaseMapper<AcUserRole> {

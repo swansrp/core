@@ -11,8 +11,8 @@ package com.bidr.kernel.validate.format;
 
 import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.utils.MathUtil;
+import com.bidr.kernel.validate.Validator;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;

@@ -6,10 +6,10 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * Title: AcMenuDao
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/23 11:31
+ * @date 2023/04/27 14:35
  */
 @Mapper
 public interface AcMenuDao extends MyBaseMapper<AcMenu> {

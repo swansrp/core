@@ -3,8 +3,8 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.mapper.AcAccountDao;
-import com.bidr.kernel.constant.dict.ActiveStatusDict;
-import com.bidr.kernel.constant.dict.BoolDict;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
+import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
@@ -51,6 +51,13 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
         wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
                 .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue()).eq(AcAccount::getMobile, mobile);
         return selectOne(wrapper);
+    }
+
+    public List<AcAccount> selectActive() {
+        LambdaQueryWrapper<AcAccount> wrapper = super.getQueryWrapper();
+        wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
+                .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue());
+        return super.select(wrapper);
     }
 }
 

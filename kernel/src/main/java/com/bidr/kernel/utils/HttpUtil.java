@@ -153,17 +153,11 @@ public class HttpUtil {
     }
 
     /**
-     *     * @Title: contentDisposition
-     * <p>
-     *     * @Description:解决不同浏览器上文件下载的中文名乱码问题
-     * <p>
-     *     * @paramfilename导出/下载的文件的文件名
-     * <p>
-     *     * @param request
-     * <p>
-     *     * @param response
-     * <p>
-     *     
+     * @param request
+     * @param response
+     * @Title: contentDisposition
+     * @Description:解决不同浏览器上文件下载的中文名乱码问题
+     * @paramfilename导出/下载的文件的文件名
      */
 
     public static void contentDisposition(String filename, HttpServletRequest request, HttpServletResponse response) {
@@ -220,6 +214,10 @@ public class HttpUtil {
                 }
             }
         }
+    }
+
+    public static boolean systemRequest(HttpServletRequest httpServletRequest) {
+        return httpServletRequest.getRequestURI().matches(".*/(actuator|export|webjars|v3|captcha.*|csrf|swagger.*).*");
     }
 }
 

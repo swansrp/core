@@ -1,26 +1,24 @@
 package com.bidr.authorization.controller.admin;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.service.admin.AdminMenuService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.controller.BaseAdminController;
+import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.IdPidReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,7 +31,7 @@ import java.util.List;
 @Api(tags = "系统菜单管理")
 @RestController("MenuController")
 @RequestMapping(value = "/web/menu/admin")
-public class AdminMenuController extends BaseAdminController<AcMenu> {
+public class AdminMenuController extends BaseAdminOrderController<AcMenu, AcMenu> {
 
     @Resource
     private AdminMenuService adminMenuService;
@@ -104,19 +102,13 @@ public class AdminMenuController extends BaseAdminController<AcMenu> {
         return update(vo, AcMenu::setPid, JsonUtil.readJson(vo.getPid(), Long.class));
     }
 
-    @RequestMapping(value = "/order/update", method = RequestMethod.POST)
-    public Boolean updateOrder(@RequestBody List<IdOrderReqVO> idOrderReqVOList) {
-        List<AcMenu> entityList = new ArrayList<>();
-        if (CollectionUtils.isNotEmpty(idOrderReqVOList)) {
-            for (IdOrderReqVO acMenu : idOrderReqVOList) {
-                AcMenu entity = new AcMenu();
-                entity.setMenuId(Long.valueOf(acMenu.getId().toString()));
-                entity.setShowOrder(acMenu.getShowOrder());
-                entityList.add(entity);
-            }
-            getRepo().updateBatchById(entityList);
-        }
-        return null;
+    @Override
+    protected SFunction<AcMenu, ?> id() {
+        return AcMenu::getMenuId;
     }
 
+    @Override
+    protected SFunction<AcMenu, Integer> order() {
+        return AcMenu::getShowOrder;
+    }
 }

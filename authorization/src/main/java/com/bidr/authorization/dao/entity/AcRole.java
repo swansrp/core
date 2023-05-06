@@ -10,12 +10,12 @@ import lombok.Data;
 
 import java.util.Date;
 
-/**
+ /**
  * Title: AcRole
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/23 11:31
+ * @date 2023/05/05 09:34
  */
 
 /**
@@ -25,102 +25,105 @@ import java.util.Date;
 @Data
 @TableName(value = "ac_role")
 public class AcRole {
-    public static final String COL_ROLE_ID = "role_id";
-    public static final String COL_ROLE_NAME = "role_name";
-    public static final String COL_ROLE_KEY = "role_key";
-    public static final String COL_ROLE_SORT = "role_sort";
+    public static final String COL_ROLE_TYPE = "role_type";
+    public static final String COL_DATA_TABLE_NAME = "data_table_name";
     public static final String COL_DATA_SCOPE = "data_scope";
-    public static final String COL_MENU_CHECK_STRICTLY = "menu_check_strictly";
-    public static final String COL_DEPT_CHECK_STRICTLY = "dept_check_strictly";
-    public static final String COL_STATUS = "status";
-    public static final String COL_CREATE_BY = "create_by";
-    public static final String COL_CREATE_AT = "create_at";
-    public static final String COL_UPDATE_BY = "update_by";
-    public static final String COL_UPDATE_AT = "update_at";
-    public static final String COL_REMARK = "remark";
-    public static final String COL_VALID = "valid";
     /**
      * 角色ID
      */
     @TableId(value = "role_id", type = IdType.AUTO)
     @ApiModelProperty(value = "角色ID")
     private Long roleId;
+
     /**
      * 角色名称
      */
     @TableField(value = "role_name")
     @ApiModelProperty(value = "角色名称")
     private String roleName;
+
     /**
      * 角色权限字符串
      */
     @TableField(value = "role_key")
     @ApiModelProperty(value = "角色权限字符串")
     private String roleKey;
+
+    /**
+     * 角色状态（1正常 0停用）
+     */
+    @TableField(value = "`status`")
+    @ApiModelProperty(value = "角色状态（1正常 0停用）")
+    private Integer status;
+
     /**
      * 显示顺序
      */
-    @TableField(value = "role_sort")
+    @TableField(value = "display_order")
     @ApiModelProperty(value = "显示顺序")
-    private Integer roleSort;
-    /**
-     * 数据范围（1：全部数据权限 2：自定数据权限 3：本部门数据权限 4：本部门及以下数据权限）
-     */
-    @TableField(value = "data_scope")
-    @ApiModelProperty(value = "数据范围（1：全部数据权限 2：自定数据权限 3：本部门数据权限 4：本部门及以下数据权限）")
-    private String dataScope;
-    /**
-     * 菜单树选择项是否关联显示
-     */
-    @TableField(value = "menu_check_strictly")
-    @ApiModelProperty(value = "菜单树选择项是否关联显示")
-    private Boolean menuCheckStrictly;
-    /**
-     * 部门树选择项是否关联显示
-     */
-    @TableField(value = "dept_check_strictly")
-    @ApiModelProperty(value = "部门树选择项是否关联显示")
-    private Boolean deptCheckStrictly;
-    /**
-     * 角色状态（0正常 1停用）
-     */
-    @TableField(value = "`status`")
-    @ApiModelProperty(value = "角色状态（0正常 1停用）")
-    private String status;
+    private Integer displayOrder;
+
     /**
      * 创建者
      */
     @TableField(value = "create_by")
     @ApiModelProperty(value = "创建者")
     private String createBy;
+
     /**
      * 创建时间
      */
     @TableField(value = "create_at")
     @ApiModelProperty(value = "创建时间")
     private Date createAt;
+
     /**
      * 更新者
      */
     @TableField(value = "update_by")
     @ApiModelProperty(value = "更新者")
     private String updateBy;
+
     /**
      * 更新时间
      */
     @TableField(value = "update_at")
     @ApiModelProperty(value = "更新时间")
     private Date updateAt;
+
     /**
      * 备注
      */
     @TableField(value = "remark")
     @ApiModelProperty(value = "备注")
     private String remark;
+
     /**
      * 有效性
      */
     @TableField(value = "`valid`")
     @ApiModelProperty(value = "有效性")
     private String valid;
+
+    public static final String COL_ROLE_ID = "role_id";
+
+    public static final String COL_ROLE_NAME = "role_name";
+
+    public static final String COL_ROLE_KEY = "role_key";
+
+    public static final String COL_STATUS = "status";
+
+    public static final String COL_DISPLAY_ORDER = "display_order";
+
+    public static final String COL_CREATE_BY = "create_by";
+
+    public static final String COL_CREATE_AT = "create_at";
+
+    public static final String COL_UPDATE_BY = "update_by";
+
+    public static final String COL_UPDATE_AT = "update_at";
+
+    public static final String COL_REMARK = "remark";
+
+    public static final String COL_VALID = "valid";
 }

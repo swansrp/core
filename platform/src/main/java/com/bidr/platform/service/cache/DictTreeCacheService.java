@@ -1,10 +1,8 @@
 package com.bidr.platform.service.cache;
 
-import cn.hutool.core.collection.CollectionUtil;
 import com.bidr.kernel.cache.DynamicMemoryCache;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
 import com.bidr.platform.bo.tree.TreeDict;
-import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.constant.dict.IDynamicTree;
 import org.apache.commons.collections4.CollectionUtils;
 import org.reflections.Reflections;
@@ -13,7 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.WebApplicationContext;
 
 import javax.annotation.Resource;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Title: DictTreeCacheService
@@ -28,7 +29,7 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
     private WebApplicationContext webApplicationContext;
 
     @Override
-    protected Collection<List<TreeDict>> getCacheData() {
+    protected Map<String, List<TreeDict>> getCacheData() {
         Map<String, List<TreeDict>> map = new HashMap<>();
         Reflections reflections = new Reflections("com.bidr");
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaTreeDict.class);
@@ -47,12 +48,7 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
                 }
             }
         }
-        return map.values();
-    }
-
-    @Override
-    protected Object getCacheKey(List<TreeDict> obj) {
-        return obj.get(0).getTreeType();
+        return map;
     }
 
 }

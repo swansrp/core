@@ -1,6 +1,5 @@
 package com.bidr.authorization.controller;
 
-import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.service.account.AuthAccountService;
 import com.bidr.authorization.vo.account.AccountReq;
 import com.bidr.authorization.vo.account.AccountRes;

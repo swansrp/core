@@ -1,12 +1,12 @@
 package com.bidr.authorization.dao.repository;
 
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import org.springframework.stereotype.Service;
-import javax.annotation.Resource;
-import java.util.List;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.mapper.AcRoleDao;
+import com.bidr.authorization.vo.admin.QueryRoleReq;
+import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import org.springframework.stereotype.Service;
 
 /**
  * Title: AcRoleService
@@ -18,5 +18,14 @@ import com.bidr.authorization.dao.mapper.AcRoleDao;
 @Service
 public class AcRoleService extends BaseSqlRepo<AcRoleDao, AcRole> {
 
+    public Page<AcRole> queryRole(QueryRoleReq req) {
+        LambdaQueryWrapper<AcRole> wrapper = super.getQueryWrapper().eq(AcRole::getRoleName, req.getName());
+        return super.select(wrapper, req);
+    }
 }
+
+
+
+
+
 

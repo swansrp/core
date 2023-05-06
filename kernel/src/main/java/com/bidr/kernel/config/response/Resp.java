@@ -1,5 +1,6 @@
 package com.bidr.kernel.config.response;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.exception.NoticeException;
 import com.diboot.core.binding.Binder;
@@ -28,14 +29,14 @@ public class Resp {
         return Binder.convertAndBindRelations(entity, voClass);
     }
 
-    public static <T, R> Page<R> convert(Page<T> page, Class<R> clazz) {
+    public static <T, R> Page<R> convert(IPage<T> page, Class<R> clazz) {
         Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<R> targetList = Binder.convertAndBindRelations(page.getRecords(), clazz);
         res.setRecords(targetList);
         return res;
     }
 
-    public static <T, R> Page<R> convert(Page<T> page, List<R> targetList) {
+    public static <T, R> Page<R> convert(IPage<T> page, List<R> targetList) {
         Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         res.setRecords(targetList);
         return res;

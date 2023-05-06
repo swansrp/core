@@ -4,9 +4,11 @@
 package com.bidr.authorization.config.log;
 
 
-import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.RandomUtil;
+import com.bidr.kernel.utils.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -37,72 +39,6 @@ import java.util.Map;
 @Component
 public class LogFilter extends OncePerRequestFilter {
 
-    private boolean isJsonResponse(HttpServletResponse response) {
-        return response.getContentType().contains("json");
-    }
-
-
-    private String getOperator(HttpServletRequest request) {
-        return request.getHeader(RequestConst.USER_ID);
-    }
-
-    private boolean isFileDownload(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI().matches(".*/(export|captcha).*");
-    }
-
-    private boolean recordIgnore(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI().matches(".*/(actuator|export|webjars|v2|captcha.*|csrf|swagger.*).*");
-    }
-
-    private String extractResultPayload(MultiReadHttpServletResponse response) {
-        byte[] buf = response.getBody();
-        String payload = "";
-        if (buf.length > 0) {
-            try {
-                payload = new String(buf, 0, buf.length, response.getCharacterEncoding());
-            } catch (UnsupportedEncodingException ex) {
-                payload = "[unknown]";
-            }
-        }
-        return payload;
-    }
-
-    private String formatGetMsg(HttpServletRequest request, Map<String, String[]> parameterMap) {
-        return buildRequestMsg(request, parameterMap).toString();
-    }
-
-    private String formatPostMsg(HttpServletRequest request, Map<String, String[]> parameterMap, String requestJson) {
-        StringBuffer sb = buildRequestMsg(request, parameterMap);
-        if (!StringUtils.isEmpty(requestJson)) {
-            sb.append("\n");
-            sb.append("[");
-            sb.append(requestJson);
-            sb.append("]");
-        }
-        return sb.toString();
-    }
-
-    private StringBuffer buildRequestMsg(HttpServletRequest request, Map<String, String[]> parameterMap) {
-        StringBuffer sb = new StringBuffer();
-        sb.append("=======>").append("[").append(request.getMethod()).append("]").append(request.getRequestURI());
-        if (MapUtils.isNotEmpty(parameterMap)) {
-            sb.append("?").append(request.getQueryString());
-        }
-        sb.append(" {");
-        sb.append("token:").append(AuthTokenUtil.extractToken(request)).append(" operator:")
-                .append(getOperator(request));
-        sb.append("}");
-        return sb;
-    }
-
-    private String formatGetRspMsg(String totalTime, String resultJson) {
-        return "<=======" + "[" + totalTime + "]" + resultJson;
-    }
-
-    private String formatPostRspMsg(String totalTime, String resultJson) {
-        return "<=======" + "[" + totalTime + "]" + resultJson;
-    }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -114,12 +50,6 @@ public class LogFilter extends OncePerRequestFilter {
         String requestBodyStr = "";
         try {
             stopWatch.start();
-            // 记录请求的消息体
-            MDC.put("logToken", AuthTokenUtil.extractToken(request));
-            MDC.put("reqToken", reqToken);
-            MDC.put("URI", request.getRequestURI());
-            MDC.put("method", request.getMethod());
-            MDC.put("status", String.valueOf(response.getStatus()));
 
             HttpServletRequest temRequest = request;
             HttpServletResponse temResponse = response;
@@ -129,6 +59,15 @@ public class LogFilter extends OncePerRequestFilter {
                 filterChain.doFilter(temRequest, temResponse);
                 return;
             }
+
+            TokenInfo tokenInfo = AuthTokenUtil.extractToken(request);
+
+            // 记录请求的消息体
+            MDC.put("logToken", tokenInfo == null ? "" : tokenInfo.getToken());
+            MDC.put("reqToken", reqToken);
+            MDC.put("URI", request.getRequestURI());
+            MDC.put("method", request.getMethod());
+            MDC.put("status", String.valueOf(response.getStatus()));
 
             if (!isMultipartContent) {
                 wrappedRequest = new MultiReadHttpServletRequest(request);
@@ -141,9 +80,9 @@ public class LogFilter extends OncePerRequestFilter {
             }
 
             if (HttpMethod.GET.matches(request.getMethod())) {
-                log.info(formatGetMsg(request, request.getParameterMap()));
+                log.info(formatGetMsg(request, request.getParameterMap(), tokenInfo));
             } else {
-                log.info(formatPostMsg(request, request.getParameterMap(), requestBodyStr));
+                log.info(formatPostMsg(request, request.getParameterMap(), tokenInfo, requestBodyStr));
             }
 
             filterChain.doFilter(temRequest, temResponse);
@@ -171,6 +110,74 @@ public class LogFilter extends OncePerRequestFilter {
             MDC.remove("method");
             MDC.remove("status");
         }
+    }
+
+    private boolean recordIgnore(HttpServletRequest httpServletRequest) {
+        return HttpUtil.systemRequest(httpServletRequest);
+    }
+
+    private boolean isFileDownload(HttpServletRequest httpServletRequest) {
+        return httpServletRequest.getRequestURI().matches(".*/(export|captcha).*");
+    }
+
+    private String formatGetMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo) {
+        return buildRequestMsg(request, parameterMap, tokenInfo).toString();
+    }
+
+    private String formatPostMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo,
+                                 String requestJson) {
+        StringBuffer sb = buildRequestMsg(request, parameterMap, tokenInfo);
+        if (!StringUtils.isEmpty(requestJson)) {
+            sb.append("\n");
+            sb.append("[");
+            sb.append(requestJson);
+            sb.append("]");
+        }
+        return sb.toString();
+    }
+
+    private boolean isJsonResponse(HttpServletResponse response) {
+        return response.getContentType().contains("json");
+    }
+
+    private String extractResultPayload(MultiReadHttpServletResponse response) {
+        byte[] buf = response.getBody();
+        String payload = "";
+        if (buf.length > 0) {
+            try {
+                payload = new String(buf, 0, buf.length, response.getCharacterEncoding());
+            } catch (UnsupportedEncodingException ex) {
+                payload = "[unknown]";
+            }
+        }
+        return payload;
+    }
+
+    private String formatGetRspMsg(String totalTime, String resultJson) {
+        return "<=======" + "[" + totalTime + "]" + resultJson;
+    }
+
+    private String formatPostRspMsg(String totalTime, String resultJson) {
+        return "<=======" + "[" + totalTime + "]" + resultJson;
+    }
+
+    private StringBuffer buildRequestMsg(HttpServletRequest request, Map<String, String[]> parameterMap,
+                                         TokenInfo tokenInfo) {
+        StringBuffer sb = new StringBuffer();
+        sb.append("=======>").append("[").append(request.getMethod()).append("]").append(request.getRequestURI());
+        if (MapUtils.isNotEmpty(parameterMap)) {
+            sb.append("?").append(request.getQueryString());
+        }
+        sb.append(" {");
+        if (tokenInfo != null) {
+            sb.append("token:").append(tokenInfo.getToken()).append(" operator:").append(tokenInfo.getCustomerNumber())
+                    .append(" type:").append(tokenInfo.getType());
+        } else {
+            sb.append("token:").append(StringUtil.NULL).append(" operator:").append(StringUtil.NULL).append(" type:")
+                    .append(StringUtil.NULL);
+        }
+        sb.append("}");
+        return sb;
     }
 
 }

@@ -15,4 +15,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class AcUserRoleService extends BaseSqlRepo<AcUserRoleDao, AcUserRole> {
 
+    public void bind(Long userId, Long roleId) {
+        AcUserRole acUserRole = new AcUserRole();
+        acUserRole.setUserId(userId);
+        acUserRole.setRoleId(roleId);
+        super.insertOrUpdate(acUserRole);
+    }
+
+    public void unbind(Long userId, Long roleId) {
+        AcUserRole acUserRole = new AcUserRole();
+        acUserRole.setUserId(userId);
+        acUserRole.setRoleId(roleId);
+        super.deleteByMultiId(acUserRole);
+    }
 }
+

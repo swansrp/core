@@ -13,7 +13,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/14 09:03
+ * @date 2023/04/26 11:30
  */
 
 /**
@@ -44,9 +44,18 @@ public class SysDictType {
     @ApiModelProperty(value = "只读")
     private String readOnly;
 
+    /**
+     * 更新时间
+     */
+    @TableField(value = "expired")
+    @ApiModelProperty(value = "更新时间")
+    private Integer expired;
+
     public static final String COL_DICT_NAME = "dict_name";
 
     public static final String COL_DICT_TITLE = "dict_title";
 
     public static final String COL_READ_ONLY = "read_only";
+
+    public static final String COL_EXPIRED = "expired";
 }

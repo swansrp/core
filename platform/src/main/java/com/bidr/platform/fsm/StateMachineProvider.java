@@ -1,16 +1,16 @@
 package com.bidr.platform.fsm;
 
+import com.bidr.kernel.constant.err.ErrCode;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.DictEnumUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.fsm.bo.MachineType;
 import com.bidr.platform.fsm.bo.StateMachine;
 import com.bidr.platform.fsm.bo.operate.MachineOperate;
 import com.bidr.platform.fsm.bo.role.MachineRole;
 import com.bidr.platform.fsm.bo.state.MachineState;
 import com.bidr.platform.fsm.bo.transition.MachineTransition;
-import com.bidr.kernel.constant.err.ErrCode;
-import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.utils.DictEnumUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.validate.Validator;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeansException;

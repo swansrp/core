@@ -1,7 +1,6 @@
 package com.bidr.authorization.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import io.swagger.annotations.ApiModel;
@@ -24,13 +23,15 @@ public class AcRoleDept {
     /**
      * 角色ID
      */
-    @MppMultiId(value = "role_id")
+    @MppMultiId
+    @TableField(value = "role_id")
     @ApiModelProperty(value = "角色ID")
     private Long roleId;
     /**
      * 部门ID
      */
-    @MppMultiId(value = "dept_id")
+    @MppMultiId
+    @TableField(value = "dept_id")
     @ApiModelProperty(value = "部门ID")
     private Long deptId;
 }

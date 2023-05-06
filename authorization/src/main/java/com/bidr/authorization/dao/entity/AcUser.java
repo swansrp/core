@@ -1,9 +1,7 @@
 package com.bidr.authorization.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
+import com.bidr.kernel.mybatis.anno.AutoInsert;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -12,10 +10,10 @@ import java.util.Date;
 
 /**
  * Title: AcUser
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/23 11:31
+ * @date 2023/05/04 10:50
  */
 
 /**
@@ -26,12 +24,14 @@ import java.util.Date;
 @TableName(value = "ac_user")
 public class AcUser {
     public static final String COL_USER_ID = "user_id";
+    public static final String COL_CUSTOMER_NUMBER = "customer_number";
+    public static final String COL_NAME = "name";
     public static final String COL_DEPT_ID = "dept_id";
     public static final String COL_USER_NAME = "user_name";
     public static final String COL_NICK_NAME = "nick_name";
     public static final String COL_USER_TYPE = "user_type";
     public static final String COL_EMAIL = "email";
-    public static final String COL_PHONENUMBER = "phonenumber";
+    public static final String COL_PHONE_NUMBER = "phone_number";
     public static final String COL_SEX = "sex";
     public static final String COL_AVATAR = "avatar";
     public static final String COL_PASSWORD = "password";
@@ -53,11 +53,24 @@ public class AcUser {
     @ApiModelProperty(value = "用户ID")
     private Long userId;
     /**
+     * 用户编码
+     */
+    @AutoInsert(seq = "AC_USER_CUSTOMER_NUMBER_SEQ")
+    @TableField(value = "customer_number", fill = FieldFill.INSERT)
+    @ApiModelProperty(value = "用户编码")
+    private String customerNumber;
+    /**
+     * 用户姓名
+     */
+    @TableField(value = "`name`")
+    @ApiModelProperty(value = "用户姓名")
+    private String name;
+    /**
      * 部门ID
      */
     @TableField(value = "dept_id")
     @ApiModelProperty(value = "部门ID")
-    private Long deptId;
+    private String deptId;
     /**
      * 用户账号
      */
@@ -85,14 +98,14 @@ public class AcUser {
     /**
      * 手机号码
      */
-    @TableField(value = "phonenumber")
+    @TableField(value = "phone_number")
     @ApiModelProperty(value = "手机号码")
-    private String phonenumber;
+    private String phoneNumber;
     /**
-     * 用户性别（0男 1女 2未知）
+     * 用户性别（1男 2女）
      */
     @TableField(value = "sex")
-    @ApiModelProperty(value = "用户性别（0男 1女 2未知）")
+    @ApiModelProperty(value = "用户性别（1男 2女）")
     private String sex;
     /**
      * 头像地址
@@ -119,11 +132,11 @@ public class AcUser {
     @ApiModelProperty(value = "上次密码修改时间")
     private Date passwordLastTime;
     /**
-     * 帐号状态（0正常 1停用）
+     * 帐号状态ACTIVE_STATUS_DICT
      */
     @TableField(value = "`status`")
-    @ApiModelProperty(value = "帐号状态（0正常 1停用）")
-    private String status;
+    @ApiModelProperty(value = "帐号状态ACTIVE_STATUS_DICT")
+    private Integer status;
     /**
      * 最后登录IP
      */

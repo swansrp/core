@@ -5,9 +5,9 @@ import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,8 +30,8 @@ public class FuncUtil {
             Class<?> clazz = obj.getClass();
             if (String.class.isAssignableFrom(clazz)) {
                 return StringUtils.isEmpty((String) obj);
-            } else if (List.class.isAssignableFrom(clazz)) {
-                return CollectionUtils.isEmpty((List) obj);
+            } else if (Collection.class.isAssignableFrom(clazz)) {
+                return CollectionUtils.isEmpty((Collection) obj);
             } else if (Map.class.isAssignableFrom(clazz)) {
                 return MapUtils.isEmpty((Map) obj);
             } else if (obj.getClass().isArray()) {
@@ -40,7 +40,7 @@ public class FuncUtil {
                 return IteratorUtils.isEmpty((Iterator) obj);
             }
         }
-        return false;
+        return true;
     }
 
     public static Boolean notEquals(Object obj1, Object obj2) {
@@ -56,8 +56,8 @@ public class FuncUtil {
             Class<?> clazz = obj1.getClass();
             if (String.class.isAssignableFrom(clazz)) {
                 return StringUtils.equals((String) obj1, (String) obj2);
-            } else if (List.class.isAssignableFrom(clazz)) {
-                return CollectionUtils.isEqualCollection((List) obj1, (List) obj2);
+            } else if (Collection.class.isAssignableFrom(clazz)) {
+                return CollectionUtils.isEqualCollection((Collection) obj1, (Collection) obj2);
             } else if (obj1.getClass().isArray()) {
                 return CollectionUtils.isEqualCollection(Collections.singletonList(obj1),
                         Collections.singletonList(obj2));

@@ -11,11 +11,9 @@ import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.diboot.core.service.BaseService;
 import com.diboot.core.service.impl.BaseServiceImpl;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.jeffreyning.mybatisplus.service.IMppService;
 import com.github.yulichang.base.service.MPJJoinService;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.binding.MapperMethod;
 
 import java.lang.reflect.Field;

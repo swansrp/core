@@ -1,8 +1,8 @@
 package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.vo.query.QueryReqVO;
 
 import java.io.Serializable;
 import java.util.List;
@@ -21,23 +21,37 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(long currentPage, long pageSize);
 
+    Page<T> select(QueryReqVO req);
+
     List<T> select(Wrapper<T> wrapper);
 
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
 
+    Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
+
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize, boolean searchCount);
+
+    Page<T> select(Wrapper<T> wrapper,  QueryReqVO req, boolean searchCount);
 
     List<T> select(Map<String, Object> propertyMap);
 
     Page<T> select(Map<String, Object> propertyMap, long currentPage, long pageSize);
 
+    Page<T> select(Map<String, Object> propertyMap, QueryReqVO req);
+
     Page<T> select(Map<String, Object> propertyMap, long currentPage, long pageSize, boolean searchCount);
+
+    Page<T> select(Map<String, Object> propertyMap, QueryReqVO req, boolean searchCount);
 
     List<T> select(String propertyName, List<?> propertyList);
 
     Page<T> select(String propertyName, List<?> propertyList, long currentPage, long pageSize);
 
+    Page<T> select(String propertyName, List<?> propertyList, QueryReqVO req);
+
     Page<T> select(String propertyName, List<?> propertyList, long currentPage, long pageSize, boolean searchCount);
+
+    Page<T> select(String propertyName, List<?> propertyList, QueryReqVO req, boolean searchCount);
 
     T selectOne(Wrapper<T> wrapper);
 

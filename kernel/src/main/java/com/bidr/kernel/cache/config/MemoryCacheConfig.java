@@ -2,14 +2,12 @@ package com.bidr.kernel.cache.config;
 
 import com.bidr.kernel.cache.DynamicMemoryCacheInf;
 import com.bidr.kernel.cache.MemoryCacheInf;
-import com.diboot.core.cache.DynamicMemoryCacheManager;
 import com.diboot.core.cache.StaticMemoryCacheManager;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

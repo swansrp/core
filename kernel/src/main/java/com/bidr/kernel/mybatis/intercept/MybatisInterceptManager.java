@@ -16,6 +16,7 @@ import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.sql.Connection;
@@ -48,7 +49,7 @@ import java.util.List;
                 type = ResultSetHandler.class,
                 method = "handleResultSets",
                 args = {Statement.class})})
-// @Component
+@Component
 public class MybatisInterceptManager implements Interceptor {
 
     @Lazy

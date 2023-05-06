@@ -2,6 +2,7 @@ package com.bidr.authorization.vo.account;
 
 import com.bidr.authorization.dao.entity.AcDept;
 import com.diboot.core.binding.annotation.BindField;
+import com.diboot.core.data.copy.Accept;
 import lombok.Data;
 
 /**
@@ -13,11 +14,14 @@ import lombok.Data;
  */
 @Data
 public class AccountRes {
+    @Accept(name = "userId")
     private String id;
     private String userName;
     private String name;
+    @Accept(name = "deptId")
     private String department;
     @BindField(entity = AcDept.class, field = "name", condition = "this.department = dept_id")
     private String deptName;
+    @Accept(name = "avatar")
     private String pictureLink;
 }

@@ -5,7 +5,7 @@ import com.bidr.authorization.dao.repository.AcDeptService;
 import com.bidr.authorization.vo.department.DepartmentItem;
 import com.bidr.authorization.vo.department.DepartmentTreeRes;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.constant.dict.ActiveStatusDict;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

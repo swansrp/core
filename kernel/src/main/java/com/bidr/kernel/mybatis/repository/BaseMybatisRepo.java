@@ -204,4 +204,6 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     protected String getSelectSqlName(SFunction<T, ?> column) {
         return LambdaUtils.getName(column);
     }
+
+
 }

@@ -31,13 +31,22 @@ public interface MemoryCacheInf<T> extends CommandLineRunner {
      */
     void refresh();
 
+    @Override
+    default void run(String... args) throws Exception {
+        if (!lazyInit()) {
+            init();
+        }
+    }
+
+    /**
+     * 是否开机初始化
+     *
+     * @return
+     */
+    boolean lazyInit();
+
     /**
      * 初始化缓存
      */
     void init();
-
-    @Override
-    default void run(String... args) throws Exception {
-        init();
-    }
 }

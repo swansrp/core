@@ -1,7 +1,7 @@
 package com.bidr.platform.controller.admin;
 
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.controller.BaseAdminController;
+import com.bidr.kernel.controller.AdminController;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dict/admin"})
-public class AdminDictTypeController extends BaseAdminController<SysDictType> {
+public class AdminDictTypeController extends AdminController<SysDictType, SysDictType> {
     private final DictService dictService;
 
     @RequestMapping(path = {"/add"}, method = {RequestMethod.POST})

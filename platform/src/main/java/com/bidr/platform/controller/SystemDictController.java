@@ -2,7 +2,7 @@ package com.bidr.platform.controller;
 
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysDict;
-import com.bidr.platform.service.cache.DictCacheService;
+import com.bidr.platform.service.cache.dict.DictCacheService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.RequestMapping;

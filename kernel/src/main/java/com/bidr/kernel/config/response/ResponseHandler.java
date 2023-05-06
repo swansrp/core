@@ -1,8 +1,8 @@
 package com.bidr.kernel.config.response;
 
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.vo.common.CommonResVO;
 import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.vo.common.CommonResVO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ResponseBody;

@@ -7,8 +7,9 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
-import org.springframework.stereotype.Component;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.List;
 
 /**
@@ -18,10 +19,12 @@ import java.util.List;
  * @author Sharp
  * @date 2022/7/26 14:27
  */
-@Component
-public class BaseIntercept implements ExecutorIntercept, StatementIntercept, ParameterHandlerIntercept, ResultSetHandlerIntercept {
+public class BaseIntercept implements ExecutorIntercept, StatementIntercept, ParameterHandlerIntercept,
+        ResultSetHandlerIntercept {
+
     @Override
-    public void proceed(MappedStatement mappedStatement, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey cacheKey, BoundSql boundSql) {
+    public void proceed(MappedStatement mappedStatement, Object parameter, RowBounds rowBounds,
+                        ResultHandler resultHandler, CacheKey cacheKey, BoundSql boundSql) {
 
     }
 
@@ -38,5 +41,22 @@ public class BaseIntercept implements ExecutorIntercept, StatementIntercept, Par
     @Override
     public void proceed(StatementHandler statementHandler) {
 
+    }
+
+    protected <T extends Annotation> T getAnnotation(MappedStatement mappedStatement, Class<T> annoClass) {
+        try {
+            String id = mappedStatement.getId();
+            String className = id.substring(0, id.lastIndexOf("."));
+            String methodName = id.substring(id.lastIndexOf(".") + 1);
+            final Method[] method = Class.forName(className).getMethods();
+            for (Method me : method) {
+                if (me.getName().equals(methodName) && me.isAnnotationPresent(annoClass)) {
+                    return me.getAnnotation(annoClass);
+                }
+            }
+        } catch (Exception ex) {
+            return null;
+        }
+        return null;
     }
 }

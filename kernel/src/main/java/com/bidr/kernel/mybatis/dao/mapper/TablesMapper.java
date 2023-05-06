@@ -1,7 +1,7 @@
 package com.bidr.kernel.mybatis.dao.mapper;
 
-import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.dao.entity.Tables;
+import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 
 /**
  * Title: TablesMapper
