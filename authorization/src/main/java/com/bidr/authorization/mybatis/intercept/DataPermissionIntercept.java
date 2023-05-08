@@ -48,7 +48,7 @@ public class DataPermissionIntercept extends BaseIntercept implements CommandLin
 
     private static final Map<String, List<DataPermissionBo>> map = new ConcurrentHashMap<>();
     @Lazy
-    @Autowired
+    @Autowired(required = false)
     private List<DataPermissionInf> dataPermissionList;
 
     @Override
