@@ -28,6 +28,9 @@ public class RedissonConfig {
     @Value("${spring.redis.password}")
     private String password;
 
+    @Value("${spring.redis.username}")
+    private String username;
+
 
     @Bean(destroyMethod = "shutdown")
     public RedissonClient redisson() {
@@ -37,6 +40,9 @@ public class RedissonConfig {
         singleServerConfig.setAddress(redisUrl);
         if (StringUtils.isNotEmpty(password)) {
             singleServerConfig.setPassword(password);
+        }
+        if (StringUtils.isNotEmpty(username)) {
+            singleServerConfig.setUsername(username);
         }
         RedissonClient redisson = Redisson.create(config);
         return redisson;
