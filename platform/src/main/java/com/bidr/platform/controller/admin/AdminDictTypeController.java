@@ -1,5 +1,6 @@
 package com.bidr.platform.controller.admin;
 
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.AdminController;
 import com.bidr.kernel.utils.JsonUtil;
@@ -39,8 +40,8 @@ public class AdminDictTypeController extends AdminController<SysDictType, SysDic
 
     @Override
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
-    public Boolean delete(@RequestBody IdReqVO vo) {
+    public void delete(@RequestBody IdReqVO vo) {
         dictService.deleteDict(JsonUtil.readJson(vo.getId(), String.class));
-        return null;
+        Resp.notice("删除字典成功");
     }
 }

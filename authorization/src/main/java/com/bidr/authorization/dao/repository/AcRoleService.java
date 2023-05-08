@@ -21,7 +21,7 @@ public class AcRoleService extends BaseSqlRepo<AcRoleDao, AcRole> {
 
     public Page<AcRole> queryRole(QueryRoleReq req) {
         LambdaQueryWrapper<AcRole> wrapper = super.getQueryWrapper()
-                .eq(FuncUtil.isNotEmpty(req.getName()), AcRole::getRoleName, req.getName());
+                .like(FuncUtil.isNotEmpty(req.getName()), AcRole::getRoleName, req.getName());
         return super.select(wrapper, req);
     }
 }

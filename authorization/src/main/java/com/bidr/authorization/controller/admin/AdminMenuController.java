@@ -36,10 +36,16 @@ public class AdminMenuController extends BaseAdminOrderController<AcMenu, AcMenu
     @Resource
     private AdminMenuService adminMenuService;
 
+    @ApiOperation(value = "获取菜单树", notes = "全部")
+    @RequestMapping(value = "/tree", method = RequestMethod.GET)
+    public List<MenuTreeRes> getMenuTree() {
+        return adminMenuService.getMenuTree();
+    }
+
     @ApiOperation(value = "获取主菜单树", notes = "全部")
     @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getMainMenuTree() {
-        return adminMenuService.getMenuTree();
+        return adminMenuService.getMainMenuTree();
     }
 
     @ApiOperation(value = "获取子菜单树", notes = "全部")

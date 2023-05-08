@@ -1,5 +1,6 @@
 package com.bidr.authorization.dao.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.dao.mapper.AcUserRoleDao;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
@@ -27,6 +28,11 @@ public class AcUserRoleService extends BaseSqlRepo<AcUserRoleDao, AcUserRole> {
         acUserRole.setUserId(userId);
         acUserRole.setRoleId(roleId);
         super.deleteByMultiId(acUserRole);
+    }
+
+    public boolean existedByRoleId(String id) {
+        LambdaQueryWrapper<AcUserRole> wrapper = super.getQueryWrapper().eq(AcUserRole::getRoleId, id);
+        return super.existed(wrapper);
     }
 }
 

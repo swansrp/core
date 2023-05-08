@@ -27,11 +27,14 @@ import java.util.List;
 @Slf4j
 @Service
 @SuppressWarnings("rawtypes,unchecked")
-public abstract class BaseBindRepo<MASTER, BIND> {
+public abstract class BaseBindRepo<MASTER, BIND, SLAVE> {
 
     private final Class<MASTER> masterClass = (Class<MASTER>) ReflectionUtil.getSuperClassGenericType(this.getClass(),
             0);
     private final Class<BIND> bindClass = (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+
+    private final Class<SLAVE> slaveClass = (Class<SLAVE>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
+
     @Resource
     private ApplicationContext applicationContext;
 
@@ -52,7 +55,7 @@ public abstract class BaseBindRepo<MASTER, BIND> {
         return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(masterClass.getSimpleName()) + "Service");
     }
 
-    public IPage<MASTER> getUnbindUserList(QueryBindReq req) {
+    public IPage<MASTER> getUnbindList(QueryBindReq req) {
         MPJLambdaWrapper<MASTER> wrapper = new MPJLambdaWrapper<>(masterClass).distinct();
         wrapper.leftJoin(bindClass, bindMasterId(), masterId());
         masterRepo().parseQueryCondition(req, wrapper);
@@ -93,5 +96,18 @@ public abstract class BaseBindRepo<MASTER, BIND> {
             BIND bindEntity = buildBindEntity(masterId, salveId);
             bindRepo().deleteById(bindEntity);
         }
+    }
+
+    public List<SLAVE> getBindSlaveList(Object masterId) {
+        MPJLambdaWrapper<SLAVE> wrapper = new MPJLambdaWrapper<>(slaveClass);
+        wrapper.leftJoin(bindClass, bindMasterId(), masterId()).leftJoin(slaveClass, slaveId(), bindSlaveId())
+                .eq(bindSlaveId(), masterId);
+        return slaveRepo().selectJoinList(slaveClass, wrapper);
+    }
+
+    protected abstract SFunction<SLAVE, ?> slaveId();
+
+    protected BaseSqlRepo slaveRepo() {
+        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(slaveClass.getSimpleName()) + "Service");
     }
 }

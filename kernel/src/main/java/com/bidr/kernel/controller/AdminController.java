@@ -25,8 +25,14 @@ import javax.annotation.Resource;
  */
 @SuppressWarnings("rawtypes, unchecked")
 public abstract class AdminController<ENTITY, VO> {
-    protected Class<ENTITY> entityClass = (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
-    protected Class<VO> voClass = (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+
+    protected Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
+    protected Class<VO> getVoClass() {
+        return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    }
     @Resource
     private ApplicationContext applicationContext;
 
@@ -39,7 +45,7 @@ public abstract class AdminController<ENTITY, VO> {
     }
 
     protected BaseSqlRepo getRepo() {
-        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(entityClass.getSimpleName()) + "Service");
+        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
     }
 
     protected <T> boolean update(IdReqVO vo, SetFunc<ENTITY, T> bizFunc, T bizValue) {
@@ -52,14 +58,15 @@ public abstract class AdminController<ENTITY, VO> {
 
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
-    public Boolean delete(@RequestBody IdReqVO vo) {
-        return getRepo().deleteById(vo.getId());
+    public void delete(@RequestBody IdReqVO vo) {
+        getRepo().deleteById(vo.getId());
+        Resp.notice("删除成功");
     }
 
     @ApiOperation("根据id获取详情")
     @RequestMapping(value = "/id", method = RequestMethod.GET)
     public VO queryById(IdReqVO req) {
-        return Resp.convert(getRepo().selectById(req.getId()), voClass);
+        return Resp.convert(getRepo().selectById(req.getId()), getVoClass());
     }
 
 }

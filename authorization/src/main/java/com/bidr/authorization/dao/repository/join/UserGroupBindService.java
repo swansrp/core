@@ -1,6 +1,7 @@
 package com.bidr.authorization.dao.repository.join;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
  * @since 2023/05/05 14:05
  */
 @Service
-public class UserGroupBindService extends BaseBindRepo<AcUser, AcUserGroup> {
+public class UserGroupBindService extends BaseBindRepo<AcUser, AcUserGroup, AcGroup> {
 
     @Override
     protected SFunction<AcUserGroup, ?> bindMasterId() {
@@ -29,5 +30,10 @@ public class UserGroupBindService extends BaseBindRepo<AcUser, AcUserGroup> {
     @Override
     protected SFunction<AcUserGroup, ?> bindSlaveId() {
         return AcUserGroup::getGroupId;
+    }
+
+    @Override
+    protected SFunction<AcGroup, ?> slaveId() {
+        return AcGroup::getId;
     }
 }

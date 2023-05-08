@@ -1,9 +1,14 @@
 package com.bidr.authorization.service.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
+import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Title: AdminRoleMenuBindService
@@ -12,19 +17,25 @@ import com.bidr.kernel.mybatis.repository.BaseBindRepo;
  * @author Sharp
  * @since 2023/05/08 13:38
  */
-public class AdminRoleMenuBindService extends BaseBindRepo<AcRole, AcRoleMenu> {
+@Service
+public class AdminRoleMenuBindService extends BaseBindRepo<AcMenu, AcRoleMenu, AcRole> {
     @Override
     protected SFunction<AcRoleMenu, ?> bindMasterId() {
-        return AcRoleMenu::getRoleId;
+        return AcRoleMenu::getMenuId;
     }
 
     @Override
-    protected SFunction<AcRole, ?> masterId() {
-        return AcRole::getRoleId;
+    protected SFunction<AcMenu, ?> masterId() {
+        return AcMenu::getMenuId;
     }
 
     @Override
     protected SFunction<AcRoleMenu, ?> bindSlaveId() {
-        return AcRoleMenu::getMenuId;
+        return AcRoleMenu::getRoleId;
+    }
+
+    @Override
+    protected SFunction<AcRole, ?> slaveId() {
+        return AcRole::getRoleId;
     }
 }

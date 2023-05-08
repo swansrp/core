@@ -37,6 +37,12 @@ public class AdminMenuService {
     }
 
     public List<MenuTreeRes> getMenuTree() {
+        List<AcMenu> menuList = acMenuService.getAllMenu();
+        return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
+
+    }
+
+    public List<MenuTreeRes> getMainMenuTree() {
         List<AcMenu> menuList = acMenuService.getMainMenu();
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 

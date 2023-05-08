@@ -61,7 +61,9 @@ public enum AccountErrCode implements ErrCode {
     AC_NO_GET_MSG_CODE(1021, "请先获取短信验证码"),
 
     AC_IS_NOT_ADMIN(1022, "不是管理员,无权限"),
-    AC_DONT_HAVE_PERMIT(1023, "无指定接口权限");
+    AC_DONT_HAVE_PERMIT(1023, "无指定接口权限"),
+
+    AC_ROLE_HAS_USER(1024, "该角色下尚有用户, 不能删除该角色");
 
 
     private final Integer errCode;

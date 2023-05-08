@@ -19,19 +19,47 @@ import org.springframework.web.bind.annotation.RequestMethod;
  * @author Sharp
  * @since 2023/05/06 10:44
  */
-public abstract class BaseBindController<ENTITY, VO, BIND> {
+@SuppressWarnings("unchecked,rawtypes")
+public abstract class BaseBindController<MASTER, BIND, SLAVE, MASTER_VO, SLAVE_VO> extends AdminController<SLAVE,
+        SLAVE_VO> {
 
-    protected Class<ENTITY> entityClass = (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
-    protected Class<VO> voClass = (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    protected Class<MASTER> getMasterClass() {
+        return (Class<MASTER>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
+    protected Class<BIND> getBindClass() {
+        return (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    }
+
+    protected Class<SLAVE> getSlaveClass() {
+        return (Class<SLAVE>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
+    }
+
+    protected Class<MASTER_VO> getMasterVoClass() {
+        return (Class<MASTER_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 3);
+    }
+
+    protected Class<SLAVE_VO> getSlaveVoClass() {
+        return (Class<SLAVE_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
+    }
+
+
+    protected Class<SLAVE> getEntityClass() {
+        return (Class<SLAVE>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
+    }
+
+    protected Class<SLAVE_VO> getVoClass() {
+        return (Class<SLAVE_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
+    }
 
     @ApiOperation(value = "获取已绑定")
     @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
-    public Page<VO> getBind(@RequestBody QueryBindReq req) {
-        IPage<ENTITY> res = bindRepo().getBindList(req);
-        return Resp.convert(res, voClass);
+    public Page<MASTER_VO> getBind(@RequestBody QueryBindReq req) {
+        IPage<MASTER> res = bindRepo().getBindList(req);
+        return Resp.convert(res, getMasterVoClass());
     }
 
-    protected abstract BaseBindRepo<ENTITY, BIND> bindRepo();
+    protected abstract BaseBindRepo<MASTER, BIND, SLAVE> bindRepo();
 
     @ApiOperation(value = "绑定")
     @RequestMapping(value = "/bind", method = RequestMethod.POST)
@@ -42,9 +70,9 @@ public abstract class BaseBindController<ENTITY, VO, BIND> {
 
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/query", method = RequestMethod.POST)
-    public Page<VO> getUnBind(@RequestBody QueryBindReq req) {
-        IPage<ENTITY> res = bindRepo().getUnbindUserList(req);
-        return Resp.convert(res, voClass);
+    public Page<MASTER_VO> getUnBind(@RequestBody QueryBindReq req) {
+        IPage<MASTER> res = bindRepo().getUnbindList(req);
+        return Resp.convert(res, getMasterVoClass());
     }
 
     @ApiOperation(value = "解绑")

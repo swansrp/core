@@ -35,7 +35,7 @@ public abstract class BaseAdminOrderController<ENTITY, VO> extends AdminControll
     }
 
     private ENTITY buildIdOrderEntity(Object id, Integer order) {
-        ENTITY entity = ReflectionUtil.newInstance(entityClass);
+        ENTITY entity = ReflectionUtil.newInstance(getEntityClass());
         Object idValue = LambdaUtil.getValue(id(), id);
         String idField = LambdaUtil.getFieldName(id());
         String orderField = LambdaUtil.getFieldName(order());
