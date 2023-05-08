@@ -13,9 +13,9 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.awt.image.BufferedImage;
 import java.util.Map;
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2023/04/26 17:39
  */
 @Service
-public class CaptchaServiceImpl implements CaptchaService {
+public class CaptchaServiceImpl implements CaptchaService, CommandLineRunner {
 
     private static final Map<String, ICaptchaVerification> CAPTCHA_CODE_TYPE_MAP = new ConcurrentHashMap<>(16);
     private static final String EXPIRED_TIMESTAMP = "_CAPTCHA_EXPIRED_TIMESTAMP";
@@ -89,7 +89,11 @@ public class CaptchaServiceImpl implements CaptchaService {
         tokenServiceImpl.removeItemByToken(token, type, getExpiredTimestampTokenItem(type));
     }
 
-    @PostConstruct
+    @Override
+    public void run(String... args) throws Exception {
+        init();
+    }
+
     public void init() {
         Reflections reflections = new Reflections("com.bidr");
         Set<Class<? extends ICaptchaVerification>> msgVerificationClass = reflections.getSubTypesOf(

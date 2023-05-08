@@ -34,7 +34,7 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
 
 
     public DictCacheProvider(DynamicMemoryCacheManager dynamicMemoryCacheManager, DictCacheConfig config,
-                             SysDictService sysDictService, SysDictTypeService sysDictTypeService) {
+                             SysDictService sysDictService, SysDictTypeService sysDictTypeService, Boolean init) {
         this.dynamicMemoryCacheManager = dynamicMemoryCacheManager;
         this.config = config;
         this.sysDictService = sysDictService;
@@ -42,6 +42,9 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         Map<String, Integer> cacheConfig = new HashMap<>();
         cacheConfig.put(config.getDictName(), config.getExpired());
         this.dynamicMemoryCacheManager.addCache(cacheConfig);
+        if (init) {
+            this.init();
+        }
     }
 
     @Override

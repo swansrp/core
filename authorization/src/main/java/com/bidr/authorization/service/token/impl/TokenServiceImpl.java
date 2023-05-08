@@ -282,6 +282,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public Boolean isLoginToken() {
+        Validator.assertTrue(isTokenExist(), ErrCodeSys.SYS_SESSION_TIME_OUT);
         return FuncUtil.notEquals(getToken().getCustomerNumber(), GUEST_OPERATOR);
     }
 

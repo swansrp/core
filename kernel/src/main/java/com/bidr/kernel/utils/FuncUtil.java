@@ -40,7 +40,7 @@ public class FuncUtil {
                 return IteratorUtils.isEmpty((Iterator) obj);
             }
         }
-        return true;
+        return false;
     }
 
     public static Boolean notEquals(Object obj1, Object obj2) {

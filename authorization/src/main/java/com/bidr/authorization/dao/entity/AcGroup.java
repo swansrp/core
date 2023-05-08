@@ -1,0 +1,65 @@
+package com.bidr.authorization.dao.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
+
+ /**
+ * Title: AcGroup
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ *
+ * @author Sharp
+ * @date 2023/05/08 09:51
+ */
+
+/**
+ * 用户逻辑组群
+ */
+@ApiModel(description = "用户逻辑组群")
+@Data
+@TableName(value = "ac_group")
+public class AcGroup {
+    @TableId(value = "id", type = IdType.AUTO)
+    @ApiModelProperty(value = "")
+    @NotNull(message = "不能为null")
+    private Long id;
+
+    /**
+     * 父id
+     */
+    @TableField(value = "pid")
+    @ApiModelProperty(value = "父id")
+    private Long pid;
+
+    /**
+     * 组类型
+     */
+    @TableField(value = "`type`")
+    @ApiModelProperty(value = "组类型")
+    @NotNull(message = "组类型不能为null")
+    private Long type;
+
+    /**
+     * 组群名
+     */
+    @TableField(value = "`name`")
+    @ApiModelProperty(value = "组群名")
+    @Size(max = 50, message = "组群名最大长度要小于 50")
+    @NotBlank(message = "组群名不能为空")
+    private String name;
+
+    public static final String COL_ID = "id";
+
+    public static final String COL_PID = "pid";
+
+    public static final String COL_TYPE = "type";
+
+    public static final String COL_NAME = "name";
+}

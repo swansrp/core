@@ -28,31 +28,33 @@ import java.util.Map;
 public class SqlParseUtil {
 
     public static Map<String, String> buildTableAliasMap(String sql) {
-        PlainSelect plainSelect = getPlainSelect(sql);
+        PlainSelect plainSelect = (PlainSelect) getPlainSelect(sql).getSelectBody();
         Map<String, String> mapTable = new HashMap<>();
-        Table table = (Table) plainSelect.getFromItem();
-        if (table != null) {
-            if (table.getAlias() != null) {
-                mapTable.put(table.getName(), table.getAlias().getName());
-            } else {
-                mapTable.put(table.getName(), null);
-            }
-        }
-
-        if (FuncUtil.isNotEmpty(plainSelect.getJoins())) {
-            for (Join join : plainSelect.getJoins()) {
-                Table joinTable = (Table) join.getRightItem();
-                if (joinTable.getAlias() != null) {
-                    mapTable.put(joinTable.getName(), joinTable.getAlias().getName());
+        if(Table.class.isAssignableFrom(plainSelect.getClass())) {
+            Table table = (Table) plainSelect.getFromItem();
+            if (table != null) {
+                if (table.getAlias() != null) {
+                    mapTable.put(table.getName(), table.getAlias().getName());
                 } else {
-                    mapTable.put(joinTable.getName(), null);
+                    mapTable.put(table.getName(), null);
+                }
+            }
+
+            if (FuncUtil.isNotEmpty(plainSelect.getJoins())) {
+                for (Join join : plainSelect.getJoins()) {
+                    Table joinTable = (Table) join.getRightItem();
+                    if (joinTable.getAlias() != null) {
+                        mapTable.put(joinTable.getName(), joinTable.getAlias().getName());
+                    } else {
+                        mapTable.put(joinTable.getName(), null);
+                    }
                 }
             }
         }
         return mapTable;
     }
 
-    private static PlainSelect getPlainSelect(String sql) {
+    public static Select getPlainSelect(String sql) {
         Select select = null;
         try {
             select = (Select) CCJSqlParserUtil.parse(sql, ccjSqlParser -> ccjSqlParser.withSquareBracketQuotation(true));
@@ -60,11 +62,12 @@ public class SqlParseUtil {
             log.error(sql);
             Validator.assertException(ErrCodeSys.PA_PARAM_FORMAT, "SQL");
         }
-        return (PlainSelect) select.getSelectBody();
+        return select;
     }
 
     public static String mergeWhere(String sql, Expression newExpression) {
-        PlainSelect plainSelect = getPlainSelect(sql);
+        Select select = getPlainSelect(sql);
+        PlainSelect plainSelect = (PlainSelect) select.getSelectBody();
         Expression plainSelectWhere = plainSelect.getWhere();
         if (FuncUtil.isNotEmpty(newExpression)) {
             if (FuncUtil.isNotEmpty(plainSelectWhere)) {
@@ -73,6 +76,6 @@ public class SqlParseUtil {
                 plainSelect.setWhere(newExpression);
             }
         }
-        return plainSelect.toString();
+        return select.toString();
     }
 }

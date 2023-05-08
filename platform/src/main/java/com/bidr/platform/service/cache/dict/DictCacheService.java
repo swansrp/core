@@ -94,7 +94,8 @@ public class DictCacheService implements CommandLineRunner {
             for (SysDictType sysDictType : sysDictTypeList) {
                 DictCacheConfig config = ReflectionUtil.copy(sysDictType, DictCacheConfig.class);
                 MAP.put(config.getDictName(),
-                        new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService));
+                        new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService,
+                                false));
             }
         }
         Reflections reflections = new Reflections("com.bidr");
@@ -106,12 +107,14 @@ public class DictCacheService implements CommandLineRunner {
                     clazz.isAnnotationPresent(MetaDict.class)) {
                 config = buildDictCacheConfig(clazz, false);
                 MAP.put(config.getDictName(),
-                        new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService));
+                        new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService,
+                                true));
 
             } else if (IDynamicDict.class.isAssignableFrom(clazz) && clazz.isAnnotationPresent(MetaDict.class)) {
                 config = buildDictCacheConfig(clazz, true);
                 MAP.put(config.getDictName(),
-                        new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService));
+                        new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService,
+                                false));
             }
         }
     }

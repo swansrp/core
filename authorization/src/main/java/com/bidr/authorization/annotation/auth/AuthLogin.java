@@ -49,8 +49,8 @@ public class AuthLogin implements AuthRole {
         Validator.assertTrue(tokenService.isLoginToken(), SYS_SESSION_TIME_OUT);
         Map<String, Object> map = tokenService.getTokenValue(token);
         UserInfo userInfo = buildUserInfo(map);
-        Map<Long, RoleInfo> roleInfoMap = JsonUtil.readJson(map.get(TokenItem.ROLE_MAP.name()), Map.class,
-                Long.class, RoleInfo.class);
+        Map<Long, RoleInfo> roleInfoMap = JsonUtil.readJson(map.get(TokenItem.ROLE_MAP.name()), Map.class, Long.class,
+                RoleInfo.class);
         List<PermitInfo> permitInfoList = JsonUtil.readJson(map.get(TokenItem.PERMIT_LIST.name()), List.class,
                 PermitInfo.class);
         userInfo.setRoleInfoMap(roleInfoMap);
@@ -87,6 +87,7 @@ public class AuthLogin implements AuthRole {
         if (map.get(TokenItem.CLIENT_TYPE.name()) != null) {
             accountInfo.setClientType(String.valueOf(map.get(TokenItem.CLIENT_TYPE.name())));
         }
+        accountInfo.setExtraData(map);
         return accountInfo;
     }
 
