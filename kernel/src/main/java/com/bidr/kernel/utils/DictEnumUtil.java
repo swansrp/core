@@ -13,7 +13,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/11/29 17:21
+ * @since 2020/11/29 17:21
  */
 public class DictEnumUtil {
 

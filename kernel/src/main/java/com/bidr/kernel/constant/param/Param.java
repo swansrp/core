@@ -5,7 +5,7 @@ package com.bidr.kernel.constant.param;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/8 17:03
+ * @since 2022/6/8 17:03
  */
 public interface Param {
     /**

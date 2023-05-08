@@ -5,7 +5,7 @@ package com.bidr.authorization.config.msg;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/24 10:02
+ * @since 2021/8/24 10:02
  */
 public interface IMsgVerification {
     /**

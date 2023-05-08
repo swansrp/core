@@ -17,7 +17,7 @@ import java.util.UUID;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 12:44
+ * @since 2023/04/27 12:44
  */
 public class OpenApiUtil {
     public static void validateSign(long timeStamp, String nonce, String signature, String appSecret) {

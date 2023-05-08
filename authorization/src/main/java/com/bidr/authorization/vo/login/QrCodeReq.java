@@ -8,7 +8,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/3/12 13:58
+ * @since 2021/3/12 13:58
  */
 @Data
 public class QrCodeReq {

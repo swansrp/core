@@ -7,7 +7,7 @@ import java.util.Collection;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/07 18:41
+ * @since 2022/12/07 18:41
  */
 public interface SqlInsertRpo<T> {
     boolean insert(T entity);

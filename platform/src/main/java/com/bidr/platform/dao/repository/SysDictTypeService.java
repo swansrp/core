@@ -15,7 +15,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/29 13:23
+ * @since 2023/03/29 13:23
  */
 @Service
 public class SysDictTypeService extends BaseSqlRepo<SysDictTypeDao, SysDictType> {

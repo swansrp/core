@@ -11,7 +11,7 @@ import org.apache.ibatis.session.RowBounds;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/7/25 11:18
+ * @since 2022/7/25 11:18
  */
 public interface ExecutorIntercept extends MybatisIntercept {
 

@@ -5,7 +5,7 @@ package com.bidr.authorization.constants.token;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/4/17 21:47
+ * @since 2020/4/17 21:47
  */
 public enum ChangePasswordTokenItemConst {
     // 用户名

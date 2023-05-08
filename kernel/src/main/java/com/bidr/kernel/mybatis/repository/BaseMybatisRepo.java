@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * Description: Copyright: Copyright (c) 2022 Company: bidr
  *
  * @author Sharp
- * @date 2022/10/21 9:55
+ * @since 2022/10/21 9:55
  */
 @SuppressWarnings("unchecked")
 public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl<M, T> {

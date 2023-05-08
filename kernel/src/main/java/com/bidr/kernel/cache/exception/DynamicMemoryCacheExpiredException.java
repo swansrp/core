@@ -5,7 +5,7 @@ package com.bidr.kernel.cache.exception;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/09 13:24
+ * @since 2023/03/09 13:24
  */
 public class DynamicMemoryCacheExpiredException extends RuntimeException {
 

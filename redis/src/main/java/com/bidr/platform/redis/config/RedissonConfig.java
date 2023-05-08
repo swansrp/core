@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author 沙若鹏
- * @date 2019/9/29 21:50
+ * @since 2019/9/29 21:50
  */
 @Configuration
 public class RedissonConfig {

@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/5/11 11:27
+ * @since 2021/5/11 11:27
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

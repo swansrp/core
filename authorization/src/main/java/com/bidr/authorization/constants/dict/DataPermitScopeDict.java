@@ -11,7 +11,7 @@ import lombok.Getter;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/01 00:37
+ * @since 2023/05/01 00:37
  */
 @MetaDict(value = "DATA_PERMIT_SCOPE_DICT", remark = "数据权限作用域字典")
 @Getter

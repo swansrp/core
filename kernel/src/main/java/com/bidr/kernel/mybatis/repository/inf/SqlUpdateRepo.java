@@ -10,7 +10,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/07 18:38
+ * @since 2022/12/07 18:38
  */
 public interface SqlUpdateRepo<T> {
 

@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/4/17 20:43
+ * @since 2020/4/17 20:43
  * @description Project Name: Mall
  * @Package: com.srct.service.account.vo.login
  */

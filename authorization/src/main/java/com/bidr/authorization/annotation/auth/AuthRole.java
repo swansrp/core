@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/17 18:56
+ * @since 2021/8/17 18:56
  */
 @Component
 public interface AuthRole {

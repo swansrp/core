@@ -11,7 +11,7 @@ import lombok.Getter;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/05 15:56
+ * @since 2023/05/05 15:56
  */
 @MetaDict(value = "PORTAL_SORT_DICT", remark = "前端查询排序字典")
 @AllArgsConstructor

@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/8/12 9:46
+ * @since 2020/8/12 9:46
  */
 @Component
 public class CacheKeyByClass implements KeyGenerator {

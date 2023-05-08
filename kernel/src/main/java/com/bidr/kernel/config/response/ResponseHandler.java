@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/1/2 21:39
+ * @since 2021/1/2 21:39
  * @description Project Name: Seed
  * @Package: com.srct.service.config.response
  */

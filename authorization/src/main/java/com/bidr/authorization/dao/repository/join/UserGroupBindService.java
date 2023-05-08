@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/05 14:05
+ * @since 2023/05/05 14:05
  */
 @Service
 public class UserGroupBindService extends BaseBindRepo<AcUser, AcUserGroup> {

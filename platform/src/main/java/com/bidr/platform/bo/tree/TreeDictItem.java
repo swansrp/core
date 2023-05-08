@@ -7,7 +7,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/04 11:42
+ * @since 2023/04/04 11:42
  */
 @Data
 public class TreeDictItem {

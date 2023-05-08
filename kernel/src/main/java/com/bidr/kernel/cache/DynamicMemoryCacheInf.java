@@ -5,7 +5,7 @@ package com.bidr.kernel.cache;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/02/17 11:10
+ * @since 2023/02/17 11:10
  */
 public interface DynamicMemoryCacheInf<T> extends MemoryCacheInf<T> {
     /**

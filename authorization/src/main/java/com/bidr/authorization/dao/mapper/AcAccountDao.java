@@ -10,7 +10,7 @@ import org.apache.ibatis.annotations.Update;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/23 13:34
+ * @since 2023/04/23 13:34
  */
 @Mapper
 public interface AcAccountDao extends MyBaseMapper<AcAccount> {

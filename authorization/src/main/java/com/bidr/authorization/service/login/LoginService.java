@@ -11,7 +11,7 @@ import com.bidr.authorization.vo.login.SsoLoginReq;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/26 16:09
+ * @since 2023/04/26 16:09
  */
 public interface LoginService {
     /**

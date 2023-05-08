@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/07 18:15
+ * @since 2022/12/07 18:15
  */
 @Configuration
 @EnableMPP//启动mpp配置初始化

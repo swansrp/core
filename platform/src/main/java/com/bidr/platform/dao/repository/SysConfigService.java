@@ -13,7 +13,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/30 11:01
+ * @since 2022/12/30 11:01
  */
 @Service
 public class SysConfigService extends BaseSqlRepo<SysConfigDao, SysConfig> {

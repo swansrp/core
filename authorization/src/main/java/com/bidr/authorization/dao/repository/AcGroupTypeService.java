@@ -12,7 +12,7 @@ import com.bidr.authorization.dao.entity.AcGroupType;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/08 09:47
+ * @since 2023/05/08 09:47
  */
 @Service
 public class AcGroupTypeService extends BaseSqlRepo<AcGroupTypeMapper, AcGroupType> {

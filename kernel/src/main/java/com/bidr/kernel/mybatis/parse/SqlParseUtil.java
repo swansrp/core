@@ -22,7 +22,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/02 17:31
+ * @since 2023/05/02 17:31
  */
 @Slf4j
 public class SqlParseUtil {

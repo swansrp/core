@@ -26,7 +26,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/20 11:48
+ * @since 2023/03/20 11:48
  */
 @Api(tags = "系统菜单管理")
 @RestController("MenuController")

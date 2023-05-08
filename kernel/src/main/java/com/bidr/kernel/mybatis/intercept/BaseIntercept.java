@@ -17,7 +17,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/7/26 14:27
+ * @since 2022/7/26 14:27
  */
 public class BaseIntercept implements ExecutorIntercept, StatementIntercept, ParameterHandlerIntercept,
         ResultSetHandlerIntercept {

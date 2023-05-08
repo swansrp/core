@@ -7,7 +7,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/05 09:28
+ * @since 2023/05/05 09:28
  */
 @Data
 public class RoleReq {

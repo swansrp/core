@@ -7,7 +7,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/2/2 15:35
+ * @since 2021/2/2 15:35
  */
 @Data
 public class RedisPublishDto<T> {

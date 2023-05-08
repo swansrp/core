@@ -8,7 +8,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/21 18:28
+ * @since 2023/04/21 18:28
  */
 @Data
 public class DepartmentItem {

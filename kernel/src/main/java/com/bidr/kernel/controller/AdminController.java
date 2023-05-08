@@ -21,7 +21,7 @@ import javax.annotation.Resource;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/31 11:42
+ * @since 2023/03/31 11:42
  */
 @SuppressWarnings("rawtypes, unchecked")
 public abstract class AdminController<ENTITY, VO> {

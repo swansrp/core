@@ -5,7 +5,7 @@ package com.bidr.authorization.holder;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 13:59
+ * @since 2023/04/27 13:59
  */
 public class ClientTypeHolder {
 

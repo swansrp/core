@@ -11,7 +11,7 @@ import javax.validation.constraints.NotBlank;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/23 15:42
+ * @since 2021/8/23 15:42
  */
 @Data
 public class MsgCodeReq implements ICaptchaVerificationReq {

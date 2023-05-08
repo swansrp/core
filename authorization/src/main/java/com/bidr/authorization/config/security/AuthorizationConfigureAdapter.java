@@ -4,7 +4,7 @@
  * @Project Name: SpringBootCommonLib
  * @Package: com.srct.service.config.security
  * @author: ruopeng.sha
- * @date: 2018-07-20 15:01
+ * @since: 2018-07-20 15:01
  */
 package com.bidr.authorization.config.security;
 

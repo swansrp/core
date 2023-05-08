@@ -9,7 +9,7 @@ import java.awt.image.BufferedImage;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 09:38
+ * @since 2023/04/27 09:38
  */
 public interface CaptchaService {
 

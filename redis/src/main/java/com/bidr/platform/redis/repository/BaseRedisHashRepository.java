@@ -5,7 +5,7 @@ package com.bidr.platform.redis.repository;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/7/2 10:12
+ * @since 2020/7/2 10:12
  */
 public abstract class BaseRedisHashRepository<T> extends BaseRedisRepository {
 

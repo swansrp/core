@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/04 16:33
+ * @since 2023/05/04 16:33
  */
 @Service
 public class AcUserGroupService extends BaseSqlRepo<AcUserGroupDao, AcUserGroup> {

@@ -13,7 +13,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/05 16:20
+ * @since 2023/05/05 16:20
  */
 public interface PortalSelectRepo {
     default MPJLambdaWrapper parseQueryCondition(QueryConditionReq req, MPJLambdaWrapper wrapper) {

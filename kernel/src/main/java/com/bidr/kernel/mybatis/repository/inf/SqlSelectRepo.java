@@ -13,7 +13,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/8 15:53
+ * @since 2022/6/8 15:53
  */
 public interface SqlSelectRepo<T> {
 

@@ -5,7 +5,7 @@ package com.bidr.platform.service.callback;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/6 11:12
+ * @since 2022/6/6 11:12
  */
 public interface MyCallBack {
     /**

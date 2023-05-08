@@ -8,7 +8,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/23 15:43
+ * @since 2021/8/23 15:43
  */
 @Data
 public class MsgCodeRes {

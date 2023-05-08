@@ -16,7 +16,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/21 18:24
+ * @since 2023/04/21 18:24
  */
 @Api(value = "人事信息", tags = "人事信息")
 @RestController("DepartmentController")

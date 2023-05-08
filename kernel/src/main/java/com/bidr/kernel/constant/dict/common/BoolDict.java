@@ -10,7 +10,7 @@ import lombok.Getter;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/12/3 11:21
+ * @since 2020/12/3 11:21
  * @description Project Name: Seed
  * @Package: com.srct.service.constant.dict
  */

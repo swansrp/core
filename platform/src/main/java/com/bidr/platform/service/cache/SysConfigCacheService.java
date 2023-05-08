@@ -22,7 +22,7 @@ import java.util.*;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/09 11:41
+ * @since 2023/03/09 11:41
  */
 @Service
 public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {

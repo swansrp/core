@@ -7,7 +7,7 @@ import com.bidr.kernel.constant.CommonConst;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2019-7-26 22:16
+ * @since 2019-7-26 22:16
  */
 public interface Dict {
 

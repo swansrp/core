@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/16 16:25
+ * @since 2022/6/16 16:25
  */
 @Component
 public class AuthNone implements AuthRole {

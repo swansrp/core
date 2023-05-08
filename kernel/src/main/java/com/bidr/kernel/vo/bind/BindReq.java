@@ -9,7 +9,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/06 10:47
+ * @since 2023/05/06 10:47
  */
 @Data
 public class BindReq {

@@ -10,7 +10,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/8 16:04
+ * @since 2022/6/8 16:04
  */
 public interface SqlCountRepo<T> {
 

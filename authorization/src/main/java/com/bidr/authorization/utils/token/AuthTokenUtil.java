@@ -19,7 +19,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2019/10/9 15:07
+ * @since 2019/10/9 15:07
  */
 public class AuthTokenUtil {
 

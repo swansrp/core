@@ -5,7 +5,7 @@ package com.bidr.authorization.service.login;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 16:25
+ * @since 2023/04/27 16:25
  */
 public interface RoleBindService {
     /**

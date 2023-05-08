@@ -2,7 +2,7 @@
  * Title: BaseVO.java Description: Copyright: Copyright (c) 2019 Company: Sharp
  *
  * @author sharuopeng
- * @date 2019-02-19 13:51:27
+ * @since 2019-02-19 13:51:27
  */
 package com.bidr.kernel.vo.query;
 

@@ -5,7 +5,7 @@ package com.bidr.authorization.vo.msg;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/7/10 17:56
+ * @since 2020/7/10 17:56
  * @description Project Name: Seed
  * @Package: com.srct.service.vo
  */

@@ -25,7 +25,7 @@ import java.util.List;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/28 08:49
+ * @since 2023/03/28 08:49
  */
 @Api(tags = {"系统字典管理"})
 @RestController

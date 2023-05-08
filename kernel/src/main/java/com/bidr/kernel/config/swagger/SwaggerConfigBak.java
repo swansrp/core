@@ -3,7 +3,7 @@
  *
  * @Package: com.srct.service.config.swagger
  * @author: xxfore
- * @date: 2018-04-30 15:07
+ * @since: 2018-04-30 15:07
  */
 package com.bidr.kernel.config.swagger;
 

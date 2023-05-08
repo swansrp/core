@@ -12,7 +12,7 @@ import java.math.BigDecimal;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/4/23 14:09
+ * @since 2021/4/23 14:09
  */
 public class BigDecimalSerializer extends JsonSerializer<BigDecimal> {
 

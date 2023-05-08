@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/17 10:02
+ * @since 2023/03/17 10:02
  */
 @ApiModel(value = "角色和菜单关联表")
 @Data

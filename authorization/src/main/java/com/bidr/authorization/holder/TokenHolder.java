@@ -7,7 +7,7 @@ import com.bidr.authorization.bo.token.TokenInfo;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 09:36
+ * @since 2023/04/27 09:36
  */
 public class TokenHolder {
 

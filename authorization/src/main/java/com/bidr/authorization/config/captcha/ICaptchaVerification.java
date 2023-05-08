@@ -5,7 +5,7 @@ package com.bidr.authorization.config.captcha;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/24 11:41
+ * @since 2021/8/24 11:41
  */
 public interface ICaptchaVerification {
     /**

@@ -11,7 +11,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/08 08:53
+ * @since 2022/12/08 08:53
  */
 public interface SqlDeleteRepo<T> {
 

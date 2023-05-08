@@ -7,7 +7,7 @@ import com.bidr.authorization.dao.entity.AcMenu;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/20 11:50
+ * @since 2023/03/20 11:50
  */
 public class MenuReq extends AcMenu {
 }

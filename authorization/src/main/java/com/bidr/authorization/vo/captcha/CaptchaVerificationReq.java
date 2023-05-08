@@ -8,7 +8,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/24 11:44
+ * @since 2021/8/24 11:44
  */
 @Data
 public class CaptchaVerificationReq implements ICaptchaVerificationReq {

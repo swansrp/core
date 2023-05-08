@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/02 21:23
+ * @since 2023/05/02 21:23
  */
 @Component
 public class DataPermissionIntercept extends BaseIntercept implements CommandLineRunner {

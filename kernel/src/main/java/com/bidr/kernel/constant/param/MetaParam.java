@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/09 14:00
+ * @since 2023/03/09 14:00
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

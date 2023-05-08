@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/29 14:01
+ * @since 2023/03/29 14:01
  */
 
 @Api(tags = {"系统字典管理"})

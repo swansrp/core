@@ -9,7 +9,7 @@ import javax.annotation.Resource;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/7/2 11:58
+ * @since 2020/7/2 11:58
  */
 public abstract class BaseRedisRepository {
     @Resource

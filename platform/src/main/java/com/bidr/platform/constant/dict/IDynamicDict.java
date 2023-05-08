@@ -12,7 +12,7 @@ import java.util.Collection;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/3/16 22:36
+ * @since 2021/3/16 22:36
  */
 public interface IDynamicDict {
     /**

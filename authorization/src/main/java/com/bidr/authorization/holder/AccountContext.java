@@ -9,7 +9,7 @@ import com.bidr.kernel.utils.StringUtil;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 11:27
+ * @since 2023/04/27 11:27
  */
 public class AccountContext {
     private static final ThreadLocal<AccountInfo> ACCOUNT_INFO_HOLDER = new ThreadLocal<>();

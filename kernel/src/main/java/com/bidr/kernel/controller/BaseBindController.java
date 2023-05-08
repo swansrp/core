@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/06 10:44
+ * @since 2023/05/06 10:44
  */
 public abstract class BaseBindController<ENTITY, VO, BIND> {
 

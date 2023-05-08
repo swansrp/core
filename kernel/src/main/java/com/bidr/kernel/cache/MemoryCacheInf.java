@@ -7,7 +7,7 @@ import org.springframework.boot.CommandLineRunner;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2022/12/14 09:59
+ * @since 2022/12/14 09:59
  */
 public interface MemoryCacheInf<T> extends CommandLineRunner {
     /**

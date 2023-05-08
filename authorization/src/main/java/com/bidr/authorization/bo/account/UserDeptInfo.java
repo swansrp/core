@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/05/04 18:31
+ * @since 2023/05/04 18:31
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

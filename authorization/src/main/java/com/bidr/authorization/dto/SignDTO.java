@@ -7,7 +7,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/04/27 12:39
+ * @since 2023/04/27 12:39
  */
 @Data
 public class SignDTO {

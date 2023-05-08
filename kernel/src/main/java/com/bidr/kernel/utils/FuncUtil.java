@@ -15,7 +15,7 @@ import java.util.Map;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/30 10:32
+ * @since 2023/03/30 10:32
  */
 @SuppressWarnings("rawtypes")
 public class FuncUtil {

@@ -10,7 +10,7 @@ import lombok.Setter;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/20 10:39
+ * @since 2021/8/20 10:39
  */
 @AllArgsConstructor
 public enum CaptchaType implements ICaptchaVerification {

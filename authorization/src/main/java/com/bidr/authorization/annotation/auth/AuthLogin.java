@@ -28,7 +28,7 @@ import static com.bidr.kernel.constant.err.ErrCodeSys.SYS_SESSION_TIME_OUT;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2021/8/23 14:17
+ * @since 2021/8/23 14:17
  */
 @Slf4j
 @Component

@@ -8,7 +8,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
- * @date 2023/03/22 09:26
+ * @since 2023/03/22 09:26
  */
 @Data
 public class IdReqVO {

@@ -5,7 +5,7 @@ package com.bidr.kernel.constant.db;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/6 14:40
+ * @since 2022/6/6 14:40
  */
 public class SqlConstant {
     public static final String INVALID = "0";

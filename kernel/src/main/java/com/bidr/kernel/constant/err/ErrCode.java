@@ -5,7 +5,7 @@ package com.bidr.kernel.constant.err;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2022/6/6 11:17
+ * @since 2022/6/6 11:17
  */
 public interface ErrCode {
     /**
