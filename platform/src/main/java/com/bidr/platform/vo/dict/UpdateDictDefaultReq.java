@@ -15,5 +15,5 @@ public class UpdateDictDefaultReq {
     @ApiModelProperty("字典名")
     private String dictName;
     @ApiModelProperty("default字典项id")
-    private Long dictId;
+    private String dictId;
 }

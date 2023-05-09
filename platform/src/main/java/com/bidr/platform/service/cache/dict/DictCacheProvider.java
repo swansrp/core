@@ -132,6 +132,7 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         SysDict item = new SysDict();
         String itemId = ((Enum) enumItem).name();
         Integer order = ((Enum) enumItem).ordinal();
+        item.setDictId(dictName + "_" + itemId);
         item.setDictName(dictName);
         item.setDictTitle(title);
         item.setDictItem(itemId);

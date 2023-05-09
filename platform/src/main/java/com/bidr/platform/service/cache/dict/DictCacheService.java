@@ -1,6 +1,7 @@
 package com.bidr.platform.service.cache.dict;
 
 import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.utils.FuncUtil;
@@ -128,6 +129,7 @@ public class DictCacheService implements CommandLineRunner {
         config.setDictTitle(dictTitle);
         config.setDynamic(dynamic);
         config.setExpired(DEFAULT_EXPIRED);
+        config.setReadOnly(CommonConst.YES);
         return config;
     }
 }

@@ -4,8 +4,8 @@
   <resultMap id="BaseResultMap" type="com.bidr.platform.dao.entity.SysDict">
     <!--@mbg.generated-->
     <!--@Table sys_dict-->
-    <id column="dict_id" jdbcType="BIGINT" property="dictId" />
-    <result column="dict_pid" jdbcType="BIGINT" property="dictPid" />
+    <id column="dict_id" jdbcType="VARCHAR" property="dictId" />
+    <result column="dict_pid" jdbcType="VARCHAR" property="dictPid" />
     <result column="dict_sort" jdbcType="INTEGER" property="dictSort" />
     <result column="dict_name" jdbcType="VARCHAR" property="dictName" />
     <result column="dict_title" jdbcType="VARCHAR" property="dictTitle" />
