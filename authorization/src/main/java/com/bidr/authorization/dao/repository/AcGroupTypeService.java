@@ -1,11 +1,8 @@
 package com.bidr.authorization.dao.repository;
 
+import com.bidr.authorization.dao.mapper.AcGroupTypeDao;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
-import javax.annotation.Resource;
-import java.util.List;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.bidr.authorization.dao.mapper.AcGroupTypeMapper;
 import com.bidr.authorization.dao.entity.AcGroupType;
  /**
  * Title: AcGroupTypeService
@@ -15,6 +12,6 @@ import com.bidr.authorization.dao.entity.AcGroupType;
  * @since 2023/05/08 09:47
  */
 @Service
-public class AcGroupTypeService extends BaseSqlRepo<AcGroupTypeMapper, AcGroupType> {
+public class AcGroupTypeService extends BaseSqlRepo<AcGroupTypeDao, AcGroupType> {
 
 }

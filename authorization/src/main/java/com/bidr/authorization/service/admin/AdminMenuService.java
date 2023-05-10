@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.repository.AcMenuService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,11 @@ public class AdminMenuService {
 
     public List<MenuTreeRes> getMenuTree() {
         List<AcMenu> menuList = acMenuService.getAllMenu();
+        for (AcMenu acMenu : menuList) {
+            if (FuncUtil.isEmpty(acMenu.getPid())) {
+                acMenu.setPid(acMenu.getGrandId());
+            }
+        }
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }

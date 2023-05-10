@@ -3,9 +3,9 @@
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @since 2019-7-28 10:52
  * @description Project Name: Grote
  * @Package: com.srct.service.account.constants
+ * @since 2019-7-28 10:52
  */
 package com.bidr.authorization.constants.token;
 
@@ -16,6 +16,8 @@ public enum TokenItem {
     CLIENT_TYPE,
     // 用户编码
     OPERATOR,
+    // 用户id,
+    USER_ID,
     // 用户名
     USER_NAME,
     // 显示名称,
@@ -54,5 +56,5 @@ public enum TokenItem {
     ROLE_MAP,
 
     TIMESTAMP,
-    EXPIRED;
+    EXPIRED
 }

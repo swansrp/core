@@ -28,7 +28,7 @@ public class AccountController {
 
     private final AuthAccountService accountService;
 
-    @ApiOperation(value = "获取用户", notes = "登录后准入")
+    @ApiOperation(value = "获取用户")
     @RequestMapping(value = "", method = RequestMethod.POST)
     public List<AccountRes> getAccount(@RequestBody AccountReq req) {
         return accountService.getAccount(req);

@@ -6,22 +6,24 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
 import java.util.Date;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
 
  /**
  * Title: AcMenu
- * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/04/27 14:35
+ * @since 2023/05/09 22:17
  */
 
 /**
  * 菜单权限表
  */
-@ApiModel(value = "菜单权限表")
+@ApiModel(description = "菜单权限表")
 @Data
 @TableName(value = "ac_menu")
 public class AcMenu {
@@ -30,6 +32,7 @@ public class AcMenu {
      */
     @TableId(value = "menu_id", type = IdType.AUTO)
     @ApiModelProperty(value = "菜单ID")
+    @NotNull(message = "菜单ID不能为null")
     private Long menuId;
 
     /**
@@ -54,10 +57,21 @@ public class AcMenu {
     private Long key;
 
     /**
+     * 祖级列表
+     */
+    @TableField(value = "ancestors")
+    @ApiModelProperty(value = "祖级列表")
+    @Size(max = 50, message = "祖级列表最大长度要小于 50")
+    @NotBlank(message = "祖级列表不能为空")
+    private String ancestors;
+
+    /**
      * 客户端类型
      */
     @TableField(value = "client_type")
     @ApiModelProperty(value = "客户端类型")
+    @Size(max = 2, message = "客户端类型最大长度要小于 2")
+    @NotBlank(message = "客户端类型不能为空")
     private String clientType;
 
     /**
@@ -65,6 +79,8 @@ public class AcMenu {
      */
     @TableField(value = "title")
     @ApiModelProperty(value = "菜单名称")
+    @Size(max = 50, message = "菜单名称最大长度要小于 50")
+    @NotBlank(message = "菜单名称不能为空")
     private String title;
 
     /**
@@ -79,6 +95,7 @@ public class AcMenu {
      */
     @TableField(value = "`path`")
     @ApiModelProperty(value = "路由地址")
+    @Size(max = 200, message = "路由地址最大长度要小于 200")
     private String path;
 
     /**
@@ -86,6 +103,7 @@ public class AcMenu {
      */
     @TableField(value = "component")
     @ApiModelProperty(value = "组件路径")
+    @Size(max = 255, message = "组件路径最大长度要小于 255")
     private String component;
 
     /**
@@ -93,6 +111,7 @@ public class AcMenu {
      */
     @TableField(value = "query")
     @ApiModelProperty(value = "路由参数")
+    @Size(max = 255, message = "路由参数最大长度要小于 255")
     private String query;
 
     /**
@@ -100,6 +119,7 @@ public class AcMenu {
      */
     @TableField(value = "is_frame")
     @ApiModelProperty(value = "是否为外链（0是 1否）")
+    @Size(max = 50, message = "是否为外链（0是 1否）最大长度要小于 50")
     private String isFrame;
 
     /**
@@ -107,6 +127,7 @@ public class AcMenu {
      */
     @TableField(value = "is_cache")
     @ApiModelProperty(value = "是否缓存（0缓存 1不缓存）")
+    @Size(max = 50, message = "是否缓存（0缓存 1不缓存）最大长度要小于 50")
     private String isCache;
 
     /**
@@ -121,6 +142,7 @@ public class AcMenu {
      */
     @TableField(value = "visible")
     @ApiModelProperty(value = "菜单状态（0显示 1隐藏）")
+    @Size(max = 1, message = "菜单状态（0显示 1隐藏）最大长度要小于 1")
     private String visible;
 
     /**
@@ -128,6 +150,7 @@ public class AcMenu {
      */
     @TableField(value = "`status`")
     @ApiModelProperty(value = "菜单状态（0正常 1停用）")
+    @Size(max = 1, message = "菜单状态（0正常 1停用）最大长度要小于 1")
     private String status;
 
     /**
@@ -135,6 +158,7 @@ public class AcMenu {
      */
     @TableField(value = "perms")
     @ApiModelProperty(value = "权限标识")
+    @Size(max = 100, message = "权限标识最大长度要小于 100")
     private String perms;
 
     /**
@@ -142,6 +166,7 @@ public class AcMenu {
      */
     @TableField(value = "icon")
     @ApiModelProperty(value = "菜单图标")
+    @Size(max = 100, message = "菜单图标最大长度要小于 100")
     private String icon;
 
     /**
@@ -149,6 +174,7 @@ public class AcMenu {
      */
     @TableField(value = "create_by")
     @ApiModelProperty(value = "创建者")
+    @Size(max = 64, message = "创建者最大长度要小于 64")
     private String createBy;
 
     /**
@@ -163,6 +189,7 @@ public class AcMenu {
      */
     @TableField(value = "update_by")
     @ApiModelProperty(value = "更新者")
+    @Size(max = 64, message = "更新者最大长度要小于 64")
     private String updateBy;
 
     /**
@@ -177,6 +204,7 @@ public class AcMenu {
      */
     @TableField(value = "remark")
     @ApiModelProperty(value = "备注")
+    @Size(max = 500, message = "备注最大长度要小于 500")
     private String remark;
 
     public static final String COL_MENU_ID = "menu_id";
@@ -186,6 +214,8 @@ public class AcMenu {
     public static final String COL_GRAND_ID = "grand_id";
 
     public static final String COL_KEY = "key";
+
+    public static final String COL_ANCESTORS = "ancestors";
 
     public static final String COL_CLIENT_TYPE = "client_type";
 

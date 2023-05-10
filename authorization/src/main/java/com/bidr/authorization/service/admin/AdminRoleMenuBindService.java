@@ -18,24 +18,24 @@ import java.util.List;
  * @since 2023/05/08 13:38
  */
 @Service
-public class AdminRoleMenuBindService extends BaseBindRepo<AcMenu, AcRoleMenu, AcRole> {
+public class AdminRoleMenuBindService extends BaseBindRepo<AcRole, AcRoleMenu, AcMenu> {
     @Override
-    protected SFunction<AcRoleMenu, ?> bindMasterId() {
+    protected SFunction<AcRoleMenu, ?> bindAttachId() {
         return AcRoleMenu::getMenuId;
     }
 
     @Override
-    protected SFunction<AcMenu, ?> masterId() {
+    protected SFunction<AcMenu, ?> attachId() {
         return AcMenu::getMenuId;
     }
 
     @Override
-    protected SFunction<AcRoleMenu, ?> bindSlaveId() {
+    protected SFunction<AcRoleMenu, ?> bindEntityId() {
         return AcRoleMenu::getRoleId;
     }
 
     @Override
-    protected SFunction<AcRole, ?> slaveId() {
+    protected SFunction<AcRole, ?> entityId() {
         return AcRole::getRoleId;
     }
 }

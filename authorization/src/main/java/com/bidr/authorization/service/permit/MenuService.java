@@ -30,7 +30,11 @@ public class MenuService {
     private final AcUserRoleMenuService acUserRoleMenuService;
 
     public List<MenuTreeRes> getMenuTree() {
+        String customerNumber = AccountContext.getOperator();
+        String clientType = ClientTypeHolder.get();
+        // List<AcMenu> menuList = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
         List<AcMenu> menuList = acMenuService.getAllMenu();
+
         for (AcMenu acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
@@ -40,6 +44,9 @@ public class MenuService {
     }
 
     public List<MenuTreeItem> getMenuList() {
+        String customerNumber = AccountContext.getOperator();
+        String clientType = ClientTypeHolder.get();
+        // List<AcMenu> allPermit = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
         List<AcMenu> allPermit = acMenuService.getAllMenu();
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }

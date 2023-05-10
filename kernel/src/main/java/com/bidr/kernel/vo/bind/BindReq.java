@@ -13,6 +13,6 @@ import java.util.List;
  */
 @Data
 public class BindReq {
-    private List<?> masterIds;
-    private Object slaveId;
+    private Object attachId;
+    private Object entityId;
 }

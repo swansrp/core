@@ -1,5 +1,6 @@
 package com.bidr.kernel.mybatis.intercept;
 
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -15,6 +16,7 @@ import org.apache.ibatis.plugin.Invocation;
 import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -32,36 +34,24 @@ import java.util.List;
  * @since 2022/7/25 14:54
  */
 @Slf4j
-@Intercepts({
-        @Signature(
-                type = Executor.class,
-                method = "query",
-                args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
-        @Signature(
-                type = StatementHandler.class,
-                method = "prepare",
-                args = {Connection.class, Integer.class}),
-        @Signature(
-                type = ParameterHandler.class,
-                method = "setParameters",
-                args = {PreparedStatement.class}),
-        @Signature(
-                type = ResultSetHandler.class,
-                method = "handleResultSets",
-                args = {Statement.class})})
+@Intercepts({@Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class,
+        RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}), @Signature(type =
+        StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}), @Signature(type =
+        ParameterHandler.class, method = "setParameters", args = {PreparedStatement.class}), @Signature(type =
+        ResultSetHandler.class, method = "handleResultSets", args = {Statement.class})})
 @Component
 public class MybatisInterceptManager implements Interceptor {
 
     @Lazy
     @Resource
     private MybatisInterceptManager mybatisInterceptManager;
-    @Resource
+    @Autowired(required = false)
     private List<ExecutorIntercept> executorIntercepts;
-    @Resource
+    @Autowired(required = false)
     private List<StatementIntercept> statementIntercepts;
-    @Resource
+    @Autowired(required = false)
     private List<ParameterHandlerIntercept> parameterHandlerIntercepts;
-    @Resource
+    @Autowired(required = false)
     private List<ResultSetHandlerIntercept> resultSetHandlerIntercepts;
 
     @Override
@@ -73,28 +63,36 @@ public class MybatisInterceptManager implements Interceptor {
             ResultHandler resultHandler = (ResultHandler) invocation.getArgs()[3];
             CacheKey cacheKey = (CacheKey) invocation.getArgs()[4];
             BoundSql boundSql = (BoundSql) invocation.getArgs()[5];
-            for (ExecutorIntercept executorIntercept : executorIntercepts) {
-                executorIntercept.proceed(mappedStatement, parameter, rowBounds, resultHandler, cacheKey, boundSql);
+            if (FuncUtil.isNotEmpty(executorIntercepts)) {
+                for (ExecutorIntercept executorIntercept : executorIntercepts) {
+                    executorIntercept.proceed(mappedStatement, parameter, rowBounds, resultHandler, cacheKey, boundSql);
+                }
             }
             return invocation.proceed();
         } else if (invocation.getTarget() instanceof StatementHandler) {
             StatementHandler statementHandler = (StatementHandler) invocation.getTarget();
-            for (StatementIntercept statementIntercept : statementIntercepts) {
-                statementIntercept.proceed(statementHandler);
+            if (FuncUtil.isNotEmpty(statementIntercepts)) {
+                for (StatementIntercept statementIntercept : statementIntercepts) {
+                    statementIntercept.proceed(statementHandler);
+                }
             }
             return invocation.proceed();
         } else if (invocation.getTarget() instanceof ParameterHandler) {
             ParameterHandler parameterHandler = (ParameterHandler) invocation.getTarget();
-            for (ParameterHandlerIntercept parameterHandlerIntercept : parameterHandlerIntercepts) {
-                parameterHandlerIntercept.proceed(parameterHandler);
+            if (FuncUtil.isNotEmpty(parameterHandlerIntercepts)) {
+                for (ParameterHandlerIntercept parameterHandlerIntercept : parameterHandlerIntercepts) {
+                    parameterHandlerIntercept.proceed(parameterHandler);
+                }
             }
             return invocation.proceed();
         } else if (invocation.getTarget() instanceof ResultSetHandler) {
             DefaultResultSetHandler handler = (DefaultResultSetHandler) invocation.getTarget();
             Statement statement = (Statement) invocation.getArgs()[0];
             List<Object> resultList = handler.handleResultSets(statement);
-            for (ResultSetHandlerIntercept resultSetHandlerIntercept : resultSetHandlerIntercepts) {
-                resultSetHandlerIntercept.proceed(resultList);
+            if (FuncUtil.isNotEmpty(resultSetHandlerIntercepts)) {
+                for (ResultSetHandlerIntercept resultSetHandlerIntercept : resultSetHandlerIntercepts) {
+                    resultSetHandlerIntercept.proceed(resultList);
+                }
             }
             return resultList;
         } else {

@@ -1,5 +1,7 @@
 package com.bidr.authorization.mybatis.anno;
 
+import com.bidr.authorization.mybatis.permission.DataPermissionInf;
+
 import java.lang.annotation.*;
 
 /**
@@ -14,4 +16,10 @@ import java.lang.annotation.*;
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface DataPermission {
 
+    /**
+     * 需要追加的数据权限
+     *
+     * @return
+     */
+    Class<? extends DataPermissionInf>[] value();
 }

@@ -18,6 +18,8 @@ import java.util.Map;
  */
 @Data
 public class UserInfo {
+    @ApiModelProperty("用户id")
+    private Long userId;
     @ApiModelProperty("用户编码")
     private String customerNumber;
     @ApiModelProperty("用户登录名")

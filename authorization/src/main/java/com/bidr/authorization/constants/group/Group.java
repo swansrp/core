@@ -13,7 +13,7 @@ public interface Group {
      *
      * @return
      */
-    String getId();
+    String name();
 
     /**
      * 组名
@@ -21,5 +21,5 @@ public interface Group {
      * @return
      */
 
-    String getName();
+    String getRemark();
 }

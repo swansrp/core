@@ -191,8 +191,8 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private void fillToken(LoginRes res, AcUser acUser) {
-        TokenInfo accessToken = buildAccessToken(res.getCustomerNumber(), res.getName());
-        TokenInfo refreshToken = buildRefreshToken(res.getCustomerNumber());
+        TokenInfo accessToken = buildAccessToken(acUser.getUserId(), acUser.getCustomerNumber(), acUser.getName());
+        TokenInfo refreshToken = buildRefreshToken(acUser.getCustomerNumber());
         res.setAccessToken(AuthTokenUtil.getToken(accessToken));
         res.setRefreshToken(AuthTokenUtil.getToken(refreshToken));
         String clientType = ClientTypeHolder.get();
@@ -203,7 +203,7 @@ public class LoginServiceImpl implements LoginService {
         TokenHolder.set(accessToken);
     }
 
-    private TokenInfo buildAccessToken(String customerNumber, String nickName) {
+    private TokenInfo buildAccessToken(Long userId, String customerNumber, String nickName) {
         TokenInfo accessToken = null;
         String clientType = ClientTypeHolder.get();
         if (FuncUtil.equals(clientType, ClientType.WEB.getValue())) {
@@ -213,6 +213,7 @@ public class LoginServiceImpl implements LoginService {
         } else if (FuncUtil.equals(clientType, ClientType.WECHAT.getValue())) {
             accessToken = tokenService.buildWechatToken(customerNumber);
         }
+        tokenService.putItem(accessToken, TokenItem.USER_ID.name(), userId);
         tokenService.putItem(accessToken, TokenItem.OPERATOR.name(), customerNumber);
         tokenService.putItem(accessToken, TokenItem.NICK_NAME.name(), nickName);
         return accessToken;

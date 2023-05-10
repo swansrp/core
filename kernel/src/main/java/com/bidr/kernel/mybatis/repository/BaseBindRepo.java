@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,87 +26,88 @@ import java.util.List;
 @Slf4j
 @Service
 @SuppressWarnings("rawtypes,unchecked")
-public abstract class BaseBindRepo<MASTER, BIND, SLAVE> {
-
-    private final Class<MASTER> masterClass = (Class<MASTER>) ReflectionUtil.getSuperClassGenericType(this.getClass(),
-            0);
-    private final Class<BIND> bindClass = (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
-
-    private final Class<SLAVE> slaveClass = (Class<SLAVE>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
-
+public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
     @Resource
     private ApplicationContext applicationContext;
 
-    public IPage<MASTER> getBindList(QueryBindReq req) {
-        MPJLambdaWrapper<MASTER> wrapper = new MPJLambdaWrapper<>(masterClass);
-        wrapper.leftJoin(bindClass, bindMasterId(), masterId()).eq(bindSlaveId(), req.getSalveId());
-        return masterRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false), masterClass,
-                wrapper);
+    public IPage<ATTACH> getBindList(QueryBindReq req) {
+        MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId());
+        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
+                getAttachClass(), wrapper);
     }
 
-    protected abstract SFunction<BIND, ?> bindMasterId();
-
-    protected abstract SFunction<MASTER, ?> masterId();
-
-    protected abstract SFunction<BIND, ?> bindSlaveId();
-
-    protected BaseSqlRepo masterRepo() {
-        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(masterClass.getSimpleName()) + "Service");
+    protected Class<ATTACH> getAttachClass() {
+        return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
     }
 
-    public IPage<MASTER> getUnbindList(QueryBindReq req) {
-        MPJLambdaWrapper<MASTER> wrapper = new MPJLambdaWrapper<>(masterClass).distinct();
-        wrapper.leftJoin(bindClass, bindMasterId(), masterId());
-        masterRepo().parseQueryCondition(req, wrapper);
-        wrapper.and(w -> w.ne(bindSlaveId(), req.getSalveId()).or(ww -> ww.isNull(bindSlaveId())));
-        masterRepo().parseSort(req, wrapper);
-        return masterRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false), masterClass,
-                wrapper);
+    protected Class<BIND> getBindClass() {
+        return (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    }
+
+    protected abstract SFunction<BIND, ?> bindAttachId();
+
+    protected abstract SFunction<ATTACH, ?> attachId();
+
+    protected abstract SFunction<BIND, ?> bindEntityId();
+
+    protected BaseSqlRepo attachRepo() {
+        return (BaseSqlRepo) applicationContext.getBean(
+                StrUtil.lowerFirst(getAttachClass().getSimpleName()) + "Service");
+    }
+
+    public IPage<ATTACH> getUnbindList(QueryBindReq req) {
+        MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
+        attachRepo().parseQueryCondition(req, wrapper);
+        wrapper.and(w -> w.ne(bindEntityId(), req.getEntityId()).or(ww -> ww.isNull(bindEntityId())));
+        attachRepo().parseSort(req, wrapper);
+        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
+                getAttachClass(), wrapper);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void bind(List<?> masterIdList, Object salveId) {
-        List<BIND> list = new ArrayList<>();
-        for (Object masterId : masterIdList) {
-            BIND bindEntity = buildBindEntity(masterId, salveId);
-            list.add(bindEntity);
-        }
-        bindRepo().saveBatch(list);
+    public void bind(Object masterId, Object salveId) {
+        BIND bindEntity = buildBindEntity(masterId, salveId);
+        bindRepo().insertOrUpdate(bindEntity);
     }
 
     private BIND buildBindEntity(Object masterId, Object salveId) {
-        BIND bindEntity = ReflectionUtil.newInstance(bindClass);
-        Object masterIdValue = LambdaUtil.getValue(bindMasterId(), masterId);
-        String masterIdField = LambdaUtil.getFieldName(bindMasterId());
-        Object slaveIdValue = LambdaUtil.getValue(bindSlaveId(), salveId);
-        String slaveIdField = LambdaUtil.getFieldName(bindSlaveId());
+        BIND bindEntity = ReflectionUtil.newInstance(getBindClass());
+        Object masterIdValue = LambdaUtil.getValue(bindAttachId(), masterId);
+        String masterIdField = LambdaUtil.getFieldName(bindAttachId());
+        Object slaveIdValue = LambdaUtil.getValue(bindEntityId(), salveId);
+        String slaveIdField = LambdaUtil.getFieldName(bindEntityId());
         ReflectionUtil.setValue(bindEntity, masterIdField, masterIdValue);
         ReflectionUtil.setValue(bindEntity, slaveIdField, slaveIdValue);
         return bindEntity;
     }
 
     protected BaseSqlRepo bindRepo() {
-        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(bindClass.getSimpleName()) + "Service");
+        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(getBindClass().getSimpleName()) + "Service");
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void unbind(List<?> masterIdList, Object salveId) {
-        for (Object masterId : masterIdList) {
-            BIND bindEntity = buildBindEntity(masterId, salveId);
-            bindRepo().deleteById(bindEntity);
-        }
+    public void unbind(Object masterId, Object salveId) {
+        BIND bindEntity = buildBindEntity(masterId, salveId);
+        bindRepo().deleteById(bindEntity);
     }
 
-    public List<SLAVE> getBindSlaveList(Object masterId) {
-        MPJLambdaWrapper<SLAVE> wrapper = new MPJLambdaWrapper<>(slaveClass);
-        wrapper.leftJoin(bindClass, bindMasterId(), masterId()).leftJoin(slaveClass, slaveId(), bindSlaveId())
-                .eq(bindSlaveId(), masterId);
-        return slaveRepo().selectJoinList(slaveClass, wrapper);
+    public List<ENTITY> getBindSlaveList(Object masterId) {
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId())
+                .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(bindEntityId(), masterId);
+        return entityRepo().selectJoinList(getEntityClass(), wrapper);
     }
 
-    protected abstract SFunction<SLAVE, ?> slaveId();
+    protected Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
 
-    protected BaseSqlRepo slaveRepo() {
-        return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(slaveClass.getSimpleName()) + "Service");
+    protected abstract SFunction<ENTITY, ?> entityId();
+
+    protected BaseSqlRepo entityRepo() {
+        return (BaseSqlRepo) applicationContext.getBean(
+                StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
     }
 }

@@ -14,5 +14,5 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class QueryBindReq extends QueryConditionReq {
-    private Object salveId;
+    private Object entityId;
 }

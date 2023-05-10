@@ -6,10 +6,11 @@
     <!--@Table ac_group-->
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="pid" jdbcType="BIGINT" property="pid" />
+    <result column="type" jdbcType="VARCHAR" property="type" />
     <result column="name" jdbcType="VARCHAR" property="name" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, pid, `name`
+    id, pid, `type`, `name`
   </sql>
 </mapper>

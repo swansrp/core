@@ -12,10 +12,10 @@ import lombok.Data;
 
  /**
  * Title: AcGroupType
- * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/08 09:51
+ * @since 2023/05/09 13:24
  */
 
 /**

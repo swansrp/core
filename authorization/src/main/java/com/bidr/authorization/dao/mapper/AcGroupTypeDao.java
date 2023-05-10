@@ -5,13 +5,13 @@ import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
-/**
- * Title: AcGroupTypeMapper
- * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ /**
+ * Title: AcGroupTypeDao
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/08 09:51
+ * @since 2023/05/09 13:24
  */
 @Mapper
-public interface AcGroupTypeMapper extends BaseMapper<AcGroupType>, MyBaseMapper<AcGroupType> {
+public interface AcGroupTypeDao extends BaseMapper<AcGroupType>, com.bidr.kernel.mybatis.mapper.MyBaseMapper<AcGroupType> {
 }

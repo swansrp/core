@@ -12,8 +12,9 @@ import com.bidr.authorization.vo.admin.RoleReq;
 import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.controller.BaseBindController;
+import com.bidr.kernel.controller.BaseBindAdminController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.bind.QueryBindReq;
 import com.bidr.kernel.vo.common.IdReqVO;
@@ -34,11 +35,11 @@ import java.util.List;
  * @author Sharp
  * @since 2023/05/08 13:36
  */
-@Api(tags = "系统角色管理")
+@Api(tags = "系统管理 - 角色 - 权限管理")
 @RestController("AdminRoleMenuBindController")
-@RequestMapping(value = "/web/role/admin")
+@RequestMapping(value = "/web-admin-role")
 @RequiredArgsConstructor
-public class AdminRoleMenuBindController extends BaseBindController<AcMenu, AcRoleMenu, AcRole, AcMenu, RoleRes> {
+public class AdminRoleMenuBindController extends BaseBindAdminController<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> {
 
     private final AdminRoleMenuBindService adminRoleMenuBindService;
     private final AdminRoleService adminRoleService;
@@ -66,16 +67,21 @@ public class AdminRoleMenuBindController extends BaseBindController<AcMenu, AcRo
 
     @ApiOperation(value = "获取角色对应菜单树", notes = "全部")
     @RequestMapping(value = "/menu/tree", method = RequestMethod.GET)
-    public List<MenuTreeRes> getMenuTree(Long slaveId) {
+    public List<MenuTreeRes> getMenuTree(Long entityId) {
         QueryBindReq req = new QueryBindReq();
-        req.setSalveId(slaveId);
+        req.setEntityId(entityId);
         IPage<AcMenu> bindList = adminRoleMenuBindService.getBindList(req);
+        for (AcMenu acMenu : bindList.getRecords()) {
+            if (FuncUtil.isEmpty(acMenu.getPid())) {
+                acMenu.setPid(acMenu.getGrandId());
+            }
+        }
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, bindList.getRecords(), AcMenu::getMenuId,
                 AcMenu::getPid);
     }
 
     @Override
-    protected BaseBindRepo<AcMenu, AcRoleMenu, AcRole> bindRepo() {
+    protected BaseBindRepo<AcRole, AcRoleMenu, AcMenu> bindRepo() {
         return adminRoleMenuBindService;
     }
 }

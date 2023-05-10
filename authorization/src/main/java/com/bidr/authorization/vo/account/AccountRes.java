@@ -3,6 +3,7 @@ package com.bidr.authorization.vo.account;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.diboot.core.binding.annotation.BindField;
 import com.diboot.core.data.copy.Accept;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
@@ -14,9 +15,11 @@ import lombok.Data;
  */
 @Data
 public class AccountRes {
+    @JsonProperty("value")
     @Accept(name = "userId")
     private String id;
     private String userName;
+    @JsonProperty("label")
     private String name;
     @Accept(name = "deptId")
     private String department;

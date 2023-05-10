@@ -83,4 +83,9 @@ public class AcUserRoleMenuService {
                 menuId).eq(AcMenu::getMenuType, MenuTypeDict.SUB_MENU.getValue());
         return acMenuService.selectJoinList(AcMenu.class, wrapper);
     }
+
+    public List<AcMenu> getAllMenu(String customerNumber, String clientType) {
+        MPJLambdaWrapper<AcMenu> wrapper = getMenuRoleUserWrapper(customerNumber, clientType);
+        return acMenuService.selectJoinList(AcMenu.class, wrapper);
+    }
 }

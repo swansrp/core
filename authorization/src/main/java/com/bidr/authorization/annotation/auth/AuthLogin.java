@@ -61,6 +61,9 @@ public class AuthLogin implements AuthRole {
 
     private UserInfo buildUserInfo(Map<String, Object> map) {
         UserInfo userInfo = new UserInfo();
+        if (map.get(TokenItem.USER_ID.name()) != null) {
+            userInfo.setUserId(Long.parseLong(String.valueOf(map.get(TokenItem.USER_ID.name()))));
+        }
         if (map.get(TokenItem.NICK_NAME.name()) != null) {
             userInfo.setName(String.valueOf(map.get(TokenItem.NICK_NAME.name())));
         }

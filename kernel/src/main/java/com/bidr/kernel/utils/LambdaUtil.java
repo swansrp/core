@@ -230,6 +230,17 @@ public class LambdaUtil {
         return ReflectionUtil.getField(getRealClass(func), fieldName);
     }
 
+
+    public static <T> Class<T> getRealClass(SFunction<T, ?> func) {
+        final SerializedLambda lambda = resolveSFunction(func);
+        checkLambdaTypeCanGetClass(lambda.getImplMethodKind());
+        return ClassUtil.loadClass(lambda.getImplClass());
+    }
+
+    public static <T, R> SerializedLambda resolveSFunction(SFunction<T, R> func) {
+        return _resolve(func);
+    }
+
     public static <T, R> String getFieldName(SFunction<T, ?> func) throws IllegalArgumentException {
         return BeanUtil.getFieldName(getMethodName(func));
     }
@@ -238,16 +249,18 @@ public class LambdaUtil {
         return resolveSFunction(func).getImplMethodName();
     }
 
-    public static <T, R> SerializedLambda resolveSFunction(SFunction<T, R> func) {
-        return _resolve(func);
-    }
-
     public static <T, R> R getValue(SFunction<T, R> func, Object obj) {
         if (FuncUtil.isNotEmpty(obj)) {
             Class<R> clazz = LambdaUtil.getMethodSignatureClass(func);
             return JsonUtil.readJson(obj, clazz);
         }
         return null;
+    }
+
+    public static <T, R> void setValue(Object entity, SFunction<T, R> func, Object obj) {
+        Object value = LambdaUtil.getValue(func, obj);
+        String fieldName = LambdaUtil.getFieldName(func);
+        ReflectionUtil.setValue(entity, fieldName, value);
     }
 
     /**

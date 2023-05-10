@@ -3,12 +3,12 @@ package com.bidr.authorization.controller.login;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
-import com.bidr.authorization.dao.repository.join.UserGroupBindService;
+import com.bidr.authorization.service.admin.AdminUserGroupBindService;
 import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.controller.BaseBindController;
+import com.bidr.kernel.controller.BaseBindAdminController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Title: UserGroupBindController
+ * Title: UserGroupBindAdminController
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
@@ -31,9 +31,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController("UserGroupBindController")
 @RequestMapping(value = "/web/user/group")
-public class UserGroupBindController extends BaseBindController<AcUser, AcUserGroup, AcGroup, AccountRes, AcGroup> {
+public class UserGroupBindAdminController extends BaseBindAdminController<AcGroup, AcUserGroup, AcUser, AcGroup, AccountRes> {
 
-    private final UserGroupBindService userGroupBindService;
+    private final AdminUserGroupBindService adminUserGroupBindService;
     private final UserGroupService userGroupService;
 
     @ApiOperation(value = "获取全部用户组")
@@ -50,7 +50,7 @@ public class UserGroupBindController extends BaseBindController<AcUser, AcUserGr
     }
 
     @Override
-    protected BaseBindRepo<AcUser, AcUserGroup, AcGroup> bindRepo() {
-        return userGroupBindService;
+    protected BaseBindRepo<AcGroup, AcUserGroup, AcUser> bindRepo() {
+        return adminUserGroupBindService;
     }
 }

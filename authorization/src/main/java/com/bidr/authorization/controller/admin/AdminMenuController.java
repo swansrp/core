@@ -7,9 +7,7 @@ import com.bidr.authorization.service.admin.AdminMenuService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.controller.BaseAdminOrderController;
-import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.vo.common.IdPidReqVO;
+import com.bidr.kernel.controller.BaseAdminTreeController;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,10 +26,10 @@ import java.util.List;
  * @author Sharp
  * @since 2023/03/20 11:48
  */
-@Api(tags = "系统菜单管理")
+@Api(tags = "系统管理 - 菜单管理")
 @RestController("MenuController")
-@RequestMapping(value = "/web/menu/admin")
-public class AdminMenuController extends BaseAdminOrderController<AcMenu, AcMenu> {
+@RequestMapping(value = "/web-admin-menu")
+public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu> {
 
     @Resource
     private AdminMenuService adminMenuService;
@@ -84,28 +82,22 @@ public class AdminMenuController extends BaseAdminOrderController<AcMenu, AcMenu
 
     @RequestMapping(value = "/enable", method = RequestMethod.POST)
     public Boolean enable(@RequestBody IdReqVO vo) {
-        return update(vo, AcMenu::setStatus, CommonConst.YES);
+        return update(vo, AcMenu::getStatus, CommonConst.YES);
     }
-
 
     @RequestMapping(value = "/disable", method = RequestMethod.POST)
     public Boolean disable(@RequestBody IdReqVO vo) {
-        return update(vo, AcMenu::setStatus, CommonConst.NO);
+        return update(vo, AcMenu::getStatus, CommonConst.NO);
     }
 
     @RequestMapping(value = "/show", method = RequestMethod.POST)
     public Boolean show(@RequestBody IdReqVO vo) {
-        return update(vo, AcMenu::setVisible, CommonConst.YES);
+        return update(vo, AcMenu::getVisible, CommonConst.YES);
     }
 
     @RequestMapping(value = "/hide", method = RequestMethod.POST)
     public Boolean hide(@RequestBody IdReqVO vo) {
-        return update(vo, AcMenu::setVisible, CommonConst.NO);
-    }
-
-    @RequestMapping(value = "/pid", method = RequestMethod.POST)
-    public Boolean pid(@RequestBody IdPidReqVO vo) {
-        return update(vo, AcMenu::setPid, JsonUtil.readJson(vo.getPid(), Long.class));
+        return update(vo, AcMenu::getVisible, CommonConst.NO);
     }
 
     @Override
@@ -116,5 +108,10 @@ public class AdminMenuController extends BaseAdminOrderController<AcMenu, AcMenu
     @Override
     protected SFunction<AcMenu, Integer> order() {
         return AcMenu::getShowOrder;
+    }
+
+    @Override
+    protected SFunction<AcMenu, ?> pid() {
+        return AcMenu::getPid;
     }
 }

@@ -8,6 +8,7 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.Join;
@@ -15,6 +16,7 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -65,15 +67,15 @@ public class SqlParseUtil {
         return select;
     }
 
-    public static String mergeWhere(String sql, Expression newExpression) {
+    public static String mergeWhere(String sql, Expression dataExpression) {
         Select select = getPlainSelect(sql);
         PlainSelect plainSelect = (PlainSelect) select.getSelectBody();
         Expression plainSelectWhere = plainSelect.getWhere();
-        if (FuncUtil.isNotEmpty(newExpression)) {
+        if (FuncUtil.isNotEmpty(dataExpression)) {
             if (FuncUtil.isNotEmpty(plainSelectWhere)) {
-                plainSelect.setWhere(new AndExpression(plainSelectWhere, new Parenthesis(newExpression)));
+                plainSelect.setWhere(new AndExpression(plainSelectWhere, new Parenthesis(dataExpression)));
             } else {
-                plainSelect.setWhere(newExpression);
+                plainSelect.setWhere(dataExpression);
             }
         }
         return select.toString();

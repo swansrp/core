@@ -13,10 +13,10 @@ import lombok.Data;
 
  /**
  * Title: AcGroup
- * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/08 09:51
+ * @since 2023/05/10 15:55
  */
 
 /**
@@ -26,6 +26,7 @@ import lombok.Data;
 @Data
 @TableName(value = "ac_group")
 public class AcGroup {
+    public static final String COL_ANCESTORS = "ancestors";
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "")
     @NotNull(message = "不能为null")
@@ -43,8 +44,9 @@ public class AcGroup {
      */
     @TableField(value = "`type`")
     @ApiModelProperty(value = "组类型")
-    @NotNull(message = "组类型不能为null")
-    private Long type;
+    @Size(max = 50, message = "组类型最大长度要小于 50")
+    @NotBlank(message = "组类型不能为空")
+    private String type;
 
     /**
      * 组群名

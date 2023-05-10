@@ -13,13 +13,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 /**
- * Title: BaseBindController
- * Description: Copyright: Copyright (c) 2023
+ * Title: BaseBindAdminController
+ * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
  *
  * @author Sharp
- * @since 2023/05/09 17:02
+ * @since 2023/05/06 10:44
  */
-public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
+@SuppressWarnings("unchecked,rawtypes")
+public abstract class BaseBindAdminController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> extends AdminController<ENTITY,
+        ENTITY_VO> {
+
+
+    protected Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
+    protected Class<ENTITY_VO> getVoClass() {
+        return (Class<ENTITY_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
+    }
 
     protected Class<BIND> getBindClass() {
         return (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
