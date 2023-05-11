@@ -32,7 +32,7 @@ public class SqlParseUtil {
     public static Map<String, String> buildTableAliasMap(String sql) {
         PlainSelect plainSelect = (PlainSelect) getPlainSelect(sql).getSelectBody();
         Map<String, String> mapTable = new HashMap<>();
-        if(Table.class.isAssignableFrom(plainSelect.getClass())) {
+        if(Table.class.isAssignableFrom(plainSelect.getFromItem().getClass())) {
             Table table = (Table) plainSelect.getFromItem();
             if (table != null) {
                 if (table.getAlias() != null) {

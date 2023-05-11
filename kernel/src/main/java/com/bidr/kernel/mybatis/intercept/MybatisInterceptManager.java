@@ -17,10 +17,8 @@ import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -42,9 +40,6 @@ import java.util.List;
 @Component
 public class MybatisInterceptManager implements Interceptor {
 
-    @Lazy
-    @Resource
-    private MybatisInterceptManager mybatisInterceptManager;
     @Autowired(required = false)
     private List<ExecutorIntercept> executorIntercepts;
     @Autowired(required = false)

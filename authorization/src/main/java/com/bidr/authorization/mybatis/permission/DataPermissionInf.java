@@ -2,7 +2,6 @@ package com.bidr.authorization.mybatis.permission;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.bidr.authorization.constants.group.Group;
 import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
@@ -64,5 +63,11 @@ public interface DataPermissionInf extends CommandLineRunner {
      */
     Map<String, String> getFilterMap();
 
-
+    default boolean needFilter(Map<String, String> tableAliasMap) {
+        boolean res = false;
+        for (String table : tableAliasMap.keySet()) {
+            res |= getFilterMap().containsKey(table);
+        }
+        return res;
+    }
 }

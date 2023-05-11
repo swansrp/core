@@ -33,12 +33,12 @@ public class AccountContextFillHandler implements MetaObjectHandler {
             Field[] declaredFields = classObj.getClass().getDeclaredFields();
             for (Field field : declaredFields) {
                 String fieldName = field.getName();
-                String operator = AccountContext.getOperator();
-                if (FuncUtil.isNotEmpty(operator)) {
+                Long userId = AccountContext.getUserId();
+                if (FuncUtil.isNotEmpty(userId)) {
                     if (FuncUtil.equals(fieldName, contextFill.createBy())) {
-                        this.fillStrategy(metaObject, fieldName, operator);
+                        this.fillStrategy(metaObject, fieldName, userId);
                     } else if (FuncUtil.equals(fieldName, contextFill.updateBy())) {
-                        this.fillStrategy(metaObject, fieldName, operator);
+                        this.fillStrategy(metaObject, fieldName, userId);
                     }
                 }
                 if (FuncUtil.equals(fieldName, contextFill.createAt())) {
@@ -66,10 +66,10 @@ public class AccountContextFillHandler implements MetaObjectHandler {
             Field[] declaredFields = classObj.getClass().getDeclaredFields();
             for (Field field : declaredFields) {
                 String fieldName = field.getName();
-                String operator = AccountContext.getOperator();
-                if (FuncUtil.isNotEmpty(operator)) {
+                Long userId = AccountContext.getUserId();
+                if (FuncUtil.isNotEmpty(userId)) {
                     if (FuncUtil.equals(fieldName, contextFill.updateBy())) {
-                        this.fillStrategy(metaObject, fieldName, operator);
+                        this.fillStrategy(metaObject, fieldName, userId);
                     }
                 }
                 if (FuncUtil.equals(fieldName, contextFill.updateAt())) {

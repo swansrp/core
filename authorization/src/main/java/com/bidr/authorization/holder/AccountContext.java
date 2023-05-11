@@ -51,4 +51,13 @@ public class AccountContext {
     public static AccountInfo get() {
         return ACCOUNT_INFO_HOLDER.get();
     }
+
+    public static Long getUserId() {
+        AccountInfo accountInfo = get();
+        if (FuncUtil.isNotEmpty(accountInfo)) {
+            return accountInfo.getUserId();
+        } else {
+            return null;
+        }
+    }
 }
