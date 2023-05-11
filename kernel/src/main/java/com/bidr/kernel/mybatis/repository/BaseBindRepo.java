@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.bind.QueryBindReq;
@@ -67,19 +68,15 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void bind(Object masterId, Object salveId) {
-        BIND bindEntity = buildBindEntity(masterId, salveId);
+    public void bind(Object attachId, Object entityId) {
+        BIND bindEntity = buildBindEntity(attachId, entityId);
         bindRepo().insertOrUpdate(bindEntity);
     }
 
-    private BIND buildBindEntity(Object masterId, Object salveId) {
+    private BIND buildBindEntity(Object attachId, Object entityId) {
         BIND bindEntity = ReflectionUtil.newInstance(getBindClass());
-        Object masterIdValue = LambdaUtil.getValue(bindAttachId(), masterId);
-        String masterIdField = LambdaUtil.getFieldName(bindAttachId());
-        Object slaveIdValue = LambdaUtil.getValue(bindEntityId(), salveId);
-        String slaveIdField = LambdaUtil.getFieldName(bindEntityId());
-        ReflectionUtil.setValue(bindEntity, masterIdField, masterIdValue);
-        ReflectionUtil.setValue(bindEntity, slaveIdField, slaveIdValue);
+        LambdaUtil.setValue(bindEntity, bindAttachId(), attachId);
+        LambdaUtil.setValue(bindEntity, bindEntityId(), entityId);
         return bindEntity;
     }
 
@@ -88,15 +85,35 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void unbind(Object masterId, Object salveId) {
-        BIND bindEntity = buildBindEntity(masterId, salveId);
+    public void bindList(List<Object> attachIdList, Object entityId) {
+        if (FuncUtil.isNotEmpty(attachIdList)) {
+            for (Object attachId : attachIdList) {
+                BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindRepo().insertOrUpdate(bindEntity);
+            }
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void unbind(Object attachId, Object entityId) {
+        BIND bindEntity = buildBindEntity(attachId, entityId);
         bindRepo().deleteById(bindEntity);
     }
 
-    public List<ENTITY> getBindSlaveList(Object masterId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void unbindList(List<Object> attachIdList, Object entityId) {
+        if (FuncUtil.isNotEmpty(attachIdList)) {
+            for (Object attachId : attachIdList) {
+                BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindRepo().deleteById(bindEntity);
+            }
+        }
+    }
+
+    public List<ENTITY> getBindEntityList(Object attachId) {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         wrapper.leftJoin(getBindClass(), bindAttachId(), attachId())
-                .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(bindEntityId(), masterId);
+                .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(bindAttachId(), attachId);
         return entityRepo().selectJoinList(getEntityClass(), wrapper);
     }
 

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.vo.bind.BindListReq;
 import com.bidr.kernel.vo.bind.BindReq;
 import com.bidr.kernel.vo.bind.QueryBindReq;
 import io.swagger.annotations.ApiOperation;
@@ -49,6 +50,13 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         Resp.notice("绑定成功");
     }
 
+    @ApiOperation(value = "批量绑定")
+    @RequestMapping(value = "/bind/list", method = RequestMethod.POST)
+    public void bind(@RequestBody BindListReq req) {
+        bindRepo().bindList(req.getAttachIdList(), req.getEntityId());
+        Resp.notice("绑定成功");
+    }
+
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getUnBind(@RequestBody QueryBindReq req) {
@@ -60,6 +68,13 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @RequestMapping(value = "/unbind", method = RequestMethod.POST)
     public void unbind(@RequestBody BindReq req) {
         bindRepo().unbind(req.getAttachId(), req.getEntityId());
+        Resp.notice("解绑成功");
+    }
+
+    @ApiOperation(value = "批量解绑")
+    @RequestMapping(value = "/unbind", method = RequestMethod.POST)
+    public void unbind(@RequestBody BindListReq req) {
+        bindRepo().unbindList(req.getAttachIdList(), req.getEntityId());
         Resp.notice("解绑成功");
     }
 }
