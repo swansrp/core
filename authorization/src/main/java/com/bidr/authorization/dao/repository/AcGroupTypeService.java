@@ -1,9 +1,9 @@
 package com.bidr.authorization.dao.repository;
 
+import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.authorization.dao.mapper.AcGroupTypeDao;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
-import com.bidr.authorization.dao.entity.AcGroupType;
  /**
  * Title: AcGroupTypeService
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.

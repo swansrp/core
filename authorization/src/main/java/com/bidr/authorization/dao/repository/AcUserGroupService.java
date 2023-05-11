@@ -3,16 +3,12 @@ package com.bidr.authorization.dao.repository;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.mapper.AcUserGroupDao;
-import com.bidr.kernel.mybatis.dao.mapper.RecursionDao;
 import com.bidr.kernel.mybatis.dao.repository.RecursionService;
-import com.bidr.kernel.mybatis.func.MySqlFuncEnum;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import com.bidr.kernel.utils.DbUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**

@@ -2,8 +2,6 @@ package com.bidr.kernel.controller;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.bidr.kernel.common.func.GetFunc;
-import com.bidr.kernel.common.func.SetFunc;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;

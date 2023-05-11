@@ -2,7 +2,6 @@ package com.bidr.authorization.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.bidr.authorization.dao.entity.AcUserGroup;
-import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
  /**

@@ -4,11 +4,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
-import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * Title: AdminRoleMenuBindService

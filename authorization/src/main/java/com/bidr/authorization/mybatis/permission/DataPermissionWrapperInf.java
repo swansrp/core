@@ -8,7 +8,6 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import org.springframework.boot.CommandLineRunner;
 
-
 import java.util.Map;
 
 /**
