@@ -72,7 +72,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     }
 
     @ApiOperation(value = "批量解绑")
-    @RequestMapping(value = "/unbind", method = RequestMethod.POST)
+    @RequestMapping(value = "/unbind/list", method = RequestMethod.POST)
     public void unbind(@RequestBody BindListReq req) {
         bindRepo().unbindList(req.getAttachIdList(), req.getEntityId());
         Resp.notice("解绑成功");
