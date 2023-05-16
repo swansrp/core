@@ -4,7 +4,7 @@ import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.service.admin.AdminUserGroupBindService;
-import com.bidr.authorization.vo.account.AccountRes;
+import com.bidr.authorization.vo.group.GroupAccountRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
@@ -27,15 +27,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RestController("GroupUserBindController")
 @RequestMapping(value = "/web/group/user")
-public class GroupUserBindController extends BaseBindController<AcGroup, AcUserGroup, AcUser, AcGroup, AccountRes> {
+public class GroupUserBindController extends BaseBindController<AcGroup, AcUserGroup, AcUser, AcGroup,
+        GroupAccountRes> {
 
     private final AdminUserGroupBindService adminUserGroupBindService;
 
     @Override
-    protected BaseBindRepo<AcGroup, AcUserGroup, AcUser> bindRepo() {
+    protected BaseBindRepo<AcGroup, AcUserGroup, AcUser, AcGroup, GroupAccountRes> bindRepo() {
         return adminUserGroupBindService;
     }
-
 
     @ApiOperation(value = "更改用户数据权限")
     @RequestMapping(value = "/data/scope", method = RequestMethod.POST)

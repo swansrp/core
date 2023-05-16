@@ -27,19 +27,22 @@ import java.util.List;
 @Slf4j
 @Service
 @SuppressWarnings("rawtypes,unchecked")
-public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
+public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     @Resource
     private ApplicationContext applicationContext;
 
-    public List<ATTACH> getBindList(Object entityId) {
+    public List<ATTACH_VO> getBindList(Object entityId) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId()).eq(bindEntityId(), entityId);
-        return attachRepo().selectJoinList(getAttachClass(), wrapper);
+        wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
+                .eq(bindEntityId(), entityId);
+        return attachRepo().selectJoinList(getAttachVOClass(), wrapper);
     }
 
     protected Class<ATTACH> getAttachClass() {
         return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
     }
+
+    protected abstract SFunction<BIND, ?> bindEntityId();
 
     protected Class<BIND> getBindClass() {
         return (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
@@ -49,18 +52,21 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
 
     protected abstract SFunction<ATTACH, ?> attachId();
 
-    protected abstract SFunction<BIND, ?> bindEntityId();
-
     protected BaseSqlRepo attachRepo() {
         return (BaseSqlRepo) applicationContext.getBean(
                 StrUtil.lowerFirst(getAttachClass().getSimpleName()) + "Service");
     }
 
-    public IPage<ATTACH> queryBindList(QueryBindReq req) {
+    protected Class<ATTACH_VO> getAttachVOClass() {
+        return (Class<ATTACH_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
+    }
+
+    public IPage<ATTACH_VO> queryBindList(QueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId());
+        wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
+                .eq(bindEntityId(), req.getEntityId());
         return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
-                getAttachClass(), wrapper);
+                getAttachVOClass(), wrapper);
     }
 
     public IPage<ATTACH> getUnbindList(QueryBindReq req) {
@@ -132,5 +138,9 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
     protected BaseSqlRepo entityRepo() {
         return (BaseSqlRepo) applicationContext.getBean(
                 StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
+    }
+
+    protected Class<ENTITY_VO> getEntityVOClass() {
+        return (Class<ENTITY_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 3);
     }
 }

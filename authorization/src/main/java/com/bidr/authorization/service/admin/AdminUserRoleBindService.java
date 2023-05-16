@@ -7,6 +7,8 @@ import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
+import com.bidr.authorization.vo.account.AccountRes;
+import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -24,7 +26,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class AdminUserRoleBindService extends BaseBindRepo<AcUser, AcUserRole, AcRole> {
+public class AdminUserRoleBindService extends BaseBindRepo<AcUser, AcUserRole, AcRole, AccountRes, RoleRes> {
 
     private final AcUserRoleMenuService acUserRoleMenuService;
 

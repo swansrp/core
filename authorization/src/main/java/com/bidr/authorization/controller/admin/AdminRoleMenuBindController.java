@@ -48,7 +48,7 @@ public class AdminRoleMenuBindController extends BaseBindController<AcRole, AcRo
     }
 
     @Override
-    protected BaseBindRepo<AcRole, AcRoleMenu, AcMenu> bindRepo() {
+    protected BaseBindRepo<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> bindRepo() {
         return adminRoleMenuBindService;
     }
 }

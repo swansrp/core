@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
+import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Service;
  * @since 2023/05/08 13:38
  */
 @Service
-public class AdminRoleMenuBindService extends BaseBindRepo<AcRole, AcRoleMenu, AcMenu> {
+public class AdminRoleMenuBindService extends BaseBindRepo<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> {
     @Override
     protected SFunction<AcRoleMenu, ?> bindAttachId() {
         return AcRoleMenu::getMenuId;

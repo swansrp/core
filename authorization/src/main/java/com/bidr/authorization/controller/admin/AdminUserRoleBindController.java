@@ -34,7 +34,7 @@ public class AdminUserRoleBindController extends BaseBindController<AcUser, AcUs
     private final AdminUserRoleBindService adminUserRoleBindService;
 
     @Override
-    protected BaseBindRepo<AcUser, AcUserRole, AcRole> bindRepo() {
+    protected BaseBindRepo<AcUser, AcUserRole, AcRole, AccountRes, RoleRes> bindRepo() {
         return adminUserRoleBindService;
     }
 

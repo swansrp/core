@@ -5,9 +5,13 @@ import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.repository.AcUserGroupService;
+import com.bidr.authorization.vo.group.GroupAccountRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Title: AdminUserGroupBindService
@@ -18,7 +22,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup, AcUser> {
+public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup, AcUser, AcGroup, GroupAccountRes> {
 
     private final AcUserGroupService acUserGroupService;
 

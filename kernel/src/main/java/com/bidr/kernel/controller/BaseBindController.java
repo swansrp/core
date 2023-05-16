@@ -35,18 +35,18 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "获取已绑定(列表)")
     @RequestMapping(value = "/bind/list", method = RequestMethod.GET)
     public List<ATTACH_VO> getBindList(String entityId) {
-        List<ATTACH> res = bindRepo().getBindList(entityId);
+        List<ATTACH_VO> res = bindRepo().getBindList(entityId);
         return Resp.convert(res, getAttachVoClass());
     }
 
     @ApiOperation(value = "获取已绑定(分页)")
     @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getBind(@RequestBody QueryBindReq req) {
-        IPage<ATTACH> res = bindRepo().queryBindList(req);
+        IPage<ATTACH_VO> res = bindRepo().queryBindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
-    protected abstract BaseBindRepo<ENTITY, BIND, ATTACH> bindRepo();
+    protected abstract BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> bindRepo();
 
     protected Class<ATTACH_VO> getAttachVoClass() {
         return (Class<ATTACH_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
