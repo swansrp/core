@@ -48,8 +48,8 @@ public class AdminUserRoleBindService extends BaseBindRepo<AcUser, AcUserRole, A
         return AcUser::getUserId;
     }
 
-    public List<MenuTreeRes> getUserMenuTree(String customerNumber) {
-        List<AcMenu> allMenu = acUserRoleMenuService.getAllMenu(customerNumber, ClientType.WEB.getValue());
+    public List<MenuTreeRes> getUserMenuTree(String userId) {
+        List<AcMenu> allMenu = acUserRoleMenuService.getAllMenuByUserId(userId, ClientType.WEB.getValue());
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, allMenu, AcMenu::getMenuId,
                 AcMenu::getPid);
     }

@@ -19,7 +19,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/03/27 17:06
  */
-@Api(tags = {"系统基础接口"})
+@Api(tags = "系统基础 - 参数接口")
 @RestController
 @RequestMapping(path = {"/web/dict"})
 public class SystemDictController {

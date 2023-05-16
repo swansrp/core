@@ -31,11 +31,10 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
     @Resource
     private ApplicationContext applicationContext;
 
-    public IPage<ATTACH> getBindList(QueryBindReq req) {
+    public List<ATTACH> getBindList(Object entityId) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId());
-        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
-                getAttachClass(), wrapper);
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId()).eq(bindEntityId(), entityId);
+        return attachRepo().selectJoinList(getAttachClass(), wrapper);
     }
 
     protected Class<ATTACH> getAttachClass() {
@@ -55,6 +54,13 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH> {
     protected BaseSqlRepo attachRepo() {
         return (BaseSqlRepo) applicationContext.getBean(
                 StrUtil.lowerFirst(getAttachClass().getSimpleName()) + "Service");
+    }
+
+    public IPage<ATTACH> queryBindList(QueryBindReq req) {
+        MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId());
+        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
+                getAttachClass(), wrapper);
     }
 
     public IPage<ATTACH> getUnbindList(QueryBindReq req) {

@@ -20,7 +20,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/04/23 15:09
  */
-@Api(value = "人事信息", tags = "人事信息")
+@Api(tags = "系统基础 - 人事信息")
 @RestController("AccountController")
 @RequestMapping(value = "/web/account")
 @RequiredArgsConstructor

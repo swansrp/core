@@ -20,7 +20,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/03/13 15:04
  */
-@Api(value = "权限操作", tags = "权限操作")
+@Api(tags = "系统基础 - 页面权限")
 @RestController("PermitController")
 @RequestMapping(value = "/web/menu")
 public class PermitController {

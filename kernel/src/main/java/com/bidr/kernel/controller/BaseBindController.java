@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.util.List;
+
 /**
  * Title: BaseBindController
  * Description: Copyright: Copyright (c) 2023
@@ -30,10 +32,17 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
     }
 
-    @ApiOperation(value = "获取已绑定")
+    @ApiOperation(value = "获取已绑定(列表)")
+    @RequestMapping(value = "/bind/list", method = RequestMethod.GET)
+    public List<ATTACH_VO> getBindList(String entityId) {
+        List<ATTACH> res = bindRepo().getBindList(entityId);
+        return Resp.convert(res, getAttachVoClass());
+    }
+
+    @ApiOperation(value = "获取已绑定(分页)")
     @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getBind(@RequestBody QueryBindReq req) {
-        IPage<ATTACH> res = bindRepo().getBindList(req);
+        IPage<ATTACH> res = bindRepo().queryBindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
@@ -51,7 +60,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     }
 
     @ApiOperation(value = "批量绑定")
-    @RequestMapping(value = "/bind/list", method = RequestMethod.POST)
+    @RequestMapping(value = "/bind/batch", method = RequestMethod.POST)
     public void bind(@RequestBody BindListReq req) {
         bindRepo().bindList(req.getAttachIdList(), req.getEntityId());
         Resp.notice("绑定成功");
@@ -72,7 +81,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     }
 
     @ApiOperation(value = "批量解绑")
-    @RequestMapping(value = "/unbind/list", method = RequestMethod.POST)
+    @RequestMapping(value = "/unbind/batch", method = RequestMethod.POST)
     public void unbind(@RequestBody BindListReq req) {
         bindRepo().unbindList(req.getAttachIdList(), req.getEntityId());
         Resp.notice("解绑成功");

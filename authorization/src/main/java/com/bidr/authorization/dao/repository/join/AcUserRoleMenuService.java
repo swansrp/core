@@ -88,4 +88,16 @@ public class AcUserRoleMenuService {
         MPJLambdaWrapper<AcMenu> wrapper = getMenuRoleUserWrapper(customerNumber, clientType);
         return acMenuService.selectJoinList(AcMenu.class, wrapper);
     }
+
+    public List<AcMenu> getAllMenuByUserId(String userId, String clientType) {
+        MPJLambdaWrapper<AcMenu> wrapper = new MPJLambdaWrapper<AcMenu>().selectAll(AcMenu.class).distinct()
+                .leftJoin(AcRoleMenu.class, AcRoleMenu::getMenuId, AcMenu::getMenuId)
+                .leftJoin(AcRole.class, AcRole::getRoleId, AcRoleMenu::getRoleId)
+                .leftJoin(AcUserRole.class, AcUserRole::getRoleId, AcRole::getRoleId)
+                .leftJoin(AcUser.class, AcUser::getUserId, AcUserRole::getUserId).eq(AcUser::getUserId, userId)
+                .eq(AcMenu::getClientType, clientType).eq(AcMenu::getStatus, CommonConst.YES)
+                .eq(AcMenu::getVisible, CommonConst.YES).orderByAsc(AcMenu::getShowOrder);
+        return acMenuService.selectJoinList(AcMenu.class, wrapper);
+
+    }
 }

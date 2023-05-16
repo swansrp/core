@@ -6,18 +6,17 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import lombok.Data;
 
  /**
  * Title: AcGroup
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/10 15:55
+ * @since 2023/05/16 09:59
  */
 
 /**
@@ -58,6 +57,14 @@ public class AcGroup {
     @NotBlank(message = "组群名不能为空")
     private String name;
 
+    /**
+     * 显示顺序
+     */
+    @TableField(value = "display_order")
+    @ApiModelProperty(value = "显示顺序")
+    @NotNull(message = "显示顺序不能为null")
+    private Integer displayOrder;
+
     public static final String COL_ID = "id";
 
     public static final String COL_PID = "pid";
@@ -65,4 +72,6 @@ public class AcGroup {
     public static final String COL_TYPE = "type";
 
     public static final String COL_NAME = "name";
+
+    public static final String COL_DISPLAY_ORDER = "display_order";
 }

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 2023/03/29 14:01
  */
 
-@Api(tags = {"系统字典管理"})
+@Api(tags = "系统管理 - 字典管理")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dict/admin"})

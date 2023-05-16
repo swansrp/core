@@ -18,7 +18,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/04/21 18:24
  */
-@Api(value = "人事信息", tags = "人事信息")
+@Api(tags = "系统基础 - 人事信息")
 @RestController("DepartmentController")
 @RequestMapping(value = "/web/account/department")
 @RequiredArgsConstructor

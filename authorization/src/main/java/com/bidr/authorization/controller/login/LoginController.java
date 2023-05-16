@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Sharp
  * @since 2023/04/26 16:17
  */
-@Api(value = "登录操作", tags = "登录操作")
+@Api(tags = "系统基础 - 登录操作")
 @RestController("LoginController")
 @RequestMapping(value = "/web/login")
 @RequiredArgsConstructor

@@ -27,7 +27,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/03/28 08:49
  */
-@Api(tags = {"系统字典管理"})
+@Api(tags = "系统管理 - 字典管理")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dict/item/admin"})

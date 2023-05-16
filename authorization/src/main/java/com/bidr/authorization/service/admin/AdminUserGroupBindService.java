@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
+import com.bidr.authorization.dao.repository.AcUserGroupService;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
@@ -15,7 +17,10 @@ import org.springframework.stereotype.Service;
  * @since 2023/05/05 14:05
  */
 @Service
+@RequiredArgsConstructor
 public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup, AcUser> {
+
+    private final AcUserGroupService acUserGroupService;
 
     @Override
     protected SFunction<AcUserGroup, ?> bindAttachId() {
@@ -35,5 +40,9 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
     @Override
     protected SFunction<AcGroup, ?> entityId() {
         return AcGroup::getId;
+    }
+
+    public void updateAcUserGroup(AcUserGroup acUserGroup) {
+        acUserGroupService.updateById(acUserGroup);
     }
 }

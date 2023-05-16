@@ -16,7 +16,7 @@ import javax.annotation.Resource;
  * @author Sharp
  * @since 2023/03/27 22:07
  */
-@Api(tags = {"系统基础接口"})
+@Api(tags = "系统基础 - 参数接口")
 @RestController
 @RequestMapping(path = {"/web/config"})
 public class SystemConfigController {

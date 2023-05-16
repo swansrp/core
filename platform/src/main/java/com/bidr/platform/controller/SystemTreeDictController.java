@@ -18,7 +18,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/04/04 14:08
  */
-@Api(tags = {"系统基础接口"})
+@Api(tags = "系统基础 - 参数接口")
 @RestController
 @RequestMapping(path = {"/web/tree"})
 public class SystemTreeDictController {

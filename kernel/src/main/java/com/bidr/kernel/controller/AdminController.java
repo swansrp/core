@@ -34,10 +34,10 @@ public abstract class AdminController<ENTITY, VO> {
 
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
-    public Boolean update(@RequestBody ENTITY entity) {
+    public void update(@RequestBody ENTITY entity) {
         Boolean result = getRepo().updateById(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
-        return null;
+        Resp.notice("更新成功");
     }
 
     protected BaseSqlRepo getRepo() {

@@ -30,7 +30,7 @@ import java.io.IOException;
  */
 @Slf4j
 @Auth(AuthNone.class)
-@Api(value = "图形验证码", tags = "COMMON-图形验证码")
+@Api(tags = "系统基础 - 图形验证码")
 @RestController("CaptchaController")
 @RequestMapping(value = "/web")
 public class CaptchaController {
