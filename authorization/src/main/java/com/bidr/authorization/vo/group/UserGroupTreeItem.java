@@ -13,4 +13,5 @@ import lombok.Data;
 public class UserGroupTreeItem {
     private Long id;
     private String name;
+    private Long key;
 }

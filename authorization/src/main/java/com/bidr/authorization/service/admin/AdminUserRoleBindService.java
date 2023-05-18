@@ -11,6 +11,7 @@ import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,13 @@ public class AdminUserRoleBindService extends BaseBindRepo<AcUser, AcUserRole, A
 
     public List<MenuTreeRes> getUserMenuTree(String userId) {
         List<AcMenu> allMenu = acUserRoleMenuService.getAllMenuByUserId(userId, ClientType.WEB.getValue());
+        if(FuncUtil.isNotEmpty(allMenu)) {
+            for (AcMenu menu : allMenu) {
+                if (FuncUtil.isEmpty(menu.getPid())) {
+                    menu.setPid(menu.getGrandId());
+                }
+            }
+        }
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, allMenu, AcMenu::getMenuId,
                 AcMenu::getPid);
     }

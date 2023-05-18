@@ -2,6 +2,8 @@ package com.bidr.kernel.vo.bind;
 
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+
 /**
  * Title: BindReq
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
@@ -12,5 +14,6 @@ import lombok.Data;
 @Data
 public class BindReq {
     private Object attachId;
+    @NotNull(message = "未提供实体id")
     private Object entityId;
 }

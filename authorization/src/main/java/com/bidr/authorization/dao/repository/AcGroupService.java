@@ -18,7 +18,8 @@ import java.util.List;
 @Service
 public class AcGroupService extends BaseSqlRepo<AcGroupDao, AcGroup> {
     public List<AcGroup> getGroupByType(String type) {
-        LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper().eq(AcGroup::getType, type);
+        LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper().eq(AcGroup::getType, type)
+                .orderByAsc(AcGroup::getDisplayOrder);
         return super.select(wrapper);
     }
 }

@@ -16,7 +16,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/16 09:59
+ * @since 2023/05/18 11:18
  */
 
 /**
@@ -38,6 +38,11 @@ public class AcGroup {
     @TableField(value = "pid")
     @ApiModelProperty(value = "父id")
     private Long pid;
+
+    @TableField(value = "`key`")
+    @ApiModelProperty(value = "")
+    @NotNull(message = "不能为null")
+    private Long key;
 
     /**
      * 组类型
@@ -68,6 +73,8 @@ public class AcGroup {
     public static final String COL_ID = "id";
 
     public static final String COL_PID = "pid";
+
+    public static final String COL_KEY = "key";
 
     public static final String COL_TYPE = "type";
 

@@ -15,7 +15,7 @@ import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.holder.TokenHolder;
-import com.bidr.authorization.service.login.CreateUserService;
+import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -127,7 +127,7 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes refreshLogin(String refreshToken) {
-        TokenInfo tokenInfo = AuthTokenUtil.resolveToken(refreshToken);
+        TokenInfo tokenInfo = AuthTokenUtil.decode(refreshToken);
         Validator.assertTrue(tokenService.isTokenExist(tokenInfo), ErrCodeSys.SYS_SESSION_TIME_OUT);
         String customerNumber = tokenService.getItem(tokenInfo, TokenItem.OPERATOR.name(), String.class);
         Validator.assertNotBlank(customerNumber, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");

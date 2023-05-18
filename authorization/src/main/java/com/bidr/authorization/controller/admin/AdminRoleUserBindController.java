@@ -4,8 +4,8 @@ import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.service.admin.AdminRoleUserBindService;
-import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.authorization.vo.admin.RoleRes;
+import com.bidr.authorization.vo.user.UserRes;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import io.swagger.annotations.Api;
@@ -24,12 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController("AdminRoleUserBindController")
 @RequestMapping(value = "/web-admin/role/user")
 @RequiredArgsConstructor
-public class AdminRoleUserBindController extends BaseBindController<AcRole, AcUserRole, AcUser, RoleRes, AccountRes> {
+public class AdminRoleUserBindController extends BaseBindController<AcRole, AcUserRole, AcUser, RoleRes, UserRes> {
 
     private final AdminRoleUserBindService adminRoleUserBindService;
 
     @Override
-    protected BaseBindRepo<AcRole, AcUserRole, AcUser, RoleRes, AccountRes> bindRepo() {
+    protected BaseBindRepo<AcRole, AcUserRole, AcUser, RoleRes, UserRes> bindRepo() {
         return adminRoleUserBindService;
     }
 }

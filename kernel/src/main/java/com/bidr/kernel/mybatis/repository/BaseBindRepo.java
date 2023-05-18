@@ -1,6 +1,7 @@
 package com.bidr.kernel.mybatis.repository;
 
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -97,16 +99,6 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void bindList(List<Object> attachIdList, Object entityId) {
-        if (FuncUtil.isNotEmpty(attachIdList)) {
-            for (Object attachId : attachIdList) {
-                BIND bindEntity = buildBindEntity(attachId, entityId);
-                bindRepo().insertOrUpdate(bindEntity);
-            }
-        }
-    }
-
-    @Transactional(rollbackFor = Exception.class)
     public void unbind(Object attachId, Object entityId) {
         BIND bindEntity = buildBindEntity(attachId, entityId);
         bindRepo().deleteById(bindEntity);
@@ -118,6 +110,30 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
             for (Object attachId : attachIdList) {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
                 bindRepo().deleteById(bindEntity);
+            }
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void replace(List<Object> attachIdList, Object entityId) {
+        Wrapper<BIND> wrapper = (Wrapper<BIND>) bindRepo().getQueryWrapper().eq(bindEntityId(), entityId);
+        bindRepo().delete(wrapper);
+        List<BIND> bindList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(attachIdList)) {
+            for (Object attachId : attachIdList) {
+                BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindList.add(bindEntity);
+            }
+        }
+        bindRepo().saveBatch(bindList);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void bindList(List<Object> attachIdList, Object entityId) {
+        if (FuncUtil.isNotEmpty(attachIdList)) {
+            for (Object attachId : attachIdList) {
+                BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindRepo().insertOrUpdate(bindEntity);
             }
         }
     }

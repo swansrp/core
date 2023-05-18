@@ -9,6 +9,7 @@ import com.bidr.kernel.vo.bind.BindListReq;
 import com.bidr.kernel.vo.bind.BindReq;
 import com.bidr.kernel.vo.bind.QueryBindReq;
 import io.swagger.annotations.ApiOperation;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -41,7 +42,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
 
     @ApiOperation(value = "获取已绑定(分页)")
     @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
-    public Page<ATTACH_VO> getBind(@RequestBody QueryBindReq req) {
+    public Page<ATTACH_VO> getBind(@RequestBody @Validated QueryBindReq req) {
         IPage<ATTACH_VO> res = bindRepo().queryBindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
@@ -54,36 +55,43 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
 
     @ApiOperation(value = "绑定")
     @RequestMapping(value = "/bind", method = RequestMethod.POST)
-    public void bind(@RequestBody BindReq req) {
+    public void bind(@RequestBody @Validated BindReq req) {
         bindRepo().bind(req.getAttachId(), req.getEntityId());
         Resp.notice("绑定成功");
     }
 
     @ApiOperation(value = "批量绑定")
     @RequestMapping(value = "/bind/batch", method = RequestMethod.POST)
-    public void bind(@RequestBody BindListReq req) {
+    public void bind(@RequestBody @Validated BindListReq req) {
         bindRepo().bindList(req.getAttachIdList(), req.getEntityId());
         Resp.notice("绑定成功");
     }
 
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/query", method = RequestMethod.POST)
-    public Page<ATTACH_VO> getUnBind(@RequestBody QueryBindReq req) {
+    public Page<ATTACH_VO> getUnBind(@RequestBody @Validated QueryBindReq req) {
         IPage<ATTACH> res = bindRepo().getUnbindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
     @ApiOperation(value = "解绑")
     @RequestMapping(value = "/unbind", method = RequestMethod.POST)
-    public void unbind(@RequestBody BindReq req) {
+    public void unbind(@RequestBody @Validated BindReq req) {
         bindRepo().unbind(req.getAttachId(), req.getEntityId());
         Resp.notice("解绑成功");
     }
 
     @ApiOperation(value = "批量解绑")
     @RequestMapping(value = "/unbind/batch", method = RequestMethod.POST)
-    public void unbind(@RequestBody BindListReq req) {
+    public void unbind(@RequestBody @Validated BindListReq req) {
         bindRepo().unbindList(req.getAttachIdList(), req.getEntityId());
         Resp.notice("解绑成功");
+    }
+
+    @ApiOperation(value = "替换绑定")
+    @RequestMapping(value = "/replace", method = RequestMethod.POST)
+    public void replace(@RequestBody @Validated BindListReq req) {
+        bindRepo().replace(req.getAttachIdList(), req.getEntityId());
+        Resp.notice("操作成功");
     }
 }

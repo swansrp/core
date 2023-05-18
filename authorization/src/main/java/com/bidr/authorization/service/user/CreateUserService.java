@@ -1,4 +1,4 @@
-package com.bidr.authorization.service.login;
+package com.bidr.authorization.service.user;
 
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;

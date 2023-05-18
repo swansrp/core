@@ -28,7 +28,7 @@ public class GroupAccountRes {
     @JsonProperty("department")
     @Accept(name = "deptId")
     private String deptId;
-    @BindField(entity = AcDept.class, field = "name", condition = "this.deptName = dept_id")
+    @BindField(entity = AcDept.class, field = "name", condition = "this.deptId = dept_id")
     private String deptName;
     @JsonProperty("pictureLink")
     @Accept(name = "avatar")
@@ -36,8 +36,11 @@ public class GroupAccountRes {
 
     private Long groupId;
 
-    @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")
     @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId = user_id")
     private String dataScope;
+
+    @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")
+    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId = user_id")
+    private String dataScopeDisplay;
 
 }

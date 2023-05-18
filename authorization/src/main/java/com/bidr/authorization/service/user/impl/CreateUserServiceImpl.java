@@ -1,4 +1,4 @@
-package com.bidr.authorization.service.login.impl;
+package com.bidr.authorization.service.user.impl;
 
 import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.constants.param.AccountParam;
@@ -7,7 +7,7 @@ import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
-import com.bidr.authorization.service.login.CreateUserService;
+import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.service.login.RoleBindService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
@@ -44,7 +44,7 @@ public class CreateUserServiceImpl implements CreateUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AcUser createUser(String userId, String password) {
-        return createUser(userId, password, null, null, null, null);
+        return createUser(userId, password, userId, null, null, null);
     }
 
     @Override

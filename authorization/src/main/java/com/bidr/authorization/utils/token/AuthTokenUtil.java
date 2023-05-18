@@ -4,10 +4,13 @@ package com.bidr.authorization.utils.token;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.common.RequestConst;
 import com.bidr.authorization.constants.token.TokenType;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.Base64Util;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.validate.Validator;
+import org.springframework.validation.annotation.Validated;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -32,6 +35,7 @@ public class AuthTokenUtil {
 
     public static TokenInfo resolveToken(String token) {
         if (FuncUtil.isNotEmpty(token)) {
+            Validator.assertTrue(token.startsWith("Bearer "), ErrCodeSys.SYS_SESSION_TIME_OUT);
             String[] array = token.split(" ");
             if (array.length > 1) {
                 return decode(array[array.length - 1]);
@@ -40,7 +44,7 @@ public class AuthTokenUtil {
         return null;
     }
 
-    private static TokenInfo decode(String token) {
+    public static TokenInfo decode(String token) {
         String str = Base64Util.decode(token);
         List<String> list = StringUtil.split(str, SEPARATION);
         return new TokenInfo(list.get(0), TokenType.of(list.get(1)), list.get(2));

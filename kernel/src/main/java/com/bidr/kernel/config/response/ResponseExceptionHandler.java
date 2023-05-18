@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -56,6 +57,13 @@ public class ResponseExceptionHandler {
     @ResponseBody
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<Response<String>> errorHandler(MethodArgumentNotValidException ex) {
+        ServiceException serviceException = new ServiceException(ex);
+        return errorHandler(serviceException);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(value = BindException.class)
+    public ResponseEntity<Response<String>> errorHandler(BindException ex) {
         ServiceException serviceException = new ServiceException(ex);
         return errorHandler(serviceException);
     }

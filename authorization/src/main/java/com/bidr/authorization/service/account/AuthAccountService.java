@@ -4,7 +4,7 @@ import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcAccountService;
 import com.bidr.authorization.dao.repository.AcUserService;
-import com.bidr.authorization.service.login.CreateUserService;
+import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.vo.account.AccountReq;
 import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.kernel.config.response.Resp;

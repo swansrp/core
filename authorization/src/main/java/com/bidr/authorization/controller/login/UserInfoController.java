@@ -1,0 +1,30 @@
+package com.bidr.authorization.controller.login;
+
+import com.bidr.authorization.service.user.UserInfoService;
+import com.bidr.authorization.vo.user.UserInfoRes;
+import io.swagger.annotations.Api;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Title: UserInfoController
+ * Description: Copyright: Copyright (c) 2023
+ *
+ * @author Sharp
+ * @since 2023/05/18 08:59
+ */
+@Api(tags = "系统基础 - 用户信息")
+@RestController("UserInfoController")
+@RequestMapping(value = "/web/user")
+@RequiredArgsConstructor
+public class UserInfoController {
+
+    private final UserInfoService userInfoService;
+
+    @RequestMapping(value = "/info", method = RequestMethod.GET)
+    public UserInfoRes getUserInfo() {
+        return userInfoService.getUserInfo();
+    }
+}

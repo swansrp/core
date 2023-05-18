@@ -15,6 +15,7 @@ public class TreeDictItem {
     private Object pid;
     private String treeType;
     private String treeTitle;
+    private Object key;
     private Object value;
     private String label;
     private Integer order;

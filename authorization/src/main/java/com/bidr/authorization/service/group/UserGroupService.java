@@ -12,6 +12,7 @@ import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,14 +27,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserGroupService {
 
-    private final AcUserGroupService acUserGroupService;
-
     private final AcGroupService acGroupService;
     private final AcGroupTypeService acGroupTypeService;
 
 
     public List<UserGroupTreeRes> getTree(String groupType) {
         List<AcGroup> groups = acGroupService.getGroupByType(groupType);
+
         return ReflectionUtil.buildTree(UserGroupTreeRes::setChildren, groups, AcGroup::getId, AcGroup::getPid);
     }
 
@@ -42,8 +42,11 @@ public class UserGroupService {
         return Resp.convert(groups, GroupRes.class);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void addGroup(AcGroup req) {
         acGroupService.insert(req);
+        req.setKey(req.getId());
+        acGroupService.updateById(req);
     }
 
     public List<GroupTypeRes> getGroupType(String name) {

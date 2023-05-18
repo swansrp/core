@@ -2,6 +2,7 @@ package com.bidr.kernel.vo.bind;
 
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -14,5 +15,6 @@ import java.util.List;
 @Data
 public class BindListReq {
     private List<Object> attachIdList;
+    @NotNull(message = "未提供实体id")
     private Object entityId;
 }

@@ -6,12 +6,13 @@
     <!--@Table ac_group-->
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="pid" jdbcType="BIGINT" property="pid" />
+    <result column="key" jdbcType="BIGINT" property="key" />
     <result column="type" jdbcType="VARCHAR" property="type" />
     <result column="name" jdbcType="VARCHAR" property="name" />
     <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, pid, `type`, `name`, display_order
+    id, pid, `key`, `type`, `name`, display_order
   </sql>
 </mapper>

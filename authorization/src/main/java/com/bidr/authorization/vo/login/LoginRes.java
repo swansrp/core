@@ -9,10 +9,13 @@
  */
 package com.bidr.authorization.vo.login;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 @Data
 public class LoginRes {
+    @JsonIgnore
+    private Long userId;
     private String customerNumber;
     private String name;
     private String avtar;

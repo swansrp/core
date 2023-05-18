@@ -30,23 +30,25 @@ public class SqlParseUtil {
     public static Map<String, String> buildTableAliasMap(String sql) {
         PlainSelect plainSelect = (PlainSelect) getPlainSelect(sql).getSelectBody();
         Map<String, String> mapTable = new HashMap<>();
-        if(Table.class.isAssignableFrom(plainSelect.getFromItem().getClass())) {
-            Table table = (Table) plainSelect.getFromItem();
-            if (table != null) {
-                if (table.getAlias() != null) {
-                    mapTable.put(table.getName(), table.getAlias().getName());
-                } else {
-                    mapTable.put(table.getName(), null);
-                }
-            }
-
-            if (FuncUtil.isNotEmpty(plainSelect.getJoins())) {
-                for (Join join : plainSelect.getJoins()) {
-                    Table joinTable = (Table) join.getRightItem();
-                    if (joinTable.getAlias() != null) {
-                        mapTable.put(joinTable.getName(), joinTable.getAlias().getName());
+        if (FuncUtil.isNotEmpty(plainSelect.getFromItem())) {
+            if (Table.class.isAssignableFrom(plainSelect.getFromItem().getClass())) {
+                Table table = (Table) plainSelect.getFromItem();
+                if (table != null) {
+                    if (table.getAlias() != null) {
+                        mapTable.put(table.getName(), table.getAlias().getName());
                     } else {
-                        mapTable.put(joinTable.getName(), null);
+                        mapTable.put(table.getName(), null);
+                    }
+                }
+
+                if (FuncUtil.isNotEmpty(plainSelect.getJoins())) {
+                    for (Join join : plainSelect.getJoins()) {
+                        Table joinTable = (Table) join.getRightItem();
+                        if (joinTable.getAlias() != null) {
+                            mapTable.put(joinTable.getName(), joinTable.getAlias().getName());
+                        } else {
+                            mapTable.put(joinTable.getName(), null);
+                        }
                     }
                 }
             }
@@ -57,7 +59,8 @@ public class SqlParseUtil {
     public static Select getPlainSelect(String sql) {
         Select select = null;
         try {
-            select = (Select) CCJSqlParserUtil.parse(sql, ccjSqlParser -> ccjSqlParser.withSquareBracketQuotation(true));
+            select = (Select) CCJSqlParserUtil.parse(sql,
+                    ccjSqlParser -> ccjSqlParser.withSquareBracketQuotation(true));
         } catch (JSQLParserException e) {
             log.error(sql);
             Validator.assertException(ErrCodeSys.PA_PARAM_FORMAT, "SQL");

@@ -5,6 +5,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -48,6 +49,11 @@ public class ServiceException extends RuntimeException {
     }
 
     public ServiceException(MethodArgumentNotValidException ex) {
+        super(ErrCodeSys.SYS_VALIDATE_NOT_PASS.getErrText(Objects.requireNonNull(ex.getBindingResult().getFieldError()).getDefaultMessage()));
+        errCode = ErrCodeSys.SYS_VALIDATE_NOT_PASS;
+    }
+
+    public ServiceException(BindException ex) {
         super(ErrCodeSys.SYS_VALIDATE_NOT_PASS.getErrText(Objects.requireNonNull(ex.getBindingResult().getFieldError()).getDefaultMessage()));
         errCode = ErrCodeSys.SYS_VALIDATE_NOT_PASS;
     }
