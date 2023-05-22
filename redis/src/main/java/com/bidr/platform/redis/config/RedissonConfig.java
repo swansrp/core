@@ -28,7 +28,7 @@ public class RedissonConfig {
     @Value("${spring.redis.password}")
     private String password;
 
-    @Value("${spring.redis.username}")
+    @Value("${spring.redis.username:}")
     private String username;
 
 
