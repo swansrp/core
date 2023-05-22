@@ -230,6 +230,11 @@ public class LambdaUtil {
         return ReflectionUtil.getField(getRealClass(func), fieldName);
     }
 
+    public static <T, R> Field getField(SFunction<T, ?> func) throws IllegalArgumentException {
+        String fieldName = BeanUtil.getFieldName(getMethodName(func));
+        return ReflectionUtil.getField(getRealClass(func), fieldName);
+    }
+
 
     public static <T> Class<T> getRealClass(SFunction<T, ?> func) {
         final SerializedLambda lambda = resolveSFunction(func);

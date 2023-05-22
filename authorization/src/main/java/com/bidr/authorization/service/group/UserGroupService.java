@@ -44,6 +44,8 @@ public class UserGroupService {
 
     @Transactional(rollbackFor = Exception.class)
     public void addGroup(AcGroup req) {
+        long size = acGroupService.countGroupByType(req.getType());
+        req.setDisplayOrder((int) size + 1);
         acGroupService.insert(req);
         req.setKey(req.getId());
         acGroupService.updateById(req);

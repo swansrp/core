@@ -11,6 +11,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
@@ -194,16 +196,25 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
         map.forEach((name, field) -> {
             if (!Modifier.isFinal(field.getModifiers())) {
-                sb.append(" `").append(StringUtil.camelToUnderline(name)).append("` as ").append(name).append(" ,");
+                String columnName = getSelectSqlName(field);
+                sb.append(" ").append(columnName).append(" as ").append(name).append(" ,");
             }
         });
         String sql = sb.toString();
         return sql.substring(0, sql.length() - 1);
     }
 
-    protected String getSelectSqlName(SFunction<T, ?> column) {
-        return LambdaUtils.getName(column);
+    protected String getSelectSqlName(Field field) {
+        TableField annotation = field.getAnnotation(TableField.class);
+        if (FuncUtil.isNotEmpty(annotation)) {
+            return annotation.value();
+        } else {
+            return "`" + StringUtil.camelToUnderline(field.getName()) + "`";
+        }
     }
 
-
+    protected String getSelectSqlName(SFunction<T, ?> column) {
+        Field field = LambdaUtil.getField(column);
+        return getSelectSqlName(field);
+    }
 }

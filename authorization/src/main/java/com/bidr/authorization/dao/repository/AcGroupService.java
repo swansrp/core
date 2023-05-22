@@ -22,4 +22,10 @@ public class AcGroupService extends BaseSqlRepo<AcGroupDao, AcGroup> {
                 .orderByAsc(AcGroup::getDisplayOrder);
         return super.select(wrapper);
     }
+
+    public long countGroupByType(String type) {
+        LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper().eq(AcGroup::getType, type)
+                .orderByAsc(AcGroup::getDisplayOrder);
+        return super.count(wrapper);
+    }
 }
