@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.service.admin.AdminUserGroupBindService;
 import com.bidr.authorization.vo.group.BindUserReq;
 import com.bidr.authorization.vo.group.GroupAccountRes;
+import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
@@ -53,5 +54,11 @@ public class GroupUserBindController extends BaseBindController<AcGroup, AcUserG
     public void dataScope(@RequestBody AcUserGroup req) {
         adminUserGroupBindService.updateAcUserGroup(req);
         Resp.notice("更改用户数据权限成功");
+    }
+
+    @ApiOperation(value = "获取指定用户组类型下所有用户")
+    @RequestMapping(value = "/bind/list/all", method = RequestMethod.GET)
+    public List<GroupAccountRes> getUserListByGroupType(String name) {
+        return adminUserGroupBindService.getDataScopeUserListByGroupType(name);
     }
 }

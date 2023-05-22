@@ -20,9 +20,9 @@ public enum DataPermitScopeDict implements Dict {
     /**
      * 数据权限作用域字典
      */
-    DEPARTMENT(0, "所属部门"),
-    OWNER(1, "所有者本人"),
-    SUBORDINATE(2, "所属部门及下属部门"),
+    DEPARTMENT(0, "本部门"),
+    OWNER(1, "本人"),
+    SUBORDINATE(2, "本部门及子部门"),
 
     OTHER(4, "其他");
 

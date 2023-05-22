@@ -31,6 +31,8 @@ user:
     lockTime: 10
 # Spring配置
 spring:
+  application:
+    name: ${my.project.name}
   profiles:
     active: local
   mvc:
@@ -159,3 +161,8 @@ my:
         timeout: 30000
   project:
     name: sharp
+app:
+  projectId:
+  moduleId: ${spring.application.name}
+  log:
+    path: /data/log
