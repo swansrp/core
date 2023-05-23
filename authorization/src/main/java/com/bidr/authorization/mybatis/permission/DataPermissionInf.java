@@ -63,6 +63,12 @@ public interface DataPermissionInf extends CommandLineRunner {
      */
     Map<String, String> getFilterMap();
 
+    /**
+     * 判定该sql语句是否需要进行本数据权限规则就行权限校验
+     *
+     * @param tableAliasMap sql语句别名表
+     * @return 判定结果
+     */
     default boolean needFilter(Map<String, String> tableAliasMap) {
         boolean res = false;
         for (String table : tableAliasMap.keySet()) {
