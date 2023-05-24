@@ -6,19 +6,18 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
+import java.util.Date;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.util.Date;
+import lombok.Data;
 
  /**
  * Title: AcMenu
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/09 22:17
+ * @since 2023/05/24 10:04
  */
 
 /**
@@ -175,8 +174,7 @@ public class AcMenu {
      */
     @TableField(value = "create_by")
     @ApiModelProperty(value = "创建者")
-    @Size(max = 64, message = "创建者最大长度要小于 64")
-    private String createBy;
+    private Long createBy;
 
     /**
      * 创建时间
@@ -190,8 +188,7 @@ public class AcMenu {
      */
     @TableField(value = "update_by")
     @ApiModelProperty(value = "更新者")
-    @Size(max = 64, message = "更新者最大长度要小于 64")
-    private String updateBy;
+    private Long updateBy;
 
     /**
      * 更新时间

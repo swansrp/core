@@ -19,9 +19,9 @@
     <result column="address" jdbcType="VARCHAR" property="address" />
     <result column="status" jdbcType="INTEGER" property="status" />
     <result column="show_order" jdbcType="INTEGER" property="showOrder" />
-    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_by" jdbcType="BIGINT" property="createBy" />
     <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
-    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_by" jdbcType="BIGINT" property="updateBy" />
     <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>

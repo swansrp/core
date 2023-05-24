@@ -37,13 +37,13 @@ public class MenuTreeItem extends AcMenu {
     private String perms;
 
     @JsonIgnore
-    private String createBy;
+    private Long createBy;
 
     @JsonIgnore
     private Date createAt;
 
     @JsonIgnore
-    private String updateBy;
+    private Long updateBy;
 
     @JsonIgnore
     private Date updateAt;

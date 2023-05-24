@@ -22,9 +22,9 @@
     <result column="status" jdbcType="CHAR" property="status" />
     <result column="perms" jdbcType="VARCHAR" property="perms" />
     <result column="icon" jdbcType="VARCHAR" property="icon" />
-    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_by" jdbcType="BIGINT" property="createBy" />
     <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
-    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_by" jdbcType="BIGINT" property="updateBy" />
     <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
   </resultMap>

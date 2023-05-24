@@ -9,9 +9,9 @@
     <result column="config_key" jdbcType="VARCHAR" property="configKey" />
     <result column="config_value" jdbcType="VARCHAR" property="configValue" />
     <result column="config_type" jdbcType="CHAR" property="configType" />
-    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_by" jdbcType="BIGINT" property="createBy" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
-    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_by" jdbcType="BIGINT" property="updateBy" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
   </resultMap>

@@ -9,9 +9,9 @@
     <result column="role_key" jdbcType="VARCHAR" property="roleKey" />
     <result column="status" jdbcType="INTEGER" property="status" />
     <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
-    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_by" jdbcType="BIGINT" property="createBy" />
     <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
-    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_by" jdbcType="BIGINT" property="updateBy" />
     <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
     <result column="valid" jdbcType="CHAR" property="valid" />

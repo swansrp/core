@@ -10,7 +10,7 @@ import org.apache.ibatis.annotations.Mapper;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/09 09:11
+ * @since 2023/05/24 13:33
  */
 @Mapper
 public interface SysDictDao extends BaseMapper<SysDict>, MyBaseMapper<SysDict> {

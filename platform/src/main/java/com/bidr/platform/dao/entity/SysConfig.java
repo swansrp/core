@@ -6,31 +6,32 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
 import java.util.Date;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
 
  /**
  * Title: SysConfig
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/03/27 23:06
+ * @since 2023/05/24 13:32
  */
 
 /**
  * 参数配置表
  */
-@ApiModel(value = "参数配置表")
+@ApiModel(description = "参数配置表")
 @Data
 @TableName(value = "sys_config")
 public class SysConfig {
-    public static final String COL_TITLE = "title";
     /**
      * 参数主键
      */
     @TableId(value = "config_id", type = IdType.AUTO)
     @ApiModelProperty(value = "参数主键")
+    @NotNull(message = "参数主键不能为null")
     private Integer configId;
 
     /**
@@ -38,6 +39,7 @@ public class SysConfig {
      */
     @TableField(value = "config_name")
     @ApiModelProperty(value = "参数名称")
+    @Size(max = 100, message = "参数名称最大长度要小于 100")
     private String configName;
 
     /**
@@ -45,6 +47,7 @@ public class SysConfig {
      */
     @TableField(value = "config_key")
     @ApiModelProperty(value = "参数键名")
+    @Size(max = 100, message = "参数键名最大长度要小于 100")
     private String configKey;
 
     /**
@@ -52,6 +55,7 @@ public class SysConfig {
      */
     @TableField(value = "config_value")
     @ApiModelProperty(value = "参数键值")
+    @Size(max = 500, message = "参数键值最大长度要小于 500")
     private String configValue;
 
     /**
@@ -59,6 +63,7 @@ public class SysConfig {
      */
     @TableField(value = "config_type")
     @ApiModelProperty(value = "系统内置")
+    @Size(max = 1, message = "系统内置最大长度要小于 1")
     private String configType;
 
     /**
@@ -66,7 +71,7 @@ public class SysConfig {
      */
     @TableField(value = "create_by")
     @ApiModelProperty(value = "创建者")
-    private String createBy;
+    private Long createBy;
 
     /**
      * 创建时间
@@ -80,7 +85,7 @@ public class SysConfig {
      */
     @TableField(value = "update_by")
     @ApiModelProperty(value = "更新者")
-    private String updateBy;
+    private Long updateBy;
 
     /**
      * 更新时间
@@ -94,6 +99,7 @@ public class SysConfig {
      */
     @TableField(value = "remark")
     @ApiModelProperty(value = "备注")
+    @Size(max = 500, message = "备注最大长度要小于 500")
     private String remark;
 
     public static final String COL_CONFIG_ID = "config_id";

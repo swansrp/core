@@ -6,33 +6,33 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
 import java.util.Date;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
 
  /**
  * Title: AcRole
- * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/05 09:34
+ * @since 2023/05/24 10:15
  */
 
 /**
  * 角色信息表
  */
-@ApiModel(value = "角色信息表")
+@ApiModel(description = "角色信息表")
 @Data
 @TableName(value = "ac_role")
 public class AcRole {
-    public static final String COL_ROLE_TYPE = "role_type";
-    public static final String COL_DATA_TABLE_NAME = "data_table_name";
-    public static final String COL_DATA_SCOPE = "data_scope";
     /**
      * 角色ID
      */
     @TableId(value = "role_id", type = IdType.AUTO)
     @ApiModelProperty(value = "角色ID")
+    @NotNull(message = "角色ID不能为null")
     private Long roleId;
 
     /**
@@ -40,6 +40,8 @@ public class AcRole {
      */
     @TableField(value = "role_name")
     @ApiModelProperty(value = "角色名称")
+    @Size(max = 30, message = "角色名称最大长度要小于 30")
+    @NotBlank(message = "角色名称不能为空")
     private String roleName;
 
     /**
@@ -47,6 +49,7 @@ public class AcRole {
      */
     @TableField(value = "role_key")
     @ApiModelProperty(value = "角色权限字符串")
+    @Size(max = 100, message = "角色权限字符串最大长度要小于 100")
     private String roleKey;
 
     /**
@@ -54,6 +57,7 @@ public class AcRole {
      */
     @TableField(value = "`status`")
     @ApiModelProperty(value = "角色状态（1正常 0停用）")
+    @NotNull(message = "角色状态（1正常 0停用）不能为null")
     private Integer status;
 
     /**
@@ -68,7 +72,7 @@ public class AcRole {
      */
     @TableField(value = "create_by")
     @ApiModelProperty(value = "创建者")
-    private String createBy;
+    private Long createBy;
 
     /**
      * 创建时间
@@ -82,7 +86,7 @@ public class AcRole {
      */
     @TableField(value = "update_by")
     @ApiModelProperty(value = "更新者")
-    private String updateBy;
+    private Long updateBy;
 
     /**
      * 更新时间
@@ -96,6 +100,7 @@ public class AcRole {
      */
     @TableField(value = "remark")
     @ApiModelProperty(value = "备注")
+    @Size(max = 500, message = "备注最大长度要小于 500")
     private String remark;
 
     /**
@@ -103,6 +108,7 @@ public class AcRole {
      */
     @TableField(value = "`valid`")
     @ApiModelProperty(value = "有效性")
+    @Size(max = 1, message = "有效性最大长度要小于 1")
     private String valid;
 
     public static final String COL_ROLE_ID = "role_id";
