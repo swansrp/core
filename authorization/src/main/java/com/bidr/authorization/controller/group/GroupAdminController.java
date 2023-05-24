@@ -8,6 +8,7 @@ import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminTreeController;
+import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,13 @@ public class GroupAdminController extends BaseAdminTreeController<AcGroup, Group
     public void addGroup(@RequestBody AcGroup req) {
         userGroupService.addGroup(req);
         Resp.notice("添加用户组成功");
+    }
+
+    @ApiOperation("删除数据")
+    @RequestMapping(value = "/delete", method = RequestMethod.POST)
+    public void delete(@RequestBody IdReqVO vo) {
+        userGroupService.deleteGroup(vo.getId());
+        Resp.notice("删除成功");
     }
 
     @Override

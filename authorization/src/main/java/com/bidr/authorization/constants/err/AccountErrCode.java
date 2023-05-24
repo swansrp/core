@@ -63,8 +63,9 @@ public enum AccountErrCode implements ErrCode {
     AC_IS_NOT_ADMIN(1022, "不是管理员,无权限"),
     AC_DONT_HAVE_PERMIT(1023, "无指定接口权限"),
 
-    AC_ROLE_HAS_USER(1024, "该角色下尚有用户, 不能删除该角色");
+    AC_ROLE_HAS_USER(1024, "该角色下尚有用户, 不能删除该角色"),
 
+    AC_GROUP_HAS_USER(1025, "该用户组下尚有用户, 不能删除该用户组");
 
     private final Integer errCode;
 

@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,7 +41,8 @@ public class AcUserGroupJoinService {
         return acUserService.selectJoinList(AccountRes.class, wrapper);
     }
 
-    public Set<Long> getUserIdByDataScope(Long userId, String groupName) {
+    public List<Long> getUserIdByDataScope(Long userId, String groupName) {
+        List<Long> res = new ArrayList<>();
         List<AcUserGroup> groups = getAcUserGroupByUserIdAndGroupType(userId, groupName);
         Set<Long> permissions = new HashSet<>();
         if (FuncUtil.isNotEmpty(groups)) {
@@ -70,7 +72,10 @@ public class AcUserGroupJoinService {
         } else {
             permissions.add(userId);
         }
-        return permissions;
+        if (FuncUtil.isNotEmpty(permissions)) {
+            res.addAll(permissions);
+        }
+        return res;
     }
 
     public List<AcUserGroup> getAcUserGroupByUserIdAndGroupType(Long userId, String groupType) {

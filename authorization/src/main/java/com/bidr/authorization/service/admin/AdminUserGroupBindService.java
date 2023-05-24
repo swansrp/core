@@ -80,7 +80,7 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
     }
 
     public List<GroupAccountRes> getDataScopeUserListByGroupType(String name) {
-        Set<Long> userIdByDataScope = acUserGroupJoinService.getUserIdByDataScope(AccountContext.getUserId(), name);
+        List<Long> userIdByDataScope = acUserGroupJoinService.getUserIdByDataScope(AccountContext.getUserId(), name);
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         wrapper.selectAll(getAttachClass()).select(bindEntityId())
                 .leftJoin(getBindClass(), bindAttachId(), attachId())

@@ -16,6 +16,7 @@ import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.schema.Column;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,7 +42,7 @@ public abstract class BaseGroupDataPermission implements DataPermissionInf {
             log.debug("没有AccountInfo, 不进行数据权限校验");
             return null;
         }
-        Set<Long> permissions = buildAuthorPermission(accountInfo.getUserId());
+        List<Long> permissions = buildAuthorPermission(accountInfo.getUserId());
         Expression res = null;
         for (Map.Entry<String, String> filerEntry : getFilterMap().entrySet()) {
             String table = filerEntry.getKey();
@@ -73,7 +74,7 @@ public abstract class BaseGroupDataPermission implements DataPermissionInf {
         return MAP;
     }
 
-    protected Set<Long> buildAuthorPermission(Long userId) {
+    protected List<Long> buildAuthorPermission(Long userId) {
         return acUserGroupJoinService.getUserIdByDataScope(userId, getGroupName().name());
     }
 

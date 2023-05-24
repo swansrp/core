@@ -10,11 +10,14 @@ import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import static com.bidr.authorization.constants.err.AccountErrCode.AC_ROLE_HAS_USER;
 
 /**
  * Title: AdminUserGroupBindService
@@ -29,6 +32,8 @@ public class UserGroupService {
 
     private final AcGroupService acGroupService;
     private final AcGroupTypeService acGroupTypeService;
+
+    private final AcUserGroupService acUserGroupService;
 
 
     public List<UserGroupTreeRes> getTree(String groupType) {
@@ -54,5 +59,11 @@ public class UserGroupService {
     public List<GroupTypeRes> getGroupType(String name) {
         List<AcGroupType> groupTypes = acGroupTypeService.getGroupTypeByName(name);
         return Resp.convert(groupTypes, GroupTypeRes.class);
+    }
+
+    public void deleteGroup(String id) {
+        boolean existedUserInGroup = acUserGroupService.existedByGroupId(Long.parseLong(id));
+        Validator.assertFalse(existedUserInGroup, AC_ROLE_HAS_USER);
+        acGroupService.deleteById(id);
     }
 }
