@@ -1,0 +1,46 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.bhfae</groupId>
+	<artifactId>om-weekly-report-db</artifactId>
+	<version>1.0.0</version>
+
+	<build>
+        <plugins>
+            <plugin>
+                <groupId>com.dbdeploy</groupId>
+                <artifactId>maven-dbdeploy-plugin</artifactId>
+                <version>3.0M3</version>
+                <configuration>
+                    <scriptdirectory>./src/main/sql</scriptdirectory>
+                    <name>${dbchangefile.name}</name>
+                    <encoding>UTF-8</encoding>
+                    <lineEnding>lf</lineEnding>
+                    <outputfile>./result/apply.sql</outputfile>
+                    <undoOutputfile>./result/undo.sql</undoOutputfile>
+                    <driver>com.mysql.jdbc.Driver</driver>
+                    <url>${db.url}</url>
+                    <userid>${db.usr}</userid>
+                    <password>${db.pwd}</password>
+                    <dbms>mysql</dbms>
+                    <delimiter>/</delimiter>
+                    <delimiterType>row</delimiterType>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.dbdeploy</groupId>
+                        <artifactId>dbdeploy-core</artifactId>
+                        <version>3.0M3</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+						<version>5.1.46</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

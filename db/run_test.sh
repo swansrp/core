@@ -1,0 +1,2 @@
+basepath=$(cd "$(dirname "$0")"; pwd)
+mvn dbdeploy:update -f $basepath/pom.xml -Ddb.url=jdbc:mysql://62.234.147.226:13306/customer?characterEncoding=utf8  -Ddb.usr=dbAdmin -Ddb.pwd=Adm!n123 | tee run.log
