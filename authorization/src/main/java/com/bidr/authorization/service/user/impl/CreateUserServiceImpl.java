@@ -1,6 +1,7 @@
 package com.bidr.authorization.service.user.impl;
 
 import com.bidr.authorization.constants.dict.DataPermitScopeDict;
+import com.bidr.authorization.constants.dict.UserTypeDict;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -95,6 +96,7 @@ public class CreateUserServiceImpl implements CreateUserService {
         acUser.setEmail(account.getEmail());
         acUser.setSex(account.getGender());
         acUser.setAvatar(account.getPictureLink());
+        acUser.setUserType(UserTypeDict.ACCOUNT.getValue());
     }
 
     private void bindDept(AcAccount account, AcUser user) {

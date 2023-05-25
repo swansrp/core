@@ -26,14 +26,8 @@ import java.util.List;
 public class AdminInitService {
 
     private final SysConfigCacheService sysConfigCacheService;
-    private final AuthAccountService accountService;
     private final AcRoleMenuService acRoleMenuService;
     private final AcMenuService acMenuService;
-
-    @Transactional(rollbackFor = Exception.class)
-    public void initUserFromAccount() {
-        accountService.accountSyncUser();
-    }
 
     @Transactional(rollbackFor = Exception.class)
     public void initAdminRole() {

@@ -4,14 +4,11 @@ import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcAccountService;
 import com.bidr.authorization.dao.repository.AcUserService;
-import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.vo.account.AccountReq;
 import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,7 +25,6 @@ public class AuthAccountService {
 
     private final AcAccountService accountService;
     private final AcUserService acUserService;
-    private final CreateUserService createUserService;
 
 
     public List<AccountRes> getAccount(AccountReq req) {
@@ -40,21 +36,5 @@ public class AuthAccountService {
         return accountService.getAccountByUserName(userName);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void accountSyncUser() {
-        List<AcAccount> acAccountList = accountService.selectActive();
-        accountSyncUser(acAccountList);
-    }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void accountSyncUser(List<AcAccount> acAccountList) {
-        if (FuncUtil.isNotEmpty(acAccountList)) {
-            for (AcAccount account : acAccountList) {
-                AcUser user = acUserService.getByCustomerNumber(account.getId());
-                if (FuncUtil.isEmpty(user)) {
-                    createUserService.createUser(account);
-                }
-            }
-        }
-    }
 }
