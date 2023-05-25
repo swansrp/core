@@ -28,7 +28,7 @@ import java.util.List;
  */
 @Api(tags = "系统管理 - 菜单管理")
 @RestController("AdminMenuController")
-@RequestMapping(value = "/web-admin/menu")
+@RequestMapping(value = "/web/admin/menu")
 public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu> {
 
     @Resource

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Api(tags = "系统管理 - 角色-人员 - 绑定管理")
 @RestController("AdminRoleUserBindController")
-@RequestMapping(value = "/web-admin/role/user")
+@RequestMapping(value = "/web/admin/role/user")
 @RequiredArgsConstructor
 public class AdminRoleUserBindController extends BaseBindController<AcRole, AcUserRole, AcUser, RoleRes, UserRes> {
 

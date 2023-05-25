@@ -28,7 +28,7 @@ import java.util.List;
  */
 @Api(tags = "系统管理 - 角色 - 权限 - 绑定管理")
 @RestController("AdminRoleMenuBindController")
-@RequestMapping(value = "/web-admin/role/menu")
+@RequestMapping(value = "/web/admin/role/menu")
 @RequiredArgsConstructor
 public class AdminRoleMenuBindController extends BaseBindController<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> {
 

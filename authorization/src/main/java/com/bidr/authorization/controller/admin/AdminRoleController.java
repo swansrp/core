@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Api(tags = "系统管理 - 角色 - 权限管理")
 @RestController("AdminRoleController")
-@RequestMapping(value = "/web-admin/role/menu")
+@RequestMapping(value = "/web/admin/role/menu")
 @RequiredArgsConstructor
 public class AdminRoleController extends AdminController<AcRole, RoleRes> {
 
