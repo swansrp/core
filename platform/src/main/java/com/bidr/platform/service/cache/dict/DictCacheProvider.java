@@ -5,9 +5,11 @@ import com.bidr.kernel.cache.DynamicMemoryCache;
 import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
@@ -99,6 +101,7 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
     }
 
     private void buildEnumSysDictCacheList(List<SysDict> sysDictCache, String dictName, String dictTitle) {
+        Validator.assertNotNull(config.getDictClazz(), ErrCodeSys.SYS_CONFIG_NOT_EXIST, "字典配置: " + dictTitle);
         for (Object enumItem : config.getDictClazz().getEnumConstants()) {
             SysDict item = buildSysDict(dictName, dictTitle, enumItem);
             sysDictCache.add(item);
