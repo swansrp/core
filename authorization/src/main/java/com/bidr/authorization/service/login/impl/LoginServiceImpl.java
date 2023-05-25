@@ -15,9 +15,9 @@ import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.holder.TokenHolder;
-import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.login.QrCodeReq;
@@ -51,10 +51,8 @@ public class LoginServiceImpl implements LoginService {
 
     private final AcUserService acUserService;
     private final SysConfigCacheService frameCacheService;
-
     private final TokenService tokenService;
     private final AcUserRoleMenuService acUserRoleMenuService;
-
     private final CreateUserService creatUserService;
     private final HttpServletRequest request;
 
@@ -93,7 +91,6 @@ public class LoginServiceImpl implements LoginService {
         if (!verify) {
             int passwordMistakeMaxTime = frameCacheService.getParamInt(AccountParam.ACCOUNT_LOCK_MISTAKE_NUMBER);
             user.setPasswordErrorTime(user.getPasswordErrorTime() + 1);
-            user.setPasswordLastTime(new Date());
             if (user.getPasswordErrorTime() >= passwordMistakeMaxTime) {
                 user.setStatus(ActiveStatusDict.LOCKING.getValue());
                 acUserService.updateById(user);
@@ -102,7 +99,10 @@ public class LoginServiceImpl implements LoginService {
             acUserService.updateById(user);
             Validator.assertException(AccountErrCode.AC_PASSWORD_NOT_RIGHT,
                     String.valueOf(passwordMistakeMaxTime - user.getPasswordErrorTime()));
+        } else {
+            user.setPasswordErrorTime(0);
         }
+
     }
 
     @Override

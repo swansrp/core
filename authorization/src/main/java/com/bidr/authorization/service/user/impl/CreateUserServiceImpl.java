@@ -7,8 +7,8 @@ import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
-import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.service.login.RoleBindService;
+import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.utils.FuncUtil;
@@ -17,6 +17,8 @@ import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
 
 /**
  * Title: CreateUserServiceImpl
@@ -113,6 +115,7 @@ public class CreateUserServiceImpl implements CreateUserService {
         AcUser user = new AcUser();
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         user.setPasswordErrorTime(0);
+        user.setPasswordLastTime(new Date());
         user.setValid(CommonConst.YES);
         return user;
     }
