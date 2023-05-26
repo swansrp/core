@@ -32,7 +32,6 @@ public class XxlJobConfig implements BeanPostProcessor {
     private int logRetention;
 
     @Bean
-    @Profile(value = {"dev", "stg", "prod"})
     public XxlJobSpringExecutor xxlJobExecutor() {
         log.info(">>>>>>>>>>> xxl-job config init.");
         XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
