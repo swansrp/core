@@ -1,12 +1,12 @@
 package com.bidr.xxljob.config;
 
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.NetUtil;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Profile;
 
 /**
  * Title: XxlJobConfig
@@ -22,6 +22,9 @@ public class XxlJobConfig implements BeanPostProcessor {
     private String adminAddresses;
     @Value("${xxl-job.executor.app-name}")
     private String appName;
+
+    @Value("${xxl-job.executor.ip:}")
+    private String ip;
     @Value("${xxl-job.executor.port}")
     private int port;
     @Value("${xxl-job.executor.log-path}")
@@ -37,7 +40,9 @@ public class XxlJobConfig implements BeanPostProcessor {
         XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
         xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
         xxlJobSpringExecutor.setAppname(appName);
-        String ip = NetUtil.getLocalIp();
+        if (FuncUtil.isEmpty(ip)) {
+            ip = NetUtil.getLocalIp();
+        }
         xxlJobSpringExecutor.setIp(ip);
         xxlJobSpringExecutor.setPort(port);
         xxlJobSpringExecutor.setAccessToken(accessToken);
