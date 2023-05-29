@@ -2,13 +2,11 @@ package com.bidr.authorization.vo.group;
 
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcUserGroup;
-import com.bidr.authorization.vo.account.AccountRes;
 import com.diboot.core.binding.annotation.BindDict;
 import com.diboot.core.binding.annotation.BindField;
 import com.diboot.core.data.copy.Accept;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 /**
  * Title: GroupAccountRes
@@ -19,9 +17,9 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 public class GroupAccountRes {
-
+    private Long userId;
     @JsonProperty("value")
-    private String userId;
+    private String customerNumber;
     private String userName;
     @JsonProperty("label")
     private String name;
@@ -36,11 +34,13 @@ public class GroupAccountRes {
 
     private Long groupId;
 
-    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId = user_id")
+    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId " +
+            "= user_id")
     private String dataScope;
 
     @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")
-    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId = user_id")
+    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId " +
+            "= user_id")
     private String dataScopeDisplay;
 
 }

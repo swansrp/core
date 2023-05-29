@@ -8,6 +8,7 @@ import com.bidr.authorization.dao.repository.AcUserGroupService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.mybatis.dao.repository.RecursionService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -31,6 +32,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class AcUserGroupJoinService {
+
+    private final RecursionService recursionService;
     private final AcUserService acUserService;
     private final AcUserGroupService acUserGroupService;
 
@@ -41,10 +44,10 @@ public class AcUserGroupJoinService {
         return acUserService.selectJoinList(AccountRes.class, wrapper);
     }
 
-    public List<Long> getUserIdByDataScope(Long userId, String groupName) {
-        List<Long> res = new ArrayList<>();
-        List<AcUserGroup> groups = getAcUserGroupByUserIdAndGroupType(userId, groupName);
-        Set<Long> permissions = new HashSet<>();
+    public List<String> getCustomerNumberListFromDataScope(String customerNumber, String groupName) {
+        List<String> res = new ArrayList<>();
+        List<AcUserGroup> groups = getAcUserGroupByUserIdAndGroupType(customerNumber, groupName);
+        Set<String> permissions = new HashSet<>();
         if (FuncUtil.isNotEmpty(groups)) {
             for (AcUserGroup group : groups) {
                 DataPermitScopeDict scope = DataPermitScopeDict.of(group.getDataScope());
@@ -55,14 +58,14 @@ public class AcUserGroupJoinService {
                 }
                 switch (scope) {
                     case OWNER:
-                        permissions.add(group.getUserId());
+                        permissions.add(customerNumber);
                         break;
                     case DEPARTMENT: {
-                        permissions.addAll(acUserGroupService.getUserIdList(group.getGroupId()));
+                        permissions.addAll(getCustomerNumberList(group.getGroupId()));
                         break;
                     }
                     case SUBORDINATE: {
-                        permissions.addAll(acUserGroupService.getSubordinateUserIdList(group.getGroupId()));
+                        permissions.addAll(getSubordinateCustomerNumberList(group.getGroupId()));
                         break;
                     }
                     default:
@@ -70,7 +73,7 @@ public class AcUserGroupJoinService {
                 }
             }
         } else {
-            permissions.add(userId);
+            permissions.add(customerNumber);
         }
         if (FuncUtil.isNotEmpty(permissions)) {
             res.addAll(permissions);
@@ -78,12 +81,27 @@ public class AcUserGroupJoinService {
         return res;
     }
 
-    public List<AcUserGroup> getAcUserGroupByUserIdAndGroupType(Long userId, String groupType) {
-        Validator.assertNotNull(userId, ErrCodeSys.PA_PARAM_NULL, "查询用户组数据权限, 用户id");
+    public List<AcUserGroup> getAcUserGroupByUserIdAndGroupType(String customerNumber, String groupType) {
+        Validator.assertNotNull(customerNumber, ErrCodeSys.PA_PARAM_NULL, "查询用户组数据权限, 用户编码");
         MPJLambdaWrapper<AcUserGroup> wrapper = new MPJLambdaWrapper<>(AcUserGroup.class).distinct()
                 .leftJoin(AcGroup.class, AcGroup::getId, AcUserGroup::getGroupId)
                 .leftJoin(AcUser.class, AcUser::getUserId, AcUserGroup::getUserId).eq(AcGroup::getType, groupType)
-                .eq(AcUserGroup::getUserId, userId);
+                .eq(AcUser::getCustomerNumber, customerNumber);
         return acUserGroupService.selectJoinList(AcUserGroup.class, wrapper);
+    }
+
+    public List<String> getCustomerNumberList(Long groupId) {
+        MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<AcUser>().select(AcUser::getCustomerNumber)
+                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId)
+                .distinct().eq(AcUserGroup::getGroupId, groupId);
+        return acUserService.selectJoinList(String.class, wrapper);
+    }
+
+    public List<String> getSubordinateCustomerNumberList(Long groupId) {
+        List subGroup = recursionService.getChildList(AcGroup::getId, AcGroup::getPid, groupId);
+        MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<AcUser>().select(AcUser::getCustomerNumber)
+                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId)
+                .distinct().in(AcUserGroup::getGroupId, subGroup);
+        return acUserService.selectJoinList(String.class, wrapper);
     }
 }

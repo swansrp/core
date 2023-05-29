@@ -1,9 +1,7 @@
 package com.bidr.authorization.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
+import com.bidr.authorization.mybatis.anno.AccountContextFill;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import java.util.Date;
@@ -17,7 +15,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/24 10:04
+ * @since 2023/05/29 16:52
  */
 
 /**
@@ -26,6 +24,7 @@ import lombok.Data;
 @ApiModel(description = "菜单权限表")
 @Data
 @TableName(value = "ac_menu")
+@AccountContextFill
 public class AcMenu {
     /**
      * 菜单ID
@@ -172,9 +171,10 @@ public class AcMenu {
     /**
      * 创建者
      */
-    @TableField(value = "create_by")
+    @TableField(value = "create_by", fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建者")
-    private Long createBy;
+    @Size(max = 50, message = "创建者最大长度要小于 50")
+    private String createBy;
 
     /**
      * 创建时间
@@ -186,9 +186,10 @@ public class AcMenu {
     /**
      * 更新者
      */
-    @TableField(value = "update_by")
+    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "更新者")
-    private Long updateBy;
+    @Size(max = 50, message = "更新者最大长度要小于 50")
+    private String updateBy;
 
     /**
      * 更新时间

@@ -11,7 +11,7 @@ import org.apache.ibatis.annotations.Update;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/24 10:03
+ * @since 2023/05/29 16:51
  */
 @Mapper
 public interface AcDeptDao extends BaseMapper<AcDept>, MyBaseMapper<AcDept> {

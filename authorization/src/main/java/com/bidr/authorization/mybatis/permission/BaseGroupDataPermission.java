@@ -41,7 +41,7 @@ public abstract class BaseGroupDataPermission implements DataPermissionInf {
             log.debug("没有AccountInfo, 不进行数据权限校验");
             return null;
         }
-        List<Long> permissions = buildAuthorPermission(accountInfo.getUserId());
+        List<String> permissions = buildAuthorPermission(accountInfo.getCustomerNumber());
         Expression res = null;
         for (Map.Entry<String, String> filerEntry : getFilterMap().entrySet()) {
             String table = filerEntry.getKey();
@@ -73,8 +73,8 @@ public abstract class BaseGroupDataPermission implements DataPermissionInf {
         return MAP;
     }
 
-    protected List<Long> buildAuthorPermission(Long userId) {
-        return acUserGroupJoinService.getUserIdByDataScope(userId, getGroupName().name());
+    protected List<String> buildAuthorPermission(String customerNumber) {
+        return acUserGroupJoinService.getCustomerNumberListFromDataScope(customerNumber, getGroupName().name());
     }
 
     /**
