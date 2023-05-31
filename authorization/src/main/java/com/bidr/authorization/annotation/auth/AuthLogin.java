@@ -43,7 +43,7 @@ public class AuthLogin implements AuthRole {
     @Override
     public void validate(HttpServletRequest request, String... args) {
         if(FuncUtil.equals(BeanUtil.getActiveProfile(), IGNORE_PROFILE)) {
-            // return;
+            return;
         }
         TokenInfo token = AuthTokenUtil.extractToken(request);
         Validator.assertNotNull(token, SYS_SESSION_TIME_OUT);
