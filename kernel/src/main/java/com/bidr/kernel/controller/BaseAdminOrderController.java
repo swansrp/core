@@ -20,7 +20,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/05/06 09:47
  */
-public abstract class BaseAdminOrderController<ENTITY, VO> extends AdminController<ENTITY, VO> {
+public abstract class BaseAdminOrderController<ENTITY, VO> extends BaseAdminController<ENTITY, VO> {
     @RequestMapping(value = "/order/update", method = RequestMethod.POST)
     public void updateOrder(@RequestBody List<IdOrderReqVO> idOrderReqVOList) {
         List<ENTITY> entityList = new ArrayList<>();

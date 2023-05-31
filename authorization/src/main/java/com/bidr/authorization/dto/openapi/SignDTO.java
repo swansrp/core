@@ -1,6 +1,8 @@
-package com.bidr.authorization.dto;
+package com.bidr.authorization.dto.openapi;
 
 import lombok.Data;
+
+import javax.validation.constraints.NotNull;
 
 /**
  * Title: SignDTO
@@ -11,7 +13,10 @@ import lombok.Data;
  */
 @Data
 public class SignDTO {
+    @NotNull(message = "timeStamp 不能为空")
     private Long timeStamp;
+    @NotNull(message = "nonce 不能为空")
     private String nonce;
+    @NotNull(message = "signature 不能为空")
     private String signature;
 }

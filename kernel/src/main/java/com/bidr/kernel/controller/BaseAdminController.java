@@ -20,14 +20,14 @@ import javax.annotation.Resource;
 import java.util.Map;
 
 /**
- * Title: AdminController
+ * Title: BaseAdminController
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
  * @since 2023/03/31 11:42
  */
 @SuppressWarnings("rawtypes, unchecked")
-public abstract class AdminController<ENTITY, VO> {
+public abstract class BaseAdminController<ENTITY, VO> {
 
     @Resource
     private ApplicationContext applicationContext;
@@ -35,9 +35,14 @@ public abstract class AdminController<ENTITY, VO> {
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     public void update(@RequestBody ENTITY entity) {
+        preUpdate(entity);
         Boolean result = getRepo().updateById(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
         Resp.notice("更新成功");
+    }
+
+    protected void preUpdate(ENTITY entity) {
+
     }
 
     protected BaseSqlRepo getRepo() {
@@ -68,7 +73,6 @@ public abstract class AdminController<ENTITY, VO> {
         }
         return getRepo().updateById(entity, false);
     }
-
 
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)

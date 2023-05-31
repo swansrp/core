@@ -1,6 +1,6 @@
 package com.bidr.authorization.openapi.utils;
 
-import com.bidr.authorization.dto.SignDTO;
+import com.bidr.authorization.dto.openapi.SignDTO;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.DateUtil;

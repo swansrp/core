@@ -1,6 +1,6 @@
 package com.bidr.authorization.vo.login;
 
-import com.bidr.authorization.dto.SignDTO;
+import com.bidr.authorization.dto.openapi.SignDTO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

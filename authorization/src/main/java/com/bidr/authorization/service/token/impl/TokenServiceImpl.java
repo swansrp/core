@@ -4,6 +4,7 @@ import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.constants.token.TokenType;
+import com.bidr.authorization.dto.openapi.OpenApiTokenRes;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -161,8 +162,11 @@ public class TokenServiceImpl implements TokenService {
     }
 
     @Override
-    public TokenInfo buildOpenPlatformToken(String appKey) {
-        return buildToken(appKey, TokenType.PLATFORM_TOKEN);
+    public OpenApiTokenRes buildOpenPlatformToken(String appKey) {
+        TokenInfo tokenInfo = buildToken(appKey, TokenType.PLATFORM_TOKEN);
+        AccountParam expiredParam = getExpiredParamByTokenType(TokenType.PLATFORM_TOKEN.name());
+        int expired = frameCacheService.getParamInt(expiredParam);
+        return new OpenApiTokenRes(AuthTokenUtil.getToken(tokenInfo), expired);
     }
 
     @Override

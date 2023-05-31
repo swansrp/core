@@ -10,6 +10,8 @@ import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.utils.BeanUtil;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
@@ -34,10 +36,15 @@ import static com.bidr.kernel.constant.err.ErrCodeSys.SYS_SESSION_TIME_OUT;
 @Component
 @RequiredArgsConstructor
 public class AuthLogin implements AuthRole {
+
+    private final static String IGNORE_PROFILE = "dev";
     private final TokenService tokenService;
 
     @Override
     public void validate(HttpServletRequest request, String... args) {
+        if(FuncUtil.equals(BeanUtil.getActiveProfile(), IGNORE_PROFILE)) {
+            return;
+        }
         TokenInfo token = AuthTokenUtil.extractToken(request);
         Validator.assertNotNull(token, SYS_SESSION_TIME_OUT);
         tokenService.verifyToken(token);

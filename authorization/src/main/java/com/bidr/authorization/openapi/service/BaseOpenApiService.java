@@ -1,7 +1,7 @@
 package com.bidr.authorization.openapi.service;
 
 import com.bidr.authorization.constants.common.RequestConst;
-import com.bidr.authorization.dto.SignDTO;
+import com.bidr.authorization.dto.openapi.SignDTO;
 import com.bidr.authorization.openapi.exception.TokenInvalidException;
 import com.bidr.authorization.openapi.utils.OpenApiUtil;
 import com.bidr.authorization.vo.token.TokenRes;
@@ -105,8 +105,7 @@ public abstract class BaseOpenApiService {
     private SignDTO buildSignDTO() {
         // todo
         String secret = RandomUtil.getUUID();
-        SignDTO signDTO = OpenApiUtil.sign(secret);
-        return signDTO;
+        return OpenApiUtil.sign(secret);
     }
 
     private HttpHeaders getHttpHeaders() {
