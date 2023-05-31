@@ -11,6 +11,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,8 +33,8 @@ public class OpenApiController {
 
     @Auth(AuthNone.class)
     @ApiOperation(value = "获取token", notes = "获取接入token")
-    @RequestMapping(value = "/token", method = RequestMethod.GET)
-    public OpenApiTokenRes fetchToken(@Validated OpenApiTokenRcv sign) {
+    @RequestMapping(value = "/token", method = RequestMethod.POST)
+    public OpenApiTokenRes fetchToken(@RequestBody @Validated OpenApiTokenRcv sign) {
         return openApiLoginService.getToken(sign);
     }
 

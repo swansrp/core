@@ -92,7 +92,7 @@ public interface TokenService {
      *
      * @return open platform Token string
      */
-    OpenApiTokenRes buildOpenPlatformToken(String appKey);
+    TokenInfo buildOpenPlatformToken(String appKey);
 
     /**
      * 获取token map中itemKey内容

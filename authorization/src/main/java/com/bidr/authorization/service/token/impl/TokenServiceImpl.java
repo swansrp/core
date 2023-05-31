@@ -4,7 +4,6 @@ import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.constants.token.TokenType;
-import com.bidr.authorization.dto.openapi.OpenApiTokenRes;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -45,7 +44,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public String fetchToken() {
-        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, GUEST_OPERATOR);
+        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, GUEST_OPERATOR, TOKEN_DEFAULT_TIMEOUT);
         saveToken(token, GUEST_OPERATOR, TOKEN_DEFAULT_TIMEOUT);
         return AuthTokenUtil.getToken(token);
     }
@@ -104,10 +103,11 @@ public class TokenServiceImpl implements TokenService {
     }
 
     private TokenInfo buildToken(String customerNumber, TokenType tokenType) {
-        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), tokenType, customerNumber);
         AccountParam expiredParam = getExpiredParamByTokenType(tokenType.toString());
         int expired = frameCacheService.getParamInt(expiredParam);
+        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), tokenType, customerNumber, expired);
         saveToken(token, customerNumber, expired);
+        token.setExpired(expired);
         return token;
     }
 
@@ -162,11 +162,8 @@ public class TokenServiceImpl implements TokenService {
     }
 
     @Override
-    public OpenApiTokenRes buildOpenPlatformToken(String appKey) {
-        TokenInfo tokenInfo = buildToken(appKey, TokenType.PLATFORM_TOKEN);
-        AccountParam expiredParam = getExpiredParamByTokenType(TokenType.PLATFORM_TOKEN.name());
-        int expired = frameCacheService.getParamInt(expiredParam);
-        return new OpenApiTokenRes(AuthTokenUtil.getToken(tokenInfo), expired);
+    public TokenInfo buildOpenPlatformToken(String appKey) {
+        return buildToken(appKey, TokenType.PLATFORM_TOKEN);
     }
 
     @Override

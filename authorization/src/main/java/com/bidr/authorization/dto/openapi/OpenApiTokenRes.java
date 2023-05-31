@@ -2,6 +2,7 @@ package com.bidr.authorization.dto.openapi;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Title: OpenApiTokenRes
@@ -12,8 +13,8 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class OpenApiTokenRes {
-
     private String token;
-    private long expired;
+    private int expired;
 }

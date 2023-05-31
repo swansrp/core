@@ -10,7 +10,6 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
-import org.springframework.validation.annotation.Validated;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -47,11 +46,11 @@ public class AuthTokenUtil {
     public static TokenInfo decode(String token) {
         String str = Base64Util.decode(token);
         List<String> list = StringUtil.split(str, SEPARATION);
-        return new TokenInfo(list.get(0), TokenType.of(list.get(1)), list.get(2));
+        return new TokenInfo(list.get(0), TokenType.of(list.get(1)), list.get(2), 0);
     }
 
-    public static TokenInfo buildToken(String token, TokenType tokenType, String customerNumber) {
-        return new TokenInfo(token, tokenType, customerNumber);
+    public static TokenInfo buildToken(String token, TokenType tokenType, String customerNumber, int expired) {
+        return new TokenInfo(token, tokenType, customerNumber, expired);
     }
 
     public static String getKeyFromToken(String token) {
@@ -77,7 +76,7 @@ public class AuthTokenUtil {
     }
 
     public static String getToken(String token, TokenType tokenType, String customerNumber) {
-        TokenInfo tokenInfo = new TokenInfo(token, tokenType, customerNumber);
+        TokenInfo tokenInfo = new TokenInfo(token, tokenType, customerNumber, 0);
         return getToken(tokenInfo);
     }
 

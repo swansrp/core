@@ -19,4 +19,5 @@ public class TokenInfo {
     private String token;
     private TokenType type;
     private String customerNumber;
+    private int expired;
 }

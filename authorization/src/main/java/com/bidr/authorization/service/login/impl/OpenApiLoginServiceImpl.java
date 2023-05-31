@@ -1,6 +1,8 @@
 package com.bidr.authorization.service.login.impl;
 
+import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.err.AccountErrCode;
+import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.dao.repository.AcPartnerService;
 import com.bidr.authorization.dto.openapi.OpenApiTokenRcv;
@@ -9,6 +11,7 @@ import com.bidr.authorization.dto.openapi.SignDTO;
 import com.bidr.authorization.openapi.utils.OpenApiUtil;
 import com.bidr.authorization.service.login.OpenApiLoginService;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,9 +33,9 @@ public class OpenApiLoginServiceImpl implements OpenApiLoginService {
     @Override
     public OpenApiTokenRes getToken(OpenApiTokenRcv sign) {
         AcPartner acPartner = acPartnerService.getByAppKey(sign.getAppKey());
-        Validator.assertNotNull(acPartner, AccountErrCode.AC_USER_NOT_EXISTED);
-        OpenApiUtil.validateSign(sign.getTimeStamp(), sign.getNonce(), sign.getSignature(), acPartner.getAppSecret());
-        return tokenService.buildOpenPlatformToken(acPartner.getAppKey());
+        TokenInfo tokenInfo = tokenService.buildOpenPlatformToken(acPartner.getAppKey());
+        tokenService.putItem(tokenInfo, TokenItem.PLATFORM.name(), acPartner.getPlatform());
+        return new OpenApiTokenRes(AuthTokenUtil.getToken(tokenInfo), tokenInfo.getExpired());
     }
 
     @Override

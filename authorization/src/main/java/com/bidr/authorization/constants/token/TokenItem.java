@@ -46,6 +46,8 @@ public enum TokenItem {
     IOT_NEED_CLEAN_OLD_TOKEN,
     // websocket session
     SESSION_ID,
+    // 对接平台PLATFORM
+    PLATFORM,
     /*
      * 权限列表
      */
