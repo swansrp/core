@@ -7,7 +7,7 @@ import com.bidr.authorization.vo.admin.QueryRoleReq;
 import com.bidr.authorization.vo.admin.RoleReq;
 import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.controller.AdminController;
+import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController("AdminRoleController")
 @RequestMapping(value = "/web/admin/role/menu")
 @RequiredArgsConstructor
-public class AdminRoleController extends AdminController<AcRole, RoleRes> {
+public class AdminRoleController extends BaseAdminController<AcRole, RoleRes> {
 
     private final AdminRoleService adminRoleService;
 
