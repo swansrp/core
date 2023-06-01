@@ -1,9 +1,13 @@
 package com.bidr.kernel.mybatis.handler;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.bidr.kernel.mybatis.anno.AutoInsert;
+import com.bidr.kernel.mybatis.anno.AutoInsertInf;
 import com.bidr.kernel.mybatis.anno.AutoUpdate;
 import com.bidr.kernel.mybatis.dao.mapper.SequenceDao;
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.github.jeffreyning.mybatisplus.util.PlusACUtils;
 import com.github.jeffreyning.mybatisplus.util.ReadValueUtil;
@@ -48,7 +52,11 @@ public class DataFillHandler implements MetaObjectHandler {
                     }
                 }
                 handleSql(insert.sql(), field, metaObject);
-                handleSeq(insert.seq(), field, metaObject);
+                if (insert.bean().equals(AutoInsertInf.class)) {
+                    handleSeq(insert.seq(), field, metaObject);
+                } else {
+                    handleBean(insert.bean(), insert.seq(), field, metaObject);
+                }
             }
         }
     }
@@ -98,6 +106,21 @@ public class DataFillHandler implements MetaObjectHandler {
             String seq = sequenceDao.getSeq(sequenceName);
             this.fillStrategy(metaObject, fieldName, seq);
         }
+    }
+
+    private void handleBean(Class<? extends AutoInsertInf> bean, String seqName, Field field, MetaObject metaObject) {
+        AutoInsertInf beanService = BeanUtil.getBean(bean);
+        if (FuncUtil.isEmpty(seqName)) {
+            TableName tableNameAnno = field.getType().getAnnotation(TableName.class);
+            String tableName = tableNameAnno.value();
+            TableField tableFieldAnno = field.getType().getAnnotation(TableField.class);
+            String column = tableFieldAnno.value();
+            seqName = tableName.toUpperCase() + "_" + column.toUpperCase() + "_SEQ";
+
+        }
+        String seq = beanService.exec(seqName);
+        String fieldName = field.getName();
+        this.fillStrategy(metaObject, fieldName, seq);
     }
 }
 

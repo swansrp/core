@@ -6,7 +6,6 @@ import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.service.admin.AdminUserGroupBindService;
 import com.bidr.authorization.vo.group.BindUserReq;
 import com.bidr.authorization.vo.group.GroupAccountRes;
-import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;

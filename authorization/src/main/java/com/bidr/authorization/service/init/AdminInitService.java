@@ -5,7 +5,6 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
 import com.bidr.authorization.dao.repository.AcMenuService;
 import com.bidr.authorization.dao.repository.AcRoleMenuService;
-import com.bidr.authorization.service.account.AuthAccountService;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

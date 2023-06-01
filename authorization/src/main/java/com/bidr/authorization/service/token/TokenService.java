@@ -1,7 +1,6 @@
 package com.bidr.authorization.service.token;
 
 import com.bidr.authorization.bo.token.TokenInfo;
-import com.bidr.authorization.dto.openapi.OpenApiTokenRes;
 
 import java.util.Map;
 

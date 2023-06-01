@@ -5,11 +5,12 @@ import com.bidr.authorization.mybatis.anno.AccountContextFill;
 import com.bidr.kernel.mybatis.anno.AutoInsert;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import java.util.Date;
+import lombok.Data;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import lombok.Data;
+import java.util.Date;
 
  /**
  * Title: AcUser

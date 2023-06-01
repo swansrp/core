@@ -2,13 +2,11 @@ package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcGroup;
-import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.mapper.AcUserGroupDao;
 import com.bidr.kernel.mybatis.dao.repository.RecursionService;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -2,12 +2,10 @@ package com.bidr.authorization.openapi.service;
 
 import com.bidr.authorization.constants.common.ClientType;
 import com.bidr.authorization.constants.common.RequestConst;
-import com.bidr.authorization.constants.token.TokenType;
 import com.bidr.authorization.dto.openapi.OpenApiTokenRcv;
 import com.bidr.authorization.dto.openapi.OpenApiTokenRes;
 import com.bidr.authorization.openapi.exception.TokenInvalidException;
 import com.bidr.authorization.openapi.utils.OpenApiUtil;
-import com.bidr.authorization.vo.token.TokenRes;
 import com.bidr.kernel.config.response.Response;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
@@ -62,7 +60,8 @@ public abstract class BaseOpenApiService {
 
     public OpenApiTokenRes fetchAccessToken() {
         OpenApiTokenRcv openApiTokenRcv = buildOpenApiTokenRcv();
-        Response<OpenApiTokenRes> res = restService.post(getBaseUrl() + "/open-api/token", openApiTokenRcv, Response.class, OpenApiTokenRes.class);
+        Response<OpenApiTokenRes> res = restService.post(getBaseUrl() + "/open-api/token", openApiTokenRcv,
+                Response.class, OpenApiTokenRes.class);
         return res.getPayload();
     }
 

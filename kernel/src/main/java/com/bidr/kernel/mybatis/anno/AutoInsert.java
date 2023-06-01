@@ -17,5 +17,7 @@ public @interface AutoInsert {
 
     String seq() default "";
 
+    Class<? extends AutoInsertInf> bean() default AutoInsertInf.class;
+
     boolean override() default false;
 }
