@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.bidr.kernel.mybatis.anno.AutoInsert;
 import com.bidr.kernel.mybatis.anno.AutoInsertInf;
 import com.bidr.kernel.mybatis.anno.AutoUpdate;
-import com.bidr.kernel.mybatis.dao.mapper.SequenceDao;
+import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.github.jeffreyning.mybatisplus.util.PlusACUtils;
@@ -37,7 +37,7 @@ public class DataFillHandler implements MetaObjectHandler {
 
     @Lazy
     @Resource
-    private SequenceDao sequenceDao;
+    private SaSequenceService saSequenceService;
 
     @Override
     public void insertFill(MetaObject metaObject) {
@@ -103,7 +103,7 @@ public class DataFillHandler implements MetaObjectHandler {
     private void handleSeq(String sequenceName, Field field, MetaObject metaObject) {
         String fieldName = field.getName();
         if (FuncUtil.isNotEmpty(sequenceName)) {
-            String seq = sequenceDao.getSeq(sequenceName);
+            String seq = saSequenceService.getSeq(sequenceName);
             this.fillStrategy(metaObject, fieldName, seq);
         }
     }

@@ -13,19 +13,19 @@ import javax.validation.constraints.Size;
 import lombok.Data;
 
  /**
- * Title: Sequence
+ * Title: SaSequence
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/06/01 13:32
+ * @since 2023/06/01 16:40
  */
 /**
     * 队列表
     */
 @ApiModel(description="队列表")
 @Data
-@TableName(value = "`sequence`")
-public class Sequence {
+@TableName(value = "sa_sequence")
+public class SaSequence {
     /**
      * 序列名称
      */
@@ -34,6 +34,15 @@ public class Sequence {
     @Size(max = 128,message = "序列名称最大长度要小于 128")
     @NotBlank(message = "序列名称不能为空")
     private String seqName;
+
+    /**
+     * 所属平台
+     */
+    @TableField(value = "platform")
+    @ApiModelProperty(value="所属平台")
+    @Size(max = 50,message = "所属平台最大长度要小于 50")
+    @NotBlank(message = "所属平台不能为空")
+    private String platform;
 
     /**
      * 目前序列值
@@ -88,20 +97,38 @@ public class Sequence {
     /**
      * 创建时间
      */
-    @TableField(value = "create_time")
+    @TableField(value = "create_at")
     @ApiModelProperty(value="创建时间")
     @NotNull(message = "创建时间不能为null")
-    private Date createTime;
+    private Date createAt;
+
+    /**
+     * 创建人
+     */
+    @TableField(value = "create_by")
+    @ApiModelProperty(value="创建人")
+    @Size(max = 50,message = "创建人最大长度要小于 50")
+    private String createBy;
 
     /**
      * 修改时间
      */
-    @TableField(value = "last_update_time")
+    @TableField(value = "update_at")
     @ApiModelProperty(value="修改时间")
     @NotNull(message = "修改时间不能为null")
-    private Date lastUpdateTime;
+    private Date updateAt;
+
+    /**
+     * 修改人
+     */
+    @TableField(value = "update_by")
+    @ApiModelProperty(value="修改人")
+    @Size(max = 50,message = "修改人最大长度要小于 50")
+    private String updateBy;
 
     public static final String COL_SEQ_NAME = "seq_name";
+
+    public static final String COL_PLATFORM = "platform";
 
     public static final String COL_VALUE = "value";
 
@@ -115,7 +142,11 @@ public class Sequence {
 
     public static final String COL_STEP = "step";
 
-    public static final String COL_CREATE_TIME = "create_time";
+    public static final String COL_CREATE_AT = "create_at";
 
-    public static final String COL_LAST_UPDATE_TIME = "last_update_time";
+    public static final String COL_CREATE_BY = "create_by";
+
+    public static final String COL_UPDATE_AT = "update_at";
+
+    public static final String COL_UPDATE_BY = "update_by";
 }
