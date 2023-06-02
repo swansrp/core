@@ -10,13 +10,12 @@ import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
-import com.bidr.kernel.utils.BeanUtil;
-import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,12 +36,13 @@ import static com.bidr.kernel.constant.err.ErrCodeSys.SYS_SESSION_TIME_OUT;
 @RequiredArgsConstructor
 public class AuthLogin implements AuthRole {
 
-    private final static String IGNORE_PROFILE = "dev";
     private final TokenService tokenService;
+    @Value("${my.login.ignore:false}")
+    private Boolean ignore;
 
     @Override
     public void validate(HttpServletRequest request, String... args) {
-        if(FuncUtil.equals(BeanUtil.getActiveProfile(), IGNORE_PROFILE)) {
+        if (ignore) {
             return;
         }
         TokenInfo token = AuthTokenUtil.extractToken(request);
