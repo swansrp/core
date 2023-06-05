@@ -1,5 +1,8 @@
 package com.bidr.kernel.mybatis.dao.repository;
 
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.dao.entity.SaSequence;
 import com.bidr.kernel.mybatis.dao.mapper.SaSequenceDao;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
@@ -23,6 +26,11 @@ public class SaSequenceService extends BaseSqlRepo<SaSequenceDao, SaSequence> {
 
     public void resetSeq(String seqName) {
         super.getBaseMapper().resetSeq(seqName);
+    }
+
+    public Page<SaSequence> query(String platform, Long currentPage, Long pageSize) {
+        LambdaQueryWrapper<SaSequence> wrapper = super.getQueryWrapper().eq(SaSequence::getPlatform, platform);
+        return super.select(wrapper, currentPage, pageSize);
     }
 
 }
