@@ -478,7 +478,10 @@ public class ReflectionUtil {
         }
         List<R> res = new ArrayList<>();
         list.forEach(item -> {
-            res.add(getFunc.apply(item));
+            R obj = getFunc.apply(item);
+            if (obj != null) {
+                res.add(obj);
+            }
         });
         return res;
     }
