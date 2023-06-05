@@ -90,7 +90,7 @@ public abstract class BaseOpenApiService {
         if (header == null) {
             header = getHttpHeaders();
         }
-        Response<?> res = restService.get(getBaseUrl() + url, header, param, Response.class);
+        Response<?> res = restService.get(getBaseUrl() + url, header, param, Response.class, resClazz);
         handleCommonError(res);
         return JsonUtil.readJson(res.getPayload(), resClazz);
     }
