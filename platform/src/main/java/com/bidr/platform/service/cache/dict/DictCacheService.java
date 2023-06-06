@@ -18,9 +18,9 @@ import com.bidr.platform.dao.repository.SysDictTypeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DictCacheService implements CommandLineRunner {
+public class DictCacheService {
 
     private final Integer DEFAULT_EXPIRED = 24 * 60;
 
@@ -88,8 +88,8 @@ public class DictCacheService implements CommandLineRunner {
     }
 
 
-    @Override
-    public void run(String... args) {
+    @PostConstruct
+    public void run() {
         List<SysDictType> sysDictTypeList = sysDictTypeService.select();
         if (FuncUtil.isNotEmpty(sysDictTypeList)) {
             for (SysDictType sysDictType : sysDictTypeList) {
