@@ -39,7 +39,7 @@ public class AcUser {
     /**
      * 用户编码
      */
-    @TableField(value = "customer_number")
+    @TableField(value = "customer_number", fill = FieldFill.INSERT)
     @ApiModelProperty(value = "用户编码")
     @Size(max = 50, message = "用户编码最大长度要小于 50")
     @NotBlank(message = "用户编码不能为空")
