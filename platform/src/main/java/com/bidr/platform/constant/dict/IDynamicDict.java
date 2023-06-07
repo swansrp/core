@@ -34,7 +34,7 @@ public interface IDynamicDict {
         SysDict item = new SysDict();
         String dictName = this.getClass().getAnnotation(MetaDict.class).value();
         String title = this.getClass().getAnnotation(MetaDict.class).remark();
-        item.setDictId(dictName + StringUtil.parse(value));
+        item.setDictId(dictName + "_" + StringUtil.parse(value));
         item.setReadOnly(CommonConst.YES);
         item.setDictTitle(title);
         item.setDictName(dictName);
