@@ -1,5 +1,6 @@
 package com.bidr.sms.dao.repository;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.sms.dao.entity.SaSmsSend;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
  * @author Sharp
  * @since 2023/03/09 10:07
  */
+@DS("SMS")
 @Service
 public class SaSmsSendService extends BaseSqlRepo<SaSmsSendDao, SaSmsSend> {
 

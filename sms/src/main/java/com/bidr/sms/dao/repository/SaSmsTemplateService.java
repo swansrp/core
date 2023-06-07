@@ -1,5 +1,6 @@
 package com.bidr.sms.dao.repository;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.mapper.SaSmsTemplateDao;
@@ -16,6 +17,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/03/09 10:08
  */
+@DS("SMS")
 @Service
 public class SaSmsTemplateService extends BaseSqlRepo<SaSmsTemplateDao, SaSmsTemplate> {
 
