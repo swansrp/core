@@ -15,8 +15,10 @@ import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.dao.repository.SysDictTypeService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 
@@ -27,6 +29,7 @@ import java.util.*;
  * @author Sharp
  * @since 2023/04/26 10:33
  */
+@Slf4j
 public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, SysDict>> {
 
     private final DynamicMemoryCacheManager dynamicMemoryCacheManager;
@@ -96,7 +99,7 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
                 sysDictCache.addAll(dynamicDictList);
             }
         } catch (BeansException e) {
-            e.printStackTrace();
+            log.error("", e);
         }
     }
 

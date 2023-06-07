@@ -4,6 +4,7 @@ import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -48,7 +49,9 @@ public class DictCacheService {
     }
 
     private SysDict getDict(String dictName, String dictValue, DictTypeEnum type) {
-        LinkedHashMap<String, SysDict> cache = MAP.get(dictName).getCache(type.name());
+        DictCacheProvider dictCacheProvider = MAP.get(dictName);
+        Validator.assertNotNull(dictCacheProvider, ErrCodeSys.SYS_CONFIG_NOT_EXIST, "字典: " + dictName);
+        LinkedHashMap<String, SysDict> cache = dictCacheProvider.getCache(type.name());
         Validator.assertNotEmpty(cache, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
         SysDict res = cache.get(dictValue);
         Validator.assertNotNull(res, type.getErrorCode(), dictName, dictValue);
@@ -69,15 +72,20 @@ public class DictCacheService {
 
     public List<KeyValueResVO> getKeyValue(String dictName) {
         List<KeyValueResVO> resList = new ArrayList<>();
-        LinkedHashMap<String, SysDict> valueMap = MAP.get(dictName).getCache(DictTypeEnum.VALUE.name());
-        Validator.assertNotEmpty(valueMap, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
-        valueMap.forEach((key, value) -> {
-            KeyValueResVO res = new KeyValueResVO();
-            res.setValue(key);
-            res.setLabel(value.getDictLabel());
-            resList.add(res);
-        });
+        DictCacheProvider dictCacheProvider = MAP.get(dictName);
+        if (FuncUtil.isNotEmpty(dictCacheProvider)) {
+            LinkedHashMap<String, SysDict> valueMap = dictCacheProvider.getCache(DictTypeEnum.VALUE.name());
+            Validator.assertNotEmpty(valueMap, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
+            valueMap.forEach((key, value) -> {
+                KeyValueResVO res = new KeyValueResVO();
+                res.setValue(key);
+                res.setLabel(value.getDictLabel());
+                resList.add(res);
+            });
+        }
         return resList;
+
+
     }
 
     public KeyValueResVO buildKeyValueResVO(SysDict dict) {
