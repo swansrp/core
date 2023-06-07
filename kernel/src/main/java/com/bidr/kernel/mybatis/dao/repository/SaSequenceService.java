@@ -1,6 +1,7 @@
 package com.bidr.kernel.mybatis.dao.repository;
 
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.dao.entity.SaSequence;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
  * @author Sharp
  * @since 2023/06/01 16:40
  */
+@DS("SEQ")
 @Service
 public class SaSequenceService extends BaseSqlRepo<SaSequenceDao, SaSequence> {
 
