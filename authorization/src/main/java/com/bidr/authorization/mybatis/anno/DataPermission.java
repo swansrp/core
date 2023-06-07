@@ -1,6 +1,7 @@
 package com.bidr.authorization.mybatis.anno;
 
 import com.bidr.authorization.mybatis.permission.DataPermissionInf;
+import com.bidr.authorization.mybatis.permission.NoDataPermission;
 
 import java.lang.annotation.*;
 
@@ -21,5 +22,5 @@ public @interface DataPermission {
      *
      * @return
      */
-    Class<? extends DataPermissionInf>[] value();
+    Class<? extends DataPermissionInf>[] value() default NoDataPermission.class;
 }

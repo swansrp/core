@@ -1,7 +1,9 @@
 package com.bidr.authorization.mybatis.intercept;
 
 import com.bidr.authorization.mybatis.anno.DataPermission;
+import com.bidr.authorization.mybatis.permission.DataPermissionHolder;
 import com.bidr.authorization.mybatis.permission.DataPermissionInf;
+import com.bidr.authorization.mybatis.permission.NoDataPermission;
 import com.bidr.kernel.mybatis.intercept.BaseIntercept;
 import com.bidr.kernel.mybatis.parse.SqlParseUtil;
 import com.bidr.kernel.utils.FuncUtil;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import javax.naming.NoPermissionException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -47,13 +50,15 @@ public class DataPermissionIntercept extends BaseIntercept {
             Map<String, String> tableAliasMap = SqlParseUtil.buildTableAliasMap(sql);
             Expression dataPermissionExpress = null;
             for (DataPermissionInf dataPermissionInf : dataPermissionList) {
-                if (dataPermissionInf.needFilter(tableAliasMap)) {
-                    Expression expression = dataPermissionInf.expression(tableAliasMap);
-                    if (FuncUtil.isNotEmpty(expression)) {
-                        if (FuncUtil.isEmpty(dataPermissionExpress)) {
-                            dataPermissionExpress = new Parenthesis(expression);
-                        } else {
-                            dataPermissionExpress = new OrExpression(dataPermissionExpress, expression);
+                if (needPermission(dataPermissionInf)) {
+                    if (dataPermissionInf.needFilter(tableAliasMap)) {
+                        Expression expression = dataPermissionInf.expression(tableAliasMap);
+                        if (FuncUtil.isNotEmpty(expression)) {
+                            if (FuncUtil.isEmpty(dataPermissionExpress)) {
+                                dataPermissionExpress = new Parenthesis(expression);
+                            } else {
+                                dataPermissionExpress = new OrExpression(dataPermissionExpress, expression);
+                            }
                         }
                     }
                 }
@@ -61,6 +66,22 @@ public class DataPermissionIntercept extends BaseIntercept {
             sql = SqlParseUtil.mergeWhere(sql, dataPermissionExpress);
             replaceSql(boundSql, sql);
         }
+    }
+
+    private boolean needPermission(DataPermissionInf inf) {
+        Class<? extends DataPermissionInf>[] classes = DataPermissionHolder.get();
+        if (FuncUtil.isNotEmpty(classes)) {
+            for (Class<? extends DataPermissionInf> aClass : classes) {
+                if (FuncUtil.equals(aClass, NoDataPermission.class)) {
+                    return false;
+                }
+                if (FuncUtil.equals(inf.getClass(), aClass)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     private static void replaceSql(BoundSql boundSql, String newSql) {
