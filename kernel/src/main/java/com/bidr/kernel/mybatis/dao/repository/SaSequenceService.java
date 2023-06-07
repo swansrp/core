@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.dao.entity.SaSequence;
 import com.bidr.kernel.mybatis.dao.mapper.SaSequenceDao;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,7 +32,8 @@ public class SaSequenceService extends BaseSqlRepo<SaSequenceDao, SaSequence> {
     }
 
     public Page<SaSequence> query(String platform, Long currentPage, Long pageSize) {
-        LambdaQueryWrapper<SaSequence> wrapper = super.getQueryWrapper().eq(SaSequence::getPlatform, platform);
+        LambdaQueryWrapper<SaSequence> wrapper = super.getQueryWrapper()
+                .eq(FuncUtil.isNotEmpty(platform), SaSequence::getPlatform, platform);
         return super.select(wrapper, currentPage, pageSize);
     }
 
