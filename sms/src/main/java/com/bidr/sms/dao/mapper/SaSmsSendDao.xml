@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.sms.dao.mapper.SaSmsSendDao">
+  <resultMap id="BaseResultMap" type="com.bidr.sms.dao.entity.SaSmsSend">
+    <!--@mbg.generated-->
+    <!--@Table sa_sms_send-->
+    <id column="send_id" jdbcType="VARCHAR" property="sendId" />
+    <result column="platform" jdbcType="VARCHAR" property="platform" />
+    <result column="send_type" jdbcType="VARCHAR" property="sendType" />
+    <result column="biz_id" jdbcType="VARCHAR" property="bizId" />
+    <result column="mobile" jdbcType="VARCHAR" property="mobile" />
+    <result column="template_code" jdbcType="VARCHAR" property="templateCode" />
+    <result column="send_sign" jdbcType="VARCHAR" property="sendSign" />
+    <result column="send_param" jdbcType="VARCHAR" property="sendParam" />
+    <result column="send_status" jdbcType="INTEGER" property="sendStatus" />
+    <result column="send_result" jdbcType="VARCHAR" property="sendResult" />
+    <result column="request_id" jdbcType="VARCHAR" property="requestId" />
+    <result column="send_at" jdbcType="TIMESTAMP" property="sendAt" />
+    <result column="response_status" jdbcType="INTEGER" property="responseStatus" />
+    <result column="response_at" jdbcType="TIMESTAMP" property="responseAt" />
+    <result column="response_msg" jdbcType="VARCHAR" property="responseMsg" />
+    <result column="response_code" jdbcType="VARCHAR" property="responseCode" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    send_id, platform, send_type, biz_id, mobile, template_code, send_sign, send_param,
+    send_status, send_result, request_id, send_at, response_status, response_at, response_msg,
+    response_code
+  </sql>
+</mapper>

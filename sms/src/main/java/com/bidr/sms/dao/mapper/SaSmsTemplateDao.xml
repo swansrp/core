@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.sms.dao.mapper.SaSmsTemplateDao">
+  <resultMap id="BaseResultMap" type="com.bidr.sms.dao.entity.SaSmsTemplate">
+    <!--@mbg.generated-->
+    <!--@Table sa_sms_template-->
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="template_title" jdbcType="VARCHAR" property="templateTitle" />
+    <result column="template_type" jdbcType="INTEGER" property="templateType" />
+    <result column="sms_type" jdbcType="VARCHAR" property="smsType" />
+    <result column="template_code" jdbcType="VARCHAR" property="templateCode" />
+    <result column="parameter" jdbcType="VARCHAR" property="parameter" />
+    <result column="body" jdbcType="VARCHAR" property="body" />
+    <result column="sign" jdbcType="VARCHAR" property="sign" />
+    <result column="author" jdbcType="VARCHAR" property="author" />
+    <result column="platform" jdbcType="VARCHAR" property="platform" />
+    <result column="confirm_at" jdbcType="TIMESTAMP" property="confirmAt" />
+    <result column="confirm_status" jdbcType="INTEGER" property="confirmStatus" />
+    <result column="reason" jdbcType="VARCHAR" property="reason" />
+    <result column="remark" jdbcType="VARCHAR" property="remark" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, template_title, template_type, sms_type, template_code, `parameter`, body, sign,
+    author, platform, confirm_at, confirm_status, reason, remark
+  </sql>
+</mapper>
