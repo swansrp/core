@@ -13,6 +13,6 @@ import java.util.List;
  */
 @Data
 public class SortVO {
-    private List<String> property;
+    private String property;
     private Integer type;
 }

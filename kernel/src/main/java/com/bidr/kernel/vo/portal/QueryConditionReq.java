@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,6 +18,6 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 public class QueryConditionReq extends QueryReqVO {
-    private List<ConditionVO> conditionList = new ArrayList<>();
-    private SortVO sort;
+    private List<ConditionVO> conditionList;
+    private List<SortVO> sortList;
 }

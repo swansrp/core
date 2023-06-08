@@ -2,7 +2,6 @@ package com.bidr.kernel.vo.portal;
 
 import lombok.Data;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,8 +14,7 @@ import java.util.List;
 @Data
 public class ConditionVO {
     private String property;
-    private String value;
+    private List<?> value;
     private Integer relation;
-    private Boolean status;
-    private List<String> valueList = new ArrayList<>();
+    private String dateFormat;
 }

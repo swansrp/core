@@ -16,5 +16,5 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class QuerySysConfigReq extends QueryReqVO {
     @ApiModelProperty("参数名")
-    private String name;
+    private String configKey;
 }

@@ -3,9 +3,11 @@ package com.bidr.kernel.mybatis.repository;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.CacheConfig;
@@ -97,6 +99,14 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     @Override
     public Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize) {
         return super.page(new Page<>(currentPage, pageSize), wrapper);
+    }
+
+    @Override
+    public Page<T> select(QueryConditionReq req) {
+        QueryWrapper<T> wrapper = Wrappers.query();
+        wrapper.setEntityClass(entityClass);
+        parseQueryCondition(req, wrapper);
+        return select(wrapper, req);
     }
 
     @Override

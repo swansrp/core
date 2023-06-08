@@ -31,7 +31,7 @@ public class SysConfigService extends BaseSqlRepo<SysConfigDao, SysConfig> {
 
     public Page<SysConfig> querySysConfig(QuerySysConfigReq req) {
         LambdaQueryWrapper<SysConfig> wrapper = super.getQueryWrapper()
-                .eq(FuncUtil.isNotEmpty(req.getName()), SysConfig::getConfigId, req.getName());
+                .like(FuncUtil.isNotEmpty(req.getConfigKey()), SysConfig::getConfigKey, req.getConfigKey());
         return super.select(wrapper, req);
     }
 }

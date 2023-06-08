@@ -2,6 +2,7 @@ package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
 
 import java.io.Serializable;
@@ -26,6 +27,8 @@ public interface SqlSelectRepo<T> {
     List<T> select(Wrapper<T> wrapper);
 
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
+
+    Page<T> select(QueryConditionReq req);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

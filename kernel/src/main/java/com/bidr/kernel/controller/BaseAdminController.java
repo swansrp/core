@@ -2,6 +2,7 @@ package com.bidr.kernel.controller;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
@@ -10,6 +11,7 @@ import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -89,6 +91,12 @@ public abstract class BaseAdminController<ENTITY, VO> {
 
     protected Class<VO> getVoClass() {
         return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    }
+
+    @ApiOperation("通用查询数据")
+    @RequestMapping(value = "/general/query", method = RequestMethod.POST)
+    public Page<VO> generalQuery(@RequestBody QueryConditionReq req) {
+        return Resp.convert(getRepo().select(req), getVoClass());
     }
 
 }
