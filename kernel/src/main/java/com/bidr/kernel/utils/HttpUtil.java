@@ -217,7 +217,7 @@ public class HttpUtil {
     }
 
     public static boolean systemRequest(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI().matches(".*/(actuator|export|webjars|v3|captcha.*|csrf|swagger.*).*");
+        return httpServletRequest.getRequestURI().matches(".*/(actuator|export|webjars|v3|captcha.*|csrf|swagger.*|error).*");
     }
 }
 
