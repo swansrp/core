@@ -22,7 +22,7 @@ import java.util.Date;
 public class SmsTemplateRes extends SaSmsTemplate {
 
     @ApiModelProperty(value = "平台显示名称", allowableValues = "PLATFORM_DICT")
-    @BindDict(type = "PLATFORM_DICT", field = "platform")
+    @BindDict(type = "MDM_PLATFORM_DICT", field = "platform")
     private String platformDisplay;
 
 

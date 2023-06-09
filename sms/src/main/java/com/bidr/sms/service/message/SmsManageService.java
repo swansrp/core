@@ -1,9 +1,6 @@
 package com.bidr.sms.service.message;
 
-import com.aliyun.dysmsapi20170525.models.AddSmsTemplateResponseBody;
-import com.aliyun.dysmsapi20170525.models.QuerySmsSignListResponseBody;
-import com.aliyun.dysmsapi20170525.models.QuerySmsSignResponseBody;
-import com.aliyun.dysmsapi20170525.models.QuerySmsTemplateResponseBody;
+import com.aliyun.dysmsapi20170525.models.*;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -15,10 +12,9 @@ import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.ali.AliSmsManageService;
 import com.bidr.sms.vo.ApplySmsTemplateReq;
-import com.bidr.sms.vo.ApplySmsTemplateRes;
+import com.bidr.sms.vo.SmsTemplateCodeRes;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.*;
@@ -37,7 +33,7 @@ public class SmsManageService {
 
     private static final String SIGN_AUDIT_STATUS_PASS = "AUDIT_STATE_PASS";
 
-    private static final String PARAMETER_REGEX = "\\$\\{(\\w*)\\}";
+    private static final String PARAMETER_REGEX = "\\{(\\w*)\\}";
 
     @Resource
     private SaSmsTemplateService saSmsTemplateService;
@@ -45,8 +41,17 @@ public class SmsManageService {
     @Resource
     private AliSmsManageService aliSmsManageService;
 
-    @Transactional(rollbackFor = Exception.class)
-    public ApplySmsTemplateRes applySmsTemplate(ApplySmsTemplateReq req) {
+    public SmsTemplateCodeRes applySmsTemplate(ApplySmsTemplateReq req) {
+        SaSmsTemplate saSmsTemplate = validateAndConvertSaSmsTemplate(req);
+        AddSmsTemplateResponseBody responseBody = aliSmsManageService.applySmsTemplate(saSmsTemplate);
+        saSmsTemplate.setTemplateCode(responseBody.getTemplateCode());
+        saSmsTemplateService.insert(saSmsTemplate);
+        SmsTemplateCodeRes res = new SmsTemplateCodeRes();
+        res.setTemplateCode(responseBody.getTemplateCode());
+        return res;
+    }
+
+    private SaSmsTemplate validateAndConvertSaSmsTemplate(ApplySmsTemplateReq req) {
         SaSmsTemplate saSmsTemplate = ReflectionUtil.copy(req, SaSmsTemplate.class);
         saSmsTemplate.setTemplateType(req.getTemplateType().getValue());
         buildParameter(saSmsTemplate);
@@ -56,12 +61,7 @@ public class SmsManageService {
         Validator.assertNotNull(response.getSignStatus(), SmsErrorCode.SIGN_NOT_REGISTER, req.getSign());
         String signStatus = response.getSignStatus().toString();
         Validator.assertYes(signStatus, SmsErrorCode.SIGN_NOT_REGISTER, req.getSign());
-        AddSmsTemplateResponseBody responseBody = aliSmsManageService.applySmsTemplate(saSmsTemplate);
-        saSmsTemplate.setTemplateCode(responseBody.getTemplateCode());
-        saSmsTemplateService.insert(saSmsTemplate);
-        ApplySmsTemplateRes res = new ApplySmsTemplateRes();
-        res.setTemplateCode(responseBody.getTemplateCode());
-        return res;
+        return saSmsTemplate;
     }
 
     private void buildParameter(SaSmsTemplate saSmsTemplate) {
@@ -69,11 +69,11 @@ public class SmsManageService {
         Matcher matcher = Pattern.compile(PARAMETER_REGEX).matcher(body);
         Map<String, Object> prop = new HashMap<>();
         while (matcher.find()) {
-            int i = matcher.groupCount();
             String group = matcher.group(0);
-            prop.put(group, StringUtil.EMPTY);
+            String param = group.substring(1, group.length() - 1);
+            prop.put(param, StringUtil.EMPTY);
         }
-        saSmsTemplate.setParameter(JsonUtil.toJson(prop, false, false, false));
+        saSmsTemplate.setParameter(JsonUtil.toJson(prop, false, false, true));
     }
 
     public List<String> getSmsSignList() {
@@ -90,7 +90,6 @@ public class SmsManageService {
         return signList;
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public void syncSmsTemplate() {
         List<SaSmsTemplate> noConfirmTemplate = saSmsTemplateService.getNoConfirmTemplate();
         if (CollectionUtils.isNotEmpty(noConfirmTemplate)) {
@@ -105,7 +104,6 @@ public class SmsManageService {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public SaSmsTemplate getSmsTemplate(String templateCode) {
         SaSmsTemplate saSmsTemplate = saSmsTemplateService.selectOneByTemplateCode(templateCode);
         if ((AliMessageTemplateConfirmStatusDict.PASS.getValue()).equals(saSmsTemplate.getConfirmStatus())) {
@@ -123,5 +121,22 @@ public class SmsManageService {
 
     public List<SaSmsTemplate> getByPlatform(String platform) {
         return saSmsTemplateService.getTemplateByPlatform(platform);
+    }
+
+    public SmsTemplateCodeRes updateSmsTemplate(SaSmsTemplate saSmsTemplate) {
+        ModifySmsTemplateResponseBody responseBody = aliSmsManageService.modifySmsSignRequest(saSmsTemplate);
+        saSmsTemplate.setTemplateCode(responseBody.getTemplateCode());
+        saSmsTemplateService.updateById(saSmsTemplate);
+        SmsTemplateCodeRes res = new SmsTemplateCodeRes();
+        res.setTemplateCode(responseBody.getTemplateCode());
+        return res;
+    }
+
+    public SmsTemplateCodeRes deleteSmsTemplate(String templateId) {
+        SaSmsTemplate saSmsTemplate = saSmsTemplateService.selectById(templateId);
+        DeleteSmsTemplateResponseBody responseBody = aliSmsManageService.deleteSmsTemplate(saSmsTemplate);
+        SmsTemplateCodeRes res = new SmsTemplateCodeRes();
+        res.setTemplateCode(responseBody.getTemplateCode());
+        return res;
     }
 }

@@ -25,7 +25,7 @@ import javax.annotation.Resource;
  */
 @Api(tags = "系统管理 - 短信 - 发送管理")
 @RestController("AdminSmsController")
-@RequestMapping(value = "/web/admin/sms")
+@RequestMapping(value = "/web/sms/admin")
 public class AdminSmsController extends BaseAdminController<SaSmsSend, SmsHistoryRes> {
     @Resource
     private AdminSmsSendService adminSmsSendService;

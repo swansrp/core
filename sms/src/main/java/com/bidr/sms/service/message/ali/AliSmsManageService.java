@@ -5,12 +5,15 @@ import com.aliyun.dysmsapi20170525.models.*;
 import com.aliyun.tea.TeaException;
 import com.aliyun.teaopenapi.models.Config;
 import com.aliyun.teautil.models.RuntimeOptions;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.validate.Validator;
+import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.bidr.sms.constant.dict.AliMessageTemplateConfirmStatusDict;
 import com.bidr.sms.constant.err.SmsErrorCode;
 import com.bidr.sms.constant.param.SmsParam;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
-import com.bidr.kernel.validate.Validator;
-import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AliSmsManageService {
+
+    private final static String ALI_SUCCESS = "OK";
     private final SysConfigCacheService sysConfigCacheService;
     @Value("${ali-sms.endpoint}")
     private String endpoint;
@@ -43,6 +48,8 @@ public class AliSmsManageService {
             // 复制代码运行请自行打印 API 的返回值
             if (!sysConfigCacheService.getSysConfigBool(SmsParam.SMS_MOCK_MODE)) {
                 AddSmsTemplateResponse response = client.addSmsTemplateWithOptions(addSmsTemplateRequest, runtime);
+                Validator.assertEquals(response.getBody().getCode(), ALI_SUCCESS, ErrCodeSys.SYS_ERR_MSG,
+                        response.getBody().getMessage());
                 return response.getBody();
             } else {
                 return buildAddSmsTemplateResponseBody();
@@ -51,6 +58,8 @@ public class AliSmsManageService {
         } catch (TeaException error) {
             // 如有需要，请打印 error
             com.aliyun.teautil.Common.assertAsString(error.message);
+        } catch (ServiceException e) {
+            Validator.assertException(e);
         } catch (Exception _error) {
             TeaException error = new TeaException(_error.getMessage(), _error);
             // 如有需要，请打印 error
@@ -70,12 +79,106 @@ public class AliSmsManageService {
         addSmsTemplateRequest.setTemplateName(saSmsTemplate.getTemplateTitle());
         addSmsTemplateRequest.setTemplateType(saSmsTemplate.getTemplateType());
         addSmsTemplateRequest.setTemplateContent(saSmsTemplate.getBody());
-        addSmsTemplateRequest.setRemark(saSmsTemplate.getRemark());
+        if (FuncUtil.isNotEmpty(saSmsTemplate.getRemark())) {
+            addSmsTemplateRequest.setRemark(saSmsTemplate.getRemark());
+        } else {
+            addSmsTemplateRequest.setRemark(saSmsTemplate.getTemplateTitle());
+        }
         return addSmsTemplateRequest;
     }
 
     private AddSmsTemplateResponseBody buildAddSmsTemplateResponseBody() {
         AddSmsTemplateResponseBody body = new AddSmsTemplateResponseBody();
+        body.setTemplateCode(UUID.randomUUID().toString());
+        return body;
+    }
+
+    public ModifySmsTemplateResponseBody modifySmsSignRequest(SaSmsTemplate saSmsTemplate) {
+        try {
+            Client client = createClient();
+            ModifySmsTemplateRequest modifySmsTemplateRequest = buildModifySmsTemplateReq(saSmsTemplate);
+            RuntimeOptions runtime = new RuntimeOptions();
+            // 复制代码运行请自行打印 API 的返回值
+            if (!sysConfigCacheService.getSysConfigBool(SmsParam.SMS_MOCK_MODE)) {
+                ModifySmsTemplateResponse response = client.modifySmsTemplateWithOptions(modifySmsTemplateRequest,
+                        runtime);
+                Validator.assertEquals(response.getBody().getCode(), ALI_SUCCESS, ErrCodeSys.SYS_ERR_MSG,
+                        response.getBody().getMessage());
+                return response.getBody();
+            } else {
+                return buildModifySmsTemplateResponseBody();
+            }
+
+        } catch (TeaException error) {
+            // 如有需要，请打印 error
+            com.aliyun.teautil.Common.assertAsString(error.message);
+        } catch (ServiceException e) {
+            Validator.assertException(e);
+        } catch (Exception _error) {
+            TeaException error = new TeaException(_error.getMessage(), _error);
+            // 如有需要，请打印 error
+            com.aliyun.teautil.Common.assertAsString(error.message);
+        }
+        return Validator.assertException(SmsErrorCode.APPLY_FAILED, saSmsTemplate.getTemplateTitle());
+    }
+
+    private ModifySmsTemplateRequest buildModifySmsTemplateReq(SaSmsTemplate saSmsTemplate) {
+        ModifySmsTemplateRequest modifySmsTemplateRequest = new ModifySmsTemplateRequest();
+        modifySmsTemplateRequest.setTemplateName(saSmsTemplate.getTemplateTitle());
+        modifySmsTemplateRequest.setTemplateType(saSmsTemplate.getTemplateType());
+        modifySmsTemplateRequest.setTemplateContent(saSmsTemplate.getBody());
+        modifySmsTemplateRequest.setTemplateCode(saSmsTemplate.getTemplateCode());
+        if (FuncUtil.isNotEmpty(saSmsTemplate.getRemark())) {
+            modifySmsTemplateRequest.setRemark(saSmsTemplate.getRemark());
+        } else {
+            modifySmsTemplateRequest.setRemark(saSmsTemplate.getTemplateTitle());
+        }
+        return modifySmsTemplateRequest;
+    }
+
+    private ModifySmsTemplateResponseBody buildModifySmsTemplateResponseBody() {
+        ModifySmsTemplateResponseBody body = new ModifySmsTemplateResponseBody();
+        body.setTemplateCode(UUID.randomUUID().toString());
+        return body;
+    }
+
+    public DeleteSmsTemplateResponseBody deleteSmsTemplate(SaSmsTemplate saSmsTemplate) {
+        try {
+            Client client = createClient();
+            DeleteSmsTemplateRequest deleteSmsTemplateRequest = buildDeleteSmsTemplateReq(saSmsTemplate);
+            RuntimeOptions runtime = new RuntimeOptions();
+            // 复制代码运行请自行打印 API 的返回值
+            if (!sysConfigCacheService.getSysConfigBool(SmsParam.SMS_MOCK_MODE)) {
+                DeleteSmsTemplateResponse response = client.deleteSmsTemplateWithOptions(deleteSmsTemplateRequest,
+                        runtime);
+                Validator.assertEquals(response.getBody().getCode(), ALI_SUCCESS, ErrCodeSys.SYS_ERR_MSG,
+                        response.getBody().getMessage());
+                return response.getBody();
+            } else {
+                return buildDeleteSmsTemplateResponseBody();
+            }
+
+        } catch (TeaException error) {
+            // 如有需要，请打印 error
+            com.aliyun.teautil.Common.assertAsString(error.message);
+        } catch (ServiceException e) {
+            Validator.assertException(e);
+        } catch (Exception _error) {
+            TeaException error = new TeaException(_error.getMessage(), _error);
+            // 如有需要，请打印 error
+            com.aliyun.teautil.Common.assertAsString(error.message);
+        }
+        return Validator.assertException(SmsErrorCode.APPLY_FAILED, saSmsTemplate.getTemplateTitle());
+    }
+
+    private DeleteSmsTemplateRequest buildDeleteSmsTemplateReq(SaSmsTemplate saSmsTemplate) {
+        DeleteSmsTemplateRequest request = new DeleteSmsTemplateRequest();
+        request.setTemplateCode(saSmsTemplate.getTemplateCode());
+        return request;
+    }
+
+    private DeleteSmsTemplateResponseBody buildDeleteSmsTemplateResponseBody() {
+        DeleteSmsTemplateResponseBody body = new DeleteSmsTemplateResponseBody();
         body.setTemplateCode(UUID.randomUUID().toString());
         return body;
     }
@@ -96,6 +199,8 @@ public class AliSmsManageService {
         } catch (TeaException error) {
             // 如有需要，请打印 error
             com.aliyun.teautil.Common.assertAsString(error.message);
+        } catch (ServiceException e) {
+            Validator.assertException(e);
         } catch (Exception _error) {
             TeaException error = new TeaException(_error.getMessage(), _error);
             // 如有需要，请打印 error

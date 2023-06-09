@@ -79,8 +79,13 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     public void delete(@RequestBody IdReqVO vo) {
+        preDelete(vo);
         getRepo().deleteById(vo.getId());
         Resp.notice("删除成功");
+    }
+
+    protected void preDelete(IdReqVO vo) {
+
     }
 
     @ApiOperation("根据id获取详情")

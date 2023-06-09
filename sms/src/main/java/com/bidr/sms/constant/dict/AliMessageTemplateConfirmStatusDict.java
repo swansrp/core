@@ -1,5 +1,6 @@
 package com.bidr.sms.constant.dict;
 
+import cn.hutool.core.util.EnumUtil;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
 import lombok.AllArgsConstructor;
@@ -22,8 +23,14 @@ public enum AliMessageTemplateConfirmStatusDict implements Dict {
 
     CONFIRMING(0, "审批中"),
     PASS(1, "审批通过"),
-    REJECT(2, "审批拒绝");
+    REJECT(2, "审批拒绝"),
+
+    CANCEL(10, "取消审核");
 
     private final Integer value;
     private final String label;
+
+    public static AliMessageTemplateConfirmStatusDict of(Integer value) {
+        return EnumUtil.getBy(AliMessageTemplateConfirmStatusDict::getValue, value);
+    }
 }

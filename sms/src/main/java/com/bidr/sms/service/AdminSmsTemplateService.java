@@ -1,11 +1,15 @@
 package com.bidr.sms.service;
 
+import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.validate.Validator;
+import com.bidr.sms.constant.dict.AliMessageTemplateConfirmStatusDict;
+import com.bidr.sms.constant.err.SmsErrorCode;
+import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.SmsManageService;
 import com.bidr.sms.vo.ApplySmsTemplateReq;
-import com.bidr.sms.vo.ApplySmsTemplateRes;
+import com.bidr.sms.vo.SmsTemplateCodeRes;
 import com.bidr.sms.vo.SmsTemplateRes;
-import com.bidr.kernel.config.response.Resp;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -27,12 +31,20 @@ public class AdminSmsTemplateService {
     private SmsManageService smsManageService;
 
     public List<SmsTemplateRes> getSmsTemplate(String platform) {
-        return Resp.convert(saSmsTemplateService.getTemplateByPlatform(platform),
-                SmsTemplateRes.class);
+        return Resp.convert(saSmsTemplateService.getTemplateByPlatform(platform), SmsTemplateRes.class);
     }
 
-    public ApplySmsTemplateRes addTemplate(ApplySmsTemplateReq req) {
+    public SmsTemplateCodeRes addTemplate(ApplySmsTemplateReq req) {
         return smsManageService.applySmsTemplate(req);
+    }
+
+    public SmsTemplateCodeRes updateTemplate(String templateCode, String body) {
+        SaSmsTemplate saSmsTemplate = smsManageService.getSmsTemplate(templateCode);
+        return smsManageService.updateSmsTemplate(saSmsTemplate);
+    }
+
+    public SmsTemplateCodeRes deleteTemplate(String id) {
+        return smsManageService.deleteSmsTemplate(id);
     }
 
     public void syncTemplate() {

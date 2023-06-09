@@ -1,5 +1,6 @@
 package com.bidr.sms.constant.dict;
 
+import cn.hutool.core.util.EnumUtil;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
 import lombok.AllArgsConstructor;
@@ -26,5 +27,9 @@ public enum AliMessageTemplateTypeDict implements Dict {
 
     private final Integer value;
     private final String label;
+
+    public static AliMessageTemplateTypeDict of(Integer value) {
+        return EnumUtil.getBy(AliMessageTemplateTypeDict::getValue, value);
+    }
 
 }
