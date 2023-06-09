@@ -77,7 +77,7 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
                 .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(AcGroup::getType, name)
-                .in(AcUser::getCustomerNumber, customerNumberList);
+                .in(AcUser::getCustomerNumber, customerNumberList).distinct();
         return attachRepo().selectJoinList(GroupAccountRes.class, wrapper);
     }
 }
