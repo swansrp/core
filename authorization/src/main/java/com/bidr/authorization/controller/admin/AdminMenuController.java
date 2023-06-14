@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.service.admin.AdminMenuService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.controller.BaseAdminTreeController;
 import com.bidr.kernel.vo.common.IdReqVO;
@@ -54,30 +55,31 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
 
     @ApiOperation(value = "添加顶部菜单")
     @RequestMapping(value = "/add/main", method = RequestMethod.POST)
-    public Boolean addMainMenu(@RequestBody AcMenu entity) {
+    public void addMainMenu(@RequestBody AcMenu entity) {
         adminMenuService.addMenu(entity, MenuTypeDict.MENU);
-        return true;
+        Resp.notice("添加顶部菜单成功");
     }
 
     @ApiOperation(value = "添加侧边菜单")
     @RequestMapping(value = "/add/sub", method = RequestMethod.POST)
-    public Boolean addSubMenu(@RequestBody AcMenu entity) {
+    public void addSubMenu(@RequestBody AcMenu entity) {
         adminMenuService.addMenu(entity, MenuTypeDict.SUB_MENU);
-        return true;
+        Resp.notice("添加左侧菜单成功");
     }
 
     @RequestMapping(value = "/add/content", method = RequestMethod.POST)
-    public Boolean addContent(@RequestBody AcMenu entity) {
+    public void addContent(@RequestBody AcMenu entity) {
         adminMenuService.addMenu(entity, MenuTypeDict.CONTENT);
-        return true;
+        Resp.notice("添加页面目录成功");
     }
 
     @RequestMapping(value = "/add/button", method = RequestMethod.POST)
-    public Boolean addButton(@RequestBody AcMenu entity) {
+    public void addButton(@RequestBody AcMenu entity) {
         entity.setKey(entity.getMenuId());
         entity.setMenuType(MenuTypeDict.BUTTON.getValue());
         entity.setKey(entity.getMenuId());
-        return getRepo().updateById(entity);
+        getRepo().updateById(entity);
+        Resp.notice("添加按钮成功");
     }
 
     @RequestMapping(value = "/enable", method = RequestMethod.POST)
