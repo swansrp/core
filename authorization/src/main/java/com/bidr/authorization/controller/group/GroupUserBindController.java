@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.service.admin.AdminUserGroupBindService;
 import com.bidr.authorization.vo.group.BindUserReq;
 import com.bidr.authorization.vo.group.GroupAccountRes;
+import com.bidr.authorization.vo.group.GroupUserRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -57,7 +59,7 @@ public class GroupUserBindController extends BaseBindController<AcGroup, AcUserG
 
     @ApiOperation(value = "获取指定用户组类型下所有用户")
     @RequestMapping(value = "/bind/list/all", method = RequestMethod.GET)
-    public List<GroupAccountRes> getUserListByGroupType(String name) {
+    public Collection<GroupUserRes> getUserListByGroupType(String name) {
         return adminUserGroupBindService.getDataScopeUserListByGroupType(name);
     }
 }

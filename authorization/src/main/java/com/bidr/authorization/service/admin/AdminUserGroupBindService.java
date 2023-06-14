@@ -9,13 +9,18 @@ import com.bidr.authorization.dao.repository.join.AcUserGroupJoinService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.vo.group.BindUserReq;
 import com.bidr.authorization.vo.group.GroupAccountRes;
+import com.bidr.authorization.vo.group.GroupUserRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: AdminUserGroupBindService
@@ -64,20 +69,30 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
         return AcGroup::getId;
     }
 
-    public List<GroupAccountRes> getUserListByGroupType(String name) {
+    public Collection<GroupAccountRes> getUserListByGroupType(String name) {
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
                 .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(AcGroup::getType, name);
-        return attachRepo().selectJoinList(GroupAccountRes.class, wrapper);
+        return distinct(attachRepo().selectJoinList(GroupAccountRes.class, wrapper));
     }
 
-    public List<GroupAccountRes> getDataScopeUserListByGroupType(String name) {
+    private Collection<GroupUserRes> distinct(List<GroupAccountRes> selectJoinList) {
+        Map<String, GroupUserRes> filter = new LinkedHashMap<>();
+        if(FuncUtil.isNotEmpty(selectJoinList)) {
+            for (GroupAccountRes account : selectJoinList) {
+                filter.put(account.getCustomerNumber(), ReflectionUtil.copy(account, GroupUserRes.class));
+            }
+        }
+        return filter.values();
+    }
+
+    public Collection<GroupUserRes> getDataScopeUserListByGroupType(String name) {
         List<String> customerNumberList = acUserGroupJoinService.getCustomerNumberListFromDataScope(
                 AccountContext.getOperator(), name);
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
                 .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(AcGroup::getType, name)
-                .in(AcUser::getCustomerNumber, customerNumberList).distinct();
-        return attachRepo().selectJoinList(GroupAccountRes.class, wrapper);
+                .in(AcUser::getCustomerNumber, customerNumberList);
+        return distinct(attachRepo().selectJoinList(GroupAccountRes.class, wrapper));
     }
 }
