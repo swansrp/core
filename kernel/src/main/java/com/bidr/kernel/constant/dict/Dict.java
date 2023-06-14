@@ -34,5 +34,12 @@ public interface Dict {
         return CommonConst.YES;
     }
 
+    /**
+     * 字典项英文名
+     *
+     * @return
+     */
+    String name();
+
 
 }
