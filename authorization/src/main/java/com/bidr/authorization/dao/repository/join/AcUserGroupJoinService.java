@@ -1,5 +1,6 @@
 package com.bidr.authorization.dao.repository.join;
 
+import com.bidr.authorization.annotation.data.scope.GroupDataScopeHolder;
 import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -45,7 +46,12 @@ public class AcUserGroupJoinService {
     }
 
     public List<String> getCustomerNumberListFromDataScope(String customerNumber, String groupName) {
-        List<String> res = new ArrayList<>();
+        List<String> res = GroupDataScopeHolder.get(groupName, customerNumber);
+        if (res != null) {
+            return res;
+        } else {
+            res = new ArrayList<>();
+        }
         List<AcUserGroup> groups = getAcUserGroupByUserIdAndGroupType(customerNumber, groupName);
         Set<String> permissions = new HashSet<>();
         if (FuncUtil.isNotEmpty(groups)) {
@@ -78,6 +84,7 @@ public class AcUserGroupJoinService {
         if (FuncUtil.isNotEmpty(permissions)) {
             res.addAll(permissions);
         }
+
         return res;
     }
 
@@ -92,16 +99,16 @@ public class AcUserGroupJoinService {
 
     public List<String> getCustomerNumberList(Long groupId) {
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<AcUser>().select(AcUser::getCustomerNumber)
-                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId)
-                .distinct().eq(AcUserGroup::getGroupId, groupId);
+                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId).distinct()
+                .eq(AcUserGroup::getGroupId, groupId);
         return acUserService.selectJoinList(String.class, wrapper);
     }
 
     public List<String> getSubordinateCustomerNumberList(Long groupId) {
         List subGroup = recursionService.getChildList(AcGroup::getId, AcGroup::getPid, groupId);
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<AcUser>().select(AcUser::getCustomerNumber)
-                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId)
-                .distinct().in(AcUserGroup::getGroupId, subGroup);
+                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId).distinct()
+                .in(AcUserGroup::getGroupId, subGroup);
         return acUserService.selectJoinList(String.class, wrapper);
     }
 }

@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServletRequest;
  * @author Sharp
  * @since 2021/8/17 18:56
  */
-@Component
 public interface AuthRole {
     /**
      * 鉴权
