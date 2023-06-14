@@ -23,13 +23,14 @@ public class GroupDataScopeHolder {
         if (GROUP_DATA_SCOPE_HOLDER.get() == null) {
             Map<String, Map<String, List<String>>> group = new LinkedHashMap<>();
             GROUP_DATA_SCOPE_HOLDER.set(group);
-        } else if (GROUP_DATA_SCOPE_HOLDER.get().get(groupName) == null) {
+        }
+        if (GROUP_DATA_SCOPE_HOLDER.get().get(groupName) == null) {
             Map<String, List<String>> customerMap = new LinkedHashMap<>();
             GROUP_DATA_SCOPE_HOLDER.get().put(groupName, customerMap);
-        } else {
-            GROUP_DATA_SCOPE_HOLDER.get().get(groupName).put(customerNumber, subordinate);
         }
+        GROUP_DATA_SCOPE_HOLDER.get().get(groupName).put(customerNumber, subordinate);
     }
+
 
     public static List<String> get(String groupName, String customerNumber) {
         if (GROUP_DATA_SCOPE_HOLDER.get() == null) {
