@@ -12,6 +12,7 @@ import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.redis.service.RedisService;
 import com.bidr.platform.service.rest.RestService;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +63,7 @@ public abstract class BaseOpenApiService {
         OpenApiTokenRcv openApiTokenRcv = buildOpenApiTokenRcv();
         Response<OpenApiTokenRes> res = restService.post(getBaseUrl() + "/open-api/token", openApiTokenRcv,
                 Response.class, OpenApiTokenRes.class);
+        handleCommonError(res);
         return res.getPayload();
     }
 
@@ -103,6 +105,7 @@ public abstract class BaseOpenApiService {
             throw new TokenInvalidException();
         } else if (!FuncUtil.equals(res.getStatus().getCode(), ErrCodeSys.SUCCESS.getErrCode())) {
             log.info("系统错误: {}-{}", res.getStatus().getMsg(), res.getStatus().getDetails());
+            Validator.assertException(ErrCodeSys.SYS_ERR_MSG, res.getStatus().getDetails());
         }
     }
 

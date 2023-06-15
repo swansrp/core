@@ -27,7 +27,7 @@ import javax.annotation.Resource;
  */
 @Api(tags = "系统管理 - 对接平台管理")
 @RestController("AdminPartnerController")
-@RequestMapping(value = "/web/admin/partner")
+@RequestMapping(value = "/web/partner/admin")
 public class AdminPartnerController extends BaseAdminController<AcPartner, PartnerRes> {
 
     @Resource
