@@ -1,5 +1,6 @@
 package com.bidr.sms.service.message;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.config.response.Resp;
@@ -17,6 +18,7 @@ import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.cache.SmsTemplateCacheService;
 import com.bidr.sms.vo.SendSmsReq;
 import com.bidr.sms.vo.SendSmsRes;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
@@ -32,7 +34,11 @@ import java.util.Map;
  * @author Sharp
  * @since 2023/03/09 10:49
  */
+@DS("SMS")
 public abstract class BaseSmsService implements SmsService {
+
+    @Autowired(required = false)
+    private SendSmsSequenceInf sendSmsSequenceInf;
 
     @Resource
     private SmsTemplateCacheService smsTemplateCacheService;
@@ -93,6 +99,9 @@ public abstract class BaseSmsService implements SmsService {
         saSmsSend.setSendResult(SendMessageStatusEnum.REQUEST.getResult());
         String platform = tokenService.getItem(TokenItem.PLATFORM.name(), String.class);
         saSmsSend.setPlatform(platform);
+        if (sendSmsSequenceInf != null) {
+            saSmsSend.setSendId(sendSmsSequenceInf.getSendSequence());
+        }
         saSmsSendService.insert(saSmsSend);
         return saSmsSend;
     }
