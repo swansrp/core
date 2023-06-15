@@ -21,7 +21,7 @@ import java.util.Date;
 @ApiModel(value = "短信发送记录")
 @Data
 @TableName(value = "sa_sms_send")
-@KeySequence("SA_SMS_SEND_SEND_ID_SEQ")
+// @KeySequence("SA_SMS_SEND_SEND_ID_SEQ")
 public class SaSmsSend {
     /**
      * 发送流水号
