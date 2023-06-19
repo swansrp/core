@@ -47,19 +47,34 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
 
     public T getCache(Object key) {
         if (key != null) {
-            synchronized (DynamicMemoryCache.class) {
-                if (cacheManager().isUninitializedCache(getCacheName())) {
-                    init();
-                } else if (cacheManager().isExpired(getCacheName(), key)) {
-                    refresh();
-                }
-                return cacheManager().getCacheObj(getCacheName(), key, entityClass);
-            }
+            cachePrepare(key);
+            return cacheManager().getCacheObj(getCacheName(), key, entityClass);
         } else {
             return null;
         }
 
     }
+
+    public void cachePrepare(Object key) {
+        synchronized (DynamicMemoryCache.class) {
+            if (cacheManager().isUninitializedCache(getCacheName())) {
+                init();
+            } else if (cacheManager().isExpired(getCacheName(), key)) {
+                refresh();
+            }
+        }
+    }
+
+    public DynamicMemoryCacheManager cacheManager() {
+        return dynamicMemoryCacheManager;
+    }
+
+    /**
+     * 获取缓存数据列表
+     *
+     * @return
+     */
+    protected abstract Map<String, T> getCacheData();
 
     @Override
     public void refresh() {
@@ -86,17 +101,6 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
             }
         }
     }
-
-    public DynamicMemoryCacheManager cacheManager() {
-        return dynamicMemoryCacheManager;
-    }
-
-    /**
-     * 获取缓存数据列表
-     *
-     * @return
-     */
-    protected abstract Map<String, T> getCacheData();
 
     @Override
     public int getExpired() {

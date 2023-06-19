@@ -87,6 +87,7 @@ public class DictService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean addDictItem(AddDictItemReq req) {
+        dictCacheService.cachePrepare(req.getDictName());
         Validator.assertFalse(sysDictService.existed(req.getDictName(), req.getDictValue()),
                 DICT_ITEM_IS_ALREADY_EXISTED, req.getDictTitle());
         return sysDictService.insert(req);
@@ -99,6 +100,7 @@ public class DictService {
     }
 
     public List<KeyValueResVO> getSysDictByLabel(String dictName, String label) {
+        dictCacheService.cachePrepare(dictName);
         List<SysDict> sysDictList = sysDictService.getSysDictByLabel(dictName, label);
         return buildKeyValueListByDict(sysDictList);
     }

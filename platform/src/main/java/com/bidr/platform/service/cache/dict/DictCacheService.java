@@ -140,4 +140,10 @@ public class DictCacheService {
         config.setReadOnly(CommonConst.YES);
         return config;
     }
+
+    public void cachePrepare(String dictName) {
+        DictCacheProvider dictCacheProvider = MAP.get(dictName);
+        Validator.assertNotNull(dictCacheProvider, ErrCodeSys.SYS_CONFIG_NOT_EXIST, "字典: " + dictName);
+        dictCacheProvider.cachePrepare(dictName);
+    }
 }
