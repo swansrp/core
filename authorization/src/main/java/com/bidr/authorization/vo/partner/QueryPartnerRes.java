@@ -53,9 +53,7 @@ public class QueryPartnerRes extends AcPartner {
 
     @BindDict(type = "ACTIVE_STATUS_DICT", field = "status")
     @ApiModelProperty(value = "有效性")
-    @Size(max = 1, message = "有效性最大长度要小于 1")
-    @NotBlank(message = "有效性不能为空")
-    private String status;
+    private String statusDisplay;
 
     @BindField(entity = AcUser.class, field = "name", condition = "this.createBy = customer_number")
     @ApiModelProperty(value = "创建者")
