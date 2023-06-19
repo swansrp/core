@@ -7,6 +7,7 @@ import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.dao.repository.SysDictTypeService;
+import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
 import com.bidr.platform.vo.dict.AddDictReq;
 import com.bidr.platform.vo.dict.UpdateDictDefaultReq;
@@ -15,7 +16,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,15 +32,17 @@ import static com.bidr.platform.constant.err.DictErrorCode.DICT_ITEM_IS_ALREADY_
 @Service
 @RequiredArgsConstructor
 public class DictService {
-
-    @Resource
-    private SysDictService sysDictService;
-    @Resource
-    private SysDictTypeService sysDictTypeService;
+    public final DictCacheService dictCacheService;
+    private final SysDictService sysDictService;
+    private final SysDictTypeService sysDictTypeService;
 
     public List<KeyValueResVO> getNameList(String name) {
-        List<KeyValueResVO> resList = new ArrayList<>();
         List<SysDictType> sysDictList = sysDictTypeService.getSysDictByTitle(name);
+        return buildKeyValueListByDictType(sysDictList);
+    }
+
+    private List<KeyValueResVO> buildKeyValueListByDictType(List<SysDictType> sysDictList) {
+        List<KeyValueResVO> resList = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(sysDictList)) {
             for (SysDictType sysDict : sysDictList) {
                 KeyValueResVO res = new KeyValueResVO();
@@ -94,5 +96,23 @@ public class DictService {
     public void deleteDict(String dictName) {
         sysDictTypeService.deleteById(dictName);
         sysDictService.deleteByDictName(dictName);
+    }
+
+    public List<KeyValueResVO> getSysDictByLabel(String dictName, String label) {
+        List<SysDict> sysDictList = sysDictService.getSysDictByLabel(dictName, label);
+        return buildKeyValueListByDict(sysDictList);
+    }
+
+    private List<KeyValueResVO> buildKeyValueListByDict(List<SysDict> sysDictList) {
+        List<KeyValueResVO> resList = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(sysDictList)) {
+            for (SysDict sysDict : sysDictList) {
+                KeyValueResVO res = new KeyValueResVO();
+                res.setValue(sysDict.getDictValue());
+                res.setLabel(sysDict.getDictLabel());
+                resList.add(res);
+            }
+        }
+        return resList;
     }
 }

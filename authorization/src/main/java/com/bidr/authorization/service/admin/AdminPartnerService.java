@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.repository.AcPartnerService;
 import com.bidr.authorization.vo.partner.PartnerReq;
 import com.bidr.authorization.vo.partner.PartnerRes;
 import com.bidr.authorization.vo.partner.QueryPartnerReq;
+import com.bidr.authorization.vo.partner.QueryPartnerRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.utils.RandomUtil;
@@ -28,13 +29,13 @@ public class AdminPartnerService {
     private final AcPartnerService acPartnerService;
 
 
-    public Page<PartnerRes> query(QueryPartnerReq req) {
+    public Page<QueryPartnerRes> query(QueryPartnerReq req) {
         Page<AcPartner> partner = acPartnerService.queryPartner(req);
-        return Resp.convert(partner, PartnerRes.class);
+        return Resp.convert(partner, QueryPartnerRes.class);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public String add(PartnerReq req) {
+    public PartnerRes add(PartnerReq req) {
         AcPartner partner = ReflectionUtil.copy(req, AcPartner.class);
         String appKey = RandomUtil.getString(8);
         String appSecret = RandomUtil.getString(16);
@@ -42,7 +43,7 @@ public class AdminPartnerService {
         partner.setAppSecret(appSecret);
         partner.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         acPartnerService.insert(partner);
-        return appSecret;
+        return new PartnerRes(appKey, appSecret);
 
     }
 }

@@ -71,6 +71,13 @@ public class SysDictService extends BaseSqlRepo<SysDictDao, SysDict> {
                 .in(FuncUtil.isNotEmpty(dictList), SysDict::getDictName, dictList);
         super.delete(wrapper);
     }
+
+    public List<SysDict> getSysDictByLabel(String dictName, String label) {
+        LambdaQueryWrapper<SysDict> wrapper = super.getQueryWrapper();
+        wrapper.eq(SysDict::getDictName, dictName).like(FuncUtil.isNotEmpty(label), SysDict::getDictLabel, label)
+                .orderByAsc(SysDict::getDictSort);
+        return super.select(wrapper);
+    }
 }
 
 

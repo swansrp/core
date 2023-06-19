@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.service.admin.AdminPartnerService;
 import com.bidr.authorization.vo.partner.PartnerReq;
 import com.bidr.authorization.vo.partner.PartnerRes;
+import com.bidr.authorization.vo.partner.QueryPartnerRes;
 import com.bidr.authorization.vo.partner.QueryPartnerReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.controller.BaseAdminController;
@@ -28,14 +29,14 @@ import javax.annotation.Resource;
 @Api(tags = "系统管理 - 对接平台管理")
 @RestController("AdminPartnerController")
 @RequestMapping(value = "/web/partner/admin")
-public class AdminPartnerController extends BaseAdminController<AcPartner, PartnerRes> {
+public class AdminPartnerController extends BaseAdminController<AcPartner, QueryPartnerRes> {
 
     @Resource
     private AdminPartnerService adminPartnerService;
 
     @ApiOperation(value = "添加对接平台")
     @RequestMapping(value = "/add", method = RequestMethod.POST)
-    public String addPartner(@RequestBody PartnerReq req) {
+    public PartnerRes addPartner(@RequestBody PartnerReq req) {
         return adminPartnerService.add(req);
     }
 
@@ -48,7 +49,7 @@ public class AdminPartnerController extends BaseAdminController<AcPartner, Partn
 
     @ApiOperation(value = "获取接入列表")
     @RequestMapping(value = "/query", method = RequestMethod.POST)
-    public Page<PartnerRes> queryPartner(@RequestBody QueryPartnerReq req) {
+    public Page<QueryPartnerRes> queryPartner(@RequestBody QueryPartnerReq req) {
         return adminPartnerService.query(req);
     }
 

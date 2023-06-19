@@ -48,6 +48,12 @@ public class AdminDictController extends BaseAdminOrderController<SysDict, SysDi
         return dictService.getSysDictByName(dictName);
     }
 
+    @ApiOperation("根据字典条目中文名查询")
+    @RequestMapping(path = {"/list/dictLabel"}, method = {RequestMethod.GET})
+    public List<KeyValueResVO> getDictByLabel(String dictName, String label) {
+        return dictService.getSysDictByLabel(dictName, label);
+    }
+
     @ApiOperation("添加字典项")
     @RequestMapping(path = {"/add"}, method = {RequestMethod.POST})
     public Boolean addDict(@RequestBody AddDictItemReq req) {
