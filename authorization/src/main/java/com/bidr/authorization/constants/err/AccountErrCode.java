@@ -66,7 +66,10 @@ public enum AccountErrCode implements ErrCode {
     AC_ROLE_HAS_USER(1024, "该角色下尚有用户, 不能删除该角色"),
 
     AC_GROUP_HAS_USER(1025, "该用户组下尚有用户, 不能删除该用户组"),
-    AC_PARTNER_NOT_EXISTED(1026, "该渠道不存在");
+    AC_PARTNER_NOT_EXISTED(1026, "该渠道不存在"),
+
+    AC_PARTNER_NOT_AVAILABLE(1027, "该渠道账号不可用"),
+    ;
 
     private final Integer errCode;
 

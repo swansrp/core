@@ -3,8 +3,10 @@ package com.bidr.platform.controller;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.dict.DictCacheService;
+import com.bidr.platform.service.dict.DictService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,9 +24,13 @@ import java.util.List;
 @Api(tags = "系统基础 - 参数接口")
 @RestController
 @RequestMapping(path = {"/web/dict"})
+@RequiredArgsConstructor
 public class SystemDictController {
-    @Resource
-    private DictCacheService dictCacheService;
+
+    private final DictCacheService dictCacheService;
+
+    private final DictService dictService;
+
 
 
     @RequestMapping(path = {""}, method = {RequestMethod.GET})
@@ -43,5 +49,11 @@ public class SystemDictController {
     public KeyValueResVO getDictByLabel(String dictName, String label) {
         SysDict dict = dictCacheService.getDictByLabel(dictName, label);
         return dictCacheService.buildKeyValueResVO(dict);
+    }
+
+    @ApiOperation("根据字典条目中文名查询")
+    @RequestMapping(path = {"/list/label"}, method = {RequestMethod.GET})
+    public List<KeyValueResVO> getDictListByLabel(String dictName, String name) {
+        return dictService.getSysDictByLabel(dictName, name);
     }
 }

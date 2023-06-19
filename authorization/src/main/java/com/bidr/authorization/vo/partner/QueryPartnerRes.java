@@ -42,7 +42,7 @@ public class QueryPartnerRes extends AcPartner {
     @NotBlank(message = "应用的密钥不能为空")
     private String appSecret;
 
-    @BindDict(type = "MdmPlatformDict", field = "platform")
+    @BindDict(type = "MDM_PLATFORM_DICT", field = "platform")
     @ApiModelProperty(value = "所属平台")
     private String platform;
 

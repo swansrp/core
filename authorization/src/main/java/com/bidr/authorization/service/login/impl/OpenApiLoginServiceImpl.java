@@ -12,6 +12,7 @@ import com.bidr.authorization.openapi.utils.OpenApiUtil;
 import com.bidr.authorization.service.login.OpenApiLoginService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,8 @@ public class OpenApiLoginServiceImpl implements OpenApiLoginService {
     public OpenApiTokenRes getToken(OpenApiTokenRcv sign) {
         AcPartner acPartner = acPartnerService.getByAppKey(sign.getAppKey());
         Validator.assertNotNull(acPartner, AccountErrCode.AC_PARTNER_NOT_EXISTED);
+        Validator.assertNotEquals(acPartner.getStatus(), ActiveStatusDict.ACTIVATE.getValue(), AccountErrCode.AC_PARTNER_NOT_AVAILABLE);
+        OpenApiUtil.validateSign(sign.getTimeStamp(), sign.getNonce(), sign.getSignature(), acPartner.getAppSecret());
         TokenInfo tokenInfo = tokenService.buildOpenPlatformToken(acPartner.getAppKey());
         tokenService.putItem(tokenInfo, TokenItem.PLATFORM.name(), acPartner.getPlatform());
         return new OpenApiTokenRes(AuthTokenUtil.getToken(tokenInfo), tokenInfo.getExpired());
