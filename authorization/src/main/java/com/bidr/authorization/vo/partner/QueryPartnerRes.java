@@ -35,8 +35,7 @@ public class QueryPartnerRes extends AcPartner {
     @NotBlank(message = "应用的唯一标识key不能为空")
     private String appKey;
 
-
-    @JsonIgnore
+    
     @ApiModelProperty(value = "应用的密钥")
     @Size(max = 50, message = "应用的密钥最大长度要小于 50")
     @NotBlank(message = "应用的密钥不能为空")
