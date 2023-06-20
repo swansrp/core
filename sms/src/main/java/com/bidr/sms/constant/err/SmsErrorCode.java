@@ -22,7 +22,8 @@ public enum SmsErrorCode implements ErrCode {
     SIGN_NOT_REGISTER(81, "[%s]签名没有申请通过"),
     QUERY_SIGN_FAILED(82, "[%s]签名查询失败"),
     SMS_TYPE_ALREADY_EXISTED(83, "[%s]短信类型已存在"),
-    SMS_TEMPLATE_DONT_SUPPORT_MODIFY(84, "短信模板当前状态:%s, 不能修改")
+    SMS_TEMPLATE_DONT_SUPPORT_MODIFY(84, "短信模板当前状态:%s, 不能修改"),
+    QUERY_SMS_TEMPLATE_FAILED(85, "查询短信模板列表失败")
     ;
 
 

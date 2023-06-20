@@ -1,6 +1,7 @@
 package com.bidr.sms.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.sms.service.AdminSmsSendService;
@@ -32,9 +33,9 @@ public class AdminSmsController extends BaseAdminController<SaSmsSend, SmsHistor
 
     @ApiOperation(value = "发送短信")
     @RequestMapping(value = "/send", method = RequestMethod.POST)
-    public Boolean sendSms(@RequestBody SendSmsVO req) {
+    public void sendSms(@RequestBody SendSmsVO req) {
         adminSmsSendService.sendSms(req);
-        return null;
+        Resp.notice("发送成功");
     }
 
     @ApiOperation(value = "获取短信发送历史")

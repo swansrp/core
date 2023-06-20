@@ -50,7 +50,7 @@ public class AdminSmsTemplateController extends BaseAdminController<SaSmsTemplat
     @ApiOperation(value = "同步短信模板审核状态")
     @RequestMapping(value = "/sync", method = RequestMethod.POST)
     public void syncTemplate() {
-        adminSmsTemplateService.syncTemplate();
+        adminSmsTemplateService.syncTemplateConfirmStatus();
         Resp.notice("同步短信模板审核状态成功");
     }
 

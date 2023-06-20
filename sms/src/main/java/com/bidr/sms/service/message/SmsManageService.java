@@ -1,10 +1,8 @@
 package com.bidr.sms.service.message;
 
 import com.aliyun.dysmsapi20170525.models.*;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.sms.constant.dict.AliMessageTemplateConfirmStatusDict;
 import com.bidr.sms.constant.err.SmsErrorCode;
@@ -15,6 +13,7 @@ import com.bidr.sms.vo.ApplySmsTemplateReq;
 import com.bidr.sms.vo.SmsTemplateCodeRes;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.*;
@@ -90,33 +89,84 @@ public class SmsManageService {
         return signList;
     }
 
-    public void syncSmsTemplate() {
-        List<SaSmsTemplate> noConfirmTemplate = saSmsTemplateService.getNoConfirmTemplate();
-        if (CollectionUtils.isNotEmpty(noConfirmTemplate)) {
-            for (SaSmsTemplate saSmsTemplate : noConfirmTemplate) {
-                QuerySmsTemplateResponseBody response = aliSmsManageService.getSmsTemplateStatus(saSmsTemplate);
-                saSmsTemplate.setConfirmStatus(response.getTemplateStatus());
-                if ((AliMessageTemplateConfirmStatusDict.PASS.getValue()).equals(saSmsTemplate.getConfirmStatus())) {
-                    saSmsTemplate.setConfirmAt(new Date());
+    @Transactional(rollbackFor = Exception.class)
+    public void syncTemplate(String defaultPlatform, String defaultSign) {
+        long total = Long.MAX_VALUE;
+        int pageSize = 10;
+        for (int currentPage = 1; ((long) currentPage - 1) * pageSize < total; currentPage++) {
+            QuerySmsTemplateListResponseBody responseBody = aliSmsManageService.querySmsTemplateList(currentPage,
+                    pageSize);
+            if (FuncUtil.isNotEmpty(responseBody.getSmsTemplateList())) {
+                for (QuerySmsTemplateListResponseBody.QuerySmsTemplateListResponseBodySmsTemplateList smsTemplate :
+                        responseBody.getSmsTemplateList()) {
+                    SaSmsTemplate saSmsTemplate = saSmsTemplateService.selectOneByTemplateCode(
+                            smsTemplate.getTemplateCode());
+                    if (FuncUtil.isNotEmpty(saSmsTemplate)) {
+                        saSmsTemplate = buildSaSmsTemplate(smsTemplate, saSmsTemplate);
+                        saSmsTemplateService.updateById(saSmsTemplate);
+                    } else {
+                        saSmsTemplate = new SaSmsTemplate();
+                        saSmsTemplate.setPlatform(defaultPlatform);
+                        saSmsTemplate.setSign(defaultSign);
+                        saSmsTemplate.setTemplateCode(smsTemplate.getTemplateCode());
+                        saSmsTemplate = buildSaSmsTemplate(smsTemplate, saSmsTemplate);
+                        saSmsTemplateService.insert(saSmsTemplate);
+                    }
                 }
+            } else {
+                break;
             }
-            saSmsTemplateService.updateBatchById(noConfirmTemplate);
+            total = responseBody.getTotalCount();
         }
+    }
+
+    private SaSmsTemplate buildSaSmsTemplate(
+            QuerySmsTemplateListResponseBody.QuerySmsTemplateListResponseBodySmsTemplateList smsTemplate,
+            SaSmsTemplate saSmsTemplate) {
+        AliMessageTemplateConfirmStatusDict dict = AliMessageTemplateConfirmStatusDict.of(smsTemplate.getAuditStatus());
+        Validator.assertNotNull(dict, ErrCodeSys.SYS_ERR_MSG, "未知状态: " + smsTemplate.getAuditStatus());
+        saSmsTemplate.setConfirmStatus(dict.getValue());
+        saSmsTemplate.setTemplateCode(smsTemplate.getTemplateCode());
+        saSmsTemplate.setTemplateType(smsTemplate.getTemplateType());
+        saSmsTemplate.setTemplateTitle(smsTemplate.getTemplateName());
+        saSmsTemplate.setBody(smsTemplate.getTemplateContent());
+        Date confirmDate = DateUtil.formatDate(smsTemplate.getCreateDate(), DateUtil.DATE_TIME_NORMAL);
+        saSmsTemplate.setConfirmAt(confirmDate);
+        saSmsTemplate.setReason(smsTemplate.getReason().getRejectInfo());
+        buildParameter(saSmsTemplate);
+        return saSmsTemplate;
     }
 
     public SaSmsTemplate getSmsTemplate(String templateCode) {
         SaSmsTemplate saSmsTemplate = saSmsTemplateService.selectOneByTemplateCode(templateCode);
-        if ((AliMessageTemplateConfirmStatusDict.PASS.getValue()).equals(saSmsTemplate.getConfirmStatus())) {
+        if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
+                saSmsTemplate.getConfirmStatus())) {
             return saSmsTemplate;
         }
         QuerySmsTemplateResponseBody response = aliSmsManageService.getSmsTemplateStatus(saSmsTemplate);
         saSmsTemplate.setConfirmStatus(response.getTemplateStatus());
         saSmsTemplate.setReason(response.getReason());
-        if ((AliMessageTemplateConfirmStatusDict.PASS.getValue()).equals(saSmsTemplate.getConfirmStatus())) {
+        if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
+                saSmsTemplate.getConfirmStatus())) {
             saSmsTemplate.setConfirmAt(new Date());
         }
         saSmsTemplateService.updateById(saSmsTemplate);
         return saSmsTemplate;
+    }
+
+    public void syncTemplateConfirmStatus() {
+        List<SaSmsTemplate> noConfirmTemplate = saSmsTemplateService.getNoConfirmTemplate();
+        if (CollectionUtils.isNotEmpty(noConfirmTemplate)) {
+            for (SaSmsTemplate saSmsTemplate : noConfirmTemplate) {
+                QuerySmsTemplateResponseBody response = aliSmsManageService.getSmsTemplateStatus(saSmsTemplate);
+                saSmsTemplate.setConfirmStatus(response.getTemplateStatus());
+                if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
+                        saSmsTemplate.getConfirmStatus())) {
+                    saSmsTemplate.setConfirmAt(new Date());
+                }
+            }
+            saSmsTemplateService.updateBatchById(noConfirmTemplate);
+        }
     }
 
     public List<SaSmsTemplate> getByPlatform(String platform) {

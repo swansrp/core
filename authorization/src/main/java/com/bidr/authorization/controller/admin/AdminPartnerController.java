@@ -8,6 +8,7 @@ import com.bidr.authorization.vo.partner.PartnerRes;
 import com.bidr.authorization.vo.partner.QueryPartnerRes;
 import com.bidr.authorization.vo.partner.QueryPartnerReq;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
@@ -56,12 +57,12 @@ public class AdminPartnerController extends BaseAdminController<AcPartner, Query
 
     @RequestMapping(value = "/enable", method = RequestMethod.POST)
     public Boolean enable(@RequestBody IdReqVO vo) {
-        return update(vo, AcPartner::getStatus, CommonConst.YES);
+        return update(vo, AcPartner::getStatus, ActiveStatusDict.ACTIVATE.getValue());
     }
 
     @RequestMapping(value = "/disable", method = RequestMethod.POST)
     public Boolean disable(@RequestBody IdReqVO vo) {
-        return update(vo, AcPartner::getStatus, CommonConst.NO);
+        return update(vo, AcPartner::getStatus, ActiveStatusDict.DEACTIVATE.getValue());
     }
 
 }

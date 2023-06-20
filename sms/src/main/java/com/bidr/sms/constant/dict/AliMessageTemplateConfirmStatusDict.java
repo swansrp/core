@@ -21,16 +21,20 @@ public enum AliMessageTemplateConfirmStatusDict implements Dict {
      * 短信模板审批状态
      */
 
-    CONFIRMING(0, "审批中"),
-    PASS(1, "审批通过"),
-    REJECT(2, "审批拒绝"),
+    AUDIT_STATE_INIT(0, "审批中"),
+    AUDIT_STATE_PASS(1, "审批通过"),
+    AUDIT_STATE_NOT_PASS(2, "审批拒绝"),
 
-    CANCEL(10, "取消审核");
+    AUDIT_STATE_CANCEL(10, "取消审核");
 
     private final Integer value;
     private final String label;
 
     public static AliMessageTemplateConfirmStatusDict of(Integer value) {
         return EnumUtil.getBy(AliMessageTemplateConfirmStatusDict::getValue, value);
+    }
+
+    public static AliMessageTemplateConfirmStatusDict of(String name) {
+        return EnumUtil.getBy(AliMessageTemplateConfirmStatusDict::name, name);
     }
 }

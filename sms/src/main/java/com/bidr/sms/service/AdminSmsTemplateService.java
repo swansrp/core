@@ -47,7 +47,7 @@ public class AdminSmsTemplateService {
         return smsManageService.deleteSmsTemplate(id);
     }
 
-    public void syncTemplate() {
-        smsManageService.syncSmsTemplate();
+    public void syncTemplateConfirmStatus() {
+        smsManageService.syncTemplateConfirmStatus();
     }
 }

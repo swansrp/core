@@ -211,7 +211,7 @@ public class AliSmsManageService {
 
     private QuerySmsTemplateResponseBody buildQuerySmsTemplateResponseBody() {
         QuerySmsTemplateResponseBody body = new QuerySmsTemplateResponseBody();
-        body.setTemplateStatus(AliMessageTemplateConfirmStatusDict.PASS.getValue());
+        body.setTemplateStatus(AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue());
         return body;
     }
 
@@ -252,5 +252,27 @@ public class AliSmsManageService {
             com.aliyun.teautil.Common.assertAsString(error.message);
         }
         return Validator.assertException(SmsErrorCode.QUERY_SIGN_FAILED, "");
+    }
+
+    public QuerySmsTemplateListResponseBody querySmsTemplateList(Integer currentPage, Integer pageSize) {
+        QuerySmsTemplateListRequest querySmsTemplateListRequest = new QuerySmsTemplateListRequest();
+        querySmsTemplateListRequest.setPageIndex(currentPage);
+        querySmsTemplateListRequest.setPageSize(pageSize);
+        try {
+            Client client = createClient();
+            // 复制代码运行请自行打印 API 的返回值
+            QuerySmsTemplateListResponse response = client.querySmsTemplateList(querySmsTemplateListRequest);
+            Validator.assertEquals(response.getBody().getCode(), ALI_SUCCESS, ErrCodeSys.SYS_ERR_MSG,
+                    response.getBody().getMessage());
+            return response.getBody();
+        } catch (TeaException error) {
+            // 如有需要，请打印 error
+            com.aliyun.teautil.Common.assertAsString(error.message);
+        } catch (Exception _error) {
+            TeaException error = new TeaException(_error.getMessage(), _error);
+            // 如有需要，请打印 error
+            com.aliyun.teautil.Common.assertAsString(error.message);
+        }
+        return Validator.assertException(SmsErrorCode.QUERY_SMS_TEMPLATE_FAILED, "");
     }
 }
