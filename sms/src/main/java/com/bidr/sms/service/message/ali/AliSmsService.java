@@ -4,6 +4,7 @@ import com.aliyun.dysmsapi20170525.Client;
 import com.aliyun.dysmsapi20170525.models.SendSmsRequest;
 import com.aliyun.dysmsapi20170525.models.SendSmsResponse;
 import com.aliyun.teaopenapi.models.Config;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.bidr.sms.constant.message.SendMessageStatusEnum;
 import com.bidr.sms.constant.param.SmsParam;
@@ -35,6 +36,9 @@ public class AliSmsService extends BaseSmsService {
     @Value("${ali-sms.access-key-secret}")
     private String accessKeySecret;
 
+    @Value("${ali-sms.proxy:}")
+    private String proxy;
+
     @Override
     protected void sendMessage(SaSmsSend smsSend, SendSmsRes res) {
         SendSmsRequest request = new SendSmsRequest().setPhoneNumbers(smsSend.getMobile())
@@ -57,6 +61,9 @@ public class AliSmsService extends BaseSmsService {
         Config config = new com.aliyun.teaopenapi.models.Config().setAccessKeyId(accessKeyId)
                 .setAccessKeySecret(accessKeySecret);
         config.endpoint = endpoint;
+        if (FuncUtil.isNotEmpty(proxy)) {
+            config.setHttpProxy(proxy);
+        }
         return new Client(config);
     }
 

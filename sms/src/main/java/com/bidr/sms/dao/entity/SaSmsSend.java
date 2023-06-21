@@ -1,6 +1,7 @@
 package com.bidr.sms.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.bidr.kernel.mybatis.anno.AutoInsert;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -27,6 +28,8 @@ public class SaSmsSend {
      * 发送流水号
      */
     @TableId(value = "send_id", type = IdType.INPUT)
+    @AutoInsert(seq = "SA_SMS_SEND_SEND_ID_SEQ")
+    @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "发送流水号")
     private String sendId;
 

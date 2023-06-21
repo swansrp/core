@@ -40,6 +40,9 @@ public class AliSmsManageService {
     @Value("${ali-sms.access-key-secret}")
     private String accessKeySecret;
 
+    @Value("${ali-sms.proxy:}")
+    private String proxy;
+
     public AddSmsTemplateResponseBody applySmsTemplate(SaSmsTemplate saSmsTemplate) {
         try {
             Client client = createClient();
@@ -71,6 +74,9 @@ public class AliSmsManageService {
     private Client createClient() throws Exception {
         Config config = new Config().setAccessKeyId(accessKeyId).setAccessKeySecret(accessKeySecret);
         config.endpoint = endpoint;
+        if (FuncUtil.isNotEmpty(proxy)) {
+            config.setHttpProxy(proxy);
+        }
         return new Client(config);
     }
 
