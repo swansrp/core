@@ -36,7 +36,7 @@ public class OpenApiLoginServiceImpl implements OpenApiLoginService {
     public OpenApiTokenRes getToken(OpenApiTokenRcv sign) {
         AcPartner acPartner = acPartnerService.getByAppKey(sign.getAppKey());
         Validator.assertNotNull(acPartner, AccountErrCode.AC_PARTNER_NOT_EXISTED);
-        Validator.assertNotEquals(acPartner.getStatus(), ActiveStatusDict.ACTIVATE.getValue(), AccountErrCode.AC_PARTNER_NOT_AVAILABLE);
+        Validator.assertEquals(acPartner.getStatus(), ActiveStatusDict.ACTIVATE.getValue(), AccountErrCode.AC_PARTNER_NOT_AVAILABLE);
         OpenApiUtil.validateSign(sign.getTimeStamp(), sign.getNonce(), sign.getSignature(), acPartner.getAppSecret());
         TokenInfo tokenInfo = tokenService.buildOpenPlatformToken(acPartner.getAppKey());
         tokenService.putItem(tokenInfo, TokenItem.PLATFORM.name(), acPartner.getPlatform());
