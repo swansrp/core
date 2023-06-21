@@ -56,7 +56,7 @@ public class AdminSmsTemplateController extends BaseAdminController<SaSmsTemplat
 
     @Override
     protected void preUpdate(SaSmsTemplate saSmsTemplate) {
-        adminSmsTemplateService.updateTemplate(saSmsTemplate.getTemplateCode(), saSmsTemplate.getBody());
+        adminSmsTemplateService.updateTemplate(saSmsTemplate);
         Resp.notice("修改短信模板成功, 等待审批");
     }
 

@@ -1,9 +1,7 @@
 package com.bidr.sms.service;
 
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.validate.Validator;
-import com.bidr.sms.constant.dict.AliMessageTemplateConfirmStatusDict;
-import com.bidr.sms.constant.err.SmsErrorCode;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.SmsManageService;
@@ -38,9 +36,8 @@ public class AdminSmsTemplateService {
         return smsManageService.applySmsTemplate(req);
     }
 
-    public SmsTemplateCodeRes updateTemplate(String templateCode, String body) {
-        SaSmsTemplate saSmsTemplate = smsManageService.getSmsTemplate(templateCode);
-        return smsManageService.updateSmsTemplate(saSmsTemplate);
+    public SmsTemplateCodeRes updateTemplate(SaSmsTemplate req) {
+        return smsManageService.updateSmsTemplate(req);
     }
 
     public SmsTemplateCodeRes deleteTemplate(String id) {

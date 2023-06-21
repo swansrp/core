@@ -173,12 +173,22 @@ public class SmsManageService {
         return saSmsTemplateService.getTemplateByPlatform(platform);
     }
 
-    public SmsTemplateCodeRes updateSmsTemplate(SaSmsTemplate saSmsTemplate) {
-        ModifySmsTemplateResponseBody responseBody = aliSmsManageService.modifySmsSignRequest(saSmsTemplate);
-        saSmsTemplate.setTemplateCode(responseBody.getTemplateCode());
+    public SmsTemplateCodeRes updateSmsTemplate(SaSmsTemplate req) {
+        SaSmsTemplate saSmsTemplate = getSmsTemplate(req.getTemplateCode());
+        if (FuncUtil.isNotEmpty(req.getPlatform())) {
+            saSmsTemplate.setPlatform(req.getPlatform());
+        }
+        if (FuncUtil.isNotEmpty(req.getSign())) {
+            saSmsTemplate.setSign(req.getSign());
+        }
+        if (FuncUtil.notEquals(req.getBody(), saSmsTemplate.getBody())) {
+            saSmsTemplate.setBody(req.getBody());
+            ModifySmsTemplateResponseBody responseBody = aliSmsManageService.modifySmsSignRequest(saSmsTemplate);
+            saSmsTemplate.setTemplateCode(responseBody.getTemplateCode());
+        }
         saSmsTemplateService.updateById(saSmsTemplate);
         SmsTemplateCodeRes res = new SmsTemplateCodeRes();
-        res.setTemplateCode(responseBody.getTemplateCode());
+        res.setTemplateCode(saSmsTemplate.getTemplateCode());
         return res;
     }
 
