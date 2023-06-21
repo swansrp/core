@@ -49,6 +49,7 @@ public class SaSequence {
      */
     @TableField(value = "`value`")
     @ApiModelProperty(value="目前序列值")
+    @NotNull(message = "目前序列值不能为null")
     private Integer value;
 
     /**
