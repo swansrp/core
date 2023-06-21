@@ -66,7 +66,7 @@ public class SmsManageService {
     private void buildParameter(SaSmsTemplate saSmsTemplate) {
         String body = saSmsTemplate.getBody();
         Matcher matcher = Pattern.compile(PARAMETER_REGEX).matcher(body);
-        Map<String, Object> prop = new HashMap<>();
+        Map<String, Object> prop = new LinkedHashMap<>();
         while (matcher.find()) {
             String group = matcher.group(0);
             String param = group.substring(1, group.length() - 1);
