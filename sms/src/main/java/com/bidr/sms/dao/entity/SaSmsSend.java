@@ -28,8 +28,6 @@ public class SaSmsSend {
      * 发送流水号
      */
     @TableId(value = "send_id", type = IdType.INPUT)
-    @AutoInsert(seq = "SA_SMS_SEND_SEND_ID_SEQ")
-    @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty(value = "发送流水号")
     private String sendId;
 
