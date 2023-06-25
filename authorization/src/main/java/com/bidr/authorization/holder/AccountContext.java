@@ -2,6 +2,7 @@ package com.bidr.authorization.holder;
 
 import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.StringUtil;
 
 /**
@@ -31,6 +32,11 @@ public class AccountContext {
 
     public static Object getExtraData(String key) {
         return ACCOUNT_INFO_HOLDER.get().getExtraData().get(key);
+    }
+
+    public static <T> T getExtraData(String key, Class<T> clazz) {
+        Object obj = ACCOUNT_INFO_HOLDER.get().getExtraData().get(key);
+        return JsonUtil.readJson(obj, clazz);
     }
 
     public static void remove() {
