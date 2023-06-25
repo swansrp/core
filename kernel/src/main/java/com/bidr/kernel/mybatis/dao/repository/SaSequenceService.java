@@ -26,9 +26,20 @@ public class SaSequenceService extends BaseSqlRepo<SaSequenceDao, SaSequence> {
         return super.getBaseMapper().getSeq(seqName);
     }
 
+    public String getSeq(String seqName, String platform) {
+        return super.getBaseMapper().getSeq(buildSeqName(seqName, platform));
+    }
+
+    public String buildSeqName(String seqName, String platform) {
+        return platform + "." + seqName;
+    }
 
     public void resetSeq(String seqName) {
         super.getBaseMapper().resetSeq(seqName);
+    }
+
+    public void resetSeq(String seqName, String platform) {
+        buildSeqName(seqName, platform);
     }
 
     public Page<SaSequence> query(String platform, Long currentPage, Long pageSize) {
