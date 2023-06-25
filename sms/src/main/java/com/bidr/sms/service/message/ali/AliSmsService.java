@@ -6,7 +6,7 @@ import com.aliyun.dysmsapi20170525.models.SendSmsResponse;
 import com.aliyun.teaopenapi.models.Config;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
-import com.bidr.sms.constant.message.SendMessageStatusEnum;
+import com.bidr.sms.constant.message.SendMessageStatusDict;
 import com.bidr.sms.constant.param.SmsParam;
 import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.sms.service.message.BaseSmsService;
@@ -80,29 +80,29 @@ public class AliSmsService extends BaseSmsService {
     }
 
     private void convertMock(SaSmsSend smsSend, SendSmsRes res) {
-        Integer code = SendMessageStatusEnum.MOCK.getStatus();
-        String result = SendMessageStatusEnum.MOCK.getResult();
+        Integer code = SendMessageStatusDict.MOCK.getValue();
+        String result = SendMessageStatusDict.MOCK.getLabel();
         smsSend.setSendStatus(code);
         smsSend.setSendResult(result);
         res.setMessage(result);
-        res.setCode(code);
+        res.setStatus(code);
     }
 
     private void convertFailed(SaSmsSend smsSend, SendSmsRes res) {
-        Integer code = SendMessageStatusEnum.FAIL.getStatus();
-        String result = SendMessageStatusEnum.FAIL.getResult();
+        Integer code = SendMessageStatusDict.FAIL.getValue();
+        String result = SendMessageStatusDict.FAIL.getLabel();
         smsSend.setSendStatus(code);
         smsSend.setSendResult(result);
         res.setMessage(result);
-        res.setCode(code);
+        res.setStatus(code);
     }
 
     private void convertSuccess(SaSmsSend smsSend, SendSmsRes res) {
-        Integer code = SendMessageStatusEnum.SUCCESS.getStatus();
-        String result = SendMessageStatusEnum.SUCCESS.getResult();
+        Integer code = SendMessageStatusDict.SUCCESS.getValue();
+        String result = SendMessageStatusDict.SUCCESS.getLabel();
         smsSend.setSendStatus(code);
         smsSend.setSendResult(result);
         res.setMessage(result);
-        res.setCode(code);
+        res.setStatus(code);
     }
 }

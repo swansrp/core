@@ -10,7 +10,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.sms.constant.message.SendMessageStatusEnum;
+import com.bidr.sms.constant.message.SendMessageStatusDict;
 import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsSendService;
@@ -68,7 +68,7 @@ public abstract class BaseSmsService implements SmsService {
             res.setBizId(sendSmsReq.getBizId());
             webApplicationContext.getBean(this.getClass()).send(sendSmsReq, res);
         } catch (ServiceException e) {
-            res.setCode(e.getErrCode().getErrCode());
+            res.setStatus(e.getErrCode().getErrCode());
             res.setMessage(e.getErrCode().getErrText());
         }
         return res;
@@ -84,6 +84,7 @@ public abstract class BaseSmsService implements SmsService {
     public void send(SendSmsReq sendSmsReq, SendSmsRes res) {
         SaSmsSend saSmsSend = webApplicationContext.getBean(this.getClass()).initSendSms(sendSmsReq);
         res.setRequestId(saSmsSend.getSendId());
+        res.setBizId(sendSmsReq.getBizId());
         if (StringUtil.convertSwitch(sendSmsReq.getMock())) {
             saveMockSendSms(saSmsSend);
         } else {
@@ -95,8 +96,8 @@ public abstract class BaseSmsService implements SmsService {
     @Transactional(rollbackFor = Exception.class)
     public SaSmsSend initSendSms(SendSmsReq sendSmsReq) {
         SaSmsSend saSmsSend = buildSmsSend(sendSmsReq);
-        saSmsSend.setSendStatus(SendMessageStatusEnum.REQUEST.getStatus());
-        saSmsSend.setSendResult(SendMessageStatusEnum.REQUEST.getResult());
+        saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
+        saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
         String platform = tokenService.getItem(TokenItem.PLATFORM.name(), String.class);
         saSmsSend.setPlatform(platform);
         if (sendSmsSequenceInf != null) {
@@ -107,8 +108,8 @@ public abstract class BaseSmsService implements SmsService {
     }
 
     protected SendSmsRes saveMockSendSms(SaSmsSend smsSend) {
-        smsSend.setSendStatus(SendMessageStatusEnum.MOCK.getStatus());
-        smsSend.setSendResult(SendMessageStatusEnum.MOCK.getResult());
+        smsSend.setSendStatus(SendMessageStatusDict.MOCK.getValue());
+        smsSend.setSendResult(SendMessageStatusDict.MOCK.getLabel());
         saSmsSendService.updateById(smsSend);
         return buildSendSmsRes(smsSend);
     }
@@ -158,7 +159,7 @@ public abstract class BaseSmsService implements SmsService {
     private SendSmsRes buildSendSmsRes(SaSmsSend smsSend) {
         SendSmsRes res = new SendSmsRes();
         res.setRequestId(smsSend.getSendId());
-        res.setCode(smsSend.getSendStatus());
+        res.setStatus(smsSend.getSendStatus());
         res.setMessage(smsSend.getSendResult());
         return res;
     }

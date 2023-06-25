@@ -1,10 +1,12 @@
 package com.bidr.sms.constant.message;
 
+import com.bidr.kernel.constant.dict.Dict;
+import com.bidr.kernel.constant.dict.MetaDict;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * Title: SendMessageStatusEnum
+ * Title: SendMessageStatusDict
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
@@ -12,7 +14,8 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public enum SendMessageStatusEnum {
+@MetaDict(value = "SEND_MESSAGE_STATUS_DICT", remark = "短信发送状态字典")
+public enum SendMessageStatusDict implements Dict {
     /**
      *
      */
@@ -22,7 +25,7 @@ public enum SendMessageStatusEnum {
     MOCK(3, "本地发送成功"),
     FAIL(99, "发送失败");
 
-    private final Integer status;
-    private final String result;
+    private final Integer value;
+    private final String label;
 
 }
