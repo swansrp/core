@@ -86,7 +86,7 @@ public abstract class BaseSmsService implements SmsService {
         res.setRequestId(saSmsSend.getSendId());
         res.setBizId(sendSmsReq.getBizId());
         if (StringUtil.convertSwitch(sendSmsReq.getMock())) {
-            saveMockSendSms(saSmsSend);
+            saveMockSendSms(saSmsSend, res);
         } else {
             sendMessage(saSmsSend, res);
             saveSendSms(saSmsSend);
@@ -107,11 +107,11 @@ public abstract class BaseSmsService implements SmsService {
         return saSmsSend;
     }
 
-    protected SendSmsRes saveMockSendSms(SaSmsSend smsSend) {
+    protected void saveMockSendSms(SaSmsSend smsSend, SendSmsRes res) {
         smsSend.setSendStatus(SendMessageStatusDict.MOCK.getValue());
         smsSend.setSendResult(SendMessageStatusDict.MOCK.getLabel());
         saSmsSendService.updateById(smsSend);
-        return buildSendSmsRes(smsSend);
+        buildSendSmsRes(smsSend, res);
     }
 
     /**
@@ -156,8 +156,7 @@ public abstract class BaseSmsService implements SmsService {
         return smsSend;
     }
 
-    private SendSmsRes buildSendSmsRes(SaSmsSend smsSend) {
-        SendSmsRes res = new SendSmsRes();
+    private SendSmsRes buildSendSmsRes(SaSmsSend smsSend, SendSmsRes res) {
         res.setRequestId(smsSend.getSendId());
         res.setStatus(smsSend.getSendStatus());
         res.setMessage(smsSend.getSendResult());
