@@ -12,6 +12,7 @@ import com.bidr.kernel.validate.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
@@ -56,7 +57,11 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
             log.info("Call BeanUtils too early");
             return null;
         }
-        return ctx.getBean(clazz);
+        try {
+            return ctx.getBean(clazz);
+        } catch (NoSuchBeanDefinitionException e) {
+            return null;
+        }
     }
 
     public static <T> T getBean(String beanName, Class<T> clazz) {
@@ -64,7 +69,11 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
             log.info("Call BeanUtils too early");
             return null;
         }
-        return (T) ctx.getBean(beanName);
+        try {
+            return (T) ctx.getBean(beanName);
+        } catch (NoSuchBeanDefinitionException e) {
+            return null;
+        }
     }
 
     public static String registerBean(ApplicationContext applicationContext, String name, Class<?> beanClass) {

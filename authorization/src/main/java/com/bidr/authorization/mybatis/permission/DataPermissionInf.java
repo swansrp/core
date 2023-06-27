@@ -70,6 +70,9 @@ public interface DataPermissionInf extends CommandLineRunner {
      * @return 判定结果
      */
     default boolean needFilter(Map<String, String> tableAliasMap) {
+        if (FuncUtil.isEmpty(getFilterMap())) {
+            return false;
+        }
         boolean res = false;
         for (String table : tableAliasMap.keySet()) {
             res |= getFilterMap().containsKey(table);

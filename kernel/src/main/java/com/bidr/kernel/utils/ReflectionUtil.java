@@ -20,6 +20,7 @@ import java.lang.reflect.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -667,5 +668,14 @@ public class ReflectionUtil {
 
     public static Method getMethod(Object obj, String methodName, Class<?>... paramTypeArr) {
         return ReflectionUtils.findMethod(obj.getClass(), methodName, paramTypeArr);
+    }
+
+    public static <T> List<T> filter(List<T> list, GetFunc<? super T, ?> getFunc) {
+        return list.stream().filter(distinctByKey(getFunc)).collect(Collectors.toList());
+    }
+
+    private static <T> Predicate<T> distinctByKey(GetFunc<? super T, ?> keyExtractor) {
+        ConcurrentHashMap<Object, Boolean> map = new ConcurrentHashMap<>();
+        return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
     }
 }

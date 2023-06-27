@@ -6,6 +6,7 @@ import com.bidr.authorization.mybatis.permission.DataPermissionInf;
 import com.bidr.authorization.mybatis.permission.NoDataPermission;
 import com.bidr.kernel.mybatis.intercept.BaseIntercept;
 import com.bidr.kernel.mybatis.parse.SqlParseUtil;
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -38,19 +39,17 @@ import java.util.Map;
 @Component
 public class DataPermissionIntercept extends BaseIntercept {
 
-    @Lazy
-    @Autowired(required = false)
-    private List<DataPermissionInf> dataPermissionList;
-
     @Override
     public void proceed(MappedStatement mappedStatement, Object parameter, RowBounds rowBounds,
                         ResultHandler resultHandler, CacheKey cacheKey, BoundSql boundSql) {
+        Class<? extends DataPermissionInf>[] dataPermissionList = DataPermissionHolder.get();
         if (FuncUtil.isNotEmpty(dataPermissionList)) {
             String sql = boundSql.getSql();
             Map<String, String> tableAliasMap = SqlParseUtil.buildTableAliasMap(sql);
             Expression dataPermissionExpress = null;
-            for (DataPermissionInf dataPermissionInf : dataPermissionList) {
-                if (needPermission(dataPermissionInf)) {
+            for (Class<? extends DataPermissionInf> dataPermissionInfClass : dataPermissionList) {
+                DataPermissionInf dataPermissionInf = BeanUtil.getBean(dataPermissionInfClass);
+                if (FuncUtil.isNotEmpty(dataPermissionInf)) {
                     if (dataPermissionInf.needFilter(tableAliasMap)) {
                         Expression expression = dataPermissionInf.expression(tableAliasMap);
                         if (FuncUtil.isNotEmpty(expression)) {
