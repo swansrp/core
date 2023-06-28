@@ -9,6 +9,7 @@ package com.bidr.platform.service.rest;
 
 import cn.hutool.core.util.RandomUtil;
 import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.platform.exception.RestTemplateException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -137,13 +138,13 @@ public class RestServiceImpl implements RestService {
             long endTime = System.currentTimeMillis();
             String duration = String.valueOf(endTime - startTime);
             try {
-                log.debug("[{}]<== {}", transactionId, JsonUtil.toJson(response.getBody()));
+                log.debug("[{}]({})<== {}", transactionId, duration, JsonUtil.toJson(response.getBody()));
                 return JsonUtil.readJson(response.getBody(), collectionClass, elementClasses);
             } catch (Exception e) {
                 return response.getBody();
             }
-        } catch (Exception e) {
-            log.error("[{}]通信异常", transactionId);
+        } catch (RestTemplateException e) {
+            log.error("[{}]通信异常: {}", transactionId, e.getMsg());
             throw e;
         }
     }

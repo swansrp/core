@@ -1,6 +1,7 @@
 package com.bidr.platform.config.rest;
 
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.platform.exception.RestTemplateException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -58,7 +59,7 @@ public class RestTemplateConfig {
         public void handleError(ClientHttpResponse clientHttpResponse) throws IOException {
             String repErrorString = StreamUtils.copyToString(clientHttpResponse.getBody(), StandardCharsets.UTF_8);
             log.info("code = {} resp = {}", clientHttpResponse.getStatusCode(), repErrorString);
-            throw new ServiceException(repErrorString);
+            throw new RestTemplateException(clientHttpResponse.getStatusCode(), repErrorString);
         }
     };
 
