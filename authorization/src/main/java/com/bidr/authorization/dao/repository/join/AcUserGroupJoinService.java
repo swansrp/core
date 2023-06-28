@@ -5,6 +5,7 @@ import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
+import com.bidr.authorization.dao.repository.AcGroupService;
 import com.bidr.authorization.dao.repository.AcUserGroupService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.vo.account.AccountRes;
@@ -37,6 +38,8 @@ public class AcUserGroupJoinService {
     private final RecursionService recursionService;
     private final AcUserService acUserService;
     private final AcUserGroupService acUserGroupService;
+
+    private final AcGroupService acGroupService;
 
     public List<AccountRes> getUserByGroupType(String groupType) {
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(AcUser.class).distinct()
@@ -110,5 +113,13 @@ public class AcUserGroupJoinService {
                 .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId).distinct()
                 .in(AcUserGroup::getGroupId, subGroup);
         return acUserService.selectJoinList(String.class, wrapper);
+    }
+
+    public List<AcGroup> getAcGroupByUserIdAndGroupType(Long userId, String groupType) {
+        Validator.assertNotNull(userId, ErrCodeSys.PA_PARAM_NULL, "查询用户组数据权限, 用户编码");
+        MPJLambdaWrapper<AcGroup> wrapper = new MPJLambdaWrapper<>(AcGroup.class).distinct()
+                .leftJoin(AcUserGroup.class, AcUserGroup::getGroupId, AcGroup::getId).eq(AcGroup::getType, groupType)
+                .eq(AcUserGroup::getUserId, userId).orderByAsc(AcGroup::getDisplayOrder);
+        return acGroupService.selectJoinList(AcGroup.class, wrapper);
     }
 }

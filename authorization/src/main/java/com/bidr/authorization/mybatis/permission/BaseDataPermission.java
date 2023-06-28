@@ -4,8 +4,7 @@ import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
@@ -13,21 +12,20 @@ import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.schema.Column;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Title: BaseCreateByDataPermission
+ * Title: BaseDataPermission
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
  * @since 2023/06/26 09:39
  */
 @Slf4j
-public abstract class BaseCreateByDataPermission implements DataPermissionInf {
+public abstract class BaseDataPermission implements DataPermissionInf {
     protected final Map<String, String> MAP = new ConcurrentHashMap<>();
 
     @Override
@@ -37,7 +35,7 @@ public abstract class BaseCreateByDataPermission implements DataPermissionInf {
             log.debug("没有AccountInfo, 不进行数据权限校验");
             return null;
         }
-        List<String> permissions = buildAuthorPermission(accountInfo.getCustomerNumber());
+        List<String> permissions = buildPermissionList();
         Expression res = null;
         for (Map.Entry<String, String> filerEntry : getFilterMap().entrySet()) {
             String table = filerEntry.getKey();
@@ -45,8 +43,7 @@ public abstract class BaseCreateByDataPermission implements DataPermissionInf {
             if (tableAliasMap.containsKey(table)) {
                 column = getAliasColumnName(tableAliasMap, table, column);
                 if (FuncUtil.isNotEmpty(permissions)) {
-                    ItemsList itemsList = new ExpressionList(
-                            permissions.stream().map(LongValue::new).collect(Collectors.toList()));
+                    ItemsList itemsList = getItemList(permissions);
                     if (FuncUtil.isEmpty(res)) {
                         res = new InExpression(new Column(column), itemsList);
                     } else {
@@ -69,9 +66,32 @@ public abstract class BaseCreateByDataPermission implements DataPermissionInf {
         return MAP;
     }
 
-    protected List<String> buildAuthorPermission(String customerNumber) {
-        List<String> res = new ArrayList<>();
-        res.add(customerNumber);
-        return res;
+    /**
+     * 构造权限过滤条件数据
+     *
+     * @return 权限过滤条件数据
+     */
+    protected abstract List<String> buildPermissionList();
+
+    protected ExpressionList getItemList(List<String> permissions) {
+        switch (getPermissionType()) {
+            case LONG:
+                return new ExpressionList(permissions.stream().map(LongValue::new).collect(Collectors.toList()));
+            case DOUBLE:
+                return new ExpressionList(permissions.stream().map(DoubleValue::new).collect(Collectors.toList()));
+            case DATE:
+                return new ExpressionList(permissions.stream().map(DateValue::new).collect(Collectors.toList()));
+            default:
+                return new ExpressionList(permissions.stream().map(StringValue::new).collect(Collectors.toList()));
+        }
     }
+
+    /**
+     * 构造权限过滤条件数据
+     *
+     * @return 权限过滤条件数据
+     */
+    protected abstract DataPermissionFilerType getPermissionType();
+
+
 }

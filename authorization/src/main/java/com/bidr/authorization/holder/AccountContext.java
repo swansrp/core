@@ -34,9 +34,9 @@ public class AccountContext {
         return ACCOUNT_INFO_HOLDER.get().getExtraData().get(key);
     }
 
-    public static <T> T getExtraData(String key, Class<T> clazz) {
+    public static <T> T getExtraData(String key, Class<T> collectionClass, Class<?>... elementClasses) {
         Object obj = ACCOUNT_INFO_HOLDER.get().getExtraData().get(key);
-        return JsonUtil.readJson(obj, clazz);
+        return JsonUtil.readJson(obj, collectionClass, elementClasses);
     }
 
     public static void remove() {

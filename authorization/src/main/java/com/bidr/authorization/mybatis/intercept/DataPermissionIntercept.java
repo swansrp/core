@@ -12,20 +12,16 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import javax.naming.NoPermissionException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -56,7 +52,7 @@ public class DataPermissionIntercept extends BaseIntercept {
                             if (FuncUtil.isEmpty(dataPermissionExpress)) {
                                 dataPermissionExpress = new Parenthesis(expression);
                             } else {
-                                dataPermissionExpress = new OrExpression(dataPermissionExpress, expression);
+                                dataPermissionExpress = new AndExpression(dataPermissionExpress, expression);
                             }
                         }
                     }
@@ -64,6 +60,16 @@ public class DataPermissionIntercept extends BaseIntercept {
             }
             sql = SqlParseUtil.mergeWhere(sql, dataPermissionExpress);
             replaceSql(boundSql, sql);
+        }
+    }
+
+    private static void replaceSql(BoundSql boundSql, String newSql) {
+        try {
+            Field field = boundSql.getClass().getDeclaredField("sql");
+            field.setAccessible(true);
+            field.set(boundSql, newSql);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -81,16 +87,6 @@ public class DataPermissionIntercept extends BaseIntercept {
             return false;
         }
         return true;
-    }
-
-    private static void replaceSql(BoundSql boundSql, String newSql) {
-        try {
-            Field field = boundSql.getClass().getDeclaredField("sql");
-            field.setAccessible(true);
-            field.set(boundSql, newSql);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private Class<? extends DataPermissionInf>[] getPermission(String fullMethodName) {

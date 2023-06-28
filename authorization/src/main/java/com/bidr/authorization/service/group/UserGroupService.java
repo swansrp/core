@@ -5,6 +5,8 @@ import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.authorization.dao.repository.AcGroupService;
 import com.bidr.authorization.dao.repository.AcGroupTypeService;
 import com.bidr.authorization.dao.repository.AcUserGroupService;
+import com.bidr.authorization.dao.repository.join.AcUserGroupJoinService;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.vo.group.GroupRes;
 import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
@@ -34,11 +36,19 @@ public class UserGroupService {
     private final AcGroupTypeService acGroupTypeService;
 
     private final AcUserGroupService acUserGroupService;
+    private final AcUserGroupJoinService acUserGroupJoinService;
 
 
     public List<UserGroupTreeRes> getTree(String groupType) {
         List<AcGroup> groups = acGroupService.getGroupByType(groupType);
+        return ReflectionUtil.buildTree(UserGroupTreeRes::setChildren, groups, AcGroup::getId, AcGroup::getPid);
+    }
 
+    public List<UserGroupTreeRes> getGroupTreeByUser(String groupType) {
+        Long userId = AccountContext.getUserId();
+        AcGroup groupRoot = acGroupService.getGroupRoot(groupType);
+        List<AcGroup> groups = acUserGroupJoinService.getAcGroupByUserIdAndGroupType(userId, groupType);
+        groups.add(groupRoot);
         return ReflectionUtil.buildTree(UserGroupTreeRes::setChildren, groups, AcGroup::getId, AcGroup::getPid);
     }
 
