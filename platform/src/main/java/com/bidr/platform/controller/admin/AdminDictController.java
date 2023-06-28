@@ -1,6 +1,7 @@
 package com.bidr.platform.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.validate.Validator;
@@ -10,6 +11,7 @@ import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
 import com.bidr.platform.vo.dict.UpdateDictDefaultReq;
+import com.bidr.platform.vo.params.QuerySysConfigReq;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +36,6 @@ import java.util.List;
 public class AdminDictController extends BaseAdminOrderController<SysDict, SysDict> {
 
     private final DictService dictService;
-    private final SysDictService sysDictService;
 
     @ApiOperation("根据字典中文名模糊查询")
     @RequestMapping(path = {"/list/dictTitle"}, method = {RequestMethod.GET})
@@ -72,5 +73,12 @@ public class AdminDictController extends BaseAdminOrderController<SysDict, SysDi
     @Override
     protected SFunction<SysDict, Integer> order() {
         return SysDict::getDictSort;
+    }
+
+    @ApiOperation("刷新缓存")
+    @RequestMapping(path = {"/refresh"}, method = {RequestMethod.POST})
+    public void refresh(@RequestBody QuerySysConfigReq req) {
+        dictService.refresh();
+        Resp.notice("系统字典修改已生效");
     }
 }

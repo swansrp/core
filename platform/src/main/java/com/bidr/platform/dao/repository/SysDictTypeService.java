@@ -1,6 +1,7 @@
 package com.bidr.platform.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.dao.entity.SysDictType;
@@ -19,6 +20,11 @@ import java.util.List;
  */
 @Service
 public class SysDictTypeService extends BaseSqlRepo<SysDictTypeDao, SysDictType> {
+
+    public List<SysDictType> getNotReadOnlySysDictType() {
+        LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper().ne(SysDictType::getReadOnly, CommonConst.YES);
+        return super.select(wrapper);
+    }
 
     public List<SysDictType> getSysDictByTitle(String title) {
         LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()

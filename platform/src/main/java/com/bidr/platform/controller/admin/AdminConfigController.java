@@ -3,6 +3,7 @@ package com.bidr.platform.controller.admin;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.platform.dao.entity.SysConfig;
+import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.service.params.ParamService;
 import com.bidr.platform.vo.params.QuerySysConfigReq;
 import com.bidr.platform.vo.params.SysConfigRes;
@@ -31,11 +32,14 @@ public class AdminConfigController extends BaseAdminController<SysConfig, SysCon
 
     @Resource
     private ParamService paramService;
+    @Resource
+    private DictService dictService;
 
     @ApiOperation("刷新缓存")
     @RequestMapping(path = {"/refresh"}, method = {RequestMethod.POST})
-    public void refresh(@RequestBody QuerySysConfigReq req) {
+    public void refresh() {
         paramService.refresh();
+        dictService.refresh();
         Resp.notice("系统参数修改已生效");
     }
 

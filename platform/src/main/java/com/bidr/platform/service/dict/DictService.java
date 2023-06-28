@@ -117,4 +117,8 @@ public class DictService {
         }
         return resList;
     }
+
+    public void refresh() {
+        dictCacheService.refresh();
+    }
 }

@@ -95,10 +95,19 @@ public class DictCacheService {
         return vo;
     }
 
+    public void refresh() {
+        if (FuncUtil.isNotEmpty(MAP)) {
+            for (Map.Entry<String, DictCacheProvider> entry : MAP.entrySet()) {
+                entry.getValue().refresh();
+            }
+        } else {
+            run();
+        }
+    }
 
     @PostConstruct
     public void run() {
-        List<SysDictType> sysDictTypeList = sysDictTypeService.select();
+        List<SysDictType> sysDictTypeList = sysDictTypeService.getNotReadOnlySysDictType();
         if (FuncUtil.isNotEmpty(sysDictTypeList)) {
             for (SysDictType sysDictType : sysDictTypeList) {
                 DictCacheConfig config = ReflectionUtil.copy(sysDictType, DictCacheConfig.class);

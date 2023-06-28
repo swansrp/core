@@ -46,6 +46,7 @@ public class AuthTokenUtil {
     public static TokenInfo decode(String token) {
         String str = Base64Util.decode(token);
         List<String> list = StringUtil.split(str, SEPARATION);
+        Validator.assertFalse((FuncUtil.isEmpty(list) || list.size() != 3), ErrCodeSys.PA_PARAM_FORMAT, "安全令牌");
         return new TokenInfo(list.get(0), TokenType.of(list.get(1)), list.get(2), 0);
     }
 

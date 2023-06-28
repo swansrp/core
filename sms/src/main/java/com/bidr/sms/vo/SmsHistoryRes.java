@@ -1,7 +1,9 @@
 package com.bidr.sms.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
+import com.diboot.core.binding.annotation.BindDict;
 import com.diboot.core.binding.annotation.BindField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
@@ -30,4 +32,8 @@ public class SmsHistoryRes extends SaSmsSend {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date sendAt;
+
+    @BindDict(field = "platform", type = "MDM_PLATFORM_DICT")
+    @ApiModelProperty(value = "对接平台")
+    private String platformDisplay;
 }
