@@ -1,4 +1,4 @@
-package com.bidr.kernel.cache.config;
+package com.bidr.platform.redis.config;
 
 import com.bidr.kernel.utils.BeanUtil;
 import lombok.extern.slf4j.Slf4j;

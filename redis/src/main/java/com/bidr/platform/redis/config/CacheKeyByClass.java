@@ -1,4 +1,4 @@
-package com.bidr.kernel.cache.config;
+package com.bidr.platform.redis.config;
 
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.stereotype.Component;

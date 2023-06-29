@@ -1,7 +1,7 @@
 package com.bidr.sms.dao.mapper;
 
-import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
+import com.bidr.sms.dao.entity.SaSmsSend;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

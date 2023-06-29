@@ -1,5 +1,7 @@
 package com.bidr.platform.redis.cache;
 
+import com.bidr.kernel.utils.BeanUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.annotation.EnableCaching;
@@ -76,15 +78,12 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
     @Bean
     @Override
     public KeyGenerator keyGenerator() {
+
         return new KeyGenerator() {
 
             @Override
             public String generate(Object target, Method method, Object... params) {
-                return method.getDeclaringClass().getName() +
-                        "." +
-                        method.getName() +
-                        "(" +
-                        getParams(method, params) +
+                return method.getDeclaringClass().getName() + "." + method.getName() + "(" + getParams(method, params) +
                         ")";
             }
 
@@ -130,11 +129,17 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory);
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer();
         RedisSerializationContext.SerializationPair<Object> pair =
-                RedisSerializationContext.SerializationPair.fromSerializer(serializer);
-        RedisCacheConfiguration defaultCacheConfig =
-                RedisCacheConfiguration.defaultCacheConfig().serializeValuesWith(pair).entryTtl(Duration.ofSeconds(600));
+                RedisSerializationContext.SerializationPair.fromSerializer(
+                serializer);
+        RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(pair).entryTtl(Duration.ofSeconds(600)).prefixCacheNameWith(getKey(""));
         // Init RedisCacheManager
         return new MyRedisCacheManager(redisCacheWriter, defaultCacheConfig);
+    }
+
+    public static String getKey(String key) {
+        String prefixKey = BeanUtil.getProperty("app.projectId");
+        return StringUtils.isNotBlank(prefixKey) ? prefixKey + ":" + key : key;
     }
 
 }

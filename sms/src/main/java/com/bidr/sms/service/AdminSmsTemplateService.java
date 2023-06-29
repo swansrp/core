@@ -1,7 +1,6 @@
 package com.bidr.sms.service;
 
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.SmsManageService;

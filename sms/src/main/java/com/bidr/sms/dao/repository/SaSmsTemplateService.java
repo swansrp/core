@@ -2,10 +2,10 @@ package com.bidr.sms.dao.repository;
 
 import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bidr.sms.dao.entity.SaSmsTemplate;
-import com.bidr.sms.dao.mapper.SaSmsTemplateDao;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.sms.dao.entity.SaSmsTemplate;
+import com.bidr.sms.dao.mapper.SaSmsTemplateDao;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

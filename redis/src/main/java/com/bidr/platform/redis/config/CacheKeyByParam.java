@@ -1,4 +1,4 @@
-package com.bidr.kernel.cache.config;
+package com.bidr.platform.redis.config;
 
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.core.DefaultParameterNameDiscoverer;
@@ -22,7 +22,7 @@ public class CacheKeyByParam implements KeyGenerator {
                 Object object = params[index];
                 key.append("&" + parameterNames[index] + "-");
                 if (object != null) {
-                    key.append(object.toString()).append("(").append(object.hashCode()).append(")");
+                    key.append(object).append("(").append(object.hashCode()).append(")");
                 } else {
                     key.append("NULL");
                 }

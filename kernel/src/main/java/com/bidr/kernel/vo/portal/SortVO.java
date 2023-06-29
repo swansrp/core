@@ -2,8 +2,6 @@ package com.bidr.kernel.vo.portal;
 
 import lombok.Data;
 
-import java.util.List;
-
 /**
  * Title: SortVO
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.

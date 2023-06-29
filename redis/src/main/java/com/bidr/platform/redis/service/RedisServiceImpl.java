@@ -5,10 +5,9 @@ import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.platform.redis.cache.RedisCacheConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,9 +22,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 public class RedisServiceImpl implements RedisService {
-
-    @Value("${app.projectId:''}")
-    private String prefixKey;
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
@@ -47,7 +43,7 @@ public class RedisServiceImpl implements RedisService {
     }
 
     public String getKey(String key) {
-        return StringUtils.isNotBlank(prefixKey) ? prefixKey + ":" + key : key;
+        return RedisCacheConfig.getKey(key);
     }
 
     @Override

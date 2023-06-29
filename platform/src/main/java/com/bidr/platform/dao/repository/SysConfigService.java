@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.StringUtil;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.mapper.SysConfigDao;
 import com.bidr.platform.vo.params.QuerySysConfigReq;

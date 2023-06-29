@@ -13,7 +13,6 @@ import com.bidr.authorization.service.login.OpenApiLoginService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
-import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

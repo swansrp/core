@@ -2,8 +2,6 @@ package com.bidr.authorization.annotation.data.scope;
 
 import com.bidr.authorization.dao.repository.join.AcUserGroupJoinService;
 import com.bidr.authorization.holder.AccountContext;
-import com.bidr.authorization.mybatis.anno.DataPermission;
-import com.bidr.authorization.mybatis.permission.DataPermissionHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;

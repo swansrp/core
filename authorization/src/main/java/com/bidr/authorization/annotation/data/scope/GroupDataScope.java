@@ -1,7 +1,5 @@
 package com.bidr.authorization.annotation.data.scope;
 
-import com.bidr.authorization.constants.group.Group;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

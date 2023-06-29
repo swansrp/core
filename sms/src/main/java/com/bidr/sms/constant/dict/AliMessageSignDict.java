@@ -1,10 +1,10 @@
 package com.bidr.sms.constant.dict;
 
-import com.bidr.sms.service.message.SmsManageService;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.dao.entity.SysDict;
+import com.bidr.sms.service.message.SmsManageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

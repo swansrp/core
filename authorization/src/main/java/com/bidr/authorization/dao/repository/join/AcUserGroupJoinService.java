@@ -16,6 +16,7 @@ import com.bidr.kernel.validate.Validator;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -48,6 +49,7 @@ public class AcUserGroupJoinService {
         return acUserService.selectJoinList(AccountRes.class, wrapper);
     }
 
+    @Cacheable(cacheNames = "DB-CACHE#30", keyGenerator = "cacheKeyByParam")
     public List<String> getCustomerNumberListFromDataScope(String customerNumber, String groupName) {
         List<String> res = GroupDataScopeHolder.get(groupName, customerNumber);
         if (res != null) {

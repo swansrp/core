@@ -18,7 +18,6 @@ import com.bidr.platform.dao.repository.SysDictTypeService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeansException;
-import org.springframework.stereotype.Service;
 
 import java.util.*;
 

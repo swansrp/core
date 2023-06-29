@@ -7,7 +7,6 @@ import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysDict;
-import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
 import com.bidr.platform.vo.dict.UpdateDictDefaultReq;

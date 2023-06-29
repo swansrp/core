@@ -5,7 +5,6 @@ import com.bidr.authorization.dao.entity.AcUser;
 import com.diboot.core.binding.annotation.BindDict;
 import com.diboot.core.binding.annotation.BindField;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -35,7 +34,7 @@ public class QueryPartnerRes extends AcPartner {
     @NotBlank(message = "应用的唯一标识key不能为空")
     private String appKey;
 
-    
+
     @ApiModelProperty(value = "应用的密钥")
     @Size(max = 50, message = "应用的密钥最大长度要小于 50")
     @NotBlank(message = "应用的密钥不能为空")

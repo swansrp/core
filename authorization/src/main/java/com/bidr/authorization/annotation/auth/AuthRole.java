@@ -1,7 +1,5 @@
 package com.bidr.authorization.annotation.auth;
 
-import org.springframework.stereotype.Component;
-
 import javax.servlet.http.HttpServletRequest;
 
 /**

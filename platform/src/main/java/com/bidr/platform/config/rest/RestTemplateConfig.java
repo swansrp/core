@@ -1,6 +1,5 @@
 package com.bidr.platform.config.rest;
 
-import com.bidr.kernel.exception.ServiceException;
 import com.bidr.platform.exception.RestTemplateException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

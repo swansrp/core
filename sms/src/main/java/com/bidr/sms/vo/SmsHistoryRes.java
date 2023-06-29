@@ -1,6 +1,5 @@
 package com.bidr.sms.vo;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.diboot.core.binding.annotation.BindDict;
