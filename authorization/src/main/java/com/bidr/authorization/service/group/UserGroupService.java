@@ -52,6 +52,20 @@ public class UserGroupService {
         return ReflectionUtil.buildTree(UserGroupTreeRes::setChildren, groups, AcGroup::getId, AcGroup::getPid);
     }
 
+    public List<UserGroupTreeRes> getGroupTreeByUserDataScope(String groupType) {
+        String customerNumber = AccountContext.getOperator();
+        AcGroup groupRoot = acGroupService.getGroupRoot(groupType);
+        List<AcGroup> groups = acUserGroupJoinService.getGroupListFromDataScope(customerNumber, groupType);
+        if (!groups.contains(groupRoot)) {
+            groups.add(groupRoot);
+            List<UserGroupTreeRes> userGroupTreeRes = ReflectionUtil.buildTree(UserGroupTreeRes::setChildren, groups,
+                    AcGroup::getId, AcGroup::getPid);
+            return userGroupTreeRes.get(0).getChildren();
+        } else {
+            return ReflectionUtil.buildTree(UserGroupTreeRes::setChildren, groups, AcGroup::getId, AcGroup::getPid);
+        }
+    }
+
     public List<GroupRes> getList(String groupType) {
         List<AcGroup> groups = acGroupService.getGroupByType(groupType);
         return Resp.convert(groups, GroupRes.class);

@@ -1,5 +1,6 @@
 package com.bidr.authorization.dao.repository.join;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.annotation.data.scope.GroupDataScopeHolder;
 import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.dao.entity.AcGroup;
@@ -23,6 +24,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static com.bidr.authorization.constants.dict.DataPermitScopeDict.SUBORDINATE;
 
 /**
  * Title: AcUserGroupJoinService
@@ -123,5 +126,33 @@ public class AcUserGroupJoinService {
                 .leftJoin(AcUserGroup.class, AcUserGroup::getGroupId, AcGroup::getId).eq(AcGroup::getType, groupType)
                 .eq(AcUserGroup::getUserId, userId).orderByAsc(AcGroup::getDisplayOrder);
         return acGroupService.selectJoinList(AcGroup.class, wrapper);
+    }
+
+    @Cacheable(cacheNames = "DB-CACHE#30", keyGenerator = "cacheKeyByParam")
+    public List<AcGroup> getGroupListFromDataScope(String customerNumber, String groupName) {
+        List<AcUserGroup> groups = getAcUserGroupByUserIdAndGroupType(customerNumber, groupName);
+        Set<Long> permissions = new HashSet<>();
+        if (FuncUtil.isNotEmpty(groups)) {
+            for (AcUserGroup group : groups) {
+                DataPermitScopeDict scope = DataPermitScopeDict.of(group.getDataScope());
+                if (FuncUtil.isEmpty(scope)) {
+                    log.error("错误的数据权限类型: {}-{}:{} ", group.getGroupId(), group.getUserId(),
+                            group.getDataScope());
+                    continue;
+                }
+                if (FuncUtil.equals(SUBORDINATE, scope)) {
+                    List subGroup = recursionService.getChildList(AcGroup::getId, AcGroup::getPid, group.getGroupId());
+                    permissions.addAll(subGroup);
+                } else {
+                    permissions.add(group.getGroupId());
+                }
+            }
+        }
+        if (FuncUtil.isNotEmpty(permissions)) {
+            LambdaQueryWrapper<AcGroup> wrapper = acGroupService.getQueryWrapper().in(AcGroup::getId, permissions);
+            return acGroupService.select(wrapper);
+        } else {
+            return null;
+        }
     }
 }
