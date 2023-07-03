@@ -8,6 +8,8 @@ import com.bidr.kernel.utils.LambdaUtil;
 import net.sf.jsqlparser.expression.Expression;
 import org.springframework.boot.CommandLineRunner;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,10 +51,12 @@ public interface DataPermissionInf extends CommandLineRunner {
      * @param function 权限字段
      */
     default <T> void init(GetFunc<T, ?> function) {
-        TableName tableName = LambdaUtil.getRealClass(function).getAnnotation(TableName.class);
-        TableField tableField = LambdaUtil.getField(function).getAnnotation(TableField.class);
+        TableName tableName = LambdaUtil.getRealClassByGetFunc(function).getAnnotation(TableName.class);
+        TableField tableField = LambdaUtil.getFieldByGetFunc(function).getAnnotation(TableField.class);
         if (FuncUtil.isNotEmpty(tableName) && FuncUtil.isNotEmpty(tableField)) {
-            getFilterMap().put(tableName.value(), tableField.value());
+            List<String> columnList = getFilterMap().getOrDefault(tableName.value(), new ArrayList<>());
+            columnList.add(tableField.value());
+            getFilterMap().put(tableName.value(), columnList);
         }
     }
 
@@ -61,7 +65,7 @@ public interface DataPermissionInf extends CommandLineRunner {
      *
      * @return 数据权限适用表
      */
-    Map<String, String> getFilterMap();
+    Map<String, List<String>> getFilterMap();
 
     /**
      * 判定该sql语句是否需要进行本数据权限规则就行权限校验

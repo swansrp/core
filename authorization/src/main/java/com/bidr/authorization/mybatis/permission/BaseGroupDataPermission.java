@@ -21,7 +21,7 @@ public abstract class BaseGroupDataPermission extends BaseDataPermission {
     protected AcUserGroupJoinService acUserGroupJoinService;
 
     @Override
-    protected List<String> buildPermissionList() {
+    protected List<String> buildPermissionList(String table, String column) {
         String customerNumber = AccountContext.getOperator();
         return acUserGroupJoinService.getCustomerNumberListFromDataScope(customerNumber, getGroupName().name());
     }

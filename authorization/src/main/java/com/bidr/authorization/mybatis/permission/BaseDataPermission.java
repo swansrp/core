@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public abstract class BaseDataPermission implements DataPermissionInf {
-    protected final Map<String, String> MAP = new ConcurrentHashMap<>();
+    protected final Map<String, List<String>> MAP = new ConcurrentHashMap<>();
 
     @Override
     public Expression expression(Map<String, String> tableAliasMap) {
@@ -35,25 +35,29 @@ public abstract class BaseDataPermission implements DataPermissionInf {
             log.debug("没有AccountInfo, 不进行数据权限校验");
             return null;
         }
-        List<String> permissions = buildPermissionList();
+
         Expression res = null;
-        for (Map.Entry<String, String> filerEntry : getFilterMap().entrySet()) {
+        for (Map.Entry<String, List<String>> filerEntry : getFilterMap().entrySet()) {
             String table = filerEntry.getKey();
-            String column = filerEntry.getValue();
             if (tableAliasMap.containsKey(table)) {
-                column = getAliasColumnName(tableAliasMap, table, column);
-                if (FuncUtil.isNotEmpty(permissions)) {
-                    ItemsList itemsList = getItemList(permissions);
-                    if (FuncUtil.isEmpty(res)) {
-                        res = new InExpression(new Column(column), itemsList);
+                List<String> columns = filerEntry.getValue();
+                for (String column : columns) {
+                    // 同一表中 不同字段的权限 OR 关系连接
+                    List<String> permissions = buildPermissionList(table, column);
+                    column = getAliasColumnName(tableAliasMap, table, column);
+                    if (FuncUtil.isNotEmpty(permissions)) {
+                        ItemsList itemsList = getItemList(permissions);
+                        if (FuncUtil.isEmpty(res)) {
+                            res = new InExpression(new Column(column), itemsList);
+                        } else {
+                            res = new OrExpression(res, new InExpression(new Column(column), itemsList));
+                        }
                     } else {
-                        res = new OrExpression(res, new InExpression(new Column(column), itemsList));
-                    }
-                } else {
-                    if (FuncUtil.isEmpty(res)) {
-                        res = new IsNullExpression().withLeftExpression(new Column(column));
-                    } else {
-                        res = new OrExpression(res, new IsNullExpression().withLeftExpression(new Column(column)));
+                        if (FuncUtil.isEmpty(res)) {
+                            res = new IsNullExpression().withLeftExpression(new Column(column));
+                        } else {
+                            res = new OrExpression(res, new IsNullExpression().withLeftExpression(new Column(column)));
+                        }
                     }
                 }
             }
@@ -62,16 +66,18 @@ public abstract class BaseDataPermission implements DataPermissionInf {
     }
 
     @Override
-    public Map<String, String> getFilterMap() {
+    public Map<String, List<String>> getFilterMap() {
         return MAP;
     }
 
     /**
      * 构造权限过滤条件数据
+     * @param table 表名
+     * @param column 列名
      *
      * @return 权限过滤条件数据
      */
-    protected abstract List<String> buildPermissionList();
+    protected abstract List<String> buildPermissionList(String table, String column);
 
     protected ExpressionList getItemList(List<String> permissions) {
         switch (getPermissionType()) {

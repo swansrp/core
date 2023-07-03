@@ -2,6 +2,7 @@ package com.bidr.authorization.mybatis.permission;
 
 import net.sf.jsqlparser.expression.Expression;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -18,7 +19,7 @@ public class NoDataPermission implements DataPermissionInf {
     }
 
     @Override
-    public Map<String, String> getFilterMap() {
+    public Map<String, List<String>> getFilterMap() {
         return null;
     }
 

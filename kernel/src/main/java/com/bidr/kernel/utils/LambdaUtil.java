@@ -61,8 +61,8 @@ public class LambdaUtil {
      * @author VampireAchao
      * @since 5.8.0
      */
-    public static <T, R> Class<R> getRealClass(GetFunc<T, R> func) {
-        final SerializedLambda lambda = resolve(func);
+    public static <T, R> Class<R> getRealClassByGetFunc(GetFunc<T, R> func) {
+        final SerializedLambda lambda = resolveByGetFunc(func);
         checkLambdaTypeCanGetClass(lambda.getImplMethodKind());
         return ClassUtil.loadClass(lambda.getImplClass());
     }
@@ -194,8 +194,8 @@ public class LambdaUtil {
      * @throws IllegalArgumentException 非Getter或Setter方法
      * @since 5.7.23
      */
-    public static <T, R> String getFieldName(GetFunc<T, R> func) throws IllegalArgumentException {
-        return BeanUtil.getFieldName(getMethodName(func));
+    public static <T, R> String getFieldNameByGetFunc(GetFunc<T, R> func) throws IllegalArgumentException {
+        return BeanUtil.getFieldName(getMethodNameByGetFunc(func));
     }
 
     //region Private methods
@@ -208,8 +208,8 @@ public class LambdaUtil {
      * @return 函数名称
      * @since 5.7.23
      */
-    public static <T, R> String getMethodName(GetFunc<T, R> func) {
-        return resolve(func).getImplMethodName();
+    public static <T, R> String getMethodNameByGetFunc(GetFunc<T, R> func) {
+        return resolveByGetFunc(func).getImplMethodName();
     }
 
     /**
@@ -221,13 +221,13 @@ public class LambdaUtil {
      * @return 返回解析后的结果
      * @since 5.7.23
      */
-    public static <T, R> SerializedLambda resolve(GetFunc<T, R> func) {
+    public static <T, R> SerializedLambda resolveByGetFunc(GetFunc<T, R> func) {
         return _resolve(func);
     }
 
-    public static <T, R> Field getField(GetFunc<T, R> func) throws IllegalArgumentException {
-        String fieldName = BeanUtil.getFieldName(getMethodName(func));
-        return ReflectionUtil.getField(getRealClass(func), fieldName);
+    public static <T, R> Field getFieldByGetFunc(GetFunc<T, R> func) throws IllegalArgumentException {
+        String fieldName = BeanUtil.getFieldName(getMethodNameByGetFunc(func));
+        return ReflectionUtil.getField(getRealClassByGetFunc(func), fieldName);
     }
 
     public static <T, R> Field getField(SFunction<T, ?> func) throws IllegalArgumentException {
