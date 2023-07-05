@@ -41,7 +41,7 @@ public class AdminPartnerController extends BaseAdminController<AcPartner, Query
     }
 
     @Override
-    protected void preUpdate(AcPartner entity) {
+    protected void beforeUpdate(AcPartner entity) {
         entity.setAppKey(null);
         entity.setAppSecret(null);
         entity.setPlatform(null);

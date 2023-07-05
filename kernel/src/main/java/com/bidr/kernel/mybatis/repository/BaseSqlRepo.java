@@ -247,7 +247,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public boolean deleteByIdList(List<T> idList) {
+    public boolean delete(List<T> idList) {
         if (CollectionUtils.isEmpty(idList)) {
             return false;
         }

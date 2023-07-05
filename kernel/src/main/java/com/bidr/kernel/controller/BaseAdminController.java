@@ -37,13 +37,18 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     public void update(@RequestBody ENTITY entity) {
-        preUpdate(entity);
+        beforeUpdate(entity);
         Boolean result = getRepo().updateById(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
+        afterUpdate(entity);
         Resp.notice("更新成功");
     }
 
-    protected void preUpdate(ENTITY entity) {
+    protected void beforeUpdate(ENTITY entity) {
+
+    }
+
+    protected void afterUpdate(ENTITY entity) {
 
     }
 
@@ -79,12 +84,17 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     public void delete(@RequestBody IdReqVO vo) {
-        preDelete(vo);
+        beforeDelete(vo);
         getRepo().deleteById(vo.getId());
+        afterDelete(vo);
         Resp.notice("删除成功");
     }
 
-    protected void preDelete(IdReqVO vo) {
+    protected void beforeDelete(IdReqVO vo) {
+
+    }
+
+    protected void afterDelete(IdReqVO vo) {
 
     }
 

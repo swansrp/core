@@ -3,6 +3,7 @@ package com.bidr.kernel.mybatis.repository.inf;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -21,9 +22,11 @@ public interface SqlDeleteRepo<T> {
 
     boolean delete(Map<String, Object> propertyMap);
 
+    boolean delete(List<T> entity);
+
     boolean deleteById(Serializable id);
 
     boolean deleteById(T entity);
 
-    boolean deleteByIdList(List<T> entity);
+
 }
