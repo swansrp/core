@@ -59,7 +59,7 @@ public class AdminSmsTemplateController extends BaseAdminController<SaSmsTemplat
     }
 
     @Override
-    protected void preDelete(IdReqVO vo) {
+    protected void beforeDelete(IdReqVO vo) {
         adminSmsTemplateService.deleteTemplate(vo.getId());
     }
 }
