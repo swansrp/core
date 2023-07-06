@@ -4,9 +4,7 @@ import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.service.admin.AdminUserGroupBindService;
-import com.bidr.authorization.vo.group.BindUserReq;
-import com.bidr.authorization.vo.group.GroupAccountRes;
-import com.bidr.authorization.vo.group.GroupUserRes;
+import com.bidr.authorization.vo.group.*;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
@@ -43,6 +41,19 @@ public class GroupUserBindController extends BaseBindController<AcGroup, AcUserG
         return adminUserGroupBindService;
     }
 
+    @ApiOperation(value = "绑定")
+    @RequestMapping(value = "/bind/dataScope", method = RequestMethod.POST)
+    public void bind(@RequestBody @Validated BindGroupUserDataScopeReq req) {
+        adminUserGroupBindService.bind(req);
+        Resp.notice("绑定成功");
+    }
+
+    @ApiOperation(value = "批量绑定")
+    @RequestMapping(value = "/bind/batch/dataScope", method = RequestMethod.POST)
+    public void bind(@RequestBody @Validated BindGroupUserListDataScopeReq req) {
+        adminUserGroupBindService.bindList(req);
+        Resp.notice("绑定成功");
+    }
     @ApiOperation(value = "获取已绑定(列表)(查询条件)")
     @RequestMapping(value = "/bind/list/search", method = RequestMethod.GET)
     public List<GroupAccountRes> getBindList(@Validated BindUserReq req) {

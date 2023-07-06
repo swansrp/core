@@ -7,15 +7,14 @@ import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.repository.AcUserGroupService;
 import com.bidr.authorization.dao.repository.join.AcUserGroupJoinService;
 import com.bidr.authorization.holder.AccountContext;
-import com.bidr.authorization.vo.group.BindUserReq;
-import com.bidr.authorization.vo.group.GroupAccountRes;
-import com.bidr.authorization.vo.group.GroupUserRes;
+import com.bidr.authorization.vo.group.*;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -38,6 +37,24 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
 
     public void updateAcUserGroup(AcUserGroup acUserGroup) {
         acUserGroupService.updateById(acUserGroup);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void bindList(BindGroupUserListDataScopeReq req) {
+        if (FuncUtil.isNotEmpty(req.getAttachIdList())) {
+            for (Object attachId : req.getAttachIdList()) {
+                AcUserGroup acUserGroup = buildBindEntity(attachId, req.getEntityId());
+                acUserGroup.setDataScope(req.getDataScope());
+                acUserGroupService.insertOrUpdate(acUserGroup);
+            }
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void bind(BindGroupUserDataScopeReq req) {
+        AcUserGroup acUserGroup = buildBindEntity(req.getAttachId(), req.getEntityId());
+        acUserGroup.setDataScope(req.getDataScope());
+        acUserGroupService.insertOrUpdate(acUserGroup);
     }
 
     public List<GroupAccountRes> searchBindList(BindUserReq req) {

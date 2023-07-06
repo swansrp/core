@@ -87,7 +87,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         bindRepo().insertOrUpdate(bindEntity);
     }
 
-    private BIND buildBindEntity(Object attachId, Object entityId) {
+    protected BIND buildBindEntity(Object attachId, Object entityId) {
         BIND bindEntity = ReflectionUtil.newInstance(getBindClass());
         LambdaUtil.setValue(bindEntity, bindAttachId(), attachId);
         LambdaUtil.setValue(bindEntity, bindEntityId(), entityId);
