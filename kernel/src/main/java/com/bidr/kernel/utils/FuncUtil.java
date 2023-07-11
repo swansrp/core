@@ -64,6 +64,8 @@ public class FuncUtil {
             } else {
                 return obj1.equals(obj2);
             }
+        } else if(Number.class.isAssignableFrom(obj1.getClass()) && Number.class.isAssignableFrom(obj2.getClass())) {
+            return obj1.toString().equals(obj2.toString());
         } else {
             return false;
         }
