@@ -2,6 +2,7 @@ package com.bidr.kernel.mybatis.repository;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -10,6 +11,7 @@ import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
@@ -18,10 +20,12 @@ import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.yulichang.toolkit.LambdaUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Resource;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -35,9 +39,13 @@ import java.util.stream.Collectors;
  * @author Sharp
  * @since 2022/10/21 9:55
  */
+@Slf4j
 @SuppressWarnings("unchecked")
 public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl<M, T> {
+
     Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    @Resource
+    private CommonMapper commonMapper;
 
     public QueryWrapper<T> getQueryWrapper(String fieldName, Object value) {
         QueryWrapper<T> wrapper = Wrappers.query();
@@ -176,7 +184,12 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     public void truncate() {
-
+        TableName annotation = entityClass.getAnnotation(TableName.class);
+        if (FuncUtil.isNotEmpty(annotation)) {
+            String tableName = annotation.value();
+            log.warn("####清空数据库表#### {}", tableName);
+            commonMapper.truncate(tableName);
+        }
     }
 
     /**
