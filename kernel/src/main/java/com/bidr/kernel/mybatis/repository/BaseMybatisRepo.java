@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.mybatis.anno.EnableTruncate;
 import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.utils.FuncUtil;
@@ -186,9 +187,14 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     public void truncate() {
         TableName annotation = entityClass.getAnnotation(TableName.class);
         if (FuncUtil.isNotEmpty(annotation)) {
+            EnableTruncate enableTruncate = this.getClass().getAnnotation(EnableTruncate.class);
             String tableName = annotation.value();
-            log.warn("####清空数据库表#### {}", tableName);
-            commonMapper.truncate(tableName);
+            if (FuncUtil.isNotEmpty(enableTruncate)) {
+                log.warn("####清空数据库表#### {}", tableName);
+                commonMapper.truncate(tableName);
+            } else {
+                log.warn("####不支持 清空数据库表#### {}", tableName);
+            }
         }
     }
 
