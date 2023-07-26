@@ -1,5 +1,6 @@
 package com.bidr.kernel.utils;
 
+import com.bidr.kernel.common.func.GetFunc;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -17,30 +18,33 @@ import java.util.Map;
  * @author Sharp
  * @since 2023/03/30 10:32
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings("rawtypes, unchecked")
 public class FuncUtil {
-    public static Boolean isNotEmpty(Object obj) {
-        return !isEmpty(obj);
+    public static <T> boolean notEqualsObj(T obj1, T obj2, GetFunc<T, ?>... funcArray) {
+        return !equalsObj(obj1, obj2, funcArray);
     }
 
-    public static Boolean isEmpty(Object obj) {
-        if (obj == null) {
-            return true;
-        } else {
-            Class<?> clazz = obj.getClass();
-            if (String.class.isAssignableFrom(clazz)) {
-                return StringUtils.isEmpty((String) obj);
-            } else if (Collection.class.isAssignableFrom(clazz)) {
-                return CollectionUtils.isEmpty((Collection) obj);
-            } else if (Map.class.isAssignableFrom(clazz)) {
-                return MapUtils.isEmpty((Map) obj);
-            } else if (obj.getClass().isArray()) {
-                return ((Object[]) obj).length == 0;
-            } else if (Iterator.class.isAssignableFrom(clazz)) {
-                return IteratorUtils.isEmpty((Iterator) obj);
+    public static <T> boolean equalsObj(T obj1, T obj2, GetFunc<T, ?>... funcArray) {
+        if (FuncUtil.isNotEmpty(funcArray)) {
+            if (obj1 == null) {
+                return obj2 == null;
+            } else if (obj2 == null) {
+                return false;
+            } else {
+                for (GetFunc<T, ?> func : funcArray) {
+                    if (FuncUtil.notEquals(func.apply(obj1), func.apply(obj2))) {
+                        return false;
+                    }
+                }
             }
+        } else {
+            return equals(obj1, obj2);
         }
-        return false;
+        return true;
+    }
+
+    public static Boolean isNotEmpty(Object obj) {
+        return !isEmpty(obj);
     }
 
     public static Boolean notEquals(Object obj1, Object obj2) {
@@ -64,10 +68,30 @@ public class FuncUtil {
             } else {
                 return obj1.equals(obj2);
             }
-        } else if(Number.class.isAssignableFrom(obj1.getClass()) && Number.class.isAssignableFrom(obj2.getClass())) {
+        } else if (Number.class.isAssignableFrom(obj1.getClass()) && Number.class.isAssignableFrom(obj2.getClass())) {
             return obj1.toString().equals(obj2.toString());
         } else {
             return false;
         }
+    }
+
+    public static Boolean isEmpty(Object obj) {
+        if (obj == null) {
+            return true;
+        } else {
+            Class<?> clazz = obj.getClass();
+            if (String.class.isAssignableFrom(clazz)) {
+                return StringUtils.isEmpty((String) obj);
+            } else if (Collection.class.isAssignableFrom(clazz)) {
+                return CollectionUtils.isEmpty((Collection) obj);
+            } else if (Map.class.isAssignableFrom(clazz)) {
+                return MapUtils.isEmpty((Map) obj);
+            } else if (obj.getClass().isArray()) {
+                return ((Object[]) obj).length == 0;
+            } else if (Iterator.class.isAssignableFrom(clazz)) {
+                return IteratorUtils.isEmpty((Iterator) obj);
+            }
+        }
+        return false;
     }
 }
