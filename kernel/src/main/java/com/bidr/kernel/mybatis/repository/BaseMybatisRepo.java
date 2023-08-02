@@ -190,10 +190,11 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
             EnableTruncate enableTruncate = this.getClass().getAnnotation(EnableTruncate.class);
             String tableName = annotation.value();
             if (FuncUtil.isNotEmpty(enableTruncate)) {
-                log.warn("####清空数据库表#### {}", tableName);
+                log.warn("#### [{}] 清空数据库表 开始 ####", tableName);
                 commonMapper.truncate(tableName);
+                log.warn("#### [{}] 清空数据库表 结束 ####", tableName);
             } else {
-                log.warn("####不支持 清空数据库表#### {}", tableName);
+                log.warn("#### [{}] 不支持 清空数据库表 ####", tableName);
             }
         }
     }

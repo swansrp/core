@@ -15,9 +15,7 @@ public class XxlLogUtil {
 
     public static void log(String appendLogPattern, Object... appendLogArguments) {
         Logger logger = LoggerFactory.getLogger(getCallerClass());
-        if (logger.isInfoEnabled()) {
-            logger.info(String.format(loc(), appendLogPattern), appendLogArguments);
-        }
+        logger.info(String.format(loc(), appendLogPattern), appendLogArguments);
         XxlJobHelper.log(appendLogPattern, appendLogArguments);
     }
 
