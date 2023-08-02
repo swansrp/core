@@ -25,7 +25,7 @@ import java.io.IOException;
  */
 @Slf4j
 @Component
-@Profile(value = {"dev", "test", "preview"})
+@Profile(value = {"dev", "test", "pre"})
 public class SwaggerFilter extends OncePerRequestFilter {
 
     @Value("${swagger.prefix:}")
