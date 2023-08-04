@@ -233,6 +233,20 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         }
     }
 
+    public List<T> group(QueryWrapper<T> wrapper, SFunction<T, ?> column, SFunction<T, ?>... columns) {
+        List<String> fields = new ArrayList<>();
+        fields.add(getSelectSqlName(column));
+        if (FuncUtil.isNotEmpty(columns)) {
+            for (SFunction<T, ?> c : columns) {
+                fields.add(getSelectSqlName(c));
+            }
+        }
+        String[] fieldArray = fields.toArray(new String[0]);
+        wrapper.select(fieldArray);
+        wrapper.groupBy(fields);
+        return super.list(wrapper);
+    }
+
     protected String getSelectSqlName(SFunction<T, ?> column) {
         Field field = LambdaUtil.getField(column);
         return getSelectSqlName(field);
