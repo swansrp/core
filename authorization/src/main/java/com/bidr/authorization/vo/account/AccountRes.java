@@ -18,6 +18,7 @@ public class AccountRes {
     @JsonProperty("value")
     @Accept(name = "userId")
     private String id;
+    private String customerNumber;
     private String userName;
     @JsonProperty("label")
     private String name;
