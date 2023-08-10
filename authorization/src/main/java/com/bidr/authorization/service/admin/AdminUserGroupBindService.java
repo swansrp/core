@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.repository.AcUserGroupService;
+import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserGroupJoinService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.vo.group.*;
@@ -16,10 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: AdminUserGroupBindService
@@ -34,6 +32,8 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
 
     private final AcUserGroupService acUserGroupService;
     private final AcUserGroupJoinService acUserGroupJoinService;
+
+    private final AcUserService acUserService;
 
     public void updateAcUserGroup(AcUserGroup acUserGroup) {
         acUserGroupService.updateById(acUserGroup);
@@ -93,23 +93,25 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
         return distinct(attachRepo().selectJoinList(GroupAccountRes.class, wrapper));
     }
 
-    private Collection<GroupUserRes> distinct(List<GroupAccountRes> selectJoinList) {
-        Map<String, GroupUserRes> filter = new LinkedHashMap<>();
-        if(FuncUtil.isNotEmpty(selectJoinList)) {
+    private Collection<GroupAccountRes> distinct(List<GroupAccountRes> selectJoinList) {
+        Map<String, GroupAccountRes> filter = new LinkedHashMap<>();
+        if (FuncUtil.isNotEmpty(selectJoinList)) {
             for (GroupAccountRes account : selectJoinList) {
-                filter.put(account.getCustomerNumber(), ReflectionUtil.copy(account, GroupUserRes.class));
+                filter.put(account.getCustomerNumber(), ReflectionUtil.copy(account, GroupAccountRes.class));
             }
         }
         return filter.values();
     }
 
-    public Collection<GroupUserRes> getDataScopeUserListByGroupType(String name) {
+    public List<GroupAccountRes> getDataScopeUserListByGroupType(String name) {
         List<String> customerNumberList = acUserGroupJoinService.getCustomerNumberListFromDataScope(
                 AccountContext.getOperator(), name);
-        MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
+        MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(AcUser.class);
+        wrapper.select(AcUser::getUserId).select(AcUser::getName).select(AcUser::getAvatar)
+                .select(AcUser::getCustomerNumber).select(AcUser::getDeptId)
+                .leftJoin(getBindClass(), bindAttachId(), attachId())
                 .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(AcGroup::getType, name)
                 .in(AcUser::getCustomerNumber, customerNumberList);
-        return distinct(attachRepo().selectJoinList(GroupAccountRes.class, wrapper));
+        return new ArrayList<>(distinct(attachRepo().selectJoinList(GroupAccountRes.class, wrapper)));
     }
 }

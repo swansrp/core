@@ -70,7 +70,7 @@ public class GroupUserBindController extends BaseBindController<AcGroup, AcUserG
 
     @ApiOperation(value = "获取指定用户组类型下所有用户")
     @RequestMapping(value = "/bind/list/all", method = RequestMethod.GET)
-    public Collection<GroupUserRes> getUserListByGroupType(String name) {
-        return adminUserGroupBindService.getDataScopeUserListByGroupType(name);
+    public Collection<GroupAccountRes> getUserListByGroupType(String name) {
+        return Resp.convert(adminUserGroupBindService.getDataScopeUserListByGroupType(name), GroupAccountRes.class);
     }
 }

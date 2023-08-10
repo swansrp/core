@@ -205,13 +205,13 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
      * @param columns
      * @return
      */
-    protected String getSelectSql(SFunction<T, ?>... columns) {
+    public String getSelectSql(SFunction<T, ?>... columns) {
         return Arrays.stream(columns)
                 .map(c -> StringUtil.camelToUnderline(LambdaUtils.getName(c)) + " as " + LambdaUtils.getName(c))
                 .collect(Collectors.joining(StringPool.COMMA, StringPool.SPACE, StringPool.SPACE));
     }
 
-    protected String getSelectSql() {
+    public String getSelectSql() {
         StringBuffer sb = new StringBuffer();
         Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
         map.forEach((name, field) -> {
@@ -224,7 +224,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         return sql.substring(0, sql.length() - 1);
     }
 
-    protected String getSelectSqlName(Field field) {
+    public String getSelectSqlName(Field field) {
         TableField annotation = field.getAnnotation(TableField.class);
         if (FuncUtil.isNotEmpty(annotation)) {
             return annotation.value();
@@ -247,7 +247,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         return super.list(wrapper);
     }
 
-    protected String getSelectSqlName(SFunction<T, ?> column) {
+    public String getSelectSqlName(SFunction<T, ?> column) {
         Field field = LambdaUtil.getField(column);
         return getSelectSqlName(field);
     }
