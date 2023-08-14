@@ -12,6 +12,7 @@
 		<module>platform</module>
 		<module>redis</module>
 		<module>sms</module>
+		<module>email</module>
 		<module>xxl-job</module>
     </modules>
 	<packaging>pom</packaging>
