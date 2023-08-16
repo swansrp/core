@@ -1,7 +1,12 @@
 package com.bidr.email.service;
 
+import com.bidr.email.vo.SendEmailReq;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.HttpUtil;
+import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -12,6 +17,9 @@ import javax.annotation.Resource;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeUtility;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
@@ -50,7 +58,7 @@ public class EmailService {
             helper.setFrom(sender);
             helper.setSubject(subject);
             helper.setTo(to);
-            if (text == null) {
+            if (FuncUtil.isEmpty(text)) {
                 helper.setText("");
             } else {
                 helper.setText(text);
@@ -87,6 +95,22 @@ public class EmailService {
 
     public void sendEmail(String to, String subject, String text, String attachmentName, FileSystemResource resource) {
         sendEmail(to, null, subject, text, attachmentName, resource);
+    }
+
+    public void sendEmail(SendEmailReq req) {
+        try {
+            if (FuncUtil.isNotEmpty(req.getFilePath()) && req.getFilePath().startsWith("http")) {
+                File tempFile = File.createTempFile("tmp", null);
+                InputStream stream = HttpUtil.getStream(req.getFilePath());
+                FileUtils.copyInputStreamToFile(stream, tempFile);
+                FileSystemResource fileSystemResource = new FileSystemResource(tempFile.getPath());
+                sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(),
+                        fileSystemResource);
+                tempFile.delete();
+            }
+        } catch (IOException e) {
+            Validator.assertException(e);
+        }
     }
 
     public MimeMessage createMimeMessage() {

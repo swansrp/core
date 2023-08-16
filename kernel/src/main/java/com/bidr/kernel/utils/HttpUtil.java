@@ -7,6 +7,8 @@ import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
@@ -217,7 +219,13 @@ public class HttpUtil {
     }
 
     public static boolean systemRequest(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI().matches(".*/(actuator|export|webjars|v3|captcha.*|csrf|swagger.*|error).*");
+        return httpServletRequest.getRequestURI()
+                .matches(".*/(actuator|export|webjars|v3|captcha.*|csrf|swagger.*|error).*");
+    }
+
+    public static InputStream getStream(String url) throws IOException {
+        URLConnection con = new URL(url).openConnection();
+        return con.getInputStream();
     }
 }
 
