@@ -3,7 +3,6 @@ package com.bidr.kernel.mybatis.repository.inf;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
