@@ -107,6 +107,8 @@ public class EmailService {
                 sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(),
                         fileSystemResource);
                 tempFile.delete();
+            } else {
+                sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(), null);
             }
         } catch (IOException e) {
             Validator.assertException(e);
