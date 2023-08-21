@@ -7,6 +7,7 @@ import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -225,6 +226,11 @@ public class HttpUtil {
 
     public static InputStream getStream(String url) throws IOException {
         URLConnection con = new URL(url).openConnection();
+        return con.getInputStream();
+    }
+
+    public static InputStream getStream(String url, Proxy proxy) throws IOException {
+        URLConnection con = new URL(url).openConnection(proxy);
         return con.getInputStream();
     }
 }

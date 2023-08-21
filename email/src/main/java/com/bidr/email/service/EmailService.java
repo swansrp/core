@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.List;
 
 /**
@@ -43,6 +45,12 @@ public class EmailService {
 
     @Value("${spring.mail.username}")
     private String sender;
+
+    @Value("${email.proxy.host:}")
+    private String emailProxyHost;
+
+    @Value("${email.proxy.port:}")
+    private Integer emailProxyPort;
 
     public void sendEmail(String to, String subject) {
         sendEmail(to, null, subject, null, null, null);
@@ -101,7 +109,15 @@ public class EmailService {
         try {
             if (FuncUtil.isNotEmpty(req.getFilePath()) && req.getFilePath().startsWith("http")) {
                 File tempFile = File.createTempFile("tmp", null);
-                InputStream stream = HttpUtil.getStream(req.getFilePath());
+                InputStream stream;
+                if (FuncUtil.isNotEmpty(emailProxyHost) && FuncUtil.isNotEmpty(emailProxyPort)) {
+                    // 创建代理服务器
+                    InetSocketAddress addr = new InetSocketAddress(emailProxyHost, emailProxyPort);
+                    Proxy proxy = new Proxy(Proxy.Type.HTTP, addr);
+                    stream = HttpUtil.getStream(req.getFilePath(), proxy);
+                } else {
+                    stream = HttpUtil.getStream(req.getFilePath());
+                }
                 FileUtils.copyInputStreamToFile(stream, tempFile);
                 FileSystemResource fileSystemResource = new FileSystemResource(tempFile.getPath());
                 sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(),
