@@ -46,11 +46,11 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String sender;
 
-    @Value("${email.proxy.host:}")
-    private String emailProxyHost;
+    @Value("${email.attachment.proxy.host:}")
+    private String emailAttachmentProxyHost;
 
-    @Value("${email.proxy.port:}")
-    private Integer emailProxyPort;
+    @Value("${email.attachment.proxy.port:}")
+    private Integer emailAttachmentProxyPort;
 
     public void sendEmail(String to, String subject) {
         sendEmail(to, null, subject, null, null, null);
@@ -110,9 +110,9 @@ public class EmailService {
             if (FuncUtil.isNotEmpty(req.getFilePath()) && req.getFilePath().startsWith("http")) {
                 File tempFile = File.createTempFile("tmp", null);
                 InputStream stream;
-                if (FuncUtil.isNotEmpty(emailProxyHost) && FuncUtil.isNotEmpty(emailProxyPort)) {
+                if (FuncUtil.isNotEmpty(emailAttachmentProxyHost) && FuncUtil.isNotEmpty(emailAttachmentProxyPort)) {
                     // 创建代理服务器
-                    InetSocketAddress addr = new InetSocketAddress(emailProxyHost, emailProxyPort);
+                    InetSocketAddress addr = new InetSocketAddress(emailAttachmentProxyHost, emailAttachmentProxyPort);
                     Proxy proxy = new Proxy(Proxy.Type.HTTP, addr);
                     stream = HttpUtil.getStream(req.getFilePath(), proxy);
                 } else {
