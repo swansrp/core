@@ -3,10 +3,12 @@ package com.bidr.kernel.cache;
 import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
 import com.bidr.kernel.cache.exception.DynamicMemoryCacheExpiredException;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.retry.annotation.Retryable;
 
@@ -34,16 +36,22 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     private Integer dynamicMemoryExpiredMinutes;
 
     @Retryable(value = DynamicMemoryCacheExpiredException.class, maxAttempts = 2)
-    public List<T> getAllCache() {
-        List<T> resList = new ArrayList<>();
-        Collection<String> cacheNames = dynamicMemoryCacheManager.getCacheNames();
-        if (CollectionUtils.isNotEmpty(cacheNames)) {
-            for (String key : cacheNames) {
-                resList.add(getCache(key));
-            }
-        }
-        return resList;
+    public Map<String, T> getAllCache() {
+        ConcurrentMapCache cache = (ConcurrentMapCache) dynamicMemoryCacheManager.getCache(getCacheName());
+        refresh();
+        return JsonUtil.readJson(cache.getNativeCache(), Map.class, String.class, entityClass);
     }
+
+    public DynamicMemoryCacheManager cacheManager() {
+        return dynamicMemoryCacheManager;
+    }
+
+    /**
+     * 获取缓存数据列表
+     *
+     * @return
+     */
+    protected abstract Map<String, T> getCacheData();
 
     public T getCache(Object key) {
         if (key != null) {
@@ -64,17 +72,6 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
             }
         }
     }
-
-    public DynamicMemoryCacheManager cacheManager() {
-        return dynamicMemoryCacheManager;
-    }
-
-    /**
-     * 获取缓存数据列表
-     *
-     * @return
-     */
-    protected abstract Map<String, T> getCacheData();
 
     @Override
     public void refresh() {
