@@ -34,7 +34,7 @@ public class AuthTokenUtil {
 
     public static TokenInfo resolveToken(String token) {
         if (FuncUtil.isNotEmpty(token)) {
-            Validator.assertTrue(token.startsWith("Bearer "), ErrCodeSys.SYS_SESSION_TIME_OUT);
+            Validator.assertTrue(token.startsWith("Bearer "), ErrCodeSys.PA_PARAM_FORMAT, "安全令牌");
             String[] array = token.split(" ");
             if (array.length > 1) {
                 return decode(array[array.length - 1]);

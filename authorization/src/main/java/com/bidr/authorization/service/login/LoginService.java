@@ -133,4 +133,9 @@ public interface LoginService {
      * @return
      */
     LoginRes loginOrReg(AcAccount account);
+
+    /**
+     * 系统登出
+     */
+    void logoff();
 }

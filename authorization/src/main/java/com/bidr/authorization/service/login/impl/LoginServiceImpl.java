@@ -177,6 +177,12 @@ public class LoginServiceImpl implements LoginService {
         return buildLoginRes(user);
     }
 
+    @Override
+    public void logoff() {
+        tokenService.removeToken();
+        tokenService.verifyToken(null);
+    }
+
     private LoginRes buildLoginRes(AcUser user) {
         recordLogin(user);
         LoginRes res = ReflectionUtil.copy(user, LoginRes.class);
