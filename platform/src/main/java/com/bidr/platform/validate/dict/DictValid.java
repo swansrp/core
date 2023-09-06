@@ -30,5 +30,5 @@ public @interface DictValid {
      *
      * @return 枚举类
      */
-    Class<? extends Dict>[] target() default {};
+    Class<? extends Dict>[] value() default {};
 }

@@ -26,7 +26,7 @@ public class DictValidator implements ConstraintValidator<DictValid, Object> {
 
     @Override
     public void initialize(DictValid constraintAnnotation) {
-        dictClassArray = constraintAnnotation.target();
+        dictClassArray = constraintAnnotation.value();
     }
 
     @Override
@@ -58,8 +58,12 @@ public class DictValidator implements ConstraintValidator<DictValid, Object> {
                         return true;
                     } else {
                         String dictName = metaDict.value();
-                        SysDict dictByValue = cacheService.getDictByValue(dictName, value.toString());
-                        return FuncUtil.isNotEmpty(dictByValue);
+                        try {
+                            SysDict dictByValue = cacheService.getDictByValue(dictName, value.toString());
+                            return FuncUtil.isNotEmpty(dictByValue);
+                        } catch (Exception e) {
+                            return false;
+                        }
                     }
 
                 } else {
