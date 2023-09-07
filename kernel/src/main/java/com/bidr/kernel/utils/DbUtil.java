@@ -3,13 +3,16 @@
  * Description: Copyright: Copyright (c) 2019 Company: Sharp
  *
  * @author Sharp
- * @since 2019-4-4 15:48
  * @description Project Name: Tanya
  * Package: com.srct.service.utils
+ * @since 2019-4-4 15:48
  */
 package com.bidr.kernel.utils;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.db.SqlConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -25,6 +28,13 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class DbUtil {
+
+    public static <T extends SFunction> String getSqlColumn(T column) {
+        Field field = LambdaUtil.getField(column);
+        TableField annotation = field.getAnnotation(TableField.class);
+        return FuncUtil.isNotEmpty(annotation) ? annotation.value() :
+                "`" + StringUtil.camelToUnderline(field.getName()) + "`";
+    }
 
     @SuppressWarnings("rawtypes")
     public static <K, T> Page<T> copy(Page<K> source, Class<T> clazz) {

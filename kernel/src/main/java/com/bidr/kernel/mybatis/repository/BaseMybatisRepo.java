@@ -14,8 +14,8 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.anno.EnableTruncate;
 import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
@@ -224,6 +224,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         return sql.substring(0, sql.length() - 1);
     }
 
+    @Deprecated
     public String getSelectSqlName(Field field) {
         TableField annotation = field.getAnnotation(TableField.class);
         if (FuncUtil.isNotEmpty(annotation)) {
@@ -248,7 +249,6 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     public String getSelectSqlName(SFunction<T, ?> column) {
-        Field field = LambdaUtil.getField(column);
-        return getSelectSqlName(field);
+        return DbUtil.getSqlColumn(column);
     }
 }

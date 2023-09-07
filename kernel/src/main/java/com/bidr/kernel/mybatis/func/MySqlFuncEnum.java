@@ -1,5 +1,9 @@
 package com.bidr.kernel.mybatis.func;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.kernel.common.func.GetFunc;
+import com.bidr.kernel.utils.DbUtil;
+import com.bidr.kernel.utils.LambdaUtil;
 import com.github.yulichang.wrapper.enums.BaseFuncEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,11 +31,20 @@ public enum MySqlFuncEnum implements BaseFuncEnum {
 
     private final String sql;
 
-    public String getSql() {
-        return this.sql;
+    public <T extends SFunction, K extends GetFunc> String getSql(T column, K aliasField) {
+        String columnFieldName = DbUtil.getSqlColumn(column);
+        return getSql(columnFieldName, aliasField);
+    }
+
+    public <T extends SFunction, K extends GetFunc> String getSql(String column, K aliasField) {
+        return getSql(column, LambdaUtil.getFieldNameByGetFunc(aliasField));
     }
 
     public String getSql(String column, String alias) {
         return String.format(this.sql, column, alias);
+    }
+
+    public String getSql() {
+        return this.sql;
     }
 }
