@@ -18,7 +18,7 @@ import java.util.List;
 public class UserGroupTreeRes extends UserGroupTreeItem {
     private List<UserGroupTreeRes> children;
 
-    public void UserGroupTreeRes() {
+    public UserGroupTreeRes() {
         children = new ArrayList<>();
     }
 }

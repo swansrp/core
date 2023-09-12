@@ -71,7 +71,7 @@ public class ResponseExceptionHandler {
     @ResponseBody
     @ExceptionHandler(value = ServiceException.class)
     public static ResponseEntity<Response<String>> errorHandler(ServiceException ex) {
-        log.error("", ex);
+        log.warn("", ex);
         Response<String> res = new Response<>(ex);
         HttpStatus status = STATUS_MAP.getOrDefault(ex.getErrCode().getErrType(), HttpStatus.INTERNAL_SERVER_ERROR);
         return new ResponseEntity<>(res, status);

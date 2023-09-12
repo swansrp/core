@@ -69,6 +69,8 @@ public enum AccountErrCode implements ErrCode {
     AC_PARTNER_NOT_EXISTED(1026, "该渠道不存在"),
 
     AC_PARTNER_NOT_AVAILABLE(1027, "该渠道账号不可用"),
+
+    AC_USER_NOT_IN_GROUP(1028, "尚未加入用户组"),
     ;
 
     private final Integer errCode;
