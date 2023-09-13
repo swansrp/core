@@ -251,4 +251,10 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     public String getSelectSqlName(SFunction<T, ?> column) {
         return DbUtil.getSqlColumn(column);
     }
+
+    public String getTableName() {
+        TableName annotation = getEntityClass().getAnnotation(TableName.class);
+        Validator.assertNotNull(annotation, ErrCodeSys.PA_DATA_NOT_EXIST, "表名");
+        return annotation.value();
+    }
 }

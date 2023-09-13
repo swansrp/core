@@ -44,6 +44,11 @@ public enum MySqlFuncEnum implements BaseFuncEnum {
         return String.format(this.sql, column, alias);
     }
 
+    public <T extends SFunction> String getSql(T column, String aliasField) {
+        String columnFieldName = DbUtil.getSqlColumn(column);
+        return getSql(columnFieldName, aliasField);
+    }
+
     public String getSql() {
         return this.sql;
     }
