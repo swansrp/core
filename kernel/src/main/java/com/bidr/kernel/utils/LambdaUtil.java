@@ -61,7 +61,7 @@ public class LambdaUtil {
      * @author VampireAchao
      * @since 5.8.0
      */
-    public static <T, R> Class<R> getRealClassByGetFunc(GetFunc<T, R> func) {
+    public static <T, R> Class<T> getRealClassByGetFunc(GetFunc<T, R> func) {
         final SerializedLambda lambda = resolveByGetFunc(func);
         checkLambdaTypeCanGetClass(lambda.getImplMethodKind());
         return ClassUtil.loadClass(lambda.getImplClass());

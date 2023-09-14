@@ -68,7 +68,6 @@ public class ReflectionUtil {
 
     public static <T, R> List<R> buildTree(SetFunc<R, List<R>> setChildrenFunc, List<T> dataList,
                                            GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc, Object pidValue) {
-        LambdaUtil.getRealClass(setChildrenFunc);
         List<T> parentDataList = dataList.stream().filter(data -> Objects.equals(getPidFunc.apply(data), (pidValue)))
                 .collect(Collectors.toList());
         List<R> res = new ArrayList<>();
@@ -95,6 +94,41 @@ public class ReflectionUtil {
             setChildrenFunc.apply(res, childrenList);
         }
         return res;
+    }
+
+    public static <T, R> List<R> buildTree(GetFunc<R, List<R>> getChildrenFunc, List<T> dataList,
+                                              GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc) {
+        Class<R> resultClazz = LambdaUtil.getRealClassByGetFunc(getChildrenFunc);
+        Map<Object, T> idMap = new HashMap<>();
+        Map<Object, T> pidMap = new HashMap<>();
+        Map<Object, R> idResMap = new HashMap<>();
+        List<R> resList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(dataList)) {
+            for (T data : dataList) {
+                R res = ReflectionUtil.copy(data, resultClazz);
+                Object id = getIdFunc.apply(data);
+                Object pid = getPidFunc.apply(data);
+                if (FuncUtil.isNotEmpty(id)) {
+                    idMap.put(id, data);
+                    idResMap.put(id, res);
+                }
+                if (FuncUtil.isNotEmpty(pid)) {
+                    pidMap.put(pid, data);
+                }
+            }
+            for (T data : dataList) {
+                Object id = getIdFunc.apply(data);
+                Object pid = getPidFunc.apply(data);
+                R self = idResMap.get(id);
+                R parent = idResMap.get(pid);
+                if (FuncUtil.isEmpty(parent)) {
+                    resList.add(self);
+                } else {
+                    getChildrenFunc.apply(parent).add(self);
+                }
+            }
+        }
+        return resList;
     }
 
     public static Class<?> getSuperClassGenericType(Class<?> clazz, int index) {
