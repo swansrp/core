@@ -64,7 +64,7 @@ public class AdminUserGroupBindService extends BaseBindRepo<AcGroup, AcUserGroup
         MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
                 .eq(FuncUtil.isNotEmpty(req.getGroupId()), bindEntityId(), req.getGroupId())
-                .in(FuncUtil.isNotEmpty(req.getGroupIdList()), bindAttachId(), req.getGroupIdList())
+                .in(FuncUtil.isNotEmpty(req.getGroupIdList()), bindEntityId(), req.getGroupIdList())
                 .like(FuncUtil.isNotEmpty(req.getName()), AcUser::getName, req.getName())
                 .eq(FuncUtil.isNotEmpty(req.getDataScope()), AcUserGroup::getDataScope, req.getDataScope());
         return attachRepo().selectJoinList(GroupAccountRes.class, wrapper);
