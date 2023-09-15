@@ -3,6 +3,7 @@ package com.bidr.authorization.vo.group;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * Title: BindUserReq
@@ -13,8 +14,9 @@ import javax.validation.constraints.NotNull;
  */
 @Data
 public class BindUserReq {
-    @NotNull(message = "用户组id不能为空")
     private Long groupId;
+
+    private List<Long> groupIdList;
 
     private String name;
 
