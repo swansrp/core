@@ -24,6 +24,8 @@ public enum DataPermitScopeDict implements Dict {
     OWNER(1, "本人"),
     SUBORDINATE(2, "本部门及子部门"),
 
+    ALL(3, "全体部门"),
+
     OTHER(4, "其他");
 
     private final Integer value;

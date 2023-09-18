@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.bidr.authorization.constants.dict.DataPermitScopeDict.ALL;
 import static com.bidr.authorization.constants.dict.DataPermitScopeDict.SUBORDINATE;
 
 /**
@@ -82,6 +83,9 @@ public class AcUserGroupJoinService {
                         permissions.addAll(getSubordinateCustomerNumberList(group.getGroupId()));
                         break;
                     }
+                    case ALL: {
+                        permissions.addAll(getAllCustomerNumberList());
+                    }
                     default:
                         break;
                 }
@@ -120,6 +124,13 @@ public class AcUserGroupJoinService {
         return acUserService.selectJoinList(String.class, wrapper);
     }
 
+    public List<String> getAllCustomerNumberList() {
+        MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<AcUser>().select(AcUser::getCustomerNumber)
+                .leftJoin(AcUserGroup.class, AcUserGroup::getUserId, AcUser::getUserId).distinct()
+                .isNotNull(AcUserGroup::getGroupId);
+        return acUserService.selectJoinList(String.class, wrapper);
+    }
+
     public List<AcGroup> getAcGroupByUserIdAndGroupType(Long userId, String groupType) {
         Validator.assertNotNull(userId, ErrCodeSys.PA_PARAM_NULL, "查询用户组数据权限, 用户编码");
         MPJLambdaWrapper<AcGroup> wrapper = new MPJLambdaWrapper<>(AcGroup.class).distinct()
@@ -143,6 +154,8 @@ public class AcUserGroupJoinService {
                 if (FuncUtil.equals(SUBORDINATE, scope)) {
                     List subGroup = recursionService.getChildList(AcGroup::getId, AcGroup::getPid, group.getGroupId());
                     permissions.addAll(subGroup);
+                } else if (FuncUtil.equals(ALL, scope)) {
+                    return acGroupService.getGroupByType(groupName);
                 } else {
                     permissions.add(group.getGroupId());
                 }
