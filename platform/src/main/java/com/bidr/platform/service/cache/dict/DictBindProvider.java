@@ -44,7 +44,7 @@ public class DictBindProvider implements DictionaryServiceExtProvider {
                                 SysDict dict = dictCacheService.getDictByValue(type, s);
                                 labelList.add(dict.getDictLabel());
                             } catch (ServiceException e) {
-                                log.error(e.getMessage());
+                                log.warn(e.getMessage());
                             }
                         }
                         if (FuncUtil.isNotEmpty(labelList)) {
