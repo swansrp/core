@@ -9,7 +9,7 @@ import com.bidr.kernel.constant.CommonConst;
  * @author Sharp
  * @since 2019-7-26 22:16
  */
-public interface Dict {
+public interface Dict extends MetaDictName {
 
     /**
      * 字典值

@@ -2,6 +2,7 @@ package com.bidr.platform.constant.dict;
 
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.MetaDict;
+import com.bidr.kernel.constant.dict.MetaDictName;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.platform.dao.entity.SysDict;
 
@@ -14,7 +15,7 @@ import java.util.Collection;
  * @author Sharp
  * @since 2021/3/16 22:36
  */
-public interface IDynamicDict {
+public interface IDynamicDict extends MetaDictName {
     /**
      * 生成字典列表
      *
