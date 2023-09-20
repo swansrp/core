@@ -18,8 +18,6 @@ import java.util.List;
  * @author Sharp
  * @since 2022/12/09 10:49
  */
-@Primary
-@Component
 public class MPJConfig extends MPJSqlInjector {
 
     @Override

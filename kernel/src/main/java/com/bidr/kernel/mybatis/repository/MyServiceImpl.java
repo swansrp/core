@@ -13,7 +13,7 @@ import com.diboot.core.service.BaseService;
 import com.diboot.core.service.impl.BaseServiceImpl;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.jeffreyning.mybatisplus.service.IMppService;
-import com.github.yulichang.base.service.MPJJoinService;
+import com.github.yulichang.base.MPJBaseService;
 import org.apache.ibatis.binding.MapperMethod;
 
 import java.lang.reflect.Field;
@@ -28,7 +28,7 @@ import java.util.*;
  * @since 2023/02/16 15:05
  */
 public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl<K, T> implements IMppService<T>,
-        MPJJoinService<T>, BaseService<T> {
+        MPJBaseService<T>, BaseService<T> {
 
     public boolean saveOrUpdateByMultiId(T entity) {
         if (null == entity) {
