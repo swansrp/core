@@ -32,6 +32,19 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
 	</properties>
+	<distributionManagement>
+		<repository>
+			<id>bidr</id>
+			<name>nexus Repository RELEASES</name>
+			<url>http://10.3.23.193:8081/repository/maven-releases/</url>
+		</repository>
+
+		<snapshotRepository>
+			<id>bidr</id>
+			<name>nexus Repository SNAPSHOTS</name>
+			<url>http://10.3.23.193:8081/repository/maven-snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
 
 
 </project>
