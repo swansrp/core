@@ -2,6 +2,7 @@ package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
+import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.service.captcha.CaptchaService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -29,7 +30,7 @@ import java.io.IOException;
  * @since 2023/04/26 17:39
  */
 @Slf4j
-@Auth(AuthNone.class)
+@Auth(AuthToken.class)
 @Api(tags = "系统基础 - 图形验证码")
 @RestController("CaptchaController")
 @RequestMapping(value = "/web")

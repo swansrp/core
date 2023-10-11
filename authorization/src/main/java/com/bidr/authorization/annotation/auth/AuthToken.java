@@ -5,22 +5,23 @@ import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
-import com.diboot.core.util.V;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Title: AuthNone
- * Description: Copyright: Copyright (c) 2019 Company: BHFAE
+ * Title: AuthToken
+ * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2022/6/16 16:25
+ * @since 2023/10/11 11:36
  */
 @Component
-public class AuthNone implements AuthRole {
+public class AuthToken implements AuthRole {
     @Override
     public void validate(HttpServletRequest request, String... args) {
-
+        TokenInfo token = AuthTokenUtil.extractToken(request);
+        Validator.assertNotNull(token, ErrCodeSys.PA_DATA_NOT_EXIST, "安全令牌");
+        TokenHolder.set(token);
     }
 }
