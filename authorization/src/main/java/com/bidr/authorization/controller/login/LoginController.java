@@ -5,6 +5,7 @@ import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.annotation.captcha.CaptchaVerify;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.LoginService;
+import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;
@@ -40,8 +41,8 @@ public class LoginController {
     @Auth(AuthNone.class)
     @RequestMapping(value = "", method = RequestMethod.POST)
     @CaptchaVerify("LOGIN_CAPTCHA")
-    public LoginRes login(String userName, String password) {
-        LoginRes res = loginService.login(userName, password);
+    public LoginRes login(@Validated LoginReq req) {
+        LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
         afterLogin(res);
         return res;
     }

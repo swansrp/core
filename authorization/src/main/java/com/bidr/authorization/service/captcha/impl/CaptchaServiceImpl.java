@@ -47,7 +47,7 @@ public class CaptchaServiceImpl implements CaptchaService, CommandLineRunner {
         Validator.assertNotNull(captchaVerification, ErrCodeSys.PA_DATA_NOT_EXIST, "图形验证码类型");
         StringBuffer code = new StringBuffer();
         BufferedImage image = CaptchaUtil.genRandomCodeImage(code);
-        TokenInfo tokenInfo = AuthTokenUtil.resolveToken(token);
+        TokenInfo tokenInfo = AuthTokenUtil.decode(token);
         tokenServiceImpl.updateTokenValue(tokenInfo, type, code.toString().toLowerCase());
         long timeout = System.currentTimeMillis();
         if (captchaVerification instanceof IMsgVerification) {

@@ -1,5 +1,11 @@
 package com.bidr.authorization.annotation.auth;
 
+import com.bidr.authorization.bo.token.TokenInfo;
+import com.bidr.authorization.holder.TokenHolder;
+import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.validate.Validator;
+import com.diboot.core.util.V;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
@@ -15,6 +21,8 @@ import javax.servlet.http.HttpServletRequest;
 public class AuthNone implements AuthRole {
     @Override
     public void validate(HttpServletRequest request, String... args) {
-
+        TokenInfo token = AuthTokenUtil.extractToken(request);
+        Validator.assertNotNull(token, ErrCodeSys.PA_DATA_NOT_EXIST, "验证码");
+        TokenHolder.set(token);
     }
 }

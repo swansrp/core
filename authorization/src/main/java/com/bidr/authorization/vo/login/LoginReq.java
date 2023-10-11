@@ -9,13 +9,14 @@
  */
 package com.bidr.authorization.vo.login;
 
+import com.bidr.authorization.vo.captcha.ICaptchaVerificationReq;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 
 @Data
-public class LoginReq {
+public class LoginReq implements ICaptchaVerificationReq {
 
     @NotBlank(message = "用户标识不能为空")
     @ApiModelProperty(value = "用户标识")
