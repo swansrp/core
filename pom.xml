@@ -56,8 +56,8 @@
 				<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 				<java.version>1.8</java.version>
 				<jarVersion>0.0.1-SNAPSHOT</jarVersion>
-				<kernel.version>20230925142326-1-SNAPSHOT</kernel.version>
-				<platform.version>20230925142357-1-SNAPSHOT</platform.version>
+				<kernel.version>20231016141340-2</kernel.version>
+				<platform.version>20231016141311-2</platform.version>
 				<authorization.version>20231011110606-2-SNAPSHOT</authorization.version>
 				<email.version>20230925142257-1-SNAPSHOT</email.version>
 				<sms.version>20230925142518-1-SNAPSHOT</sms.version>
