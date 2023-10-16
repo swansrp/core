@@ -23,12 +23,12 @@
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${platform.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>redis</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${redis.version}</version>
         </dependency>
     </dependencies>
 

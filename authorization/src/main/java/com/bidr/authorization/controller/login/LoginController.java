@@ -2,6 +2,7 @@ package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
+import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.annotation.captcha.CaptchaVerify;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.LoginService;
@@ -38,7 +39,7 @@ public class LoginController {
     @Autowired(required = false)
     private List<LoginFillTokenInf> fillTokenInfList;
 
-    @Auth(AuthNone.class)
+    @Auth(AuthToken.class)
     @RequestMapping(value = "", method = RequestMethod.POST)
     @CaptchaVerify("LOGIN_CAPTCHA")
     public LoginRes login(@Validated LoginReq req) {
@@ -55,7 +56,7 @@ public class LoginController {
         }
     }
 
-    @Auth(AuthNone.class)
+    @Auth(AuthToken.class)
     @RequestMapping(value = "/msg", method = RequestMethod.POST)
     @CaptchaVerify("LOGIN_MSG_CODE_CAPTCHA")
     public LoginRes login(String phoneNumber) {

@@ -26,13 +26,46 @@
 		<version>2.7.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>1.8</java.version>
-		<jarVersion>0.0.1-SNAPSHOT</jarVersion>
-	</properties>
+	<profiles>
+		<profile>
+			<id>development</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<properties>
+				<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+				<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+				<java.version>1.8</java.version>
+				<jarVersion>0.0.1-SNAPSHOT</jarVersion>
+				<kernel.version>0.0.1-SNAPSHOT</kernel.version>
+				<platform.version>0.0.1-SNAPSHOT</platform.version>
+				<authorization.version>0.0.1-SNAPSHOT</authorization.version>
+				<email.version>0.0.1-SNAPSHOT</email.version>
+				<sms.version>0.0.1-SNAPSHOT</sms.version>
+				<redis.version>0.0.1-SNAPSHOT</redis.version>
+				<xxl.job.version>0.0.1-SNAPSHOT</xxl.job.version>
+			</properties>
+		</profile>
+		<profile>
+			<id>public-snapshots</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+				<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+				<java.version>1.8</java.version>
+				<jarVersion>0.0.1-SNAPSHOT</jarVersion>
+				<kernel.version>20230925142326-1-SNAPSHOT</kernel.version>
+				<platform.version>20230925142357-1-SNAPSHOT</platform.version>
+				<authorization.version>20231011110606-2-SNAPSHOT</authorization.version>
+				<email.version>20230925142257-1-SNAPSHOT</email.version>
+				<sms.version>20230925142518-1-SNAPSHOT</sms.version>
+				<redis.version>20230925142438-1-SNAPSHOT</redis.version>
+				<xxl.job.version>20230925142545-1-SNAPSHOT</xxl.job.version>
+			</properties>
+		</profile>
+	</profiles>
 	<distributionManagement>
 		<repository>
 			<id>bidr</id>
@@ -46,6 +79,4 @@
 			<url>http://10.3.23.193:8081/repository/maven-snapshots/</url>
 		</snapshotRepository>
 	</distributionManagement>
-
-
 </project>

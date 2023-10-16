@@ -22,7 +22,7 @@
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>authorization</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${authorization.version}</version>
         </dependency>
         <dependency>
             <groupId>com.aliyun</groupId>

@@ -47,7 +47,7 @@ public class CaptchaController {
     public void getCaptcha(HttpServletRequest request, HttpServletResponse response,
                            @RequestParam(value = "token") String token,
                            @RequestParam(value = "captchaType") String captchaType) throws IOException {
-
+        log.info(request.getRequestURI() + "?" + request.getQueryString());
         ServletOutputStream stream = response.getOutputStream();
         try {
             response.setContentType("image/png");

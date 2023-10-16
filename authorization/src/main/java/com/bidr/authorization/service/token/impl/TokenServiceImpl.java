@@ -44,7 +44,8 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public String fetchToken() {
-        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, GUEST_OPERATOR, TOKEN_DEFAULT_TIMEOUT);
+        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, GUEST_OPERATOR,
+                TOKEN_DEFAULT_TIMEOUT);
         saveToken(token, GUEST_OPERATOR, TOKEN_DEFAULT_TIMEOUT);
         return AuthTokenUtil.getToken(token);
     }
@@ -66,6 +67,9 @@ public class TokenServiceImpl implements TokenService {
         boolean result = redisService.hasKey(getKey(token));
         if (result) {
             String operator = getItem(token, TokenItem.OPERATOR.name(), String.class);
+            if (FuncUtil.equals(operator, GUEST_OPERATOR)) {
+                return false;
+            }
             result = StringUtils.equals(token.getCustomerNumber(), operator);
         }
         return result;
