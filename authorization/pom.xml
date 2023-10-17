@@ -16,15 +16,11 @@
     <profiles>
         <profile>
             <id>development</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <platform.version>${jarVersion}</platform.version>
+
                 <redis.version>${jarVersion}</redis.version>
             </properties>
         </profile>
@@ -37,18 +33,13 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <platform.version>20231016141519-3</platform.version>
-                <redis.version>20231017093022-13</redis.version>
+
+                <redis.version>20231017110913-17</redis.version>
             </properties>
         </profile>
     </profiles>
 
     <dependencies>
-        <dependency>
-            <groupId>com.bidr</groupId>
-            <artifactId>platform</artifactId>
-            <version>${platform.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>redis</artifactId>
