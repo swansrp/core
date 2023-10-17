@@ -15,9 +15,6 @@
     <profiles>
         <profile>
             <id>development</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -34,7 +31,7 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <platform.version>20231016141519-3</platform.version>
+                <platform.version>20231017110413-4</platform.version>
             </properties>
         </profile>
     </profiles>
