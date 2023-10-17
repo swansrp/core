@@ -38,7 +38,7 @@
 				<java.version>1.8</java.version>
 				<jarVersion>0.0.1-SNAPSHOT</jarVersion>
 				<kernel.version>0.0.1-SNAPSHOT</kernel.version>
-				<platform.version>0.0.1-SNAPSHOT</platform.version>
+				<platform.version>20231016141519-3</platform.version>
 				<authorization.version>0.0.1-SNAPSHOT</authorization.version>
 				<email.version>0.0.1-SNAPSHOT</email.version>
 				<sms.version>0.0.1-SNAPSHOT</sms.version>
@@ -61,7 +61,7 @@
 				<authorization.version>20231011110606-2-SNAPSHOT</authorization.version>
 				<email.version>20231016141712-2</email.version>
 				<sms.version>20230925142518-1-SNAPSHOT</sms.version>
-				<redis.version>20230925142438-1-SNAPSHOT</redis.version>
+				<redis.version>20231017093022-13</redis.version>
 				<xxl.job.version>20231016141719-2</xxl.job.version>
 			</properties>
 		</profile>
