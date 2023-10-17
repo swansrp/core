@@ -27,6 +27,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
+	<properties>
+		<jarVersion>0.0.1-SNAPSHOT</jarVersion>
+	</properties>
+
 	<distributionManagement>
 		<repository>
 			<id>bidr</id>
