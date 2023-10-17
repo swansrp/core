@@ -5,8 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <groupId>com.bidr</groupId>
-        <version>0.0.2-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
