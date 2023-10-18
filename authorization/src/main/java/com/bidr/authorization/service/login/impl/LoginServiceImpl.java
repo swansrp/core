@@ -149,8 +149,10 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
-    public LoginRes ghostLogin(String loginId) {
-        return null;
+    public LoginRes ghostLogin(String customerNumber) {
+        AcUser user = acUserService.getByCustomerNumber(customerNumber);
+        Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
+        return login(user);
     }
 
     @Override

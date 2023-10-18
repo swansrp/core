@@ -32,7 +32,7 @@ public class AuthAdmin implements AuthRole {
     @Override
     public void validate(HttpServletRequest request, String... args) {
         authLogin.validate(request, args);
-        String adminRoleId = sysConfigCacheService.getParamValueAvail(AccountParam.ACCOUNT_ADMIN_ROLE_ID);
+        Long adminRoleId = sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID);
         AccountInfo accountInfo = AccountContext.get();
         boolean isAdmin = false;
         for (RoleInfo roleInfo : accountInfo.getRoleInfoMap().values()) {
