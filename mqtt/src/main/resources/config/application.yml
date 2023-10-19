@@ -1,0 +1,27 @@
+my:
+  project:
+    name: mqtt
+  master-db:
+    config:
+      db: mysql
+      url: 49.232.132.116
+      username: dbAdmin
+      password: Amd!n123
+      driver: com.mysql.cj.jdbc.Driver
+
+swagger: # 是否开启swagger
+  enabled: true
+  # 请求前缀
+  pathMapping:
+app:
+  projectId: om
+  moduleId: ${spring.application.name}
+  log:
+    path: /data/log
+
+mqtt:
+  host: tcp://sharp.51teqi.com:1883
+  user-name: sharp
+  password: Adm!n123
+  client:
+    id: sharp-server
