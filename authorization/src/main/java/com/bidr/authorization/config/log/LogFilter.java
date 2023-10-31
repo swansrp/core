@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * description 请求日志
@@ -42,7 +43,10 @@ public class LogFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String reqToken = RandomUtil.getUUID();
+        String requestId = request.getHeader("X-Request-Id");
+        if (!org.springframework.util.StringUtils.hasText(requestId)) {
+            requestId = UUID.randomUUID().toString().replaceAll("-", "").toUpperCase();
+        }
         MultiReadHttpServletRequest wrappedRequest;
         MultiReadHttpServletResponse wrappedResponse;
 
@@ -64,7 +68,7 @@ public class LogFilter extends OncePerRequestFilter {
 
             // 记录请求的消息体
             MDC.put("logToken", tokenInfo == null ? "" : tokenInfo.getToken());
-            MDC.put("reqToken", reqToken);
+            MDC.put("REQUEST_ID", requestId);
             MDC.put("URI", request.getRequestURI());
             MDC.put("method", request.getMethod());
             MDC.put("status", String.valueOf(response.getStatus()));
@@ -89,6 +93,7 @@ public class LogFilter extends OncePerRequestFilter {
 
             stopWatch.stop();
             MDC.put("totalTime", String.valueOf(stopWatch.getTotalTimeMillis()));
+            MDC.put("REQUEST_ID", requestId);
             // 记录响应的消息体
             String resultBodyStr;
 

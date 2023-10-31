@@ -16,7 +16,7 @@
             %n是换行符
     -->
 	<property name="LOG_PATTERN"
-			  value="%d %-5level[%thread][%X{reqToken}][%X{logToken}]%logger{15}|\(%file:%line\\)%m%n"/>
+			  value="%d %-5level[%thread][%X{REQUEST_ID}][%X{logToken}]%logger{15}|\(%file:%line\\)%m%n"/>
 	<!-- ============================= ↓↓↓↓ 输出器 ↓↓↓↓ ================================= -->
 	<!-- 控制台日志输出器 -->
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
