@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
+import com.bidr.kernel.vo.portal.AdvanceQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import org.apache.commons.collections4.CollectionUtils;
@@ -106,6 +107,14 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         QueryWrapper<T> wrapper = Wrappers.query();
         wrapper.setEntityClass(entityClass);
         parseQueryCondition(req, wrapper);
+        return select(wrapper, req);
+    }
+
+    @Override
+    public Page<T> select(AdvanceQueryReq req) {
+        QueryWrapper<T> wrapper = Wrappers.query();
+        wrapper.setEntityClass(entityClass);
+        parseAdvanceQuery(req, wrapper);
         return select(wrapper, req);
     }
 
@@ -233,20 +242,6 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public boolean deleteById(Serializable id) {
-        return removeById(id);
-    }
-
-    @Override
-    public boolean deleteById(T entity) {
-        if (super.multiIdExisted()) {
-            return super.deleteByMultiId(entity);
-        } else {
-            return super.removeById(super.getId(entity));
-        }
-    }
-
-    @Override
     public boolean delete(List<T> idList) {
         if (CollectionUtils.isEmpty(idList)) {
             return false;
@@ -263,6 +258,20 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
             } else {
                 return super.removeBatchByIds(idList);
             }
+        }
+    }
+
+    @Override
+    public boolean deleteById(Serializable id) {
+        return removeById(id);
+    }
+
+    @Override
+    public boolean deleteById(T entity) {
+        if (super.multiIdExisted()) {
+            return super.deleteByMultiId(entity);
+        } else {
+            return super.removeById(super.getId(entity));
         }
     }
 

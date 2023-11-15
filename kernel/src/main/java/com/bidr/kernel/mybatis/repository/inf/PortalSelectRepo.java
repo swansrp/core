@@ -8,9 +8,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
-import com.bidr.kernel.vo.portal.ConditionVO;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.SortVO;
+import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 import java.lang.reflect.Field;
@@ -36,95 +34,63 @@ public interface PortalSelectRepo {
     default QueryWrapper parseQueryCondition(QueryConditionReq req, QueryWrapper wrapper) {
         if (FuncUtil.isNotEmpty(req.getConditionList())) {
             for (ConditionVO condition : req.getConditionList()) {
-                String columnName = getColumnName(condition, wrapper.getEntityClass());
-                formatDateValue(condition);
-                switch (PortalConditionDict.of(condition.getRelation())) {
-                    case EQUAL:
-                        wrapper.eq(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
-                        break;
-                    case NOT_EQUAL:
-                        wrapper.ne(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
-                        break;
-                    case IN:
-                        wrapper.in(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
-                        break;
-                    case NOT_IN:
-                        wrapper.notIn(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
-                        break;
-                    case LIKE:
-                        wrapper.like(FuncUtil.isNotEmpty(condition.getValue()), columnName,
-                                condition.getValue().get(0));
-                        break;
-                    case NOT_LIKE:
-                        wrapper.notLike(FuncUtil.isNotEmpty(condition.getValue()), columnName,
-                                condition.getValue().get(0));
-                        break;
-                    case GREATER:
-                        wrapper.gt(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
-                        break;
-                    case GREATER_EQUAL:
-                        wrapper.ge(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
-                        break;
-                    case LESS:
-                        wrapper.lt(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
-                        break;
-                    case LESS_EQUAL:
-                        wrapper.le(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
-                        break;
-                    case NULL:
-                        wrapper.isNull(columnName);
-                        break;
-                    case NOT_NULL:
-                        wrapper.isNotNull(columnName);
-                        break;
-                    case BETWEEN:
-                        wrapper.between(FuncUtil.isNotEmpty(condition.getValue()), columnName,
-                                condition.getValue().get(0), condition.getValue().get(1));
-                        break;
-                    case NOT_BETWEEN:
-                        wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), columnName,
-                                condition.getValue().get(0), condition.getValue().get(1));
-                        break;
-                    default:
-                        break;
-                }
+                buildQueryWrapper(wrapper, condition);
             }
         }
         parseSort(req, wrapper);
         return wrapper;
     }
 
-    /**
-     * 获取数据库字段名
-     *
-     * @param condition   查询条件
-     * @param entityClass 所属数据库entity
-     * @return 字段名
-     */
-
-    default String getColumnName(ConditionVO condition, Class<?> entityClass) {
-        if (FuncUtil.isNotEmpty(condition.getProperty())) {
-            return getColumnName(condition.getProperty(), entityClass);
-        }
-        return null;
-    }
-
-    /**
-     * 如果指定日期格式 将value输入转换成日期格式
-     *
-     * @param condition 条件
-     */
-    default void formatDateValue(ConditionVO condition) {
-        if (FuncUtil.isNotEmpty(condition.getDateFormat())) {
-            if (FuncUtil.isNotEmpty(condition.getValue())) {
-                for (int index = 0; index < condition.getValue().size(); index++) {
-                    if (FuncUtil.isNotEmpty(condition.getValue().get(index))) {
-                        condition.getValue().set(index,
-                                JsonUtil.readDateJson(condition.getValue().get(index), condition.getDateFormat(),
-                                        Date.class));
-                    }
-                }
-            }
+    default void buildQueryWrapper(QueryWrapper wrapper, ConditionVO condition) {
+        formatDateValue(condition);
+        String columnName = getColumnName(condition, wrapper.getEntityClass());
+        switch (PortalConditionDict.of(condition.getRelation())) {
+            case EQUAL:
+                wrapper.eq(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case NOT_EQUAL:
+                wrapper.ne(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case IN:
+                wrapper.in(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
+                break;
+            case NOT_IN:
+                wrapper.notIn(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
+                break;
+            case LIKE:
+                wrapper.like(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case NOT_LIKE:
+                wrapper.notLike(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case GREATER:
+                wrapper.gt(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case GREATER_EQUAL:
+                wrapper.ge(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case LESS:
+                wrapper.lt(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case LESS_EQUAL:
+                wrapper.le(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case NULL:
+                wrapper.isNull(columnName);
+                break;
+            case NOT_NULL:
+                wrapper.isNotNull(columnName);
+                break;
+            case BETWEEN:
+                wrapper.between(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0),
+                        condition.getValue().get(1));
+                break;
+            case NOT_BETWEEN:
+                wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0),
+                        condition.getValue().get(1));
+                break;
+            default:
+                break;
         }
     }
 
@@ -155,6 +121,40 @@ public interface PortalSelectRepo {
             }
         }
         return wrapper;
+    }
+
+    /**
+     * 如果指定日期格式 将value输入转换成日期格式
+     *
+     * @param condition 条件
+     */
+    default void formatDateValue(ConditionVO condition) {
+        if (FuncUtil.isNotEmpty(condition.getDateFormat())) {
+            if (FuncUtil.isNotEmpty(condition.getValue())) {
+                for (int index = 0; index < condition.getValue().size(); index++) {
+                    if (FuncUtil.isNotEmpty(condition.getValue().get(index))) {
+                        condition.getValue().set(index,
+                                JsonUtil.readDateJson(condition.getValue().get(index), condition.getDateFormat(),
+                                        Date.class));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取数据库字段名
+     *
+     * @param condition   查询条件
+     * @param entityClass 所属数据库entity
+     * @return 字段名
+     */
+
+    default String getColumnName(ConditionVO condition, Class<?> entityClass) {
+        if (FuncUtil.isNotEmpty(condition.getProperty())) {
+            return getColumnName(condition.getProperty(), entityClass);
+        }
+        return null;
     }
 
     /**
@@ -269,6 +269,48 @@ public interface PortalSelectRepo {
                             break;
                         case DESC:
                             wrapper.orderByDesc(sortVO.getProperty());
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+        return wrapper;
+    }
+
+    default void parseAdvanceQuery(AdvanceQuery req, QueryWrapper wrapper) {
+        if (FuncUtil.isNotEmpty(req.getAndOr())) {
+            wrapper.and(w -> parseAdvanceQuery(req.getConditionA(), (QueryWrapper) w));
+            if (StringUtil.convertSwitch(req.getAndOr())) {
+                wrapper.or(w -> parseAdvanceQuery(req.getConditionB(), (QueryWrapper) w));
+            } else {
+                wrapper.and(w -> parseAdvanceQuery(req.getConditionB(), (QueryWrapper) w));
+            }
+        } else {
+            buildQueryWrapper(wrapper, req);
+        }
+    }
+
+    default QueryWrapper parseAdvanceQuery(AdvanceQueryReq req, QueryWrapper wrapper) {
+        if (FuncUtil.isNotEmpty(req.getCondition())) {
+            parseAdvanceQuery(req.getCondition(), wrapper);
+        }
+        parseSort(req, wrapper);
+        return wrapper;
+    }
+
+    default QueryWrapper parseSort(AdvanceQueryReq req, QueryWrapper wrapper) {
+        if (FuncUtil.isNotEmpty(req.getSortList())) {
+            for (SortVO sortVO : req.getSortList()) {
+                if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
+                    String columnName = getColumnName(sortVO.getProperty(), wrapper.getEntityClass());
+                    switch (PortalSortDict.of(sortVO.getType())) {
+                        case ASC:
+                            wrapper.orderByAsc(columnName);
+                            break;
+                        case DESC:
+                            wrapper.orderByDesc(columnName);
                             break;
                         default:
                             break;

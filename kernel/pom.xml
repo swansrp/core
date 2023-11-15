@@ -81,7 +81,7 @@
         <dependency>
             <groupId>com.github.yulichang</groupId>
             <artifactId>mybatis-plus-join</artifactId>
-            <version>1.4.6</version>
+            <version>1.4.7.1</version>
         </dependency>
         <dependency>
             <groupId>com.diboot</groupId>
