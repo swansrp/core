@@ -1,0 +1,30 @@
+my:
+  project:
+    name: mini
+  master-db:
+    config:
+      db: archives
+      url: 49.232.132.116
+      username: dbAdmin
+      password: Adm!n123
+      driver: com.mysql.cj.jdbc.Driver
+
+swagger: # 是否开启swagger
+  enabled: true
+  # 请求前缀
+  pathMapping:
+app:
+  projectId: mini
+  moduleId: ${spring.application.name}
+  log:
+    path: /data/log
+
+mqtt:
+  host: tcp://49.232.132.116:1883
+  user-name: sharp
+  password: Adm!n123
+  client:
+    id: sharp-server
+
+server:
+  port: 8082
