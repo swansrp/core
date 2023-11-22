@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.platform.dao.mapper.SysPortalColumnMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.platform.dao.entity.SysPortalColumn">
+    <!--@mbg.generated-->
+    <!--@Table sys_portal_column-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="portal_id" jdbcType="BIGINT" property="portalId" />
+    <result column="property" jdbcType="VARCHAR" property="property" />
+    <result column="display_name" jdbcType="VARCHAR" property="displayName" />
+    <result column="field_type" jdbcType="INTEGER" property="fieldType" />
+    <result column="reference" jdbcType="VARCHAR" property="reference" />
+    <result column="width" jdbcType="INTEGER" property="width" />
+    <result column="fixed" jdbcType="INTEGER" property="fixed" />
+    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
+    <result column="editable" jdbcType="INTEGER" property="editable" />
+    <result column="required" jdbcType="INTEGER" property="required" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, portal_id, property, display_name, field_type, reference, width, fixed, display_order, 
+    editable, required
+  </sql>
+</mapper>

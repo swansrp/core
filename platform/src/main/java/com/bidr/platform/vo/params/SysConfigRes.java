@@ -1,6 +1,7 @@
 package com.bidr.platform.vo.params;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.bidr.platform.config.portal.PortalEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -18,6 +19,7 @@ import java.util.Date;
  * @since 2023/06/07 14:01
  */
 @Data
+@PortalEntity("test")
 public class SysConfigRes {
 
     @ApiModelProperty(value = "参数主键")

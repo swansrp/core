@@ -279,28 +279,31 @@ public interface PortalSelectRepo {
         return wrapper;
     }
 
-    default void parseAdvanceQuery(AdvanceQuery req, QueryWrapper wrapper) {
+    default void parseAdvancedQuery(AdvancedQuery req, QueryWrapper wrapper) {
         if (FuncUtil.isNotEmpty(req.getAndOr())) {
-            wrapper.and(w -> parseAdvanceQuery(req.getConditionA(), (QueryWrapper) w));
-            if (StringUtil.convertSwitch(req.getAndOr())) {
-                wrapper.or(w -> parseAdvanceQuery(req.getConditionB(), (QueryWrapper) w));
-            } else {
-                wrapper.and(w -> parseAdvanceQuery(req.getConditionB(), (QueryWrapper) w));
+            if(FuncUtil.isNotEmpty(req.getConditionList())) {
+                for (AdvancedQuery advancedQuery : req.getConditionList()) {
+                    if (StringUtil.convertSwitch(req.getAndOr())) {
+                        wrapper.or(w -> parseAdvancedQuery(advancedQuery, (QueryWrapper) w));
+                    } else {
+                        wrapper.and(w -> parseAdvancedQuery(advancedQuery, (QueryWrapper) w));
+                    }
+                }
             }
         } else {
             buildQueryWrapper(wrapper, req);
         }
     }
 
-    default QueryWrapper parseAdvanceQuery(AdvanceQueryReq req, QueryWrapper wrapper) {
+    default QueryWrapper parseAdvancedQuery(AdvancedQueryReq req, QueryWrapper wrapper) {
         if (FuncUtil.isNotEmpty(req.getCondition())) {
-            parseAdvanceQuery(req.getCondition(), wrapper);
+            parseAdvancedQuery(req.getCondition(), wrapper);
         }
         parseSort(req, wrapper);
         return wrapper;
     }
 
-    default QueryWrapper parseSort(AdvanceQueryReq req, QueryWrapper wrapper) {
+    default QueryWrapper parseSort(AdvancedQueryReq req, QueryWrapper wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             for (SortVO sortVO : req.getSortList()) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {

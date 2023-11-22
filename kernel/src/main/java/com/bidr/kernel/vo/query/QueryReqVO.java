@@ -8,14 +8,12 @@ package com.bidr.kernel.vo.query;
 
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 /**
  * @author sharuopeng
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class QueryReqVO extends ReqBaseVO {
+public class QueryReqVO {
     @ApiModelProperty("当前页")
     private Long currentPage = 1L;
     @ApiModelProperty("每页大小")

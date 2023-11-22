@@ -2,12 +2,15 @@ package com.bidr.kernel.mybatis.repository;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
-import com.bidr.kernel.vo.portal.AdvanceQueryReq;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import org.apache.commons.collections4.CollectionUtils;
@@ -111,10 +114,10 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(AdvanceQueryReq req) {
+    public Page<T> select(AdvancedQueryReq req) {
         QueryWrapper<T> wrapper = Wrappers.query();
         wrapper.setEntityClass(entityClass);
-        parseAdvanceQuery(req, wrapper);
+        parseAdvancedQuery(req, wrapper);
         return select(wrapper, req);
     }
 
@@ -328,26 +331,29 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public boolean insertOrUpdate(Collection<T> entity, UpdateWrapper<T> wrapper) {
-        if (wrapper == null) {
-            if (super.multiIdExisted()) {
-                return super.saveOrUpdateBatchByMultiId(entity);
-            } else {
-                return super.saveOrUpdateBatch(entity);
-            }
-        } else {
-            return super.saveOrUpdateBatch(entity);
-        }
-    }
-
-    @Override
     public boolean insertOrUpdate(T entity) {
         return insertOrUpdate(entity, null);
     }
 
     @Override
     public boolean insertOrUpdate(Collection<T> entity) {
-        return insertOrUpdate(entity, null);
+        if (super.multiIdExisted()) {
+            return super.saveOrUpdateBatchByMultiId(entity);
+        } else {
+            return super.saveOrUpdateBatch(entity);
+        }
+    }
+
+    @Override
+    public boolean insertOrUpdate(T entity, SFunction<T, ?> field, SFunction<T, ?>... fields) {
+        LambdaUpdateWrapper<T> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(field, field.apply(entity));
+        if (FuncUtil.isNotEmpty(fields)) {
+            for (SFunction<T, ?> f : fields) {
+                wrapper.eq(f, f.apply(entity));
+            }
+        }
+        return saveOrUpdate(entity, wrapper);
     }
 
     @Override

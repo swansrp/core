@@ -1,6 +1,7 @@
 package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 
 import java.util.Collection;
 import java.util.Map;
@@ -28,10 +29,10 @@ public interface SqlUpdateRepo<T> {
 
     boolean insertOrUpdate(T entity, UpdateWrapper<T> wrapper);
 
-    boolean insertOrUpdate(Collection<T> entity, UpdateWrapper<T> wrapper);
-
     boolean insertOrUpdate(T entity);
 
     boolean insertOrUpdate(Collection<T> entity);
+
+    boolean insertOrUpdate(T entity, SFunction<T, ?> field, SFunction<T, ?>... fields);
 
 }

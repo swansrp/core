@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.platform.dao.mapper.SysPortalMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.platform.dao.entity.SysPortal">
+    <!--@mbg.generated-->
+    <!--@Table sys_portal-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="display_name" jdbcType="VARCHAR" property="displayName" />
+    <result column="tree_mode" jdbcType="VARCHAR" property="treeMode" />
+    <result column="order_mode" jdbcType="VARCHAR" property="orderMode" />
+    <result column="size" jdbcType="VARCHAR" property="size" />
+    <result column="id_column" jdbcType="VARCHAR" property="idColumn" />
+    <result column="pid_column" jdbcType="VARCHAR" property="pidColumn" />
+    <result column="name_column" jdbcType="VARCHAR" property="nameColumn" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, `name`, display_name, tree_mode, order_mode, `size`, id_column, pid_column, name_column
+  </sql>
+</mapper>

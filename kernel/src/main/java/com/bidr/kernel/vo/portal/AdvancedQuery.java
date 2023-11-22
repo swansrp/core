@@ -1,6 +1,5 @@
 package com.bidr.kernel.vo.portal;
 
-import com.bidr.kernel.vo.query.QueryReqVO;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -8,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 
 /**
- * Title: AdvanceQueryReq
+ * Title: AdvancedQuery
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
@@ -16,9 +15,9 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class AdvanceQueryReq extends QueryReqVO {
-    @ApiModelProperty("查询条件")
-    private AdvanceQuery condition;
-    @ApiModelProperty("排序")
-    private List<SortVO> sortList;
+public class AdvancedQuery extends ConditionVO {
+    @ApiModelProperty("条件列表")
+    private List<AdvancedQuery> conditionList;
+    @ApiModelProperty("0 and 1 or")
+    private String andOr;
 }

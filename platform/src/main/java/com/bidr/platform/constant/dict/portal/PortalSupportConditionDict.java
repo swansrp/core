@@ -1,9 +1,10 @@
-package com.bidr.platform.constant.dict;
+package com.bidr.platform.constant.dict.portal;
 
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.utils.StringUtil;
+import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.dao.entity.SysDict;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
