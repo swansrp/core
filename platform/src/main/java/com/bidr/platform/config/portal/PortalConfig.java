@@ -25,7 +25,7 @@ import java.util.*;
  * @author Sharp
  * @since 2023/11/22 09:11
  */
-@Service
+// @Service
 @RequiredArgsConstructor
 public class PortalConfig implements CommandLineRunner {
 

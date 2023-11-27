@@ -89,6 +89,32 @@
             <version>4.4.1</version>
         </dependency>
         <!-- XML & CSV parser END -->
+
+        <!-- jxls导出导入读取excel报表 -->
+        <!-- https://mvnrepository.com/artifact/org.jxls/jxls -->
+        <dependency>
+            <groupId>org.jxls</groupId>
+            <artifactId>jxls</artifactId>
+            <version>2.13.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jxls/jxls-poi -->
+        <dependency>
+            <groupId>org.jxls</groupId>
+            <artifactId>jxls-poi</artifactId>
+            <version>2.13.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jxls/jxls-jexcel -->
+        <dependency>
+            <groupId>org.jxls</groupId>
+            <artifactId>jxls-jexcel</artifactId>
+            <version>1.0.9</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jxls/jxls-reader -->
+        <dependency>
+            <groupId>org.jxls</groupId>
+            <artifactId>jxls-reader</artifactId>
+            <version>2.1.0</version>
+        </dependency>
     </dependencies>
 
 </project>
