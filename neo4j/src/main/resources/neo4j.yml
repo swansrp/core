@@ -1,0 +1,14 @@
+spring:
+  data:
+    neo4j:
+      uri: bolt://10.3.23.191:7687
+      username: neo4j
+      password: Adm!n123
+
+org:
+  neo4j:
+    driver:
+      uri: bolt://10.3.23.191:7687
+      authentication:
+        username: neo4j
+        password: Adm!n123

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.neo4j.dao.mapper.NeoNodeSyncMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.neo4j.dao.entity.NeoNodeSync">
+    <!--@mbg.generated-->
+    <!--@Table neo_node_sync-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="node_id" jdbcType="BIGINT" property="nodeId" />
+    <result column="property" jdbcType="VARCHAR" property="property" />
+    <result column="relation" jdbcType="INTEGER" property="relation" />
+    <result column="value" jdbcType="VARCHAR" property="value" />
+    <result column="date_format" jdbcType="VARCHAR" property="dateFormat" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, node_id, property, relation, `value`, date_format
+  </sql>
+</mapper>

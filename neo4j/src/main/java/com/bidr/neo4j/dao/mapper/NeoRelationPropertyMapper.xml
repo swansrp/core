@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.neo4j.dao.mapper.NeoRelationPropertyMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.neo4j.dao.entity.NeoRelationProperty">
+    <!--@mbg.generated-->
+    <!--@Table neo_relation_property-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="relation_id" jdbcType="BIGINT" property="relationId" />
+    <result column="property" jdbcType="VARCHAR" property="property" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="type" jdbcType="INTEGER" property="type" />
+    <result column="reference" jdbcType="VARCHAR" property="reference" />
+    <result column="require" jdbcType="VARCHAR" property="require" />
+    <result column="read_only" jdbcType="VARCHAR" property="readOnly" />
+    <result column="write_only" jdbcType="VARCHAR" property="writeOnly" />
+    <result column="show" jdbcType="VARCHAR" property="show" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, relation_id, property, `name`, `type`, reference, `require`, read_only, write_only,
+    `show`
+  </sql>
+</mapper>

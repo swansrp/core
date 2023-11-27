@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.neo4j.dao.mapper.NeoConfigPropertyMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.neo4j.dao.entity.NeoConfigProperty">
+    <!--@mbg.generated-->
+    <!--@Table neo_config_property-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="config_id" jdbcType="BIGINT" property="configId" />
+    <result column="relation_property_id" jdbcType="BIGINT" property="relationPropertyId" />
+    <result column="value" jdbcType="VARCHAR" property="value" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, config_id, relation_property_id, `value`
+  </sql>
+</mapper>

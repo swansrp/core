@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.neo4j.dao.mapper.NeoNodeMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.neo4j.dao.entity.NeoNode">
+    <!--@mbg.generated-->
+    <!--@Table neo_node-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="label" jdbcType="VARCHAR" property="label" />
+    <result column="table_name" jdbcType="VARCHAR" property="tableName" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, `name`, `label`, `table_name`
+  </sql>
+</mapper>
