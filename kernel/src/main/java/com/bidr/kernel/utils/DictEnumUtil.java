@@ -19,7 +19,7 @@ public class DictEnumUtil {
 
     private static final Map<String, Map<Object, String>> ENUM_MAP = new HashMap<>();
 
-    public static <E extends Enum<E>> E getEnumByValue(String value, Class<E> clazz) {
+    public static <E extends Enum<E>> E getEnumByValue(Object value, Class<E> clazz) {
         return getValueMap(value, "value", clazz);
     }
 

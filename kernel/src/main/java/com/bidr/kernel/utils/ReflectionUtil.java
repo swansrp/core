@@ -671,6 +671,34 @@ public class ReflectionUtil {
         return map;
     }
 
+    public static <T> Map<String, T> reflectToLinkedMap(Collection<T> list, String... fieldArr) {
+        Map<String, T> map = new LinkedHashMap<>();
+        for (T t : list) {
+            String fieldValueArr = getFieldKey(fieldArr, t);
+            String key = StringUtil.join(fieldValueArr);
+            map.put(key, t);
+        }
+        return map;
+    }
+
+    public static <T, K> Map<K, T> reflectToLinkedMap(Collection<T> list, String fieldName, Class<K> clazz) {
+        Map<K, T> map = new LinkedHashMap<>(list.size());
+        for (T t : list) {
+            K key = getFieldValue(t, fieldName);
+            map.put(key, t);
+        }
+        return map;
+    }
+
+    public static <T, K> Map<K, T> reflectToLinkedMap(Collection<T> list, GetFunc<T, K> getFunc) {
+        Map<K, T> map = new LinkedHashMap<>(list.size());
+        for (T t : list) {
+            K key = getFunc.apply(t);
+            map.put(key, t);
+        }
+        return map;
+    }
+
     public static Object invoke(Object obj, String methodName, Object... paramArray) {
         List<Class<?>> classList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(paramArray)) {
