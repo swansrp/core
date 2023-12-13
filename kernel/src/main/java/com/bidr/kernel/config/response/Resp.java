@@ -63,7 +63,7 @@ public class Resp {
             return convert(entityList, voClass, dictList, dictField, dataFiled,
                     (Class<T>) entityList.get(0).getClass());
         } else {
-            return new ArrayList<>();
+            return Binder.convertAndBindRelations(new ArrayList<>(new LinkedHashMap<>().values()), voClass);
         }
     }
 
