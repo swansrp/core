@@ -17,6 +17,7 @@ import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.captcha.CaptchaVerificationReq;
 import com.bidr.authorization.vo.msg.MsgVerificationReq;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.validate.Validator;
@@ -72,7 +73,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private void enableCrossDomain(HttpServletRequest request, HttpServletResponse response) {
         Map<String, String> headersInfoMap = HttpUtil.getHeadersInfoMap(request);
-        response.setHeader("Access-Control-Allow-Origin", headersInfoMap.get("origin"));
+        if (FuncUtil.equals(BeanUtil.getActiveProfile(), "dev") ||
+                FuncUtil.equals(BeanUtil.getActiveProfile(), "local")) {
+            response.setHeader("Access-Control-Allow-Origin", headersInfoMap.get("origin"));
+        }
         response.setHeader("Access-Control-Allow-Headers", RequestConst.getAllHeader());
         response.setHeader("Access-Control-Allow-Methods", RequestConst.getAllMethod());
     }
