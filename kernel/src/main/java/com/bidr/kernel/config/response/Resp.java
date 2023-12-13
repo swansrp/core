@@ -56,19 +56,44 @@ public class Resp {
      * @param <E>        给定列表类型
      * @return 目标数据列表
      */
+    @SuppressWarnings("unchecked")
     public static <T, VO, E> List<VO> convert(List<T> entityList, Class<VO> voClass, List<E> dictList,
                                               GetFunc<E, ?> dictField, GetFunc<T, ?> dataFiled) {
-        Map<Object, T> map = new LinkedHashMap<>();
         if (FuncUtil.isNotEmpty(entityList)) {
-            if (FuncUtil.isNotEmpty(dictList)) {
-                for (E dict : dictList) {
-                    T entity = (T) ReflectionUtil.newInstance(entityList.get(0).getClass());
-                    Field field = LambdaUtil.getFieldByGetFunc(dataFiled);
-                    Object dictValue = JsonUtil.readJson(dictField.apply(dict), field.getType());
-                    ReflectionUtil.setValue(field, entity, dictValue);
-                    map.put(dictValue, entity);
-                }
+            return convert(entityList, voClass, dictList, dictField, dataFiled,
+                    (Class<T>) entityList.get(0).getClass());
+        } else {
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 根据给定列表dict 将entity进行填充 并转换成目标列表
+     *
+     * @param entityList  源数据列表
+     * @param voClass     目标数据类型
+     * @param dictList    给定列表
+     * @param dictField   给定列表匹配字段
+     * @param dataFiled   源数据匹配点断
+     * @param entityClazz 源数据类型
+     * @param <T>         源数据类型
+     * @param <VO>        目标数据类型
+     * @param <E>         给定列表类型
+     * @return 目标数据列表
+     */
+    public static <T, VO, E> List<VO> convert(List<T> entityList, Class<VO> voClass, List<E> dictList,
+                                              GetFunc<E, ?> dictField, GetFunc<T, ?> dataFiled, Class<T> entityClazz) {
+        Map<Object, T> map = new LinkedHashMap<>();
+        if (FuncUtil.isNotEmpty(dictList)) {
+            for (E dict : dictList) {
+                T entity = ReflectionUtil.newInstance(entityClazz);
+                Field field = LambdaUtil.getFieldByGetFunc(dataFiled);
+                Object dictValue = JsonUtil.readJson(dictField.apply(dict), field.getType());
+                ReflectionUtil.setValue(field, entity, dictValue);
+                map.put(dictValue, entity);
             }
+        }
+        if (FuncUtil.isNotEmpty(entityList)) {
             for (T entity : entityList) {
                 map.put(dataFiled.apply(entity), entity);
             }
