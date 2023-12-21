@@ -21,4 +21,7 @@ public class CypherSqlConstant {
     public static final String DEFAULT_START_NODE_NAME = "start";
     public static final String DEFAULT_END_NODE_NAME = "end";
     public static final String DEFAULT_RELATIONSHIP_NAME = "r";
+
+    public static final String AND = "0";
+    public static final String OR = "1";
 }

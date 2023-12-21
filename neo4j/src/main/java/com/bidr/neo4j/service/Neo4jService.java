@@ -1,6 +1,7 @@
 package com.bidr.neo4j.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
@@ -174,21 +175,21 @@ public class Neo4jService {
         } else {
             if (FuncUtil.isNotEmpty(req.getCondition())) {
                 StringBuilder condition = new StringBuilder();
-                buildCondition(condition, req.getCondition(), name);
+                buildCondition(condition, req.getCondition(), name, CypherSqlConstant.AND);
                 query.setCondition(condition.toString());
             }
         }
         return query;
     }
 
-    private void buildCondition(StringBuilder conditionStr, AdvancedQuery condition, String name) {
+    private void buildCondition(StringBuilder conditionStr, AdvancedQuery condition, String name, String andOr) {
         if (FuncUtil.isNotEmpty(condition.getConditionList())) {
             for (AdvancedQuery advancedQuery : condition.getConditionList()) {
                 if (StringUtil.convertSwitch(condition.getAndOr())) {
-                    buildCondition(conditionStr, advancedQuery, name);
+                    buildCondition(conditionStr, advancedQuery, name, condition.getAndOr());
                     conditionStr.append("  OR ");
                 } else {
-                    buildCondition(conditionStr, advancedQuery, name);
+                    buildCondition(conditionStr, advancedQuery, name, condition.getAndOr());
                     conditionStr.append(" AND ");
                 }
             }
@@ -199,7 +200,11 @@ public class Neo4jService {
                 Validator.assertNotNull(dict, ErrCodeSys.PA_PARAM_FORMAT, "查询条件");
                 conditionStr.append(dict.getInf().build(name, condition, dict.getLabel()));
             } else {
-                conditionStr.append(" 1=1 ");
+                if(StringUtil.convertSwitch(andOr)) {
+                    conditionStr.append(" 1=0 ");
+                } else {
+                    conditionStr.append(" 1=1 ");
+                }
             }
         }
     }
