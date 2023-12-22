@@ -8,14 +8,19 @@
     <result column="name" jdbcType="VARCHAR" property="name" />
     <result column="display_name" jdbcType="VARCHAR" property="displayName" />
     <result column="tree_mode" jdbcType="VARCHAR" property="treeMode" />
-    <result column="order_mode" jdbcType="VARCHAR" property="orderMode" />
     <result column="size" jdbcType="VARCHAR" property="size" />
+    <result column="read_only" jdbcType="VARCHAR" property="readOnly" />
+    <result column="summary" jdbcType="VARCHAR" property="summary" />
     <result column="id_column" jdbcType="VARCHAR" property="idColumn" />
     <result column="pid_column" jdbcType="VARCHAR" property="pidColumn" />
     <result column="name_column" jdbcType="VARCHAR" property="nameColumn" />
+    <result column="order_column" jdbcType="VARCHAR" property="orderColumn" />
+    <result column="order_mode" jdbcType="VARCHAR" property="orderMode" />
+    <result column="description_count" jdbcType="INTEGER" property="descriptionCount" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, `name`, display_name, tree_mode, order_mode, `size`, id_column, pid_column, name_column
+    id, `name`, display_name, tree_mode, `size`, read_only, summary, id_column, pid_column, 
+    name_column, order_column, order_mode, description_count
   </sql>
 </mapper>

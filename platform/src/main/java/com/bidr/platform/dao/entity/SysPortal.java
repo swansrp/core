@@ -16,7 +16,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/11/22 13:43
+ * @since 2023/12/22 11:22
  */
 
 /**
@@ -62,46 +62,81 @@ public class SysPortal {
     private String treeMode;
 
     /**
-     * 是否支持顺序
-     */
-    @TableField(value = "order_mode")
-    @ApiModelProperty(value = "是否支持顺序")
-    @Size(max = 1, message = "是否支持顺序最大长度要小于 1")
-    @NotBlank(message = "是否支持顺序不能为空")
-    private String orderMode;
-
-    /**
-     * 表格大小
+     * 表格大小PORTAL_TABLE_SIZE_DICT
      */
     @TableField(value = "`size`")
-    @ApiModelProperty(value = "表格大小")
-    @Size(max = 50, message = "表格大小最大长度要小于 50")
-    @NotBlank(message = "表格大小不能为空")
+    @ApiModelProperty(value = "表格大小PORTAL_TABLE_SIZE_DICT")
+    @Size(max = 50, message = "表格大小PORTAL_TABLE_SIZE_DICT最大长度要小于 50")
+    @NotBlank(message = "表格大小PORTAL_TABLE_SIZE_DICT不能为空")
     private String size;
 
     /**
-     * 行id列名
+     * 只读
+     */
+    @TableField(value = "read_only")
+    @ApiModelProperty(value = "只读")
+    @Size(max = 1, message = "只读最大长度要小于 1")
+    @NotBlank(message = "只读不能为空")
+    private String readOnly;
+
+    /**
+     * 总结栏
+     */
+    @TableField(value = "summary")
+    @ApiModelProperty(value = "总结栏")
+    @Size(max = 1, message = "总结栏最大长度要小于 1")
+    @NotBlank(message = "总结栏不能为空")
+    private String summary;
+
+    /**
+     * 行id字段名
      */
     @TableField(value = "id_column")
-    @ApiModelProperty(value = "行id列名")
-    @Size(max = 50, message = "行id列名最大长度要小于 50")
-    @NotBlank(message = "行id列名不能为空")
+    @ApiModelProperty(value = "行id字段名")
+    @Size(max = 50, message = "行id字段名最大长度要小于 50")
+    @NotBlank(message = "行id字段名不能为空")
     private String idColumn;
 
     /**
-     * 父id列名
+     * 父id字段名
      */
     @TableField(value = "pid_column")
-    @ApiModelProperty(value = "父id列名")
-    @Size(max = 50, message = "父id列名最大长度要小于 50")
+    @ApiModelProperty(value = "父id字段名")
+    @Size(max = 50, message = "父id字段名最大长度要小于 50")
     private String pidColumn;
 
     /**
-     * 名称列名
+     * 名称字段名
      */
     @TableField(value = "name_column")
-    @ApiModelProperty(value = "名称列名")
-    @Size(max = 50, message = "名称列名最大长度要小于 50")
-    @NotBlank(message = "名称列名不能为空")
+    @ApiModelProperty(value = "名称字段名")
+    @Size(max = 50, message = "名称字段名最大长度要小于 50")
+    @NotBlank(message = "名称字段名不能为空")
     private String nameColumn;
+
+    /**
+     * 拍讯字段名
+     */
+    @TableField(value = "order_column")
+    @ApiModelProperty(value = "拍讯字段名")
+    @Size(max = 50, message = "拍讯字段名最大长度要小于 50")
+    @NotBlank(message = "拍讯字段名不能为空")
+    private String orderColumn;
+
+    /**
+     * 是否支持顺序调整
+     */
+    @TableField(value = "order_mode")
+    @ApiModelProperty(value = "是否支持顺序调整")
+    @Size(max = 1, message = "是否支持顺序调整最大长度要小于 1")
+    @NotBlank(message = "是否支持顺序调整不能为空")
+    private String orderMode;
+
+    /**
+     * 详情每行显示个数
+     */
+    @TableField(value = "description_count")
+    @ApiModelProperty(value = "详情每行显示个数")
+    @NotNull(message = "详情每行显示个数不能为null")
+    private Integer descriptionCount;
 }

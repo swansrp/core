@@ -8,7 +8,7 @@ import com.bidr.platform.dao.entity.SysPortal;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/11/22 13:43
+ * @since 2023/12/22 11:22
  */
 public interface SysPortalMapper extends MyBaseMapper<SysPortal> {
 }

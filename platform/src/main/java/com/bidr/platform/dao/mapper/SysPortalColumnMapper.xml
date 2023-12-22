@@ -8,17 +8,29 @@
     <result column="portal_id" jdbcType="BIGINT" property="portalId" />
     <result column="property" jdbcType="VARCHAR" property="property" />
     <result column="display_name" jdbcType="VARCHAR" property="displayName" />
-    <result column="field_type" jdbcType="INTEGER" property="fieldType" />
+    <result column="field_type" jdbcType="VARCHAR" property="fieldType" />
     <result column="reference" jdbcType="VARCHAR" property="reference" />
-    <result column="width" jdbcType="INTEGER" property="width" />
-    <result column="fixed" jdbcType="INTEGER" property="fixed" />
     <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
-    <result column="editable" jdbcType="INTEGER" property="editable" />
-    <result column="required" jdbcType="INTEGER" property="required" />
+    <result column="align" jdbcType="VARCHAR" property="align" />
+    <result column="width" jdbcType="INTEGER" property="width" />
+    <result column="fixed" jdbcType="VARCHAR" property="fixed" />
+    <result column="tooltip" jdbcType="VARCHAR" property="tooltip" />
+    <result column="edit_able" jdbcType="VARCHAR" property="editAble" />
+    <result column="required" jdbcType="VARCHAR" property="required" />
+    <result column="show" jdbcType="VARCHAR" property="show" />
+    <result column="add_show" jdbcType="VARCHAR" property="addShow" />
+    <result column="detail_show" jdbcType="VARCHAR" property="detailShow" />
+    <result column="filter_able" jdbcType="VARCHAR" property="filterAble" />
+    <result column="sort_able" jdbcType="VARCHAR" property="sortAble" />
+    <result column="description_size" jdbcType="INTEGER" property="descriptionSize" />
+    <result column="min" jdbcType="DECIMAL" property="min" />
+    <result column="max" jdbcType="DECIMAL" property="max" />
+    <result column="default_value" jdbcType="VARCHAR" property="defaultValue" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, portal_id, property, display_name, field_type, reference, width, fixed, display_order, 
-    editable, required
+    id, portal_id, property, display_name, field_type, reference, display_order, align, 
+    width, fixed, tooltip, edit_able, required, `show`, add_show, detail_show, filter_able, 
+    sort_able, description_size, `min`, `max`, default_value
   </sql>
 </mapper>

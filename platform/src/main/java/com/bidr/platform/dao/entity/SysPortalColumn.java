@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import java.math.BigDecimal;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -16,20 +17,21 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/11/21 18:00
+ * @since 2023/12/21 17:28
  */
+
 /**
-    * 系统表表头
-    */
-@ApiModel(description="系统表表头")
+ * 系统表表头
+ */
+@ApiModel(description = "系统表表头")
 @Data
 @TableName(value = "sys_portal_column")
 public class SysPortalColumn {
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.INPUT)
-    @ApiModelProperty(value="id")
+    @TableId(value = "id", type = IdType.AUTO)
+    @ApiModelProperty(value = "id")
     @NotNull(message = "id不能为null")
     private Long id;
 
@@ -37,7 +39,7 @@ public class SysPortalColumn {
      * 表id
      */
     @TableField(value = "portal_id")
-    @ApiModelProperty(value="表id")
+    @ApiModelProperty(value = "表id")
     @NotNull(message = "表id不能为null")
     private Long portalId;
 
@@ -45,8 +47,8 @@ public class SysPortalColumn {
      * 属性名
      */
     @TableField(value = "property")
-    @ApiModelProperty(value="属性名")
-    @Size(max = 50,message = "属性名最大长度要小于 50")
+    @ApiModelProperty(value = "属性名")
+    @Size(max = 50, message = "属性名最大长度要小于 50")
     @NotBlank(message = "属性名不能为空")
     private String property;
 
@@ -54,8 +56,8 @@ public class SysPortalColumn {
      * 显示名称
      */
     @TableField(value = "display_name")
-    @ApiModelProperty(value="显示名称")
-    @Size(max = 50,message = "显示名称最大长度要小于 50")
+    @ApiModelProperty(value = "显示名称")
+    @Size(max = 50, message = "显示名称最大长度要小于 50")
     @NotBlank(message = "显示名称不能为空")
     private String displayName;
 
@@ -63,23 +65,40 @@ public class SysPortalColumn {
      * 属性类型PORTAL_FIELD_DICT
      */
     @TableField(value = "field_type")
-    @ApiModelProperty(value="属性类型PORTAL_FIELD_DICT")
-    @NotNull(message = "属性类型PORTAL_FIELD_DICT不能为null")
-    private Integer fieldType;
+    @ApiModelProperty(value = "属性类型PORTAL_FIELD_DICT")
+    @Size(max = 2, message = "属性类型PORTAL_FIELD_DICT最大长度要小于 2")
+    @NotBlank(message = "属性类型PORTAL_FIELD_DICT不能为空")
+    private String fieldType;
 
     /**
      * 字典或者跳转地址
      */
     @TableField(value = "reference")
-    @ApiModelProperty(value="字典或者跳转地址")
-    @Size(max = 50,message = "字典或者跳转地址最大长度要小于 50")
+    @ApiModelProperty(value = "字典或者跳转地址")
+    @Size(max = 50, message = "字典或者跳转地址最大长度要小于 50")
     private String reference;
+
+    /**
+     * 显示顺序
+     */
+    @TableField(value = "display_order")
+    @ApiModelProperty(value = "显示顺序")
+    @NotNull(message = "显示顺序不能为null")
+    private Integer displayOrder;
+
+    /**
+     * 对齐方式
+     */
+    @TableField(value = "align")
+    @ApiModelProperty(value = "对齐方式")
+    @Size(max = 50, message = "对齐方式最大长度要小于 50")
+    private String align;
 
     /**
      * 宽度
      */
     @TableField(value = "width")
-    @ApiModelProperty(value="宽度")
+    @ApiModelProperty(value = "宽度")
     @NotNull(message = "宽度不能为null")
     private Integer width;
 
@@ -87,31 +106,110 @@ public class SysPortalColumn {
      * 是否固定
      */
     @TableField(value = "fixed")
-    @ApiModelProperty(value="是否固定")
-    @NotNull(message = "是否固定不能为null")
-    private Integer fixed;
+    @ApiModelProperty(value = "是否固定")
+    @Size(max = 1, message = "是否固定最大长度要小于 1")
+    @NotBlank(message = "是否固定不能为空")
+    private String fixed;
 
     /**
-     * 显示顺序
+     * 是否显示tooltip
      */
-    @TableField(value = "display_order")
-    @ApiModelProperty(value="显示顺序")
-    @NotNull(message = "显示顺序不能为null")
-    private Integer displayOrder;
+    @TableField(value = "tooltip")
+    @ApiModelProperty(value = "是否显示tooltip")
+    @Size(max = 1, message = "是否显示tooltip最大长度要小于 1")
+    @NotBlank(message = "是否显示tooltip不能为空")
+    private String tooltip;
 
     /**
      * 是否可以编辑
      */
-    @TableField(value = "editable")
-    @ApiModelProperty(value="是否可以编辑")
-    @NotNull(message = "是否可以编辑不能为null")
-    private Integer editable;
+    @TableField(value = "edit_able")
+    @ApiModelProperty(value = "是否可以编辑")
+    @Size(max = 1, message = "是否可以编辑最大长度要小于 1")
+    @NotBlank(message = "是否可以编辑不能为空")
+    private String editAble;
 
     /**
      * 是否必填
      */
     @TableField(value = "required")
-    @ApiModelProperty(value="是否必填")
-    @NotNull(message = "是否必填不能为null")
-    private Integer required;
+    @ApiModelProperty(value = "是否必填")
+    @Size(max = 1, message = "是否必填最大长度要小于 1")
+    @NotBlank(message = "是否必填不能为空")
+    private String required;
+
+    /**
+     * 是否显示
+     */
+    @TableField(value = "`show`")
+    @ApiModelProperty(value = "是否显示")
+    @Size(max = 1, message = "是否显示最大长度要小于 1")
+    @NotBlank(message = "是否显示不能为空")
+    private String show;
+
+    /**
+     * 添加时是否显示
+     */
+    @TableField(value = "add_show")
+    @ApiModelProperty(value = "添加时是否显示")
+    @Size(max = 1, message = "添加时是否显示最大长度要小于 1")
+    @NotBlank(message = "添加时是否显示不能为空")
+    private String addShow;
+
+    /**
+     * 详情时是否显示
+     */
+    @TableField(value = "detail_show")
+    @ApiModelProperty(value = "详情时是否显示")
+    @Size(max = 1, message = "详情时是否显示最大长度要小于 1")
+    @NotBlank(message = "详情时是否显示不能为空")
+    private String detailShow;
+
+    /**
+     * 是否可做筛选项
+     */
+    @TableField(value = "filter_able")
+    @ApiModelProperty(value = "是否可做筛选项")
+    @Size(max = 1, message = "是否可做筛选项最大长度要小于 1")
+    @NotBlank(message = "是否可做筛选项不能为空")
+    private String filterAble;
+
+    /**
+     * 是否可做排序项
+     */
+    @TableField(value = "sort_able")
+    @ApiModelProperty(value = "是否可做排序项")
+    @Size(max = 1, message = "是否可做排序项最大长度要小于 1")
+    @NotBlank(message = "是否可做排序项不能为空")
+    private String sortAble;
+
+    /**
+     * 详情查看格占用大小
+     */
+    @TableField(value = "description_size")
+    @ApiModelProperty(value = "详情查看格占用大小")
+    @NotNull(message = "详情查看格占用大小不能为null")
+    private Integer descriptionSize;
+
+    /**
+     * 最小值(长度)
+     */
+    @TableField(value = "`min`")
+    @ApiModelProperty(value = "最小值(长度)")
+    private BigDecimal min;
+
+    /**
+     * 最大值(长度)
+     */
+    @TableField(value = "`max`")
+    @ApiModelProperty(value = "最大值(长度)")
+    private BigDecimal max;
+
+    /**
+     * 默认内容
+     */
+    @TableField(value = "default_value")
+    @ApiModelProperty(value = "默认内容")
+    @Size(max = 200, message = "默认内容最大长度要小于 200")
+    private String defaultValue;
 }

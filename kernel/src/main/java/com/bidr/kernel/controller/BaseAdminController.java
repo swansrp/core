@@ -14,11 +14,13 @@ import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.ApplicationContext;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,8 +36,37 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @Resource
     private ApplicationContext applicationContext;
 
+    @ApiOperation("添加数据")
+    @RequestMapping(value = "/insert", method = RequestMethod.POST)
+    @Transactional(rollbackFor = Exception.class)
+    public void add(@RequestBody VO req) {
+        ENTITY entity = beforeAdd(req);
+        Boolean result = getRepo().insert(entity);
+        Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");
+        afterAdd(entity);
+        Resp.notice("新增成功");
+    }
+
+    protected ENTITY beforeAdd(VO entity) {
+        return ReflectionUtil.copy(entity, getEntityClass());
+    }
+
+    protected BaseSqlRepo getRepo() {
+        return (BaseSqlRepo) applicationContext.getBean(
+                StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
+    }
+
+    protected void afterAdd(ENTITY entity) {
+
+    }
+
+    protected Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
+    @Transactional(rollbackFor = Exception.class)
     public void update(@RequestBody ENTITY entity) {
         beforeUpdate(entity);
         Boolean result = getRepo().updateById(entity);
@@ -52,13 +83,19 @@ public abstract class BaseAdminController<ENTITY, VO> {
 
     }
 
-    protected BaseSqlRepo getRepo() {
-        return (BaseSqlRepo) applicationContext.getBean(
-                StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
-    }
-
-    protected Class<ENTITY> getEntityClass() {
-        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    @ApiOperation("更新数据")
+    @RequestMapping(value = "/update/list", method = RequestMethod.POST)
+    @Transactional(rollbackFor = Exception.class)
+    public void update(@RequestBody List<ENTITY> entityList) {
+        if (FuncUtil.isNotEmpty(entityList)) {
+            for (ENTITY entity : entityList) {
+                beforeUpdate(entity);
+                Boolean result = getRepo().updateById(entity);
+                Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
+                afterUpdate(entity);
+            }
+        }
+        Resp.notice("更新成功");
     }
 
     protected <T> boolean update(IdReqVO vo, SFunction<ENTITY, ?> bizFunc, T bizValue) {

@@ -25,7 +25,7 @@ import java.util.*;
  * @author Sharp
  * @since 2023/11/22 09:11
  */
-// @Service
+@Service
 @RequiredArgsConstructor
 public class PortalConfig implements CommandLineRunner {
 
@@ -34,7 +34,7 @@ public class PortalConfig implements CommandLineRunner {
 
     static {
         FIELD_MAP.put(String.class, PortalFieldDict.STRING);
-        FIELD_MAP.put(Date.class, PortalFieldDict.DATETIME);
+        FIELD_MAP.put(Date.class, PortalFieldDict.DATE);
         FIELD_MAP.put(LocalDateTime.class, PortalFieldDict.STRING);
         FIELD_MAP.put(Integer.class, PortalFieldDict.NUMBER);
         FIELD_MAP.put(Boolean.class, PortalFieldDict.BOOLEAN);
@@ -52,7 +52,7 @@ public class PortalConfig implements CommandLineRunner {
         Set<Class<?>> portalEntityList = reflections.getTypesAnnotatedWith(PortalEntity.class);
         Map<String, List<Field>> map;
         if (FuncUtil.isNotEmpty(portalEntityList)) {
-            map = new HashMap<>(portalEntityList.size());
+            map = new LinkedHashMap<>(portalEntityList.size());
             for (Class<?> aClass : portalEntityList) {
                 map.put(aClass.getAnnotation(PortalEntity.class).value(), ReflectionUtil.getFields(aClass));
             }
@@ -67,14 +67,17 @@ public class PortalConfig implements CommandLineRunner {
             if (FuncUtil.isEmpty(portal)) {
                 portal = new SysPortal();
                 portal.setName(entry.getKey());
+                portal.setDisplayName(entry.getKey());
                 sysPortalService.save(portal);
             }
             if (FuncUtil.isNotEmpty(entry.getValue())) {
+                int order = 0;
                 for (Field field : entry.getValue()) {
                     if (!sysPortalColumnService.existed(portal.getId(), field.getName())) {
                         SysPortalColumn column = new SysPortalColumn();
                         column.setPortalId(portal.getId());
                         column.setProperty(field.getName());
+                        column.setDisplayOrder(order++);
                         ApiModelProperty apiModelProperty = field.getAnnotation(ApiModelProperty.class);
                         if (FuncUtil.isNotEmpty(apiModelProperty)) {
                             column.setDisplayName(apiModelProperty.value());
