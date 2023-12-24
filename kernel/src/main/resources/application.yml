@@ -23,6 +23,8 @@ bidr:
     class-white-list:
       - springfox.documentation.swagger.web.ApiResourceController
       - springfox.documentation.oas.web.OpenApiControllerWebMvc
+    format-bean: resultMatcher
+
   # 用户配置
 user:
   password: # 密码最大错误次数
@@ -147,6 +149,7 @@ xss: # 过滤开关
   urlPatterns: /system/*,/monitor/*,/tool/*
 
 my:
+  base-package: com.bidr
   cache:
     expired: 10
   rest:

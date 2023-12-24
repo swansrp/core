@@ -17,10 +17,12 @@
     <result column="order_column" jdbcType="VARCHAR" property="orderColumn" />
     <result column="order_mode" jdbcType="VARCHAR" property="orderMode" />
     <result column="description_count" jdbcType="INTEGER" property="descriptionCount" />
+    <result column="export_able" jdbcType="VARCHAR" property="exportAble" />
+    <result column="import_able" jdbcType="VARCHAR" property="importAble" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, `name`, display_name, tree_mode, `size`, read_only, summary, id_column, pid_column, 
-    name_column, order_column, order_mode, description_count
+    name_column, order_column, order_mode, description_count, export_able, import_able
   </sql>
 </mapper>
