@@ -1,12 +1,11 @@
 package com.bidr.kernel.config.response;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.err.ErrCodeType;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.kernel.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.MethodParameter;
@@ -15,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.validation.BindException;
@@ -40,15 +40,6 @@ import java.util.Map;
 @ControllerAdvice
 public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
-    @Resource
-    private ApplicationContext applicationContext;
-
-    @Value("${bidr.result.format-bean}")
-    private String externalFormatBeanName;
-
-    @Value("${my.base-package}")
-    private String basePackage;
-
     private static final Map<String, HttpStatus> STATUS_MAP = new HashMap<>(ErrCodeType.values().length);
 
     static {
@@ -56,6 +47,13 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
         STATUS_MAP.put(ErrCodeType.BIZ.getValue(), HttpStatus.OK);
         STATUS_MAP.put(ErrCodeType.AUTH.getValue(), HttpStatus.UNAUTHORIZED);
     }
+
+    @Resource
+    private ApplicationContext applicationContext;
+    @Value("${bidr.result.format-bean}")
+    private String externalFormatBeanName;
+    @Value("${my.base-package}")
+    private String basePackage;
 
     @ResponseBody
     @ExceptionHandler(value = Exception.class)
@@ -82,13 +80,6 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     }
 
     @ResponseBody
-    @ExceptionHandler(value = BindException.class)
-    public ResponseEntity<Response<String>> errorHandler(BindException ex) {
-        ServiceException serviceException = new ServiceException(ex);
-        return errorHandler(serviceException);
-    }
-
-    @ResponseBody
     @ExceptionHandler(value = ServiceException.class)
     public static ResponseEntity<Response<String>> errorHandler(ServiceException ex) {
         log.warn("", ex);
@@ -97,9 +88,16 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
         return new ResponseEntity<>(res, status);
     }
 
+    @ResponseBody
+    @ExceptionHandler(value = BindException.class)
+    public ResponseEntity<Response<String>> errorHandler(BindException ex) {
+        ServiceException serviceException = new ServiceException(ex);
+        return errorHandler(serviceException);
+    }
+
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        if(!applicationContext.containsBean(externalFormatBeanName)) {
+        if (!applicationContext.containsBean(externalFormatBeanName)) {
             return returnType.getDeclaringClass().getName().startsWith(basePackage);
         } else {
             return false;
@@ -110,6 +108,8 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request, ServerHttpResponse response) {
-        return body instanceof Response ? body : new Response<>(body);
+        Response<?> res = body instanceof Response ? (Response<?>) body : new Response<>(body);
+        return MappingJackson2HttpMessageConverter.class.isAssignableFrom(selectedConverterType) ? res :
+                JsonUtil.toJson(res, false, false, true);
     }
 }
