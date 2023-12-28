@@ -25,7 +25,7 @@ import javax.annotation.Resource;
 @Api(tags = "系统管理 - 参数管理")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = {"/web/config/admin"})
+@RequestMapping(path = {"/web/config/admin", "/web/portal/sysConfig"})
 public class AdminConfigController extends BaseAdminController<SysConfig, SysConfigRes> {
 
     @Resource

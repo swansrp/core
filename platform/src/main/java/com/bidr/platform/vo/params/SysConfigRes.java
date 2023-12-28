@@ -19,6 +19,7 @@ import java.util.Date;
  * @since 2023/06/07 14:01
  */
 @Data
+@PortalEntity("sysConfig")
 public class SysConfigRes {
 
     @ApiModelProperty(value = "参数主键")
