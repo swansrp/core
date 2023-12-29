@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
@@ -38,7 +39,7 @@ public abstract class BaseAdminController<ENTITY, VO> {
 
     @ApiOperation("添加数据")
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void add(@RequestBody VO req) {
         ENTITY entity = beforeAdd(req);
         Boolean result = getRepo().insert(entity);
@@ -66,7 +67,7 @@ public abstract class BaseAdminController<ENTITY, VO> {
 
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void update(@RequestBody ENTITY entity) {
         beforeUpdate(entity);
         Boolean result = getRepo().updateById(entity);
@@ -85,7 +86,7 @@ public abstract class BaseAdminController<ENTITY, VO> {
 
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update/list", method = RequestMethod.POST)
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void update(@RequestBody List<ENTITY> entityList) {
         if (FuncUtil.isNotEmpty(entityList)) {
             for (ENTITY entity : entityList) {
@@ -120,6 +121,7 @@ public abstract class BaseAdminController<ENTITY, VO> {
 
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void delete(@RequestBody IdReqVO vo) {
         beforeDelete(vo);
         getRepo().deleteById(vo.getId());
