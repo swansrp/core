@@ -3,10 +3,10 @@ my:
     name: mini
   master-db:
     config:
-      db: archives
-      url: 49.232.132.116
-      username: dbAdmin
-      password: Adm!n123
+      db: tanya
+      url: localhost
+      username: root
+      password:
       driver: com.mysql.cj.jdbc.Driver
 
 swagger: # 是否开启swagger
@@ -27,4 +27,4 @@ mqtt:
     id: sharp-server
 
 server:
-  port: 8082
+  port: 8000

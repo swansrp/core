@@ -95,13 +95,13 @@
         <dependency>
             <groupId>org.jxls</groupId>
             <artifactId>jxls</artifactId>
-            <version>2.13.0</version>
+            <version>2.14.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jxls/jxls-poi -->
         <dependency>
             <groupId>org.jxls</groupId>
             <artifactId>jxls-poi</artifactId>
-            <version>2.13.0</version>
+            <version>2.14.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jxls/jxls-jexcel -->
         <dependency>
@@ -109,11 +109,10 @@
             <artifactId>jxls-jexcel</artifactId>
             <version>1.0.9</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.jxls/jxls-reader -->
         <dependency>
-            <groupId>org.jxls</groupId>
-            <artifactId>jxls-reader</artifactId>
-            <version>2.1.0</version>
+            <groupId>com.alibaba</groupId>
+            <artifactId>easyexcel</artifactId>
+            <version>3.2.1</version>
         </dependency>
     </dependencies>
 
