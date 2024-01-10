@@ -7,6 +7,7 @@
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="portal_id" jdbcType="BIGINT" property="portalId" />
     <result column="property" jdbcType="VARCHAR" property="property" />
+    <result column="db_field" jdbcType="VARCHAR" property="dbField" />
     <result column="display_name" jdbcType="VARCHAR" property="displayName" />
     <result column="field_type" jdbcType="VARCHAR" property="fieldType" />
     <result column="reference" jdbcType="VARCHAR" property="reference" />
@@ -29,8 +30,8 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, portal_id, property, display_name, field_type, reference, display_order, align, 
-    width, fixed, tooltip, edit_able, required, `show`, add_show, detail_show, filter_able, 
-    sort_able, description_size, `min`, `max`, default_value
+    id, portal_id, property, db_field, display_name, field_type, reference, display_order, 
+    align, width, fixed, tooltip, edit_able, required, `show`, add_show, detail_show, 
+    filter_able, sort_able, description_size, `min`, `max`, default_value
   </sql>
 </mapper>

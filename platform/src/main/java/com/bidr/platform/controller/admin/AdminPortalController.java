@@ -68,4 +68,11 @@ public class AdminPortalController extends BaseAdminController<SysConfig, SysCon
         portalService.updatePortalColumn(req);
         Resp.notice("更新后台配置字段成功");
     }
+
+    @RequestMapping(path = {"/config/delete"}, method = {RequestMethod.POST})
+    @ApiOperation(value = "删除配置")
+    public void deletePortalConfig(@RequestBody PortalReq req) {
+        portalService.deletePortalConfig(req);
+        Resp.notice("删除后台配置成功");
+    }
 }

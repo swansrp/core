@@ -2,6 +2,7 @@ package com.bidr.authorization.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.bidr.authorization.mybatis.anno.AccountContextFill;
+import com.bidr.kernel.mybatis.anno.AutoInsert;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -29,7 +30,9 @@ public class AcDept {
     /**
      * 部门id
      */
-    @TableId(value = "dept_id", type = IdType.AUTO)
+    @TableId(value = "dept_id", type = IdType.INPUT)
+    @AutoInsert(seq = "AC_DEPT_ID_SEQ")
+    @TableField(value = "dept_id", fill = FieldFill.INSERT)
     @ApiModelProperty(value = "部门id")
     @Size(max = 20, message = "部门id最大长度要小于 20")
     @NotBlank(message = "部门id不能为空")

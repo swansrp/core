@@ -48,6 +48,9 @@ public class PortalSupportConditionDict implements IDynamicDict {
         MAP.put(PortalFieldDict.LINK, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.HTML, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.TEXT, new PortalConditionDict[]{PortalConditionDict.LIKE});
+        MAP.put(PortalFieldDict.ENTITY,
+                new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.IN,
+                        PortalConditionDict.NOT_EQUAL, PortalConditionDict.NOT_IN});
         MAP.put(PortalFieldDict.DEFAULT, new PortalConditionDict[]{PortalConditionDict.EQUAL});
     }
 

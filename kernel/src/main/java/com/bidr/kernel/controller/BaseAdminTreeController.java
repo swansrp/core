@@ -1,10 +1,21 @@
 package com.bidr.kernel.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdPidReqVO;
+import com.bidr.kernel.vo.common.TreeDataItemVO;
+import com.bidr.kernel.vo.common.TreeDataResVO;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Title: BaseAdminTreeController
@@ -17,8 +28,10 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
 
 
     @RequestMapping(value = "/pid", method = RequestMethod.POST)
-    public Boolean pid(@RequestBody IdPidReqVO req) {
-        return update(req, pid(), req.getPid());
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
+    public void pid(@RequestBody IdPidReqVO req) {
+        update(req, pid(), req.getPid());
+        Resp.notice("变更父节点成功");
     }
 
     /**
@@ -27,5 +40,36 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
      * @return
      */
     protected abstract SFunction<ENTITY, ?> pid();
+
+    @RequestMapping(value = "/tree/data", method = RequestMethod.GET)
+    public List<TreeDataResVO> getTreeData() {
+        List<TreeDataItemVO> list = new ArrayList<>();
+        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+        wrapper.orderByAsc(order());
+        beforeGetTreeData(wrapper);
+        List<ENTITY> entityList = getRepo().select(wrapper);
+        if (FuncUtil.isNotEmpty(entityList)) {
+            for (ENTITY entity : entityList) {
+                list.add(new TreeDataItemVO(id().apply(entity), pid().apply(entity), name().apply(entity)));
+            }
+        }
+        return ReflectionUtil.buildTree(TreeDataResVO::setChildren, list, TreeDataItemVO::getId, TreeDataItemVO::getPid,
+                null);
+    }
+
+    /**
+     * 添加全局控制
+     *
+     * @param wrapper 查询条件
+     */
+    protected void beforeGetTreeData(LambdaQueryWrapper<ENTITY> wrapper) {
+    }
+
+    /**
+     * 名称字段
+     *
+     * @return
+     */
+    protected abstract SFunction<ENTITY, String> name();
 
 }

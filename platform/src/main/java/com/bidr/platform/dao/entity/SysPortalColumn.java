@@ -17,7 +17,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/12/21 17:28
+ * @since 2024/01/02 20:48
  */
 
 /**
@@ -51,6 +51,15 @@ public class SysPortalColumn {
     @Size(max = 50, message = "属性名最大长度要小于 50")
     @NotBlank(message = "属性名不能为空")
     private String property;
+
+    /**
+     * 数据字段名
+     */
+    @TableField(value = "db_field")
+    @ApiModelProperty(value = "数据字段名")
+    @Size(max = 50, message = "数据字段名最大长度要小于 50")
+    @NotBlank(message = "数据字段名不能为空")
+    private String dbField;
 
     /**
      * 显示名称
@@ -91,7 +100,7 @@ public class SysPortalColumn {
      */
     @TableField(value = "align")
     @ApiModelProperty(value = "对齐方式")
-    @Size(max = 50, message = "对齐方式最大长度要小于 50")
+    @Size(max = 20, message = "对齐方式最大长度要小于 20")
     private String align;
 
     /**

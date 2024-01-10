@@ -34,4 +34,9 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         wrapper.or().like(FuncUtil.isNotEmpty(name), SysPortal::getDisplayName, name);
         return selectJoinList(KeyValueResVO.class, wrapper);
     }
+
+    public void deleteByName(String name) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name);
+        super.delete(wrapper);
+    }
 }

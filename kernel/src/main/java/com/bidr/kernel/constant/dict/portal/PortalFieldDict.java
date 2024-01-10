@@ -29,6 +29,7 @@ public enum PortalFieldDict implements Dict {
     LINK("8", "超链接"),
     HTML("9", "富文本"),
     TEXT("10", "多行文本"),
+    ENTITY("11", "关联实体"),
     DEFAULT("0", "默认");
 
     private final String value;

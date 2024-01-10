@@ -2,10 +2,12 @@ package com.bidr.kernel.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -21,6 +23,7 @@ import java.util.List;
  * @since 2023/05/06 09:47
  */
 public abstract class BaseAdminOrderController<ENTITY, VO> extends BaseAdminController<ENTITY, VO> {
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     @RequestMapping(value = "/order/update", method = RequestMethod.POST)
     public void updateOrder(@RequestBody List<IdOrderReqVO> idOrderReqVOList) {
         List<ENTITY> entityList = new ArrayList<>();

@@ -116,4 +116,9 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
     protected SFunction<AcMenu, ?> pid() {
         return AcMenu::getPid;
     }
+
+    @Override
+    protected SFunction<AcMenu, String> name() {
+        return AcMenu::getTitle;
+    }
 }

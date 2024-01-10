@@ -150,7 +150,16 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("通用查询数据")
     @RequestMapping(value = "/general/query", method = RequestMethod.POST)
     public Page<VO> generalQuery(@RequestBody QueryConditionReq req) {
+        beforeQuery(req);
         return Resp.convert(getRepo().select(req), getVoClass());
+    }
+
+    /**
+     * 配置全局查询参数
+     *
+     * @param req 查询条件
+     */
+    protected void beforeQuery(QueryConditionReq req) {
     }
 
 }

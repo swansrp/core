@@ -81,4 +81,9 @@ public class GroupAdminController extends BaseAdminTreeController<AcGroup, Group
     protected SFunction<AcGroup, ?> pid() {
         return AcGroup::getPid;
     }
+
+    @Override
+    protected SFunction<AcGroup, String> name() {
+        return AcGroup::getName;
+    }
 }

@@ -55,15 +55,15 @@ public class JxlsUtil {
         Transformer transformer = jxlsHelper.createTransformer(is, os);
         JexlExpressionEvaluator evaluator = (JexlExpressionEvaluator) transformer.getTransformationConfig()
                 .getExpressionEvaluator();
-        Map<String, Object> funcs = new HashMap<>();
+        Map<String, Object> func = new HashMap<>(0);
         // 添加自定义功能，对应着excel模板中的utils
-        funcs.put("utils", new JxlsUtil());
+        func.put("utils", new JxlsUtil());
 
         /**
          * 这里需要注意，只加在map里面是不生效的，一定要跟后面的代码，才正确
          */
         JexlBuilder jb = new JexlBuilder();
-        jb.namespaces(funcs);
+        jb.namespaces(func);
         JexlEngine je = jb.create();
         evaluator.setJexlEngine(je);
 

@@ -77,4 +77,9 @@ public class PortalService {
         SysPortalColumn column = ReflectionUtil.copy(req, SysPortalColumn.class);
         sysPortalColumnService.updateById(column);
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deletePortalConfig(PortalReq req) {
+        sysPortalService.deleteByName(req.getName());
+    }
 }

@@ -6,25 +6,21 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * Title: UserTypeDict
+ * Title: GenderDict
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/25 16:02
+ * @since 2024/01/02 09:39
  */
 @Getter
 @AllArgsConstructor
-@MetaDict(value = "USER_TYPE_DICT", remark = "用户类型")
-public enum UserTypeDict implements Dict {
+@MetaDict(value = "GENDER_DICT", remark = "性别字典")
+public enum GenderDict implements Dict {
     /**
      * 菜单类型
      */
-
-    SYSTEM("00", "系统内部"),
-    ACCOUNT("0", "主数据同步"),
-    SSO("1", "单点登录同步"),
-    REGISTER("2", "自主注册"),
-    OTHER("3", "其他");
+    MALE("1", "男"),
+    FEMALE("2", "女");
 
     private final String value;
     private final String label;
