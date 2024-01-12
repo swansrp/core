@@ -19,7 +19,8 @@ public enum CaptchaType implements ICaptchaVerification {
      */
     LOGIN_CAPTCHA(300),
     LOGIN_MSG_CODE_CAPTCHA(300),
-    FIND_PASSWORD_CAPTCHA(300);
+    FIND_PASSWORD_CAPTCHA(300),
+    INIT_PASSWORD_CAPTCHA(300);
 
     @Getter
     @Setter

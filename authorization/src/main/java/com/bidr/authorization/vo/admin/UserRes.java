@@ -36,6 +36,9 @@ public class UserRes  {
     @NotNull(message = "用户ID不能为null")
     private Long userId;
 
+    @ApiModelProperty(value = "用户编码")
+    private String customerNumber;
+
     @ApiModelProperty(value = "用户姓名")
     @Size(max = 50, message = "用户姓名最大长度要小于 50")
     private String name;

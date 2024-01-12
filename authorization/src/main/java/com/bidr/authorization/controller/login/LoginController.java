@@ -1,13 +1,15 @@
 package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.annotation.captcha.CaptchaVerify;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.LoginService;
+import com.bidr.authorization.service.login.PasswordService;
 import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.authorization.vo.login.pwd.ChangePasswordReq;
+import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;
 import io.swagger.annotations.Api;
@@ -35,6 +37,9 @@ public class LoginController {
 
     @Resource
     protected LoginService loginService;
+    @Resource
+    protected PasswordService passwordService;
+
 
     @Autowired(required = false)
     private List<LoginFillTokenInf> fillTokenInfList;
@@ -54,6 +59,16 @@ public class LoginController {
                 loginFillTokenInf.fillToken(res);
             }
         }
+    }
+
+    @Auth(AuthToken.class)
+    @RequestMapping(value = "/password/init", method = RequestMethod.POST)
+    @CaptchaVerify("INIT_PASSWORD_CAPTCHA")
+    public LoginRes initPassword(@Validated InitPasswordReq req) {
+        passwordService.initPassword(req);
+        LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
+        afterLogin(res);
+        return res;
     }
 
     @Auth(AuthToken.class)

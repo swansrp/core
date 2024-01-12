@@ -17,7 +17,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/01/02 20:48
+ * @since 2024/01/12 09:24
  */
 
 /**
@@ -146,6 +146,15 @@ public class SysPortalColumn {
     @Size(max = 1, message = "是否必填最大长度要小于 1")
     @NotBlank(message = "是否必填不能为空")
     private String required;
+
+    /**
+     * 是否有效
+     */
+    @TableField(value = "`enable`")
+    @ApiModelProperty(value = "是否有效")
+    @Size(max = 1, message = "是否有效最大长度要小于 1")
+    @NotBlank(message = "是否有效不能为空")
+    private String enable;
 
     /**
      * 是否显示

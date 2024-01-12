@@ -2,6 +2,7 @@ package com.bidr.authorization.service.user.impl;
 
 import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.constants.dict.UserTypeDict;
+import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -14,6 +15,7 @@ import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.Md5Util;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -67,8 +69,13 @@ public class CreateUserServiceImpl implements CreateUserService {
     }
 
     @Override
-    public void changeAccountStatus(String userId, String status) {
-
+    @Transactional(rollbackFor = Exception.class)
+    public String changeAccountStatus(String customerNumber, Integer status) {
+        AcUser user = acUserService.getByCustomerNumber(customerNumber);
+        Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
+        user.setStatus(status);
+        acUserService.updateById(user);
+        return user.getName();
     }
 
     @Override
@@ -113,6 +120,12 @@ public class CreateUserServiceImpl implements CreateUserService {
         acUserDeptService.insert(acUserDept);
     }
 
+    @Override
+    public void bindDefaultRole(AcUser user) {
+        Long defaultRoleId = sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_DEFAULT_ROLE_ID);
+        roleBindService.bindRole(user.getUserId(), defaultRoleId);
+    }
+
     private AcUser buildBaseUser() {
         AcUser user = new AcUser();
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
@@ -120,10 +133,5 @@ public class CreateUserServiceImpl implements CreateUserService {
         user.setPasswordLastTime(new Date());
         user.setValid(CommonConst.YES);
         return user;
-    }
-
-    private void bindDefaultRole(AcUser user) {
-        Long defaultRoleId = sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_DEFAULT_ROLE_ID);
-        roleBindService.bindRole(user.getUserId(), defaultRoleId);
     }
 }

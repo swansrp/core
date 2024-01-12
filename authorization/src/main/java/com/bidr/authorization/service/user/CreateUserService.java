@@ -46,10 +46,11 @@ public interface CreateUserService {
     /**
      * 修改账户状态
      *
-     * @param userId 用户id
-     * @param status 状态
+     * @param customerNumber 用户编号
+     * @param status         状态
+     * @return 用户名
      */
-    void changeAccountStatus(String userId, String status);
+    String changeAccountStatus(String customerNumber, Integer status);
 
     /**
      * 将微信用户合并至已有手机号账户
@@ -67,4 +68,11 @@ public interface CreateUserService {
      * @return 用户
      */
     AcUser createUser(AcAccount account);
+
+    /**
+     * 绑定默认角色
+     *
+     * @param user 用户
+     */
+    void bindDefaultRole(AcUser user);
 }

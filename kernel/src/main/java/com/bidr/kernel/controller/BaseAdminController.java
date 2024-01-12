@@ -16,6 +16,7 @@ import com.bidr.kernel.vo.portal.QueryConditionReq;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -40,7 +41,7 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("添加数据")
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
-    public void add(@RequestBody VO req) {
+    public void add(@Validated @RequestBody VO req) {
         ENTITY entity = beforeAdd(req);
         Boolean result = getRepo().insert(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");

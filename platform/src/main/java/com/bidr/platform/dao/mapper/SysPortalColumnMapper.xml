@@ -18,6 +18,7 @@
     <result column="tooltip" jdbcType="VARCHAR" property="tooltip" />
     <result column="edit_able" jdbcType="VARCHAR" property="editAble" />
     <result column="required" jdbcType="VARCHAR" property="required" />
+    <result column="enable" jdbcType="VARCHAR" property="enable" />
     <result column="show" jdbcType="VARCHAR" property="show" />
     <result column="add_show" jdbcType="VARCHAR" property="addShow" />
     <result column="detail_show" jdbcType="VARCHAR" property="detailShow" />
@@ -31,7 +32,7 @@
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, portal_id, property, db_field, display_name, field_type, reference, display_order, 
-    align, width, fixed, tooltip, edit_able, required, `show`, add_show, detail_show, 
+    align, width, fixed, tooltip, edit_able, required, `enable`, `show`, add_show, detail_show, 
     filter_able, sort_able, description_size, `min`, `max`, default_value
   </sql>
 </mapper>

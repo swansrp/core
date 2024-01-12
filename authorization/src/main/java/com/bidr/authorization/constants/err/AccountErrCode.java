@@ -71,6 +71,8 @@ public enum AccountErrCode implements ErrCode {
     AC_PARTNER_NOT_AVAILABLE(1027, "该渠道账号不可用"),
 
     AC_USER_NOT_IN_GROUP(1028, "尚未加入用户组"),
+
+    AC_PASSWORD_IS_NOT_INITIAL(1029, "密码已设置"),
     ;
 
     private final Integer errCode;
