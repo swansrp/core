@@ -7,15 +7,13 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
+import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysPortal;
 import com.bidr.platform.dao.entity.SysPortalColumn;
 import com.bidr.platform.dao.repository.SysPortalColumnService;
 import com.bidr.platform.dao.repository.SysPortalService;
-import com.bidr.platform.vo.portal.PortalColumnReq;
-import com.bidr.platform.vo.portal.PortalReq;
-import com.bidr.platform.vo.portal.PortalUpdateReq;
-import com.bidr.platform.vo.portal.PortalWithColumnsRes;
+import com.bidr.platform.vo.portal.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,7 +77,36 @@ public class PortalService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void deletePortalConfig(PortalReq req) {
-        sysPortalService.deleteByName(req.getName());
+    public void deletePortalConfig(IdReqVO req) {
+        sysPortalService.deleteById(req.getId());
+        sysPortalColumnService.deleteByPortalId(req.getId());
+    }
+
+    public void validatePortalExisted(PortalReq req) {
+        Validator.assertFalse(sysPortalService.existedByName(req.getName()), ErrCodeSys.SYS_ERR_MSG,
+                "表格编码已存在,请删除原有表格或者使用其他编码");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void copyPortalConfig(PortalCopyReq req) {
+        Validator.assertFalse(sysPortalService.existedByName(req.getTargetName()), ErrCodeSys.PA_DATA_HAS_EXIST,
+                "表格编码");
+        SysPortal sourcePortal = sysPortalService.getById(req.getSourceConfigId());
+        Validator.assertNotNull(sourcePortal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
+        PortalWithColumnsRes sourcePortalWithColumn = Resp.convert(sourcePortal, PortalWithColumnsRes.class);
+        SysPortal targetPortal = ReflectionUtil.copy(sourcePortal, SysPortal.class);
+        targetPortal.setId(null);
+        targetPortal.setName(req.getTargetName());
+        targetPortal.setDisplayName(req.getTargetDisplayName());
+        sysPortalService.insert(targetPortal);
+        List<SysPortalColumn> columnList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(sourcePortalWithColumn.getColumns())) {
+            for (SysPortalColumn column : sourcePortalWithColumn.getColumns()) {
+                column.setId(null);
+                column.setPortalId(targetPortal.getId());
+                columnList.add(column);
+            }
+        }
+        sysPortalColumnService.insert(columnList);
     }
 }

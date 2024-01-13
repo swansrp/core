@@ -54,7 +54,9 @@ public class PortalConfig implements CommandLineRunner {
         if (FuncUtil.isNotEmpty(portalEntityList)) {
             map = new LinkedHashMap<>(portalEntityList.size());
             for (Class<?> aClass : portalEntityList) {
-                map.put(aClass.getAnnotation(PortalEntity.class).value(), ReflectionUtil.getFields(aClass));
+                for (String value : aClass.getAnnotation(PortalEntity.class).value()) {
+                    map.put(value, ReflectionUtil.getFields(aClass));
+                }
             }
             refreshPortalConfig(map);
         }

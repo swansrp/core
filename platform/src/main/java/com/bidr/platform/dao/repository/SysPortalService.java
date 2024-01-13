@@ -32,11 +32,12 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         wrapper.selectAs(SysPortal::getName, KeyValueResVO::getValue);
         wrapper.like(FuncUtil.isNotEmpty(name), SysPortal::getName, name);
         wrapper.or().like(FuncUtil.isNotEmpty(name), SysPortal::getDisplayName, name);
+        wrapper.orderByAsc(SysPortal::getDisplayName);
         return selectJoinList(KeyValueResVO.class, wrapper);
     }
 
-    public void deleteByName(String name) {
+    public Boolean existedByName(String name) {
         LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name);
-        super.delete(wrapper);
+        return super.existed(wrapper);
     }
 }

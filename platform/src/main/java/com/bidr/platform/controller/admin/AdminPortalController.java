@@ -3,14 +3,12 @@ package com.bidr.platform.controller.admin;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
+import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.service.portal.PortalService;
 import com.bidr.platform.vo.params.SysConfigRes;
-import com.bidr.platform.vo.portal.PortalColumnReq;
-import com.bidr.platform.vo.portal.PortalReq;
-import com.bidr.platform.vo.portal.PortalUpdateReq;
-import com.bidr.platform.vo.portal.PortalWithColumnsRes;
+import com.bidr.platform.vo.portal.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -71,8 +69,21 @@ public class AdminPortalController extends BaseAdminController<SysConfig, SysCon
 
     @RequestMapping(path = {"/config/delete"}, method = {RequestMethod.POST})
     @ApiOperation(value = "删除配置")
-    public void deletePortalConfig(@RequestBody PortalReq req) {
+    public void deletePortalConfig(@RequestBody IdReqVO req) {
         portalService.deletePortalConfig(req);
         Resp.notice("删除后台配置成功");
+    }
+
+    @RequestMapping(path = {"/config/existed"}, method = {RequestMethod.GET})
+    @ApiOperation(value = "检查后台管理配置是否存在")
+    public void validatePortalExisted(PortalReq req) {
+        portalService.validatePortalExisted(req);
+    }
+
+    @RequestMapping(path = {"/config/copy"}, method = {RequestMethod.POST})
+    @ApiOperation(value = "复制后台管理配置")
+    public void copyPortalConfig(@RequestBody PortalCopyReq req) {
+        portalService.copyPortalConfig(req);
+        Resp.notice("复制表格配置成功");
     }
 }

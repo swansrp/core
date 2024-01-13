@@ -18,7 +18,7 @@ public @interface PortalEntity {
     /**
      * 实体名
      */
-    String value();
+    String[] value();
 
 
 }
