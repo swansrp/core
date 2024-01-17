@@ -7,6 +7,7 @@ import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -16,7 +17,6 @@ import com.bidr.kernel.vo.portal.QueryConditionReq;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -41,16 +41,32 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("添加数据")
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
-    public void add(@Validated @RequestBody VO req) {
-        ENTITY entity = beforeAdd(req);
+    public void add(@RequestBody ENTITY entity) {
+        if (!isAdmin()) {
+            beforeAdd(entity);
+        }
         Boolean result = getRepo().insert(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");
         afterAdd(entity);
         Resp.notice("新增成功");
     }
 
-    protected ENTITY beforeAdd(VO entity) {
-        return ReflectionUtil.copy(entity, getEntityClass());
+    /**
+     * 管理员查看全局数据
+     */
+    protected boolean isAdmin() {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            return getPortalService().isAdmin();
+        } else {
+            return false;
+        }
+
+    }
+
+    protected void beforeAdd(ENTITY entity) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().beforeAdd(entity);
+        }
     }
 
     protected BaseSqlRepo getRepo() {
@@ -59,7 +75,13 @@ public abstract class BaseAdminController<ENTITY, VO> {
     }
 
     protected void afterAdd(ENTITY entity) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().afterAdd(entity);
+        }
+    }
 
+    protected PortalCommonService<ENTITY> getPortalService() {
+        return null;
     }
 
     protected Class<ENTITY> getEntityClass() {
@@ -70,7 +92,9 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void update(@RequestBody ENTITY entity) {
-        beforeUpdate(entity);
+        if (!isAdmin()) {
+            beforeUpdate(entity);
+        }
         Boolean result = getRepo().updateById(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
         afterUpdate(entity);
@@ -78,11 +102,15 @@ public abstract class BaseAdminController<ENTITY, VO> {
     }
 
     protected void beforeUpdate(ENTITY entity) {
-
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().beforeUpdate(entity);
+        }
     }
 
     protected void afterUpdate(ENTITY entity) {
-
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().afterUpdate(entity);
+        }
     }
 
     @ApiOperation("更新数据")
@@ -124,18 +152,24 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void delete(@RequestBody IdReqVO vo) {
-        beforeDelete(vo);
+        if (!isAdmin()) {
+            beforeDelete(vo);
+        }
         getRepo().deleteById(vo.getId());
         afterDelete(vo);
         Resp.notice("删除成功");
     }
 
     protected void beforeDelete(IdReqVO vo) {
-
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().beforeDelete(vo);
+        }
     }
 
     protected void afterDelete(IdReqVO vo) {
-
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().afterDelete(vo);
+        }
     }
 
     @ApiOperation("根据id获取详情")
@@ -151,7 +185,9 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("通用查询数据")
     @RequestMapping(value = "/general/query", method = RequestMethod.POST)
     public Page<VO> generalQuery(@RequestBody QueryConditionReq req) {
-        beforeQuery(req);
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
         return Resp.convert(getRepo().select(req), getVoClass());
     }
 
@@ -161,6 +197,9 @@ public abstract class BaseAdminController<ENTITY, VO> {
      * @param req 查询条件
      */
     protected void beforeQuery(QueryConditionReq req) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().beforeQuery(req);
+        }
     }
 
 }

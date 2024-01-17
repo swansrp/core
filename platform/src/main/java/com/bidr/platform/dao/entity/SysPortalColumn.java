@@ -17,7 +17,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/01/12 09:24
+ * @since 2024/01/17 11:06
  */
 
 /**
@@ -88,6 +88,14 @@ public class SysPortalColumn {
     private String reference;
 
     /**
+     * 相关实体字段
+     */
+    @TableField(value = "entity_field")
+    @ApiModelProperty(value = "相关实体字段")
+    @Size(max = 50, message = "相关实体字段最大长度要小于 50")
+    private String entityField;
+
+    /**
      * 显示顺序
      */
     @TableField(value = "display_order")
@@ -130,12 +138,12 @@ public class SysPortalColumn {
     private String tooltip;
 
     /**
-     * 是否可以编辑
+     * 表格是否可以编辑
      */
     @TableField(value = "edit_able")
-    @ApiModelProperty(value = "是否可以编辑")
-    @Size(max = 1, message = "是否可以编辑最大长度要小于 1")
-    @NotBlank(message = "是否可以编辑不能为空")
+    @ApiModelProperty(value = "表格是否可以编辑")
+    @Size(max = 1, message = "表格是否可以编辑最大长度要小于 1")
+    @NotBlank(message = "表格是否可以编辑不能为空")
     private String editAble;
 
     /**
@@ -166,6 +174,23 @@ public class SysPortalColumn {
     private String show;
 
     /**
+     * 详情时是否显示
+     */
+    @TableField(value = "detail_show")
+    @ApiModelProperty(value = "详情时是否显示")
+    @Size(max = 1, message = "详情时是否显示最大长度要小于 1")
+    @NotBlank(message = "详情时是否显示不能为空")
+    private String detailShow;
+
+    /**
+     * 详情弹框布局大小
+     */
+    @TableField(value = "detail_size")
+    @ApiModelProperty(value = "详情弹框布局大小")
+    @NotNull(message = "详情弹框布局大小不能为null")
+    private Integer detailSize;
+
+    /**
      * 添加时是否显示
      */
     @TableField(value = "add_show")
@@ -175,13 +200,45 @@ public class SysPortalColumn {
     private String addShow;
 
     /**
-     * 详情时是否显示
+     * 新增弹框布局大小
      */
-    @TableField(value = "detail_show")
-    @ApiModelProperty(value = "详情时是否显示")
-    @Size(max = 1, message = "详情时是否显示最大长度要小于 1")
-    @NotBlank(message = "详情时是否显示不能为空")
-    private String detailShow;
+    @TableField(value = "add_size")
+    @ApiModelProperty(value = "新增弹框布局大小")
+    @NotNull(message = "新增弹框布局大小不能为null")
+    private Integer addSize;
+
+    /**
+     * 新增弹框布局显示后占位填充
+     */
+    @TableField(value = "add_padding")
+    @ApiModelProperty(value = "新增弹框布局显示后占位填充")
+    @NotNull(message = "新增弹框布局显示后占位填充不能为null")
+    private Integer addPadding;
+
+    /**
+     * 编辑框是否显示
+     */
+    @TableField(value = "edit_show")
+    @ApiModelProperty(value = "编辑框是否显示")
+    @Size(max = 1, message = "编辑框是否显示最大长度要小于 1")
+    @NotBlank(message = "编辑框是否显示不能为空")
+    private String editShow;
+
+    /**
+     * 编辑弹框布局大小
+     */
+    @TableField(value = "edit_size")
+    @ApiModelProperty(value = "编辑弹框布局大小")
+    @NotNull(message = "编辑弹框布局大小不能为null")
+    private Integer editSize;
+
+    /**
+     * 编辑弹框布局显示后占位填充
+     */
+    @TableField(value = "edit_padding")
+    @ApiModelProperty(value = "编辑弹框布局显示后占位填充")
+    @NotNull(message = "编辑弹框布局显示后占位填充不能为null")
+    private Integer editPadding;
 
     /**
      * 是否可做筛选项
@@ -200,14 +257,6 @@ public class SysPortalColumn {
     @Size(max = 1, message = "是否可做排序项最大长度要小于 1")
     @NotBlank(message = "是否可做排序项不能为空")
     private String sortAble;
-
-    /**
-     * 详情查看格占用大小
-     */
-    @TableField(value = "description_size")
-    @ApiModelProperty(value = "详情查看格占用大小")
-    @NotNull(message = "详情查看格占用大小不能为null")
-    private Integer descriptionSize;
 
     /**
      * 最小值(长度)

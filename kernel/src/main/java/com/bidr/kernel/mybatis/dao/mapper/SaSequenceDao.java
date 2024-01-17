@@ -19,6 +19,6 @@ public interface SaSequenceDao extends BaseMapper<SaSequence>, MyBaseMapper<SaSe
     @Select("SELECT f_nextval(#{seqName})")
     String getSeq(String seqName);
 
-    @Update("UPDATE sa_sequence SET sa_sequence.value = 0 WHERE sequence.seq_name = #{seqName}")
+    @Update("UPDATE sa_sequence SET sa_sequence.value = 0 WHERE sa_sequence.seq_name = #{seqName}")
     void resetSeq(String seqName);
 }

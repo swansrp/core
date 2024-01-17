@@ -1,5 +1,6 @@
 package com.bidr.authorization.bo.account;
 
+import com.bidr.authorization.bo.role.RoleInfo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -18,5 +19,6 @@ import java.util.Map;
 public class AccountInfo extends UserInfo {
     private String token;
     private String clientType;
+    private Map<Long, RoleInfo> role;
     private Map<String, Object> extraData = new HashMap<>(0);
 }

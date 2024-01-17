@@ -1,6 +1,7 @@
 package com.bidr.kernel.vo.portal;
 
 import io.swagger.annotations.ApiModelProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;

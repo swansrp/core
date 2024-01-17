@@ -24,6 +24,7 @@ import com.bidr.authorization.vo.login.QrCodeReq;
 import com.bidr.authorization.vo.login.SsoLoginReq;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.Md5Util;
@@ -64,7 +65,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = ServiceException.class)
     public LoginRes login(String loginId, String password) {
         AcUser user = acUserService.getUserByUserName(loginId);
         if (user == null) {

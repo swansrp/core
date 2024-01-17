@@ -16,7 +16,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/12/24 23:03
+ * @since 2024/01/16 14:19
  */
 
 /**
@@ -53,13 +53,13 @@ public class SysPortal {
     private String displayName;
 
     /**
-     * 是否树形结构
+     * api地址
      */
-    @TableField(value = "tree_mode")
-    @ApiModelProperty(value = "是否树形结构")
-    @Size(max = 1, message = "是否树形结构最大长度要小于 1")
-    @NotBlank(message = "是否树形结构不能为空")
-    private String treeMode;
+    @TableField(value = "url")
+    @ApiModelProperty(value = "api地址")
+    @Size(max = 50, message = "api地址最大长度要小于 50")
+    @NotBlank(message = "api地址不能为空")
+    private String url;
 
     /**
      * 表格大小PORTAL_TABLE_SIZE_DICT
@@ -94,7 +94,6 @@ public class SysPortal {
     @TableField(value = "id_column")
     @ApiModelProperty(value = "行id字段名")
     @Size(max = 50, message = "行id字段名最大长度要小于 50")
-    @NotBlank(message = "行id字段名不能为空")
     private String idColumn;
 
     /**
@@ -106,12 +105,20 @@ public class SysPortal {
     private String pidColumn;
 
     /**
+     * 树形结构下是否支持拖拽修改
+     */
+    @TableField(value = "tree_drag")
+    @ApiModelProperty(value = "树形结构下是否支持拖拽修改")
+    @Size(max = 1, message = "树形结构下是否支持拖拽修改最大长度要小于 1")
+    @NotBlank(message = "树形结构下是否支持拖拽修改不能为空")
+    private String treeDrag;
+
+    /**
      * 名称字段名
      */
     @TableField(value = "name_column")
     @ApiModelProperty(value = "名称字段名")
     @Size(max = 50, message = "名称字段名最大长度要小于 50")
-    @NotBlank(message = "名称字段名不能为空")
     private String nameColumn;
 
     /**
@@ -120,24 +127,47 @@ public class SysPortal {
     @TableField(value = "order_column")
     @ApiModelProperty(value = "排序字段名")
     @Size(max = 50, message = "排序字段名最大长度要小于 50")
-    @NotBlank(message = "排序字段名不能为空")
     private String orderColumn;
 
     /**
-     * 是否支持顺序调整
+     * 表格拖拽改变顺序
      */
-    @TableField(value = "order_mode")
-    @ApiModelProperty(value = "是否支持顺序调整")
-    @Size(max = 1, message = "是否支持顺序调整最大长度要小于 1")
-    @NotBlank(message = "是否支持顺序调整不能为空")
-    private String orderMode;
+    @TableField(value = "table_drag")
+    @ApiModelProperty(value = "表格拖拽改变顺序")
+    @Size(max = 1, message = "表格拖拽改变顺序最大长度要小于 1")
+    @NotBlank(message = "表格拖拽改变顺序不能为空")
+    private String tableDrag;
 
     /**
-     * 详情每行显示个数
+     * 新增弹框宽度
+     */
+    @TableField(value = "add_width")
+    @ApiModelProperty(value = "新增弹框宽度")
+    @NotNull(message = "新增弹框宽度不能为null")
+    private Integer addWidth;
+
+    /**
+     * 编辑弹框宽度
+     */
+    @TableField(value = "edit_width")
+    @ApiModelProperty(value = "编辑弹框宽度")
+    @NotNull(message = "编辑弹框宽度不能为null")
+    private Integer editWidth;
+
+    /**
+     * 详情弹框宽度
+     */
+    @TableField(value = "detail_width")
+    @ApiModelProperty(value = "详情弹框宽度")
+    @NotNull(message = "详情弹框宽度不能为null")
+    private Integer detailWidth;
+
+    /**
+     * 弹框每行显示个数
      */
     @TableField(value = "description_count")
-    @ApiModelProperty(value = "详情每行显示个数")
-    @NotNull(message = "详情每行显示个数不能为null")
+    @ApiModelProperty(value = "弹框每行显示个数")
+    @NotNull(message = "弹框每行显示个数不能为null")
     private Integer descriptionCount;
 
     /**

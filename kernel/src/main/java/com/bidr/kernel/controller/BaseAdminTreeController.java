@@ -44,10 +44,7 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
     @RequestMapping(value = "/tree/data", method = RequestMethod.GET)
     public List<TreeDataResVO> getTreeData() {
         List<TreeDataItemVO> list = new ArrayList<>();
-        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
-        wrapper.orderByAsc(order());
-        beforeGetTreeData(wrapper);
-        List<ENTITY> entityList = getRepo().select(wrapper);
+        List<ENTITY> entityList = getAllData();
         if (FuncUtil.isNotEmpty(entityList)) {
             for (ENTITY entity : entityList) {
                 list.add(new TreeDataItemVO(id().apply(entity), pid().apply(entity), name().apply(entity)));
@@ -60,9 +57,17 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
     /**
      * 添加全局控制
      *
-     * @param wrapper 查询条件
+     * @return 树形数据
      */
-    protected void beforeGetTreeData(LambdaQueryWrapper<ENTITY> wrapper) {
+    protected List<ENTITY> getAllData() {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            return getPortalService().getAllData();
+        } else {
+            LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+            wrapper.orderByAsc(order());
+            return getRepo().select(wrapper);
+        }
+
     }
 
     /**

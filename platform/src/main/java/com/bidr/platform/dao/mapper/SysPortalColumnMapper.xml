@@ -11,6 +11,7 @@
     <result column="display_name" jdbcType="VARCHAR" property="displayName" />
     <result column="field_type" jdbcType="VARCHAR" property="fieldType" />
     <result column="reference" jdbcType="VARCHAR" property="reference" />
+    <result column="entity_field" jdbcType="VARCHAR" property="entityField" />
     <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
     <result column="align" jdbcType="VARCHAR" property="align" />
     <result column="width" jdbcType="INTEGER" property="width" />
@@ -20,19 +21,25 @@
     <result column="required" jdbcType="VARCHAR" property="required" />
     <result column="enable" jdbcType="VARCHAR" property="enable" />
     <result column="show" jdbcType="VARCHAR" property="show" />
-    <result column="add_show" jdbcType="VARCHAR" property="addShow" />
     <result column="detail_show" jdbcType="VARCHAR" property="detailShow" />
+    <result column="detail_size" jdbcType="INTEGER" property="detailSize" />
+    <result column="add_show" jdbcType="VARCHAR" property="addShow" />
+    <result column="add_size" jdbcType="INTEGER" property="addSize" />
+    <result column="add_padding" jdbcType="INTEGER" property="addPadding" />
+    <result column="edit_show" jdbcType="VARCHAR" property="editShow" />
+    <result column="edit_size" jdbcType="INTEGER" property="editSize" />
+    <result column="edit_padding" jdbcType="INTEGER" property="editPadding" />
     <result column="filter_able" jdbcType="VARCHAR" property="filterAble" />
     <result column="sort_able" jdbcType="VARCHAR" property="sortAble" />
-    <result column="description_size" jdbcType="INTEGER" property="descriptionSize" />
     <result column="min" jdbcType="DECIMAL" property="min" />
     <result column="max" jdbcType="DECIMAL" property="max" />
     <result column="default_value" jdbcType="VARCHAR" property="defaultValue" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, portal_id, property, db_field, display_name, field_type, reference, display_order, 
-    align, width, fixed, tooltip, edit_able, required, `enable`, `show`, add_show, detail_show, 
-    filter_able, sort_able, description_size, `min`, `max`, default_value
+    id, portal_id, property, db_field, display_name, field_type, reference, entity_field, 
+    display_order, align, width, fixed, tooltip, edit_able, required, `enable`, `show`, 
+    detail_show, detail_size, add_show, add_size, add_padding, edit_show, edit_size, 
+    edit_padding, filter_able, sort_able, `min`, `max`, default_value
   </sql>
 </mapper>

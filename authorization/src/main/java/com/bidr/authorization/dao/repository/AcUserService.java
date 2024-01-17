@@ -3,6 +3,7 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.mapper.AcUserDao;
+import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
@@ -23,8 +24,7 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
     public List<AcUser> getUserByDeptAndName(List<String> deptIdList, String name) {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper();
         wrapper.in(FuncUtil.isNotEmpty(deptIdList), AcUser::getDeptId, deptIdList)
-                .like(FuncUtil.isNotEmpty(name), AcUser::getName, name)
-                .or(w -> w.eq(AcUser::getUserName, name));
+                .like(FuncUtil.isNotEmpty(name), AcUser::getName, name).or(w -> w.eq(AcUser::getUserName, name));
         if (FuncUtil.isEmpty(deptIdList)) {
             return super.select(wrapper, 1, 50, false).getRecords();
         } else {
@@ -55,6 +55,15 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getCustomerNumber, customerNumber)
                 .eq(AcUser::getValid, CommonConst.YES);
         return selectOne(wrapper);
+    }
+
+    public List<AcUser> existedUser(UserExistedReq req) {
+        LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getValid, CommonConst.YES)
+                .nested(wr -> wr.eq(FuncUtil.isNotEmpty(req.getPhoneNumber()), AcUser::getPhoneNumber,
+                                req.getPhoneNumber()).or()
+                        .eq(FuncUtil.isNotEmpty(req.getEmail()), AcUser::getEmail, req.getEmail()).or()
+                        .eq(FuncUtil.isNotEmpty(req.getUserName()), AcUser::getUserName, req.getUserName()));
+        return select(wrapper);
     }
 }
 

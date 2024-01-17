@@ -6,6 +6,8 @@ import com.bidr.authorization.vo.admin.UserRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.controller.BaseAdminController;
+import com.bidr.kernel.mybatis.dao.mapper.SaSequenceDao;
+import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController extends BaseAdminController<AcUser, UserRes> {
 
     private final CreateUserService createUserService;
+    private final SaSequenceService sequenceService;
+
+    @Override
+    protected void beforeAdd(AcUser user) {
+        String customerNumber = sequenceService.getMapper().getSeq("AC_USER_CUSTOMER_NUMBER_SEQ");
+        user.setCustomerNumber(customerNumber);
+    }
 
     @Override
     protected void afterAdd(AcUser user) {

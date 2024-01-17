@@ -17,6 +17,7 @@ import lombok.Data;
 public class UserRes {
     @JsonProperty("value")
     private Long userId;
+    private String customerNumber;
     private String userName;
     @JsonProperty("label")
     private String name;

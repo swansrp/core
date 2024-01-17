@@ -1,7 +1,9 @@
 package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.service.user.UserInfoService;
+import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.authorization.vo.user.UserInfoRes;
+import com.bidr.authorization.vo.user.UserRes;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,5 +28,10 @@ public class UserInfoController {
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     public UserInfoRes getUserInfo() {
         return userInfoService.getUserInfo();
+    }
+
+    @RequestMapping(value = "/existed", method = RequestMethod.GET)
+    public UserRes userExisted(UserExistedReq req) {
+        return userInfoService.userExisted(req);
     }
 }
