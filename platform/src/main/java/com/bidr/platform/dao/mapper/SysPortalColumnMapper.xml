@@ -12,6 +12,7 @@
     <result column="field_type" jdbcType="VARCHAR" property="fieldType" />
     <result column="reference" jdbcType="VARCHAR" property="reference" />
     <result column="entity_field" jdbcType="VARCHAR" property="entityField" />
+    <result column="entity_condition" jdbcType="VARCHAR" property="entityCondition" />
     <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
     <result column="align" jdbcType="VARCHAR" property="align" />
     <result column="width" jdbcType="INTEGER" property="width" />
@@ -38,8 +39,8 @@
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, portal_id, property, db_field, display_name, field_type, reference, entity_field, 
-    display_order, align, width, fixed, tooltip, edit_able, required, `enable`, `show`, 
-    detail_show, detail_size, add_show, add_size, add_padding, edit_show, edit_size, 
-    edit_padding, filter_able, sort_able, `min`, `max`, default_value
+    entity_condition, display_order, align, width, fixed, tooltip, edit_able, required, 
+    `enable`, `show`, detail_show, detail_size, add_show, add_size, add_padding, edit_show, 
+    edit_size, edit_padding, filter_able, sort_able, `min`, `max`, default_value
   </sql>
 </mapper>

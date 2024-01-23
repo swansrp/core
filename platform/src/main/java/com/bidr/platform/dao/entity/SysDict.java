@@ -27,7 +27,6 @@ import java.util.Date;
 @Data
 @TableName(value = "sys_dict")
 public class SysDict {
-    public static final String COL_TITLE = "title";
     /**
      * 字典编码
      */
@@ -166,38 +165,4 @@ public class SysDict {
     @ApiModelProperty(value = "备注")
     @Size(max = 500, message = "备注最大长度要小于 500")
     private String remark;
-
-    public static final String COL_DICT_ID = "dict_id";
-
-    public static final String COL_DICT_PID = "dict_pid";
-
-    public static final String COL_DICT_SORT = "dict_sort";
-
-    public static final String COL_DICT_NAME = "dict_name";
-
-    public static final String COL_DICT_TITLE = "dict_title";
-
-    public static final String COL_DICT_ITEM = "dict_item";
-
-    public static final String COL_DICT_VALUE = "dict_value";
-
-    public static final String COL_DICT_LABEL = "dict_label";
-
-    public static final String COL_IS_DEFAULT = "is_default";
-
-    public static final String COL_STATUS = "status";
-
-    public static final String COL_SHOW = "show";
-
-    public static final String COL_READ_ONLY = "read_only";
-
-    public static final String COL_CREATE_BY = "create_by";
-
-    public static final String COL_CREATE_TIME = "create_time";
-
-    public static final String COL_UPDATE_BY = "update_by";
-
-    public static final String COL_UPDATE_TIME = "update_time";
-
-    public static final String COL_REMARK = "remark";
 }

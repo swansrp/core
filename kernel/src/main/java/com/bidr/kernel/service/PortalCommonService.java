@@ -3,6 +3,7 @@ package com.bidr.kernel.service;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import org.slf4j.LoggerFactory;
 
@@ -90,6 +91,15 @@ public interface PortalCommonService<ENTITY> {
      * @param req 查询条件
      */
     default void beforeQuery(QueryConditionReq req) {
+
+    }
+
+    /**
+     * 查询前处理
+     *
+     * @param req 查询条件
+     */
+    default void beforeQuery(AdvancedQueryReq req) {
 
     }
 

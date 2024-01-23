@@ -70,6 +70,7 @@ public class PortalConfig implements CommandLineRunner {
                 portal = new SysPortal();
                 portal.setName(entry.getKey());
                 portal.setDisplayName(entry.getKey());
+                portal.setUrl(entry.getKey());
                 sysPortalService.save(portal);
             }
             if (FuncUtil.isNotEmpty(entry.getValue())) {

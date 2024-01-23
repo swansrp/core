@@ -53,6 +53,9 @@ public class PortalService {
     @Transactional(rollbackFor = Exception.class)
     public void updatePortalConfig(PortalUpdateReq req) {
         SysPortal portal = ReflectionUtil.copy(req, SysPortal.class);
+        if (FuncUtil.isEmpty(req.getPidColumn())) {
+            portal.setPidColumn(StringUtil.EMPTY);
+        }
         sysPortalService.updateById(portal);
     }
 

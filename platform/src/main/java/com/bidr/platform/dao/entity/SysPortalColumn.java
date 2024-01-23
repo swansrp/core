@@ -17,7 +17,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/01/17 11:06
+ * @since 2024/01/17 16:22
  */
 
 /**
@@ -94,6 +94,13 @@ public class SysPortalColumn {
     @ApiModelProperty(value = "相关实体字段")
     @Size(max = 50, message = "相关实体字段最大长度要小于 50")
     private String entityField;
+
+    /**
+     * 查询实体关系
+     */
+    @TableField(value = "entity_condition")
+    @ApiModelProperty(value = "查询实体关系")
+    private String entityCondition;
 
     /**
      * 显示顺序

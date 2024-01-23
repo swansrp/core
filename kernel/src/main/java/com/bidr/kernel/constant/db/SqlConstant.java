@@ -34,4 +34,7 @@ public class SqlConstant {
     public static final int NOT_BETWEEN = 14;
     public static final int BETWEEN_OR_EQUAL = 15;
     public static final int NOT_BETWEEN_OR_EQUAL = 16;
+
+    public static final String AND = "0";
+    public static final String OR = "1";
 }

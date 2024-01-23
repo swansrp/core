@@ -8,7 +8,7 @@ import com.bidr.platform.dao.entity.SysPortalColumn;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/01/17 11:06
+ * @since 2024/01/17 16:22
  */
 public interface SysPortalColumnMapper extends MyBaseMapper<SysPortalColumn> {
 }

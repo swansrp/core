@@ -2,6 +2,7 @@ package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.utils.FuncUtil;
@@ -279,19 +280,33 @@ public interface PortalSelectRepo {
         return wrapper;
     }
 
-    default void parseAdvancedQuery(AdvancedQuery req, QueryWrapper wrapper) {
-        if (FuncUtil.isNotEmpty(req.getAndOr())) {
-            if(FuncUtil.isNotEmpty(req.getConditionList())) {
+    default void parseAdvancedQuery(AdvancedQuery req, QueryWrapper<?> wrapper) {
+        parseAdvancedQuery(req, wrapper, SqlConstant.AND);
+    }
+
+    default void parseAdvancedQuery(AdvancedQuery req, QueryWrapper<?> wrapper, String andOr) {
+        if (FuncUtil.isNotEmpty(req.getConditionList())) {
+            if (req.getConditionList().size() == 1) {
+                wrapper.and(w -> parseAdvancedQuery(req.getConditionList().get(0), w, SqlConstant.AND));
+            } else if (req.getConditionList().size() > 1) {
                 for (AdvancedQuery advancedQuery : req.getConditionList()) {
                     if (StringUtil.convertSwitch(req.getAndOr())) {
-                        wrapper.or(w -> parseAdvancedQuery(advancedQuery, (QueryWrapper) w));
+                        wrapper.or(w -> parseAdvancedQuery(advancedQuery, w, SqlConstant.OR));
                     } else {
-                        wrapper.and(w -> parseAdvancedQuery(advancedQuery, (QueryWrapper) w));
+                        wrapper.and(w -> parseAdvancedQuery(advancedQuery, w, SqlConstant.AND));
                     }
                 }
             }
         } else {
-            buildQueryWrapper(wrapper, req);
+            if (FuncUtil.isNotEmpty(req.getProperty()) && FuncUtil.isNotEmpty(req.getRelation())) {
+                buildQueryWrapper(wrapper, req);
+            } else {
+                if (FuncUtil.equals(andOr, SqlConstant.AND)) {
+                    wrapper.apply("1 = 1");
+                } else {
+                    wrapper.apply("1 = 0");
+                }
+            }
         }
     }
 

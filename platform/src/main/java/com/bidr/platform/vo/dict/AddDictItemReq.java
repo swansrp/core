@@ -1,5 +1,6 @@
 package com.bidr.platform.vo.dict;
 
+import com.bidr.platform.config.portal.PortalEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -12,6 +13,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@PortalEntity("dict")
 public class AddDictItemReq extends DictItem {
 
 }

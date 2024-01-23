@@ -13,6 +13,7 @@ import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.ApplicationContext;
@@ -191,12 +192,32 @@ public abstract class BaseAdminController<ENTITY, VO> {
         return Resp.convert(getRepo().select(req), getVoClass());
     }
 
+    @ApiOperation("高级查询数据")
+    @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
+    public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        return Resp.convert(getRepo().select(req), getVoClass());
+    }
+
     /**
      * 配置全局查询参数
      *
      * @param req 查询条件
      */
     protected void beforeQuery(QueryConditionReq req) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().beforeQuery(req);
+        }
+    }
+
+    /**
+     * 配置全局查询参数
+     *
+     * @param req 查询条件
+     */
+    protected void beforeQuery(AdvancedQueryReq req) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().beforeQuery(req);
         }

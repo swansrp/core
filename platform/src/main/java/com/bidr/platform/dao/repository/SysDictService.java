@@ -1,14 +1,12 @@
 package com.bidr.platform.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.mapper.SysDictDao;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -43,9 +41,9 @@ public class SysDictService extends BaseSqlRepo<SysDictDao, SysDict> {
         return super.select(wrapper);
     }
 
-    public List<SysDict> getSysDictByTitle(String dictName) {
-        QueryWrapper<SysDict> wrapper = new QueryWrapper<SysDict>().select("DISTINCT " + SysDict.COL_DICT_NAME,
-                SysDict.COL_TITLE).like(StringUtils.isNotEmpty(dictName), SysDict.COL_TITLE, dictName);
+    public List<SysDict> getSysDictByTitle(String dictTitle) {
+        LambdaQueryWrapper<SysDict> wrapper = super.getQueryWrapper();
+        wrapper.eq(SysDict::getDictTitle, dictTitle).orderBy(true, true, SysDict::getDictSort);
         return super.select(wrapper);
     }
 
