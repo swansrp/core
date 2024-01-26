@@ -16,7 +16,6 @@ import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.annotations.ApiOperation;
-import lombok.SneakyThrows;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -227,7 +225,6 @@ public abstract class BaseAdminController<ENTITY, VO> {
             fileName = fileName + ".csv";
         }
         HttpUtil.export(request, response, contentType, "UTF-8", fileName, exportBytes);
-
     }
 
     @ApiOperation("高级查询数据")

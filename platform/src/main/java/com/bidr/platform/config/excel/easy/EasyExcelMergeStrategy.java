@@ -1,4 +1,4 @@
-package com.bidr.platform.config.excel;
+package com.bidr.platform.config.excel.easy;
 
 import com.alibaba.excel.metadata.Head;
 import com.alibaba.excel.write.merge.AbstractMergeStrategy;
