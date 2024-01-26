@@ -3,7 +3,6 @@ package com.bidr.authorization.controller.admin;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.vo.admin.DepartmentRes;
-import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.controller.BaseAdminTreeController;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;

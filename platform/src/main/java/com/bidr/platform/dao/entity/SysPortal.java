@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import java.math.BigDecimal;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -16,7 +17,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/01/16 14:19
+ * @since 2024/01/26 08:47
  */
 
 /**
@@ -187,4 +188,12 @@ public class SysPortal {
     @Size(max = 1, message = "支持导入最大长度要小于 1")
     @NotBlank(message = "支持导入不能为空")
     private String importAble;
+
+    /**
+     * 上传导入进度
+     */
+    @TableField(value = "upload_progress")
+    @ApiModelProperty(value = "上传导入进度")
+    @NotNull(message = "上传导入进度不能为null")
+    private BigDecimal uploadProgress;
 }

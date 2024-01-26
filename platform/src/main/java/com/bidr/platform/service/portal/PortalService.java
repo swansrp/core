@@ -35,7 +35,11 @@ public class PortalService {
     private final SysPortalColumnService sysPortalColumnService;
 
     public PortalWithColumnsRes getPortalWithColumnsConfig(PortalReq req) {
-        SysPortal portal = sysPortalService.getByName(req.getName());
+        return getPortalWithColumnsConfig(req.getName());
+    }
+
+    public PortalWithColumnsRes getPortalWithColumnsConfig(String name) {
+        SysPortal portal = sysPortalService.getByName(name);
         Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         return Resp.convert(portal, PortalWithColumnsRes.class);
     }

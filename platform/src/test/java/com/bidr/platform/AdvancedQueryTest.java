@@ -1,10 +1,10 @@
 package com.bidr.platform;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.bidr.kernel.test.BaseTest;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.repository.SysDictService;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.testng.annotations.Test;
@@ -37,8 +37,8 @@ public class AdvancedQueryTest extends BaseTest {
         AdvancedQuery d = getAdvancedQueryReq("0", a, b);
         AdvancedQuery req = getAdvancedQueryReq("1", d, c);
         log(req);
-        QueryWrapper<SysDict> wrapper = new QueryWrapper<>(new SysDict());
-        sysDictService.parseAdvancedQuery(req, wrapper);
+        MPJLambdaWrapper<SysDict> wrapper = new MPJLambdaWrapper<>(new SysDict());
+        sysDictService.parseAdvancedQuery(req, null, wrapper);
         log(wrapper.getTargetSql());
 
     }
@@ -59,5 +59,6 @@ public class AdvancedQueryTest extends BaseTest {
         req.setConditionList(Arrays.asList(query));
         return req;
     }
+
 
 }

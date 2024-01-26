@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 import java.io.Serializable;
 import java.util.List;
@@ -31,7 +32,9 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(QueryConditionReq req);
 
-    Page<T> select(AdvancedQueryReq req);
+    Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<?> vo);
+
+    Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper, Class<?> vo);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

@@ -10,6 +10,7 @@ import com.bidr.platform.dao.repository.SysPortalService;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
 import org.reflections.Reflections;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,9 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class PortalConfig implements CommandLineRunner {
+
+    @Value("${my.base-package}")
+    private String basePackage;
 
 
     private static final Map<Class<?>, PortalFieldDict> FIELD_MAP = new HashMap<>();
@@ -48,7 +52,7 @@ public class PortalConfig implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        Reflections reflections = new Reflections("com.bidr");
+        Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> portalEntityList = reflections.getTypesAnnotatedWith(PortalEntity.class);
         Map<String, List<Field>> map;
         if (FuncUtil.isNotEmpty(portalEntityList)) {
@@ -75,8 +79,11 @@ public class PortalConfig implements CommandLineRunner {
             }
             if (FuncUtil.isNotEmpty(entry.getValue())) {
                 int order = 0;
+                List<SysPortalColumn> columnList = sysPortalColumnService.getPropertyListByPortalId(portal.getId());
+                Map<String, SysPortalColumn> columnMap = ReflectionUtil.reflectToMap(columnList,
+                        SysPortalColumn::getProperty);
                 for (Field field : entry.getValue()) {
-                    if (!sysPortalColumnService.existed(portal.getId(), field.getName())) {
+                    if (!columnMap.containsKey(field.getName())) {
                         SysPortalColumn column = new SysPortalColumn();
                         column.setPortalId(portal.getId());
                         column.setProperty(field.getName());

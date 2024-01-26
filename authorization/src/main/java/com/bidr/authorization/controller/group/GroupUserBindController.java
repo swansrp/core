@@ -57,6 +57,7 @@ public class GroupUserBindController extends BaseBindController<AcGroup, AcUserG
         adminUserGroupBindService.bindList(req);
         Resp.notice("绑定成功");
     }
+
     @ApiOperation(value = "获取已绑定(列表)(查询条件)")
     @RequestMapping(value = "/bind/list/search", method = RequestMethod.GET)
     public List<GroupAccountRes> getBindList(@Validated BindUserReq req) {

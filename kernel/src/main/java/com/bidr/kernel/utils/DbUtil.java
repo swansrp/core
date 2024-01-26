@@ -10,10 +10,12 @@
 package com.bidr.kernel.utils;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.db.SqlConstant;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.validate.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -147,6 +149,22 @@ public class DbUtil {
         List<R> targetList = ReflectionUtil.copyList(page.getRecords(), clazz);
         res.setRecords(targetList);
         return res;
+    }
+
+    public static String getTableName(Class<?> clazz) {
+        TableName annotation = clazz.getAnnotation(TableName.class);
+        Validator.assertNotNull(annotation, ErrCodeSys.PA_DATA_NOT_EXIST, "表名");
+        return annotation.value();
+    }
+
+    public static String getSelectSqlName(Class<?> clazz, String fieldName) {
+        Field field = ReflectionUtil.getField(clazz, fieldName);
+        TableField annotation = field.getAnnotation(TableField.class);
+        if (FuncUtil.isNotEmpty(annotation)) {
+            return annotation.value();
+        } else {
+            return "`" + StringUtil.camelToUnderline(field.getName()) + "`";
+        }
     }
 
     @Retention(RetentionPolicy.RUNTIME)

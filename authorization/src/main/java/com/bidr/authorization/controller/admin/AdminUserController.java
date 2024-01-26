@@ -1,13 +1,13 @@
 package com.bidr.authorization.controller.admin;
 
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.service.admin.AdminUserServiceImpl;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.vo.admin.UserRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.controller.BaseAdminController;
-import com.bidr.kernel.mybatis.dao.mapper.SaSequenceDao;
-import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
+import com.bidr.kernel.service.PortalCommonService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -29,17 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController extends BaseAdminController<AcUser, UserRes> {
 
     private final CreateUserService createUserService;
-    private final SaSequenceService sequenceService;
+
+    private final AdminUserServiceImpl adminUserService;
 
     @Override
-    protected void beforeAdd(AcUser user) {
-        String customerNumber = sequenceService.getMapper().getSeq("AC_USER_CUSTOMER_NUMBER_SEQ");
-        user.setCustomerNumber(customerNumber);
-    }
-
-    @Override
-    protected void afterAdd(AcUser user) {
-        createUserService.bindDefaultRole(user);
+    protected PortalCommonService<AcUser, UserRes> getPortalService() {
+        return adminUserService;
     }
 
     @ApiOperation(value = "禁用某用户")

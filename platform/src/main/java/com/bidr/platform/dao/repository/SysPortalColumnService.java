@@ -6,6 +6,8 @@ import com.bidr.platform.dao.entity.SysPortalColumn;
 import com.bidr.platform.dao.mapper.SysPortalColumnMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * Title: SysPortalColumnService
  * Description: Copyright: Copyright (c) 2023
@@ -27,5 +29,12 @@ public class SysPortalColumnService extends BaseSqlRepo<SysPortalColumnMapper, S
         LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper();
         wrapper.eq(SysPortalColumn::getPortalId, portalId);
         delete(wrapper);
+    }
+
+    public List<SysPortalColumn> getPropertyListByPortalId(Long portalId) {
+        LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper();
+        wrapper.select(SysPortalColumn::getProperty);
+        wrapper.eq(SysPortalColumn::getPortalId, portalId);
+        return select(wrapper);
     }
 }

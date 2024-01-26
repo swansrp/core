@@ -19,6 +19,7 @@ import com.bidr.platform.dao.repository.SysDictTypeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -36,6 +37,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 public class DictCacheService {
+
+    @Value("${my.base-package}")
+    private String basePackage;
 
     private final Integer DEFAULT_EXPIRED = 24 * 60;
 
@@ -116,7 +120,7 @@ public class DictCacheService {
                                 false));
             }
         }
-        Reflections reflections = new Reflections("com.bidr");
+        Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaDict.class);
 
         for (Class<?> clazz : metaDictClass) {

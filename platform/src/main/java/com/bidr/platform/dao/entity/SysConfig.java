@@ -102,24 +102,4 @@ public class SysConfig {
     @ApiModelProperty(value = "备注")
     @Size(max = 500, message = "备注最大长度要小于 500")
     private String remark;
-
-    public static final String COL_CONFIG_ID = "config_id";
-
-    public static final String COL_CONFIG_NAME = "config_name";
-
-    public static final String COL_CONFIG_KEY = "config_key";
-
-    public static final String COL_CONFIG_VALUE = "config_value";
-
-    public static final String COL_CONFIG_TYPE = "config_type";
-
-    public static final String COL_CREATE_BY = "create_by";
-
-    public static final String COL_CREATE_TIME = "create_time";
-
-    public static final String COL_UPDATE_BY = "update_by";
-
-    public static final String COL_UPDATE_TIME = "update_time";
-
-    public static final String COL_REMARK = "remark";
 }

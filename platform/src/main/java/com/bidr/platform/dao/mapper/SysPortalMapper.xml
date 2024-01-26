@@ -23,11 +23,12 @@
     <result column="description_count" jdbcType="INTEGER" property="descriptionCount" />
     <result column="export_able" jdbcType="VARCHAR" property="exportAble" />
     <result column="import_able" jdbcType="VARCHAR" property="importAble" />
+    <result column="upload_progress" jdbcType="DECIMAL" property="uploadProgress" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, `name`, display_name, url, `size`, read_only, summary, id_column, pid_column, 
     tree_drag, name_column, order_column, table_drag, add_width, edit_width, detail_width, 
-    description_count, export_able, import_able
+    description_count, export_able, import_able, upload_progress
   </sql>
 </mapper>

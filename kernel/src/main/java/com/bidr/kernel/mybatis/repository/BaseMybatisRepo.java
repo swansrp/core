@@ -211,6 +211,19 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
                 .collect(Collectors.joining(StringPool.COMMA, StringPool.SPACE, StringPool.SPACE));
     }
 
+    /**
+     * 处理sql查询字段名
+     *
+     * @param columns
+     * @return
+     */
+    public String getSelectSql(String prefix, SFunction<T, ?>... columns) {
+        return Arrays.stream(columns)
+                .map(c -> prefix + "." + StringUtil.camelToUnderline(LambdaUtils.getName(c)) + " as " +
+                        LambdaUtils.getName(c))
+                .collect(Collectors.joining(StringPool.COMMA, StringPool.SPACE, StringPool.SPACE));
+    }
+
     public String getSelectSql() {
         StringBuffer sb = new StringBuffer();
         Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
@@ -234,6 +247,43 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         }
     }
 
+    public String getSelectSql(String prefix) {
+        StringBuffer sb = new StringBuffer();
+        Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
+        map.forEach((name, field) -> {
+            if (!Modifier.isFinal(field.getModifiers())) {
+                String columnName = getSelectSqlName(field);
+                sb.append(" ").append(prefix).append(".").append(columnName).append(" as ").append(name).append(" ,");
+            }
+        });
+        String sql = sb.toString();
+        return sql.substring(0, sql.length() - 1);
+    }
+
+    public List<String> getFieldSql(String prefix) {
+        List<String> list = new ArrayList<>();
+        Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
+        map.forEach((name, field) -> {
+            if (!Modifier.isFinal(field.getModifiers())) {
+                String columnName = getSelectSqlName(field);
+                list.add(prefix + "." + columnName);
+            }
+        });
+        return list;
+    }
+
+    public List<String> getFieldSql() {
+        List<String> list = new ArrayList<>();
+        Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
+        map.forEach((name, field) -> {
+            if (!Modifier.isFinal(field.getModifiers())) {
+                String columnName = getSelectSqlName(field);
+                list.add(columnName);
+            }
+        });
+        return list;
+    }
+
     public List<T> group(QueryWrapper<T> wrapper, SFunction<T, ?> column, SFunction<T, ?>... columns) {
         List<String> fields = new ArrayList<>();
         fields.add(getSelectSqlName(column));
@@ -250,11 +300,5 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
 
     public String getSelectSqlName(SFunction<T, ?> column) {
         return DbUtil.getSqlColumn(column);
-    }
-
-    public String getTableName() {
-        TableName annotation = getEntityClass().getAnnotation(TableName.class);
-        Validator.assertNotNull(annotation, ErrCodeSys.PA_DATA_NOT_EXIST, "表名");
-        return annotation.value();
     }
 }

@@ -13,6 +13,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.cache.annotation.CacheConfig;
 
@@ -31,7 +32,7 @@ import java.util.Map;
 
 @CacheConfig(cacheNames = "DB-CACHE", keyGenerator = "cacheKeyByParam")
 public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K, T> implements SqlCountRepo<T>,
-        SqlSelectRepo<T>, SqlInsertRpo<T>, SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo {
+        SqlSelectRepo<T>, SqlInsertRpo<T>, SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo<T> {
 
     @Override
     public long count(T entity) {
@@ -114,11 +115,20 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(AdvancedQueryReq req) {
-        QueryWrapper<T> wrapper = Wrappers.query();
-        wrapper.setEntityClass(entityClass);
-        parseAdvancedQuery(req, wrapper);
-        return select(wrapper, req);
+    public Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<?> vo) {
+        return select(req, aliasMap, null, vo);
+    }
+
+    @Override
+    public Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
+                          Class<?> vo) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<>();
+        }
+        wrapper.selectAll(getEntityClass(), "t");
+        wrapper.groupByStr(getFieldSql("t"));
+        parseAdvancedQuery(req, aliasMap, wrapper);
+        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
     }
 
     @Override

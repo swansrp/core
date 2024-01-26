@@ -1,5 +1,6 @@
 package com.bidr.kernel.utils;
 
+import com.bidr.kernel.validate.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -182,40 +183,17 @@ public class HttpUtil {
         }
     }
 
-    public static void mergeStream(File file, HttpServletResponse response) {
-        byte[] buffer = new byte[1024];
-        response.reset();
-        response.setContentType("application/pdf");
-        response.setCharacterEncoding("UTF-8");
-        response.setHeader("Content-disposition", "attachment;filename=" + file.getName() + ".pdf");
-        FileInputStream fis = null;
-        BufferedInputStream bis = null;
-        try {
-            fis = new FileInputStream(file);
-            bis = new BufferedInputStream(fis);
-            OutputStream os = response.getOutputStream();
-            int i = bis.read(buffer);
-            while (i != -1) {
-                os.write(buffer, 0, i);
-                i = bis.read(buffer);
-            }
+    public static void export(HttpServletRequest request, HttpServletResponse response, String contentType,
+                              String charset, String fileName, byte[] buffers) {
+        contentDisposition(fileName, request ,response);
+        // response.reset();
+        response.setContentType(contentType);
+        response.setCharacterEncoding(charset);
+        try (OutputStream outputStream = response.getOutputStream()) {
+            outputStream.write(buffers);
+            outputStream.flush();
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (bis != null) {
-                try {
-                    bis.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            Validator.assertException(e);
         }
     }
 

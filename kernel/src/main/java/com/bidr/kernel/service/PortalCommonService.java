@@ -5,10 +5,14 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: PortalCommonService
@@ -17,7 +21,7 @@ import java.util.List;
  * @author Sharp
  * @since 2024/01/15 16:17
  */
-public interface PortalCommonService<ENTITY> {
+public interface PortalCommonService<ENTITY, VO> {
     /**
      * 是否查看全局数据
      *
@@ -112,4 +116,33 @@ public interface PortalCommonService<ENTITY> {
         LoggerFactory.getLogger(this.getClass()).debug("没有配置获取全部数据生成树形结构的方法");
         return new ArrayList<>();
     }
+
+    /**
+     * 生成联表查询wrapper
+     *
+     * @return
+     */
+    default MPJLambdaWrapper<ENTITY> getJoinWrapper() {
+        return new MPJLambdaWrapper<>();
+    }
+
+    /**
+     * 生成联表查询别名
+     *
+     * @return
+     */
+    default Map<String, String> getAliasMap() {
+        return null;
+    }
+
+    /**
+     * 导出文件流
+     *
+     * @param dataList 数据
+     * @return
+     */
+    default byte[] export(List<VO> dataList) throws IOException {
+        return null;
+    }
+
 }

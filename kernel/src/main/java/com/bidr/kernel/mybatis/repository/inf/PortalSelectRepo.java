@@ -14,6 +14,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Title: PortalSelectRepo
@@ -22,7 +23,7 @@ import java.util.Date;
  * @author Sharp
  * @since 2023/05/05 16:20
  */
-public interface PortalSelectRepo {
+public interface PortalSelectRepo<T> {
 
     /**
      * 构造通用查询wrapper
@@ -32,7 +33,7 @@ public interface PortalSelectRepo {
      * @return 查询wrapper
      */
 
-    default QueryWrapper parseQueryCondition(QueryConditionReq req, QueryWrapper wrapper) {
+    default QueryWrapper<T> parseQueryCondition(QueryConditionReq req, QueryWrapper wrapper) {
         if (FuncUtil.isNotEmpty(req.getConditionList())) {
             for (ConditionVO condition : req.getConditionList()) {
                 buildQueryWrapper(wrapper, condition);
@@ -42,7 +43,7 @@ public interface PortalSelectRepo {
         return wrapper;
     }
 
-    default void buildQueryWrapper(QueryWrapper wrapper, ConditionVO condition) {
+    default void buildQueryWrapper(QueryWrapper<T> wrapper, ConditionVO condition) {
         formatDateValue(condition);
         String columnName = getColumnName(condition, wrapper.getEntityClass());
         switch (PortalConditionDict.of(condition.getRelation())) {
@@ -103,7 +104,7 @@ public interface PortalSelectRepo {
      * @return 排序wrapper
      */
 
-    default QueryWrapper parseSort(QueryConditionReq req, QueryWrapper wrapper) {
+    default QueryWrapper<T> parseSort(QueryConditionReq req, QueryWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             for (SortVO sortVO : req.getSortList()) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
@@ -185,71 +186,67 @@ public interface PortalSelectRepo {
      * @param wrapper 现有查询条件
      * @return 查询wrapper
      */
-    default MPJLambdaWrapper parseQueryCondition(QueryConditionReq req, MPJLambdaWrapper wrapper) {
+    default MPJLambdaWrapper<T> parseQueryCondition(QueryConditionReq req, MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getConditionList())) {
             for (ConditionVO condition : req.getConditionList()) {
-                formatDateValue(condition);
-                switch (PortalConditionDict.of(condition.getRelation())) {
-                    case EQUAL:
-                        wrapper.eq(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case NOT_EQUAL:
-                        wrapper.ne(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case IN:
-                        wrapper.in(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue());
-                        break;
-                    case NOT_IN:
-                        wrapper.notIn(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue());
-                        break;
-                    case LIKE:
-                        wrapper.like(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case NOT_LIKE:
-                        wrapper.notLike(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case GREATER:
-                        wrapper.gt(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case GREATER_EQUAL:
-                        wrapper.ge(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case LESS:
-                        wrapper.lt(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case LESS_EQUAL:
-                        wrapper.le(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0));
-                        break;
-                    case NULL:
-                        wrapper.isNull(condition.getProperty());
-                        break;
-                    case NOT_NULL:
-                        wrapper.isNotNull(condition.getProperty());
-                        break;
-                    case BETWEEN:
-                        wrapper.between(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0), condition.getValue().get(1));
-                        break;
-                    case NOT_BETWEEN:
-                        wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), condition.getProperty(),
-                                condition.getValue().get(0), condition.getValue().get(1));
-                        break;
-                    default:
-                        break;
-                }
+                buildQueryWrapper(wrapper, null, condition);
             }
         }
+        parseSort(req, wrapper);
         return wrapper;
+    }
+
+    default void buildQueryWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap, ConditionVO condition) {
+        formatDateValue(condition);
+        String columnName = getColumnName(condition, aliasMap, wrapper.getEntityClass());
+        switch (PortalConditionDict.of(condition.getRelation())) {
+            case EQUAL:
+                wrapper.eq(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case NOT_EQUAL:
+                wrapper.ne(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case IN:
+                wrapper.in(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
+                break;
+            case NOT_IN:
+                wrapper.notIn(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
+                break;
+            case LIKE:
+                wrapper.like(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case NOT_LIKE:
+                wrapper.notLike(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case GREATER:
+                wrapper.gt(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case GREATER_EQUAL:
+                wrapper.ge(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case LESS:
+                wrapper.lt(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case LESS_EQUAL:
+                wrapper.le(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
+                break;
+            case NULL:
+                wrapper.isNull(columnName);
+                break;
+            case NOT_NULL:
+                wrapper.isNotNull(columnName);
+                break;
+            case BETWEEN:
+                wrapper.between(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0),
+                        condition.getValue().get(1));
+                break;
+            case NOT_BETWEEN:
+                wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0),
+                        condition.getValue().get(1));
+                break;
+            default:
+                break;
+        }
     }
 
     /**
@@ -260,7 +257,7 @@ public interface PortalSelectRepo {
      * @return 查询wrapper
      */
 
-    default MPJLambdaWrapper parseSort(QueryConditionReq req, MPJLambdaWrapper wrapper) {
+    default MPJLambdaWrapper<T> parseSort(QueryConditionReq req, MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             for (SortVO sortVO : req.getSortList()) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
@@ -280,26 +277,50 @@ public interface PortalSelectRepo {
         return wrapper;
     }
 
-    default void parseAdvancedQuery(AdvancedQuery req, QueryWrapper<?> wrapper) {
-        parseAdvancedQuery(req, wrapper, SqlConstant.AND);
+    /**
+     * 获取数据库字段名
+     *
+     * @param condition   查询条件
+     * @param aliasMap    别名表
+     * @param entityClass 所属数据库entity
+     * @return 字段名
+     */
+
+    default String getColumnName(ConditionVO condition, Map<String, String> aliasMap, Class<?> entityClass) {
+        if (FuncUtil.isNotEmpty(condition.getProperty())) {
+            String columnName = null;
+            if (FuncUtil.isNotEmpty(aliasMap)) {
+                columnName = aliasMap.get(condition.getProperty());
+            }
+            if (FuncUtil.isEmpty(columnName)) {
+                columnName = getColumnName(condition.getProperty(), entityClass);
+            }
+            return columnName;
+        }
+        return null;
     }
 
-    default void parseAdvancedQuery(AdvancedQuery req, QueryWrapper<?> wrapper, String andOr) {
+    default void parseAdvancedQuery(AdvancedQuery req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper) {
+        parseAdvancedQuery(req, aliasMap, wrapper, SqlConstant.AND);
+    }
+
+    default void parseAdvancedQuery(AdvancedQuery req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
+                                    String andOr) {
         if (FuncUtil.isNotEmpty(req.getConditionList())) {
             if (req.getConditionList().size() == 1) {
-                wrapper.and(w -> parseAdvancedQuery(req.getConditionList().get(0), w, SqlConstant.AND));
+                wrapper.and(w -> parseAdvancedQuery(req.getConditionList().get(0), aliasMap, w, SqlConstant.AND));
             } else if (req.getConditionList().size() > 1) {
                 for (AdvancedQuery advancedQuery : req.getConditionList()) {
                     if (StringUtil.convertSwitch(req.getAndOr())) {
-                        wrapper.or(w -> parseAdvancedQuery(advancedQuery, w, SqlConstant.OR));
+                        wrapper.or(w -> parseAdvancedQuery(advancedQuery, aliasMap, w, SqlConstant.OR));
                     } else {
-                        wrapper.and(w -> parseAdvancedQuery(advancedQuery, w, SqlConstant.AND));
+                        wrapper.and(w -> parseAdvancedQuery(advancedQuery, aliasMap, w, SqlConstant.AND));
                     }
                 }
             }
         } else {
             if (FuncUtil.isNotEmpty(req.getProperty()) && FuncUtil.isNotEmpty(req.getRelation())) {
-                buildQueryWrapper(wrapper, req);
+                buildQueryWrapper(wrapper, aliasMap, req);
             } else {
                 if (FuncUtil.equals(andOr, SqlConstant.AND)) {
                     wrapper.apply("1 = 1");
@@ -310,15 +331,16 @@ public interface PortalSelectRepo {
         }
     }
 
-    default QueryWrapper parseAdvancedQuery(AdvancedQueryReq req, QueryWrapper wrapper) {
+    default MPJLambdaWrapper<T> parseAdvancedQuery(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                                   MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getCondition())) {
-            parseAdvancedQuery(req.getCondition(), wrapper);
+            parseAdvancedQuery(req.getCondition(), aliasMap, wrapper);
         }
         parseSort(req, wrapper);
         return wrapper;
     }
 
-    default QueryWrapper parseSort(AdvancedQueryReq req, QueryWrapper wrapper) {
+    default MPJLambdaWrapper<T> parseSort(AdvancedQueryReq req, MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             for (SortVO sortVO : req.getSortList()) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {

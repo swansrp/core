@@ -50,12 +50,4 @@ public class SysDictType {
     @TableField(value = "expired")
     @ApiModelProperty(value = "更新时间")
     private Integer expired;
-
-    public static final String COL_DICT_NAME = "dict_name";
-
-    public static final String COL_DICT_TITLE = "dict_title";
-
-    public static final String COL_READ_ONLY = "read_only";
-
-    public static final String COL_EXPIRED = "expired";
 }

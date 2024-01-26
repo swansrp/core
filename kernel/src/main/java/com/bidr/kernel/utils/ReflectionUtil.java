@@ -449,6 +449,24 @@ public class ReflectionUtil {
         return res;
     }
 
+    public static LinkedHashSet<String> getFieldDisplaySet(Class<?> aClass) {
+        List<Field> fieldList = getFields(aClass);
+        LinkedHashSet<String> res = new LinkedHashSet<>();
+        for (Field field : fieldList) {
+            try {
+                String name = field.getName();
+                ApiModelProperty apiModelAnnotation = field.getAnnotation(ApiModelProperty.class);
+                if (apiModelAnnotation != null && StringUtils.isNotEmpty((apiModelAnnotation).value())) {
+                    name = apiModelAnnotation.value();
+                }
+                res.add(name);
+            } catch (SecurityException | IllegalArgumentException e) {
+                e.printStackTrace();
+            }
+        }
+        return res;
+    }
+
     public static void setValue(Object target, String fieldName, Object value) {
         try {
             Field field = getField(target, fieldName);
@@ -593,7 +611,7 @@ public class ReflectionUtil {
     }
 
     private static String convertDateFormat(Field field, Date value) {
-        SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.UK);
+        SimpleDateFormat format = new SimpleDateFormat(DateUtil.DATE_TIME_NORMAL);
         String res = format.format(value);
         DateTimeFormat dateTimeFormatAnnotation = field.getAnnotation(DateTimeFormat.class);
         if (dateTimeFormatAnnotation != null && StringUtils.isNotEmpty((dateTimeFormatAnnotation).pattern())) {

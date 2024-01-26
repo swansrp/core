@@ -11,6 +11,7 @@ import com.bidr.platform.constant.err.ConfigErrorCode;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.repository.SysConfigService;
 import org.reflections.Reflections;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,8 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
     @Lazy
     @Resource
     private SysConfigCacheService self;
+    @Value("${my.base-package}")
+    private String basePackage;
 
     @Override
     protected Map<String, SysConfig> getCacheData() {
@@ -42,7 +45,7 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
     @SuppressWarnings("rawtypes")
     private void addDefaultParameter(List<SysConfig> list) {
         Map<String, SysConfig> map = ReflectionUtil.reflectToMap(list, "configKey");
-        Reflections reflections = new Reflections("com.bidr");
+        Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> metaParamClass = reflections.getTypesAnnotatedWith(MetaParam.class);
         List<SysConfig> sysConfigList = new ArrayList<>();
         for (Class<?> clazz : metaParamClass) {

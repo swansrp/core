@@ -13,6 +13,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +40,8 @@ public class CaptchaServiceImpl implements CaptchaService, CommandLineRunner {
 
     @Resource
     private SysConfigCacheService sysConfigCacheService;
+    @Value("${my.base-package}")
+    private String basePackage;
 
     @Override
     public BufferedImage generateCaptcha(String token, String type) {
@@ -95,7 +98,7 @@ public class CaptchaServiceImpl implements CaptchaService, CommandLineRunner {
     }
 
     public void init() {
-        Reflections reflections = new Reflections("com.bidr");
+        Reflections reflections = new Reflections(basePackage);
         Set<Class<? extends ICaptchaVerification>> msgVerificationClass = reflections.getSubTypesOf(
                 ICaptchaVerification.class);
         for (Class<? extends ICaptchaVerification> clazz : msgVerificationClass) {

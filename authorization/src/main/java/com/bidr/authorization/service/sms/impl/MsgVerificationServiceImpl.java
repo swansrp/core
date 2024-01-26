@@ -16,6 +16,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -42,6 +43,8 @@ public class MsgVerificationServiceImpl implements MsgVerificationService {
 
     private final TokenService tokenService;
     private final SysConfigCacheService frameCacheService;
+    @Value("${my.base-package}")
+    private String basePackage;
 
     @Override
     public IMsgVerification getMsgCodeType(String msgCodeType) {
@@ -116,7 +119,7 @@ public class MsgVerificationServiceImpl implements MsgVerificationService {
 
     @PostConstruct
     public void init() {
-        Reflections reflections = new Reflections("com.bidr");
+        Reflections reflections = new Reflections(basePackage);
         Set<Class<? extends IMsgVerification>> msgVerificationClass = reflections.getSubTypesOf(IMsgVerification.class);
         for (Class<? extends IMsgVerification> clazz : msgVerificationClass) {
             if (Enum.class.isAssignableFrom(clazz)) {

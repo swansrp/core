@@ -7,6 +7,7 @@ import com.bidr.platform.constant.dict.IDynamicTree;
 import org.apache.commons.collections4.CollectionUtils;
 import org.reflections.Reflections;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -27,11 +28,13 @@ import java.util.Set;
 public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
     @Resource
     private WebApplicationContext webApplicationContext;
+    @Value("${my.base-package}")
+    private String basePackage;
 
     @Override
     protected Map<String, List<TreeDict>> getCacheData() {
         Map<String, List<TreeDict>> map = new HashMap<>();
-        Reflections reflections = new Reflections("com.bidr");
+        Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaTreeDict.class);
         for (Class<?> clazz : metaDictClass) {
             if (IDynamicTree.class.isAssignableFrom(clazz) && clazz.isAnnotationPresent(MetaTreeDict.class)) {

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.kernel.mybatis.anno.AutoInsert;
+import com.bidr.kernel.mybatis.anno.PortalEntityField;
 import com.bidr.platform.config.portal.PortalEntity;
 import com.diboot.core.binding.annotation.BindDict;
 import com.diboot.core.binding.annotation.BindField;
@@ -47,8 +48,8 @@ public class UserRes  {
     @Size(max = 50, message = "部门ID最大长度要小于 50")
     private String deptId;
 
+    @PortalEntityField(entity = AcDept.class, field = "name")
     @ApiModelProperty(value = "部门名称")
-    @BindField(entity = AcDept.class, field = "name", condition = "this.deptId = dept_id")
     private String deptName;
 
     @ApiModelProperty(value = "用户账号")
