@@ -1,5 +1,8 @@
 package com.bidr.platform.utils.excel;
 
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.jexl3.JexlBuilder;
 import org.apache.commons.jexl3.JexlEngine;
 import org.jxls.common.Context;
@@ -20,7 +23,7 @@ import java.util.Map;
  * @author Sharp
  * @since 2024/01/08 22:47
  */
-
+@Slf4j
 public class JxlsUtil {
     /**
      * 本地的excel导出
@@ -94,4 +97,18 @@ public class JxlsUtil {
     public Object ifElse(boolean b, Object o1, Object o2) {
         return b ? o1 : o2;
     }
+
+    public Object isNotEmpty(Object obj, Object o1, Object o2) {
+        return FuncUtil.isNotEmpty(obj) ? o1 : o2;
+    }
+
+    public Object isEmpty(Object obj, Object o1, Object o2) {
+        return FuncUtil.isEmpty(obj) ? o1 : o2;
+    }
+
+    public Object log(Object... obj) {
+        log.debug(JsonUtil.toJson(obj));
+        return obj;
+    }
+
 }
