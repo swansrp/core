@@ -199,7 +199,7 @@ public class HttpUtil {
 
     public static boolean systemRequest(HttpServletRequest httpServletRequest) {
         return httpServletRequest.getRequestURI()
-                .matches(".*/(actuator|export|webjars|v3|captcha.*|csrf|swagger.*|error).*");
+                .matches(".*/(actuator|webjars|v3|captcha.*|csrf|swagger.*|error).*");
     }
 
     public static InputStream getStream(String url) throws IOException {
