@@ -13,4 +13,5 @@ import lombok.Data;
 public class RoleRes {
     private Long roleId;
     private String roleName;
+    private Integer status;
 }

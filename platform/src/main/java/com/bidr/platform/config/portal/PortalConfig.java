@@ -30,10 +30,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class PortalConfig implements CommandLineRunner {
 
-    @Value("${my.base-package}")
-    private String basePackage;
-
-
     private static final Map<Class<?>, PortalFieldDict> FIELD_MAP = new HashMap<>();
 
     static {
@@ -49,6 +45,8 @@ public class PortalConfig implements CommandLineRunner {
 
     private final SysPortalService sysPortalService;
     private final SysPortalColumnService sysPortalColumnService;
+    @Value("${my.base-package}")
+    private String basePackage;
 
     @Override
     public void run(String... args) {
@@ -101,8 +99,12 @@ public class PortalConfig implements CommandLineRunner {
                             column.setFieldType(portalFieldDict.getValue());
                         }
                         sysPortalColumnService.insert(column);
+                    } else {
+                        columnMap.remove(field.getName());
                     }
                 }
+                sysPortalColumnService.deleteEntities(
+                        ReflectionUtil.getFieldList(columnMap.values(), SysPortalColumn::getId));
             }
         }
     }

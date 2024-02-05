@@ -39,6 +39,6 @@ public class RoleBindServiceImpl implements RoleBindService {
 
     @Override
     public void unbindRole(Long userId, Long roleId) {
-        acUserRoleService.bind(userId, roleId);
+        acUserRoleService.unbind(userId, roleId);
     }
 }

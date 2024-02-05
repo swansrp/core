@@ -1,9 +1,13 @@
 package com.bidr.authorization.holder;
 
 import com.bidr.authorization.bo.account.AccountInfo;
+import com.bidr.authorization.bo.role.RoleInfo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
+
+import java.util.List;
 
 /**
  * Title: AccountContextHolder
@@ -62,6 +66,15 @@ public class AccountContext {
         AccountInfo accountInfo = get();
         if (FuncUtil.isNotEmpty(accountInfo)) {
             return accountInfo.getUserId();
+        } else {
+            return null;
+        }
+    }
+
+    public static List<Long> getRoleIdList() {
+        AccountInfo accountInfo = get();
+        if (FuncUtil.isNotEmpty(accountInfo)) {
+            return ReflectionUtil.getFieldList(accountInfo.getRoleInfoMap().values(), RoleInfo::getRoleId);
         } else {
             return null;
         }

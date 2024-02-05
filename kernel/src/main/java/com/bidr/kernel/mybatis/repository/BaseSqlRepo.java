@@ -123,7 +123,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     public Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
                           Class<?> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<>();
+            wrapper = new MPJLambdaWrapper<>(entityClass);
         }
         wrapper.selectAll(getEntityClass(), "t");
         wrapper.groupByStr(getFieldSql("t"));

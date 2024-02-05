@@ -39,7 +39,7 @@ public class AdminRoleService {
     @Transactional(rollbackFor = Exception.class)
     public void addRole(RoleReq req) {
         AcRole role = ReflectionUtil.copy(req, AcRole.class);
-        role.setStatus(ActiveStatusDict.ACTIVATE.getValue());
+        role.setStatus(ActiveStatusDict.SYSTEM.getValue());
         acRoleService.insert(role);
     }
 

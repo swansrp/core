@@ -29,6 +29,7 @@ public enum ErrCodeSys implements ErrCode {
     PA_DATA_HAS_EXIST(12, "该%s数据已存在"),
     PA_DATA_NOT_EXIST(13, "该%s数据不存在"),
     PA_DATA_DIFF(14, "该%s数据不相同"),
+    PA_DATA_NOT_SUPPORT(15, "不支持该%s"),
 
     SYS_CONFIG_NOT_EXIST(20, "当前配置不支持该%s"),
     SYS_SESSION_NOT_SAME(21, "登录超时,%s不一致"),

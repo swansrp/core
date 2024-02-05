@@ -4,6 +4,7 @@ import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.DictEnumUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.fsm.bo.MachineType;
 import com.bidr.platform.fsm.bo.StateMachine;
@@ -48,7 +49,7 @@ public class StateMachineProvider implements ApplicationContextAware {
     public static MachineTransition doTransfer(MachineType machineType,
                                                MachineState from,
                                                MachineOperate operate,
-                                               List<String> roleList) {
+                                               List<?> roleList) {
         return doTransfer(machineType, from, operate, roleList,
                 ErrCodeSys.STATE_MACHINE_TRANSFER_NOT_ALLOW, from.getLabel(), operate.getLabel());
     }
@@ -56,7 +57,7 @@ public class StateMachineProvider implements ApplicationContextAware {
     public static MachineTransition doTransfer(MachineType machineType,
                                                MachineState from,
                                                MachineOperate operate,
-                                               List<String> roleList,
+                                               List<?> roleList,
                                                ErrCode tipCode,
                                                String... tipMsg) {
         StateMachine stateMachine = STATE_MACHINE_MAP.get(machineType);
@@ -72,20 +73,20 @@ public class StateMachineProvider implements ApplicationContextAware {
 
     public static void validateMachineRoleOperate(MachineType machineType,
                                                   MachineOperate operate,
-                                                  List<String> roleIdList) {
+                                                  List<?> roleIdList) {
         StateMachine stateMachine = STATE_MACHINE_MAP.get(machineType);
         validateMachineRoleOperate(stateMachine, operate, roleIdList);
     }
 
     public static void validateMachineRoleOperate(StateMachine stateMachine,
                                                   MachineOperate operate,
-                                                  List<String> roleIdList) {
+                                                  List<?> roleIdList) {
         Set<MachineRole> acceptRoleSet = stateMachine.getAcceptRoles(operate);
         if (CollectionUtils.isNotEmpty(acceptRoleSet)) {
             Map<String, MachineRole> acceptRoleMap = ReflectionUtil.reflectToMap(acceptRoleSet, "value");
             boolean allow = false;
-            for (String role : roleIdList) {
-                MachineRole machineRole = acceptRoleMap.get(role);
+            for (Object role : roleIdList) {
+                MachineRole machineRole = acceptRoleMap.get(StringUtil.parse(role));
                 if (machineRole != null) {
                     allow = true;
                     break;
@@ -173,7 +174,7 @@ public class StateMachineProvider implements ApplicationContextAware {
         stateMachine.init();
     }
 
-    public List<String> getAcceptMachineStateValue(StateMachine stateMachine, MachineOperate operate) {
+    public static List<String> getAcceptMachineStateValue(StateMachine stateMachine, MachineOperate operate) {
         List<String> acceptMachineStateValues = new ArrayList<>();
         Set<MachineState> machineStates = stateMachine.getAcceptMachineState(operate);
         if (CollectionUtils.isNotEmpty(machineStates)) {

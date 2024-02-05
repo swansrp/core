@@ -9,7 +9,6 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +35,15 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 管理员-添加前处理
+     *
+     * @param entity 添加参数
+     */
+    default void adminBeforeAdd(ENTITY entity) {
+        beforeAdd(entity);
+    }
+
+    /**
      * 添加前处理
      *
      * @param entity 添加参数
@@ -54,6 +62,15 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 管理员-编辑前处理
+     *
+     * @param entity 编辑参数
+     */
+    default void adminBeforeUpdate(ENTITY entity) {
+        beforeUpdate(entity);
+    }
+
+    /**
      * 编辑前处理
      *
      * @param entity 编辑参数
@@ -69,6 +86,15 @@ public interface PortalCommonService<ENTITY, VO> {
      */
     default void afterUpdate(ENTITY entity) {
 
+    }
+
+    /**
+     * 管理员-删除前处理
+     *
+     * @param vo 删除参数
+     */
+    default void adminBeforeDelete(IdReqVO vo) {
+        beforeDelete(vo);
     }
 
     /**
@@ -138,8 +164,9 @@ public interface PortalCommonService<ENTITY, VO> {
     /**
      * 导出文件流
      *
-     * @param dataList 数据
+     * @param dataList 数据集
      * @return
+     * @throws IOException
      */
     default byte[] export(List<VO> dataList) throws IOException {
         return null;

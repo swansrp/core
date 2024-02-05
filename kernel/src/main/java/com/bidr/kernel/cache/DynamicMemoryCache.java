@@ -5,7 +5,6 @@ import com.bidr.kernel.cache.exception.DynamicMemoryCacheExpiredException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -13,9 +12,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.retry.annotation.Retryable;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**

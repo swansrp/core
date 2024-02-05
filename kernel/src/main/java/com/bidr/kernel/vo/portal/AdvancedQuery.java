@@ -1,11 +1,12 @@
 package com.bidr.kernel.vo.portal;
 
+import com.bidr.kernel.common.func.GetFunc;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Title: AdvancedQuery
@@ -21,4 +22,14 @@ public class AdvancedQuery extends ConditionVO {
     private List<AdvancedQuery> conditionList;
     @ApiModelProperty("0 and 1 or")
     private String andOr;
+
+    public AdvancedQuery() {
+        super();
+        conditionList = new ArrayList<>();
+    }
+
+    public AdvancedQuery(GetFunc field, Object obj) {
+        super(field, obj);
+        conditionList = new ArrayList<>();
+    }
 }

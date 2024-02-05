@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -46,8 +47,11 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("添加数据")
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
-    public void add(@RequestBody ENTITY entity) {
-        if (!isAdmin()) {
+    public void add(@RequestBody VO vo) {
+        ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
+        if (isAdmin()) {
+            adminBeforeAdd(entity);
+        } else {
             beforeAdd(entity);
         }
         Boolean result = getRepo().insert(entity);
@@ -66,6 +70,12 @@ public abstract class BaseAdminController<ENTITY, VO> {
             return false;
         }
 
+    }
+
+    protected void adminBeforeAdd(ENTITY entity) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().adminBeforeAdd(entity);
+        }
     }
 
     protected void beforeAdd(ENTITY entity) {
@@ -96,14 +106,23 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
-    public void update(@RequestBody ENTITY entity) {
-        if (!isAdmin()) {
+    public void update(@RequestBody VO vo, @RequestParam(required = false) boolean strict) {
+        ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
+        if (isAdmin()) {
+            adminBeforeUpdate(entity);
+        } else {
             beforeUpdate(entity);
         }
-        Boolean result = getRepo().updateById(entity);
+        Boolean result = getRepo().updateById(entity, !strict);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
         afterUpdate(entity);
         Resp.notice("更新成功");
+    }
+
+    protected void adminBeforeUpdate(ENTITY entity) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().adminBeforeUpdate(entity);
+        }
     }
 
     protected void beforeUpdate(ENTITY entity) {
@@ -157,12 +176,20 @@ public abstract class BaseAdminController<ENTITY, VO> {
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void delete(@RequestBody IdReqVO vo) {
-        if (!isAdmin()) {
+        if (isAdmin()) {
+            adminBeforeDelete(vo);
+        } else {
             beforeDelete(vo);
         }
         getRepo().deleteById(vo.getId());
         afterDelete(vo);
         Resp.notice("删除成功");
+    }
+
+    protected void adminBeforeDelete(IdReqVO vo) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().adminBeforeDelete(vo);
+        }
     }
 
     protected void beforeDelete(IdReqVO vo) {
@@ -238,6 +265,7 @@ public abstract class BaseAdminController<ENTITY, VO> {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            wrapper.setEntityClass(getEntityClass());
         }
         return Resp.convert(getRepo().select(req, aliasMap, wrapper, getVoClass()), getVoClass());
     }

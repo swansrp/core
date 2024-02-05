@@ -8,7 +8,6 @@ import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.login.PasswordService;
 import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
-import com.bidr.authorization.vo.login.pwd.ChangePasswordReq;
 import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;

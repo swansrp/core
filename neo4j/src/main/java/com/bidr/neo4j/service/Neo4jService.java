@@ -1,7 +1,6 @@
 package com.bidr.neo4j.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;

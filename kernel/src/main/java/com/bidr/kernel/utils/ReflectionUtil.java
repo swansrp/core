@@ -97,7 +97,7 @@ public class ReflectionUtil {
     }
 
     public static <T, R> List<R> buildTree(GetFunc<R, List<R>> getChildrenFunc, List<T> dataList,
-                                              GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc) {
+                                           GetFunc<T, ?> getIdFunc, GetFunc<T, ?> getPidFunc) {
         Class<R> resultClazz = LambdaUtil.getRealClassByGetFunc(getChildrenFunc);
         Map<Object, T> idMap = new HashMap<>();
         Map<Object, T> pidMap = new HashMap<>();
@@ -131,8 +131,47 @@ public class ReflectionUtil {
         return resList;
     }
 
+    public static <T> T copy(Object source, Class<T> clazz) {
+        T obj = newInstance(clazz);
+        copyProperties(source, obj);
+        return obj;
+    }
+
+    public static <T> T newInstance(Class<T> clazz) {
+        try {
+            return clazz.getDeclaredConstructor().newInstance();
+        } catch (InstantiationException | InvocationTargetException | NoSuchMethodException |
+                 IllegalAccessException e) {
+            throw new ServiceException("创建对象失败", e);
+        }
+    }
+
+    public static void copyProperties(Object source, Object target) {
+        if (source == null) {
+            return;
+        }
+        String beanKey = generateKey(source.getClass(), target.getClass());
+        BeanCopier copier;
+        if (!beanCopierMap.containsKey(beanKey)) {
+            copier = BeanCopier.create(source.getClass(), target.getClass(), false);
+            beanCopierMap.put(beanKey, copier);
+        } else {
+            copier = beanCopierMap.get(beanKey);
+        }
+        copier.copy(source, target, null);
+    }
+
+    private static String generateKey(Class<?> class1, Class<?> class2) {
+        return class1.toString() + class2.toString();
+    }
+
     public static Class<?> getSuperClassGenericType(Class<?> clazz, int index) {
         Type genType = clazz.getGenericSuperclass();
+        Class<?> tempClazz;
+        while (genType != Object.class && !(genType instanceof ParameterizedType)) {
+            tempClazz = clazz.getSuperclass();
+            genType = tempClazz.getGenericSuperclass();
+        }
         if (!(genType instanceof ParameterizedType)) {
             return Object.class;
         }
@@ -169,34 +208,6 @@ public class ReflectionUtil {
         T target = ReflectionUtil.newInstance(targetClazz);
         copyProperties(source, target);
         return target;
-    }
-
-    public static <T> T newInstance(Class<T> clazz) {
-        try {
-            return clazz.getDeclaredConstructor().newInstance();
-        } catch (InstantiationException | InvocationTargetException | NoSuchMethodException |
-                 IllegalAccessException e) {
-            throw new ServiceException("创建对象失败", e);
-        }
-    }
-
-    public static void copyProperties(Object source, Object target) {
-        if (source == null) {
-            return;
-        }
-        String beanKey = generateKey(source.getClass(), target.getClass());
-        BeanCopier copier;
-        if (!beanCopierMap.containsKey(beanKey)) {
-            copier = BeanCopier.create(source.getClass(), target.getClass(), false);
-            beanCopierMap.put(beanKey, copier);
-        } else {
-            copier = beanCopierMap.get(beanKey);
-        }
-        copier.copy(source, target, null);
-    }
-
-    private static String generateKey(Class<?> class1, Class<?> class2) {
-        return class1.toString() + class2.toString();
     }
 
     public static boolean existedField(Class<?> aClass, String fieldName) {
@@ -420,12 +431,6 @@ public class ReflectionUtil {
         return obj;
     }
 
-    public static <T> T copy(Object source, Class<T> clazz) {
-        T obj = newInstance(clazz);
-        copyProperties(source, obj);
-        return obj;
-    }
-
     public static Map<String, String> getFieldDisplayMap(Class<?> aClass) {
         List<Field> fieldList = getFields(aClass);
         LinkedHashMap<String, String> res = new LinkedHashMap<>(fieldList.size());
@@ -449,6 +454,21 @@ public class ReflectionUtil {
         return res;
     }
 
+    public static void setValue(Object target, String fieldName, Object value) {
+        try {
+            Field field = getField(target, fieldName);
+            if (!field.isAccessible()) {
+                Method setFieldMethod = target.getClass()
+                        .getMethod("set" + StringUtils.capitalize(field.getName()), field.getType());
+                setFieldMethod.invoke(target, value);
+            } else {
+                field.set(target, value);
+            }
+        } catch (Exception e) {
+            throw new ServiceException("赋值失败");
+        }
+    }
+
     public static LinkedHashSet<String> getFieldDisplaySet(Class<?> aClass) {
         List<Field> fieldList = getFields(aClass);
         LinkedHashSet<String> res = new LinkedHashSet<>();
@@ -467,21 +487,6 @@ public class ReflectionUtil {
         return res;
     }
 
-    public static void setValue(Object target, String fieldName, Object value) {
-        try {
-            Field field = getField(target, fieldName);
-            if (!field.isAccessible()) {
-                Method setFieldMethod = target.getClass()
-                        .getMethod("set" + StringUtils.capitalize(field.getName()), field.getType());
-                setFieldMethod.invoke(target, value);
-            } else {
-                field.set(target, value);
-            }
-        } catch (Exception e) {
-            throw new ServiceException("赋值失败");
-        }
-    }
-
     public static <K, T> Set<T> copySet(Collection<K> source, Class<T> clazz) {
         Set<T> resSet = new LinkedHashSet<>();
         if (CollectionUtils.isNotEmpty(source)) {
@@ -494,7 +499,7 @@ public class ReflectionUtil {
         return resSet;
     }
 
-    public static <T> List<T> getFieldList(List<?> list, String fieldName, Class<T> clazz) {
+    public static <T> List<T> getFieldList(Collection<?> list, String fieldName, Class<T> clazz) {
         if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
@@ -525,7 +530,7 @@ public class ReflectionUtil {
         return (T) object;
     }
 
-    public static <T, R> List<R> getFieldList(List<T> list, GetFunc<T, R> getFunc) {
+    public static <T, R> List<R> getFieldList(Collection<T> list, GetFunc<T, R> getFunc) {
         if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
@@ -757,5 +762,17 @@ public class ReflectionUtil {
     private static <T> Predicate<T> distinctByKey(GetFunc<? super T, ?> keyExtractor) {
         ConcurrentHashMap<Object, Boolean> map = new ConcurrentHashMap<>();
         return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
+    }
+
+    public static void merge(@NotNull Object source, @NotNull Object dist, boolean ignoreNull) {
+        for (Field field : getFields(source)) {
+            Object sourceValue = getValue(source, field);
+            if (ignoreNull) {
+                if (sourceValue == null) {
+                    continue;
+                }
+            }
+            setValue(field, dist, sourceValue);
+        }
     }
 }

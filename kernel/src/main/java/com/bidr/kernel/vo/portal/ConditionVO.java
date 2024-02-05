@@ -1,9 +1,13 @@
 package com.bidr.kernel.vo.portal;
 
+import com.bidr.kernel.common.func.GetFunc;
+import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
+import com.bidr.kernel.utils.LambdaUtil;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,4 +27,14 @@ public class ConditionVO {
     private Integer relation;
     @ApiModelProperty("日期格式")
     private String dateFormat;
+
+    public ConditionVO() {
+        value = new ArrayList<>();
+    }
+
+    public ConditionVO(GetFunc field, Object obj) {
+        property = LambdaUtil.getFieldNameByGetFunc(field);
+        relation = PortalConditionDict.EQUAL.getValue();
+        value = Collections.singletonList(obj);
+    }
 }

@@ -33,7 +33,7 @@ public class SysPortalColumnService extends BaseSqlRepo<SysPortalColumnMapper, S
 
     public List<SysPortalColumn> getPropertyListByPortalId(Long portalId) {
         LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper();
-        wrapper.select(SysPortalColumn::getProperty);
+        wrapper.select(SysPortalColumn::getId, SysPortalColumn::getProperty);
         wrapper.eq(SysPortalColumn::getPortalId, portalId);
         return select(wrapper);
     }

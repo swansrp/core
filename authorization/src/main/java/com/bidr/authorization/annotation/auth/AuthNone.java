@@ -1,11 +1,5 @@
 package com.bidr.authorization.annotation.auth;
 
-import com.bidr.authorization.bo.token.TokenInfo;
-import com.bidr.authorization.holder.TokenHolder;
-import com.bidr.authorization.utils.token.AuthTokenUtil;
-import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.validate.Validator;
-import com.diboot.core.util.V;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;

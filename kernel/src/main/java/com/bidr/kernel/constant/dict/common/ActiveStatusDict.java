@@ -19,10 +19,12 @@ public enum ActiveStatusDict implements Dict {
     /**
      * 激活状态字典
      */
+    SYSTEM(-1, "系统内置"),
     ACTIVATE(1, "已启用"),
     PENDING(2, "待启用"),
     DEACTIVATE(0, "已停用"),
-    LOCKING(3, "已锁定"),;
+    LOCKING(3, "已锁定");
+
 
     private final Integer value;
     private final String label;

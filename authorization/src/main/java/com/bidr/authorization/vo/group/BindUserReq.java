@@ -2,7 +2,6 @@ package com.bidr.authorization.vo.group;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**

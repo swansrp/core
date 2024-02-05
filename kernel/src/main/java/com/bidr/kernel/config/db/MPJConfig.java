@@ -6,8 +6,6 @@ import com.github.jeffreyning.mybatisplus.base.DeleteByMultiIdMethod;
 import com.github.jeffreyning.mybatisplus.base.SelectByMultiIdMethod;
 import com.github.jeffreyning.mybatisplus.base.UpdateByMultiIdMethod;
 import com.github.yulichang.injector.MPJSqlInjector;
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 

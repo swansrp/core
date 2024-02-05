@@ -1,20 +1,11 @@
 package com.bidr.authorization.vo.admin;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.bidr.authorization.dao.entity.AcDept;
-import com.bidr.authorization.dao.entity.AcUser;
-import com.bidr.kernel.mybatis.anno.AutoInsert;
 import com.bidr.kernel.mybatis.anno.PortalEntityField;
 import com.bidr.platform.config.portal.PortalEntity;
-import com.diboot.core.binding.annotation.BindDict;
-import com.diboot.core.binding.annotation.BindField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.constraints.NotBlank;

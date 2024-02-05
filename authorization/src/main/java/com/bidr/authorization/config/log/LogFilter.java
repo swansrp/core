@@ -7,7 +7,6 @@ package com.bidr.authorization.config.log;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.utils.HttpUtil;
-import com.bidr.kernel.utils.RandomUtil;
 import com.bidr.kernel.utils.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;

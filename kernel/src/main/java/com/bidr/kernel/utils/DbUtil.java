@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
@@ -159,6 +160,16 @@ public class DbUtil {
 
     public static String getSelectSqlName(Class<?> clazz, String fieldName) {
         Field field = ReflectionUtil.getField(clazz, fieldName);
+        TableField annotation = field.getAnnotation(TableField.class);
+        if (FuncUtil.isNotEmpty(annotation)) {
+            return annotation.value();
+        } else {
+            return "`" + StringUtil.camelToUnderline(field.getName()) + "`";
+        }
+    }
+
+    public static String getSelectSqlName(GetFunc fieldFunc) {
+        Field field = LambdaUtil.getFieldByGetFunc(fieldFunc);
         TableField annotation = field.getAnnotation(TableField.class);
         if (FuncUtil.isNotEmpty(annotation)) {
             return annotation.value();
