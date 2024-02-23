@@ -78,7 +78,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public boolean insert(Collection<T> entity) {
-        return super.saveBatch(entity);
+        return super.updateBatchByMultiId(entity);
     }
 
     @Override
@@ -300,6 +300,15 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
+    public boolean updateById(List<T> entityList) {
+        if (super.multiIdExisted()) {
+            return super.updateBatchByMultiId(entityList);
+        } else {
+            return super.updateBatchById(entityList);
+        }
+    }
+
+    @Override
     public boolean update(T entity, UpdateWrapper<T> wrapper) {
         return update(entity, wrapper, true);
     }
@@ -370,6 +379,4 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     public long count(Wrapper<T> wrapper) {
         return super.getBaseMapper().selectCount(wrapper);
     }
-
-
 }

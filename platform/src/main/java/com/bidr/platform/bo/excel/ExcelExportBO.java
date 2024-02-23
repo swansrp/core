@@ -3,7 +3,9 @@ package com.bidr.platform.bo.excel;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Title: ExcelExportBO
@@ -15,11 +17,11 @@ import java.util.List;
 @Data
 public class ExcelExportBO {
     private String title;
-    private List<String> columnTitles;
+    private Set<String> columnTitles;
     private List<List<String>> records;
 
     public ExcelExportBO() {
-        columnTitles = new ArrayList<>();
+        columnTitles = new HashSet<>();
         records = new ArrayList<>();
     }
 }

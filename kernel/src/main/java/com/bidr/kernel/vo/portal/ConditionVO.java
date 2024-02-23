@@ -37,4 +37,10 @@ public class ConditionVO {
         relation = PortalConditionDict.EQUAL.getValue();
         value = Collections.singletonList(obj);
     }
+
+    public ConditionVO(String field, Object obj) {
+        property = field;
+        relation = PortalConditionDict.EQUAL.getValue();
+        value = Collections.singletonList(obj);
+    }
 }

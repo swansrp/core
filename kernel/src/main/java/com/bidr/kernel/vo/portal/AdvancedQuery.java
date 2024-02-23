@@ -32,4 +32,9 @@ public class AdvancedQuery extends ConditionVO {
         super(field, obj);
         conditionList = new ArrayList<>();
     }
+
+    public AdvancedQuery(String field, Object obj) {
+        super(field, obj);
+        conditionList = new ArrayList<>();
+    }
 }

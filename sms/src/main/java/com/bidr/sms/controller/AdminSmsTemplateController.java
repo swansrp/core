@@ -53,13 +53,13 @@ public class AdminSmsTemplateController extends BaseAdminController<SaSmsTemplat
     }
 
     @Override
-    protected void beforeUpdate(SaSmsTemplate saSmsTemplate) {
+    public void beforeUpdate(SaSmsTemplate saSmsTemplate) {
         adminSmsTemplateService.updateTemplate(saSmsTemplate);
         Resp.notice("修改短信模板成功, 等待审批");
     }
 
     @Override
-    protected void beforeDelete(IdReqVO vo) {
+    public void beforeDelete(IdReqVO vo) {
         adminSmsTemplateService.deleteTemplate(vo.getId());
     }
 }

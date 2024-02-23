@@ -764,7 +764,7 @@ public class ReflectionUtil {
         return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
     }
 
-    public static void merge(@NotNull Object source, @NotNull Object dist, boolean ignoreNull) {
+    public static <T, K> K merge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
         for (Field field : getFields(source)) {
             Object sourceValue = getValue(source, field);
             if (ignoreNull) {
@@ -774,5 +774,6 @@ public class ReflectionUtil {
             }
             setValue(field, dist, sourceValue);
         }
+        return dist;
     }
 }

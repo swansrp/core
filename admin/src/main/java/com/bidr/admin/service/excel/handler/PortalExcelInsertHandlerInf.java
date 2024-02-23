@@ -1,0 +1,45 @@
+package com.bidr.admin.service.excel.handler;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Title: PortalExcelHandlerInf
+ * Description: Copyright: Copyright (c) 2023
+ *
+ * @author Sharp
+ * @since 2024/02/15 22:56
+ */
+public interface PortalExcelInsertHandlerInf<ENTITY> extends PortalExcelHandlerInf<ENTITY> {
+    /**
+     * 预处理插入数据
+     *
+     * @param entity 数据
+     */
+    void prepareInsert(ENTITY entity);
+
+    /**
+     * 检查数据是否有效
+     *
+     * @param entity      当前行数据
+     * @param cachedList  历史数据
+     * @param validateMap 校验map
+     */
+    void validateInsert(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap);
+
+    /**
+     * 处理数据列表
+     *
+     * @param entityList 数据列表
+     */
+    void handleInsert(List<ENTITY> entityList);
+
+    /**
+     * 落库后处理
+     *
+     * @param entityList 数据列表
+     */
+    void afterInsert(List<ENTITY> entityList);
+
+
+}

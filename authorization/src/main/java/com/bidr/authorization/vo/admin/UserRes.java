@@ -1,8 +1,5 @@
 package com.bidr.authorization.vo.admin;
 
-import com.bidr.authorization.dao.entity.AcDept;
-import com.bidr.kernel.mybatis.anno.PortalEntityField;
-import com.bidr.platform.config.portal.PortalEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -21,8 +18,7 @@ import java.util.Date;
  * @since 2023/12/28 21:20
  */
 @Data
-@PortalEntity("user")
-public class UserRes  {
+public class UserRes {
 
     @ApiModelProperty(value = "用户ID")
     @NotNull(message = "用户ID不能为null")
@@ -39,7 +35,6 @@ public class UserRes  {
     @Size(max = 50, message = "部门ID最大长度要小于 50")
     private String deptId;
 
-    @PortalEntityField(entity = AcDept.class, field = "name")
     @ApiModelProperty(value = "部门名称")
     private String deptName;
 

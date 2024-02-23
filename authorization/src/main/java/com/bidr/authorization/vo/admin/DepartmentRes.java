@@ -1,6 +1,5 @@
 package com.bidr.authorization.vo.admin;
 
-import com.bidr.platform.config.portal.PortalEntity;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -16,7 +15,6 @@ import java.util.Date;
  * @since 2023/12/28 21:22
  */
 @Data
-@PortalEntity("department")
 public class DepartmentRes {
 
     @ApiModelProperty(value = "部门id")

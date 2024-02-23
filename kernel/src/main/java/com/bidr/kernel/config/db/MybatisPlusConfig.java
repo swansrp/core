@@ -29,4 +29,9 @@ public class MybatisPlusConfig {
         interceptor.addInnerInterceptor(innerInterceptor);
         return interceptor;
     }
+
+    @Bean
+    public MPJConfig sqlInjector() {
+        return new MPJConfig();
+    }
 }

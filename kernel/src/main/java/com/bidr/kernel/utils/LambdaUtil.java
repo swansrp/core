@@ -262,9 +262,23 @@ public class LambdaUtil {
         return null;
     }
 
+    public static <T, R> R getValue(GetFunc<T, R> func, Object obj) {
+        if (FuncUtil.isNotEmpty(obj)) {
+            Class<R> clazz = LambdaUtil.getMethodSignatureClass(func);
+            return JsonUtil.readJson(obj, clazz);
+        }
+        return null;
+    }
+
     public static <T, R> void setValue(Object entity, SFunction<T, R> func, Object obj) {
         Object value = LambdaUtil.getValue(func, obj);
         String fieldName = LambdaUtil.getFieldName(func);
+        ReflectionUtil.setValue(entity, fieldName, value);
+    }
+
+    public static <T, R> void setValue(Object entity, GetFunc<T, R> func, Object obj) {
+        Object value = LambdaUtil.getValue(func, obj);
+        String fieldName = LambdaUtil.getFieldNameByGetFunc(func);
         ReflectionUtil.setValue(entity, fieldName, value);
     }
 
@@ -278,6 +292,27 @@ public class LambdaUtil {
      */
     public static <T, R> Class<R> getMethodSignatureClass(SFunction<T, R> func) {
         final SerializedLambda lambda = resolveSFunction(func);
+        checkLambdaTypeCanGetClass(lambda.getImplMethodKind());
+        String name = lambda.getImplMethodSignature();
+        Class<R> res;
+        try {
+            res = ClassUtil.loadClass(name);
+        } catch (Exception e) {
+            res = ClassUtil.loadClass(name.substring(FUNCTION_PREFIX.length(), name.length() - 1));
+        }
+        return res;
+    }
+
+    /**
+     * 类型String ()L 开头 ;结尾 不能解析
+     *
+     * @param func lambda 函数
+     * @param <T>  实体类型
+     * @param <R>  字段类型
+     * @return 字段类型Class
+     */
+    public static <T, R> Class<R> getMethodSignatureClass(GetFunc<T, R> func) {
+        final SerializedLambda lambda = resolveByGetFunc(func);
         checkLambdaTypeCanGetClass(lambda.getImplMethodKind());
         String name = lambda.getImplMethodSignature();
         Class<R> res;

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -18,6 +19,8 @@ public interface SqlUpdateRepo<T> {
     boolean updateById(T entity);
 
     boolean updateById(T entity, boolean ignoreNull);
+
+    boolean updateById(List<T> entityList);
 
     boolean update(T entity, UpdateWrapper<T> wrapper);
 

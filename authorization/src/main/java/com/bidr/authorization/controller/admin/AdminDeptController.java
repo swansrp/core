@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.vo.admin.DepartmentRes;
 import com.bidr.kernel.controller.BaseAdminTreeController;
+import com.bidr.platform.config.portal.AdminPortal;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 2023/03/20 11:48
  */
 @Api(tags = "系统管理 - 部门管理")
+@AdminPortal
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/department"})

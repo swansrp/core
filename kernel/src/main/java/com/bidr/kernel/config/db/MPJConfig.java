@@ -1,7 +1,9 @@
 package com.bidr.kernel.config.db;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.extension.injector.methods.InsertBatchSomeColumn;
 import com.github.jeffreyning.mybatisplus.base.DeleteByMultiIdMethod;
 import com.github.jeffreyning.mybatisplus.base.SelectByMultiIdMethod;
 import com.github.jeffreyning.mybatisplus.base.UpdateByMultiIdMethod;
@@ -24,6 +26,7 @@ public class MPJConfig extends MPJSqlInjector {
         methodList.add(new SelectByMultiIdMethod());
         methodList.add(new UpdateByMultiIdMethod());
         methodList.add(new DeleteByMultiIdMethod());
+        methodList.add(new InsertBatchSomeColumn(t -> t.getFieldFill() != FieldFill.UPDATE));
         return methodList;
     }
 }

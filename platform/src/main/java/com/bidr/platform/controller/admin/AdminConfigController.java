@@ -2,6 +2,7 @@ package com.bidr.platform.controller.admin;
 
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminController;
+import com.bidr.platform.config.portal.AdminPortal;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.service.params.ParamService;
@@ -23,6 +24,7 @@ import javax.annotation.Resource;
  * @since 2023/06/07 14:00
  */
 @Api(tags = "系统管理 - 参数管理")
+@AdminPortal
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/config/admin", "/web/portal/sysConfig"})

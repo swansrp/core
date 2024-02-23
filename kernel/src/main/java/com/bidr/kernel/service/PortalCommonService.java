@@ -1,5 +1,7 @@
 package com.bidr.kernel.service;
 
+import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
+import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
@@ -8,7 +10,7 @@ import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +22,18 @@ import java.util.Map;
  * @author Sharp
  * @since 2024/01/15 16:17
  */
+@SuppressWarnings("unchecked")
 public interface PortalCommonService<ENTITY, VO> {
+
+    default Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
+    default Class<VO> getVoClass() {
+        return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    }
+
+
     /**
      * 是否查看全局数据
      *
@@ -146,7 +159,7 @@ public interface PortalCommonService<ENTITY, VO> {
     /**
      * 生成联表查询wrapper
      *
-     * @return
+     * @return 联表wrapper
      */
     default MPJLambdaWrapper<ENTITY> getJoinWrapper() {
         return new MPJLambdaWrapper<>();
@@ -155,7 +168,7 @@ public interface PortalCommonService<ENTITY, VO> {
     /**
      * 生成联表查询别名
      *
-     * @return
+     * @return 别名map
      */
     default Map<String, String> getAliasMap() {
         return null;
@@ -164,12 +177,73 @@ public interface PortalCommonService<ENTITY, VO> {
     /**
      * 导出文件流
      *
-     * @param dataList 数据集
-     * @return
-     * @throws IOException
+     * @param dataList   数据集
+     * @param portalName 配置名称
+     * @return 导出字节流
      */
-    default byte[] export(List<VO> dataList) throws IOException {
+    default byte[] export(List<VO> dataList, String portalName) {
         return null;
     }
+
+    /**
+     * 导出数据模版
+     *
+     * @param portalName 配置名称
+     * @return 导出字节流
+     */
+    default byte[] templateExport(String portalName) {
+        return null;
+    }
+
+    /**
+     * 批量添加
+     * 大量数据时可以考虑使用mysql.insertBatch
+     * getRepo().getMapper().insertBatchSomeColumn(dataList);
+     *
+     * @param dataList 数据列表
+     */
+    default void batchInsert(List<ENTITY> dataList) {
+        getRepo().saveBatch(dataList);
+    }
+
+    /**
+     * 数据库repo
+     *
+     * @return repo
+     */
+    BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
+
+    /**
+     * 批量修改
+     *
+     * @param dataList 数据列表
+     */
+    default void batchUpdate(List<ENTITY> dataList) {
+        getRepo().updateById(dataList);
+    }
+
+    /**
+     * 读取excel 完成数据有效性判断
+     *
+     * @param is     excel文件
+     * @param portal 配置
+     */
+    void readExcelForInsert(InputStream is, String portal);
+
+    /**
+     * 读取excel 完成数据有效性判断
+     *
+     * @param is     excel文件
+     * @param portal 配置
+     */
+    void readExcelForUpdate(InputStream is, String portal);
+
+    /**
+     * 获取上传处理进度
+     *
+     * @param portal 配置
+     * @return 当前进度
+     */
+    Object getUploadProgressRes(String portal);
 
 }

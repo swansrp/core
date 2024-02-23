@@ -4,6 +4,8 @@ import com.diboot.core.mapper.BaseCrudMapper;
 import com.github.jeffreyning.mybatisplus.base.MppBaseMapper;
 import com.github.yulichang.base.MPJBaseMapper;
 
+import java.util.List;
+
 /**
  * Title: MyBaseMapper
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
@@ -12,4 +14,5 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @since 2022/12/09 09:04
  */
 public interface MyBaseMapper<T> extends MppBaseMapper<T>, MPJBaseMapper<T>, BaseCrudMapper<T> {
+    int insertBatchSomeColumn(List<T> entityList);
 }

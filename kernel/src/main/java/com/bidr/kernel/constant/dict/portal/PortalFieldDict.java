@@ -30,6 +30,10 @@ public enum PortalFieldDict implements Dict {
     HTML("9", "富文本"),
     TEXT("10", "多行文本"),
     ENTITY("11", "关联实体"),
+    IMAGE("12", "图片"),
+    VIDEO("13", "视频"),
+    AUDIO("14", "音频"),
+    FILE("15", "文件"),
     DEFAULT("0", "默认");
 
     private final String value;
