@@ -20,8 +20,8 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <bidr.core.kernel.version>${jarVersion}</bidr.core.kernel.version>
-                <bidr.core.platform.version>${jarVersion}</bidr.core.platform.version>
+                <kernel.version>${jarVersion}</kernel.version>
+                <platform.version>${jarVersion}</platform.version>
                 <redis.version>${jarVersion}</redis.version>
             </properties>
         </profile>
@@ -34,9 +34,9 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <bidr.core.kernel.version>20240223112631-22</bidr.core.kernel.version>
-                <bidr.core.platform.version>20240223113234-13</bidr.core.platform.version>
-                <redis.version>20240123132128-18</redis.version>
+                <kernel.version>20240223112631-22</kernel.version>
+                <platform.version>20240223113234-13</platform.version>
+                <redis.version>20240223113422-19</redis.version>
             </properties>
         </profile>
     </profiles>
@@ -45,12 +45,12 @@
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
-            <version>${bidr.core.kernel.version}</version>
+            <version>${kernel.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>
-            <version>${bidr.core.platform.version}</version>
+            <version>${platform.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
