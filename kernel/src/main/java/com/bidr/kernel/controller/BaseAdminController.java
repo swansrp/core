@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -50,8 +51,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @Resource
     private ApplicationContext applicationContext;
 
-
     @Override
+    @ApiIgnore
     @ApiOperation("添加数据")
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -73,6 +74,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -88,6 +90,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -113,6 +116,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update/list", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -126,6 +130,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("根据id获取详情")
     @RequestMapping(value = "/id", method = RequestMethod.GET)
     public VO queryById(IdReqVO req) {
@@ -133,6 +138,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("通用查询数据")
     @RequestMapping(value = "/general/query", method = RequestMethod.POST)
     public Page<VO> generalQuery(@RequestBody QueryConditionReq req) {
@@ -143,6 +149,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("高级查询数据")
     @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
     public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
@@ -160,6 +167,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @SneakyThrows
     @ApiOperation("数据导出")
     @RequestMapping(value = "/advanced/query/export", method = RequestMethod.POST)
@@ -182,6 +190,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @SneakyThrows
     @ApiOperation("模版导出")
     @RequestMapping(value = "/template/export", method = RequestMethod.GET)
@@ -201,6 +210,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("导入新增")
     @RequestMapping(value = "/import/add", method = RequestMethod.POST)
     public void importAdd(@RequestParam(required = false) String name, MultipartFile file) {
@@ -213,6 +223,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @ApiOperation("获取导入新增进度")
     @RequestMapping(value = "/import/add/progress", method = RequestMethod.GET)
     public Object importAddProgress(@RequestParam(required = false) String name) {
@@ -221,6 +232,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @SneakyThrows
     @ApiOperation("导入修改")
     @RequestMapping(value = "/import/update", method = RequestMethod.POST)
@@ -234,6 +246,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     @SneakyThrows
     @ApiOperation("导入修改进度")
     @RequestMapping(value = "/import/update/progress", method = RequestMethod.GET)

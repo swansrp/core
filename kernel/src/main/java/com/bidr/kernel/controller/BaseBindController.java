@@ -4,15 +4,16 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
+import com.bidr.kernel.service.PortalCommonService;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.vo.bind.BindListReq;
-import com.bidr.kernel.vo.bind.BindReq;
-import com.bidr.kernel.vo.bind.QueryBindReq;
+import com.bidr.kernel.vo.bind.*;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.List;
 
@@ -33,17 +34,11 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
     }
 
+    @ApiIgnore
     @ApiOperation(value = "获取已绑定(列表)")
     @RequestMapping(value = "/bind/list", method = RequestMethod.GET)
     public List<ATTACH_VO> getBindList(String entityId) {
         List<ATTACH_VO> res = bindRepo().getBindList(entityId);
-        return Resp.convert(res, getAttachVoClass());
-    }
-
-    @ApiOperation(value = "获取已绑定(分页)")
-    @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
-    public Page<ATTACH_VO> getBind(@RequestBody @Validated QueryBindReq req) {
-        IPage<ATTACH_VO> res = bindRepo().queryBindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
@@ -53,6 +48,23 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         return (Class<ATTACH_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
     }
 
+    @ApiIgnore
+    @ApiOperation(value = "获取已绑定(分页)")
+    @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
+    public Page<ATTACH_VO> getBind(@RequestBody @Validated QueryBindReq req) {
+        IPage<ATTACH_VO> res = bindRepo().queryBindList(req);
+        return Resp.convert(res, getAttachVoClass());
+    }
+
+    @ApiIgnore
+    @ApiOperation(value = "获取已绑定(分页)")
+    @RequestMapping(value = "/bind/advanced/query", method = RequestMethod.POST)
+    public Page<ATTACH_VO> getBind(@RequestBody @Validated AdvancedQueryBindReq req) {
+        IPage<ATTACH_VO> res = bindRepo().advancedQueryBindList(req);
+        return Resp.convert(res, getAttachVoClass());
+    }
+
+    @ApiIgnore
     @ApiOperation(value = "绑定")
     @RequestMapping(value = "/bind", method = RequestMethod.POST)
     public void bind(@RequestBody @Validated BindReq req) {
@@ -60,6 +72,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         Resp.notice("绑定成功");
     }
 
+    @ApiIgnore
     @ApiOperation(value = "批量绑定")
     @RequestMapping(value = "/bind/batch", method = RequestMethod.POST)
     public void bind(@RequestBody @Validated BindListReq req) {
@@ -67,6 +80,37 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         Resp.notice("绑定成功");
     }
 
+    @ApiIgnore
+    @ApiOperation(value = "全量绑定")
+    @RequestMapping(value = "/bind/all", method = RequestMethod.POST)
+    public void bindAll(@RequestBody @Validated AdvancedQueryBindReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        req.setPageSize(60000L);
+        bindRepo().bindAll(req);
+        Resp.notice("绑定成功");
+    }
+
+    protected boolean isAdmin() {
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            return getAttachPortalService().isAdmin();
+        } else {
+            return false;
+        }
+    }
+
+    protected void beforeQuery(AdvancedQueryBindReq req) {
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            getAttachPortalService().beforeQuery(req);
+        }
+    }
+
+    protected PortalCommonService<ATTACH, ATTACH_VO> getAttachPortalService() {
+        return null;
+    }
+
+    @ApiIgnore
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getUnBind(@RequestBody @Validated QueryBindReq req) {
@@ -74,6 +118,18 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         return Resp.convert(res, getAttachVoClass());
     }
 
+    @ApiIgnore
+    @ApiOperation(value = "获取未绑定")
+    @RequestMapping(value = "/unbind/advanced/query", method = RequestMethod.POST)
+    public Page<ATTACH_VO> getUnBind(@RequestBody @Validated AdvancedQueryBindReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        IPage<ATTACH> res = bindRepo().advancedQueryUnbindList(req);
+        return Resp.convert(res, getAttachVoClass());
+    }
+
+    @ApiIgnore
     @ApiOperation(value = "解绑")
     @RequestMapping(value = "/unbind", method = RequestMethod.POST)
     public void unbind(@RequestBody @Validated BindReq req) {
@@ -81,6 +137,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         Resp.notice("解绑成功");
     }
 
+    @ApiIgnore
     @ApiOperation(value = "批量解绑")
     @RequestMapping(value = "/unbind/batch", method = RequestMethod.POST)
     public void unbind(@RequestBody @Validated BindListReq req) {
@@ -88,10 +145,31 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         Resp.notice("解绑成功");
     }
 
+    @ApiIgnore
+    @ApiOperation(value = "全量解绑")
+    @RequestMapping(value = "/unbind/all", method = RequestMethod.POST)
+    public void unbindAll(@RequestBody @Validated BindBaseReq req) {
+        bindRepo().unbindAll(req.getEntityId());
+        Resp.notice("解绑成功");
+    }
+
+    @ApiIgnore
     @ApiOperation(value = "替换绑定")
     @RequestMapping(value = "/replace", method = RequestMethod.POST)
     public void replace(@RequestBody @Validated BindListReq req) {
         bindRepo().replace(req.getAttachIdList(), req.getEntityId());
-        Resp.notice("操作成功");
+        Resp.notice("替换成功");
+    }
+
+    @ApiIgnore
+    @ApiOperation(value = "替换绑定")
+    @RequestMapping(value = "/advanced/replace", method = RequestMethod.POST)
+    public void replace(@RequestBody @Validated AdvancedQueryBindReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        req.setPageSize(60000L);
+        bindRepo().advancedReplace(req);
+        Resp.notice("替换成功");
     }
 }

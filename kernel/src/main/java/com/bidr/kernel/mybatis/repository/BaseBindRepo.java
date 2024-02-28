@@ -2,12 +2,16 @@ package com.bidr.kernel.mybatis.repository;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.bind.AdvancedQueryBindReq;
 import com.bidr.kernel.vo.bind.QueryBindReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +75,16 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
                 getAttachVOClass(), wrapper);
     }
 
+    public IPage<ATTACH_VO> advancedQueryBindList(AdvancedQueryBindReq req) {
+        MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
+        wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
+        attachRepo().parseAdvancedQuery(req, null, wrapper);
+        wrapper.eq(bindEntityId(), req.getEntityId());
+        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), true),
+                getAttachVOClass(), wrapper);
+    }
+
     public IPage<ATTACH> getUnbindList(QueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
         wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
@@ -105,16 +119,6 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void unbindList(List<Object> attachIdList, Object entityId) {
-        if (FuncUtil.isNotEmpty(attachIdList)) {
-            for (Object attachId : attachIdList) {
-                BIND bindEntity = buildBindEntity(attachId, entityId);
-                bindRepo().deleteById(bindEntity);
-            }
-        }
-    }
-
-    @Transactional(rollbackFor = Exception.class)
     public void replace(List<Object> attachIdList, Object entityId) {
         Wrapper<BIND> wrapper = (Wrapper<BIND>) bindRepo().getQueryWrapper().eq(bindEntityId(), entityId);
         bindRepo().delete(wrapper);
@@ -129,6 +133,39 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public void unbindList(List<Object> attachIdList, Object entityId) {
+        if (FuncUtil.isNotEmpty(attachIdList)) {
+            for (Object attachId : attachIdList) {
+                BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindRepo().deleteById(bindEntity);
+            }
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void bindAll(AdvancedQueryBindReq req) {
+        IPage<ATTACH> res = advancedQueryUnbindList(req);
+        Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG, "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
+        List attachIdList = new ArrayList();
+        if (FuncUtil.isNotEmpty(res.getRecords())) {
+            for (ATTACH record : res.getRecords()) {
+                attachIdList.add(attachId().apply(record));
+            }
+        }
+        bindList(attachIdList, req.getEntityId());
+    }
+
+    public IPage<ATTACH> advancedQueryUnbindList(AdvancedQueryBindReq req) {
+        MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
+        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
+        attachRepo().parseAdvancedQuery(req, null, wrapper);
+        wrapper.and(w -> w.ne(bindEntityId(), req.getEntityId()).or(ww -> ww.isNull(bindEntityId())));
+        attachRepo().parseSort(req, wrapper);
+        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), true),
+                getAttachClass(), wrapper);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void bindList(List<Object> attachIdList, Object entityId) {
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
@@ -137,6 +174,15 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
             }
         }
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void unbindAll(Object entityId) {
+        LambdaQueryWrapper wrapper = bindRepo().getQueryWrapper();
+        wrapper.eq(bindEntityId(), entityId);
+        bindRepo().delete(wrapper);
+    }
+
+    protected abstract SFunction<ENTITY, ?> entityId();
 
     public List<ENTITY> getBindEntityList(Object attachId) {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
@@ -149,8 +195,6 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
     }
 
-    protected abstract SFunction<ENTITY, ?> entityId();
-
     protected BaseSqlRepo entityRepo() {
         return (BaseSqlRepo) applicationContext.getBean(
                 StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
@@ -158,5 +202,17 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     protected Class<ENTITY_VO> getEntityVOClass() {
         return (Class<ENTITY_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 3);
+    }
+
+    public void advancedReplace(AdvancedQueryBindReq req) {
+        IPage<ATTACH> res = advancedQueryUnbindList(req);
+        Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG, "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
+        List attachIdList = new ArrayList();
+        if (FuncUtil.isNotEmpty(res.getRecords())) {
+            for (ATTACH record : res.getRecords()) {
+                attachIdList.add(attachId().apply(record));
+            }
+        }
+        replace(attachIdList, req.getEntityId());
     }
 }

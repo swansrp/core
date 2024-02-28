@@ -126,28 +126,4 @@ public class SaSequence {
     @ApiModelProperty(value="修改人")
     @Size(max = 50,message = "修改人最大长度要小于 50")
     private String updateBy;
-
-    public static final String COL_SEQ_NAME = "seq_name";
-
-    public static final String COL_PLATFORM = "platform";
-
-    public static final String COL_VALUE = "value";
-
-    public static final String COL_PREFIX = "prefix";
-
-    public static final String COL_SUFFIX = "suffix";
-
-    public static final String COL_MIN_VALUE = "min_value";
-
-    public static final String COL_MAX_VALUE = "max_value";
-
-    public static final String COL_STEP = "step";
-
-    public static final String COL_CREATE_AT = "create_at";
-
-    public static final String COL_CREATE_BY = "create_by";
-
-    public static final String COL_UPDATE_AT = "update_at";
-
-    public static final String COL_UPDATE_BY = "update_by";
 }

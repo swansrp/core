@@ -1,8 +1,8 @@
 package com.bidr.kernel.vo.bind;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -13,8 +13,7 @@ import java.util.List;
  * @since 2023/05/11 10:55
  */
 @Data
-public class BindListReq {
+@EqualsAndHashCode(callSuper = true)
+public class BindListReq extends BindBaseReq {
     private List<Object> attachIdList;
-    @NotNull(message = "未提供实体id")
-    private Object entityId;
 }

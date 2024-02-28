@@ -168,7 +168,6 @@ public interface AdminControllerInf<ENTITY, VO> {
         } else {
             return false;
         }
-
     }
 
     /**

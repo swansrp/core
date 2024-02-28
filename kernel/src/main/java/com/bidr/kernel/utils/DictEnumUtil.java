@@ -24,6 +24,10 @@ public class DictEnumUtil {
     }
 
     private static <E extends Enum<E>> E getValueMap(Object obj, String objFieldName, Class<E> clazz) {
+        return getValueMap(obj, objFieldName, clazz, null);
+    }
+
+    private static <E extends Enum<E>> E getValueMap(Object obj, String objFieldName, Class<E> clazz, E defaultEnum) {
         Map<Object, String> valueMap = ENUM_MAP.getOrDefault(clazz.getName() + objFieldName, new HashMap<>(16));
         if (MapUtils.isEmpty(valueMap)) {
             synchronized (ENUM_MAP) {
@@ -37,10 +41,18 @@ public class DictEnumUtil {
         try {
             res = Enum.valueOf(clazz, valueMap.get(obj));
         } catch (Exception e) {
-            Validator.assertException(e);
+            if (FuncUtil.isNotEmpty(defaultEnum)) {
+                res = defaultEnum;
+            } else {
+                Validator.assertException(e);
+            }
         }
         Validator.assertNotNull(res, ErrCodeSys.SYS_ERR_MSG, "字典反射失败");
         return res;
+    }
+
+    public static <E extends Enum<E>> E getEnumByValue(Object value, Class<E> clazz, E defaultEnum) {
+        return getValueMap(value, "value", clazz, defaultEnum);
     }
 
     public static <E extends Enum<E>> E getEnumByLabel(String label, Class<E> clazz) {
@@ -54,6 +66,10 @@ public class DictEnumUtil {
     @SuppressWarnings("unchecked")
     public static <E extends Enum<E>> E getEnum(Object obj, String objFieldName, Class<?> enumClazz) {
         return getValueMap(obj, objFieldName, (Class<E>) enumClazz);
+    }
+
+    public static <E extends Enum<E>> E getEnum(Object obj, String objFieldName, Class<?> enumClazz, E defaultEnum) {
+        return getValueMap(obj, objFieldName, (Class<E>) enumClazz, defaultEnum);
     }
 
 }

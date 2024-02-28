@@ -766,6 +766,9 @@ public class ReflectionUtil {
 
     public static <T, K> K merge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
         for (Field field : getFields(source)) {
+            if (Modifier.isFinal(field.getModifiers())) {
+                continue;
+            }
             Object sourceValue = getValue(source, field);
             if (ignoreNull) {
                 if (sourceValue == null) {
