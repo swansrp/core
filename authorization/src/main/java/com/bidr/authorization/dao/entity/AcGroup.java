@@ -27,7 +27,6 @@ import javax.validation.constraints.Size;
 @Data
 @TableName(value = "ac_group")
 public class AcGroup {
-    public static final String COL_ANCESTORS = "ancestors";
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "")
     @NotNull(message = "不能为null")
@@ -70,16 +69,4 @@ public class AcGroup {
     @ApiModelProperty(value = "显示顺序")
     @NotNull(message = "显示顺序不能为null")
     private Integer displayOrder;
-
-    public static final String COL_ID = "id";
-
-    public static final String COL_PID = "pid";
-
-    public static final String COL_KEY = "key";
-
-    public static final String COL_TYPE = "type";
-
-    public static final String COL_NAME = "name";
-
-    public static final String COL_DISPLAY_ORDER = "display_order";
 }

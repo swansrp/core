@@ -22,8 +22,6 @@ import lombok.Data;
 @Data
 @TableName(value = "ac_user_role")
 public class AcUserRole {
-    public static final String COL_USER_ID = "user_id";
-    public static final String COL_ROLE_ID = "role_id";
     /**
      * 用户ID
      */

@@ -38,10 +38,4 @@ public class AcUserGroup {
     @TableField(value = "data_scope")
     @ApiModelProperty(value = "数据权限范围")
     private Integer dataScope;
-
-    public static final String COL_USER_ID = "user_id";
-
-    public static final String COL_GROUP_ID = "group_id";
-
-    public static final String COL_DATA_SCOPE = "data_scope";
 }

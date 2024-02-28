@@ -18,8 +18,6 @@ import lombok.Data;
 @Data
 @TableName(value = "ac_role_dept")
 public class AcRoleDept {
-    public static final String COL_ROLE_ID = "role_id";
-    public static final String COL_DEPT_ID = "dept_id";
     /**
      * 角色ID
      */

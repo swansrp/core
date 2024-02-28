@@ -137,36 +137,4 @@ public class SaSmsSend {
     @TableField(value = "response_code")
     @ApiModelProperty(value = "服务商返回代码")
     private String responseCode;
-
-    public static final String COL_SEND_ID = "send_id";
-
-    public static final String COL_PLATFORM = "platform";
-
-    public static final String COL_SEND_TYPE = "send_type";
-
-    public static final String COL_BIZ_ID = "biz_id";
-
-    public static final String COL_MOBILE = "mobile";
-
-    public static final String COL_TEMPLATE_CODE = "template_code";
-
-    public static final String COL_SEND_SIGN = "send_sign";
-
-    public static final String COL_SEND_PARAM = "send_param";
-
-    public static final String COL_SEND_STATUS = "send_status";
-
-    public static final String COL_SEND_RESULT = "send_result";
-
-    public static final String COL_REQUEST_ID = "request_id";
-
-    public static final String COL_SEND_AT = "send_at";
-
-    public static final String COL_RESPONSE_STATUS = "response_status";
-
-    public static final String COL_RESPONSE_AT = "response_at";
-
-    public static final String COL_RESPONSE_MSG = "response_msg";
-
-    public static final String COL_RESPONSE_CODE = "response_code";
 }

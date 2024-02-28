@@ -25,20 +25,6 @@ import java.util.Date;
 @Data
 @TableName(value = "sa_sms_template")
 public class SaSmsTemplate {
-    public static final String COL_ID = "id";
-    public static final String COL_TEMPLATE_TITLE = "template_title";
-    public static final String COL_TEMPLATE_TYPE = "template_type";
-    public static final String COL_SMS_TYPE = "sms_type";
-    public static final String COL_TEMPLATE_CODE = "template_code";
-    public static final String COL_PARAMETER = "parameter";
-    public static final String COL_BODY = "body";
-    public static final String COL_SIGN = "sign";
-    public static final String COL_AUTHOR = "author";
-    public static final String COL_PLATFORM = "platform";
-    public static final String COL_CONFIRM_AT = "confirm_at";
-    public static final String COL_CONFIRM_STATUS = "confirm_status";
-    public static final String COL_REASON = "reason";
-    public static final String COL_REMARK = "remark";
     /**
      * id
      */

@@ -22,8 +22,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @TableName(value = "ac_role_menu")
 public class AcRoleMenu {
-    public static final String COL_ROLE_ID = "role_id";
-    public static final String COL_MENU_ID = "menu_id";
     /**
      * 角色ID
      */

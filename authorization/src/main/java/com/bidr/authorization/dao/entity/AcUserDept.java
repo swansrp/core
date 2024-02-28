@@ -22,9 +22,6 @@ import lombok.Data;
 @Data
 @TableName(value = "ac_user_dept")
 public class AcUserDept {
-    public static final String COL_USER_ID = "user_id";
-    public static final String COL_DEPT_ID = "dept_id";
-    public static final String COL_DATA_SCOPE = "data_scope";
     @MppMultiId
     @TableField(value = "user_id")
     @ApiModelProperty(value = "")

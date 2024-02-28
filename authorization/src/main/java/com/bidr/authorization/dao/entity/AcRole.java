@@ -111,26 +111,4 @@ public class AcRole {
     @ApiModelProperty(value = "有效性")
     @Size(max = 1, message = "有效性最大长度要小于 1")
     private String valid;
-
-    public static final String COL_ROLE_ID = "role_id";
-
-    public static final String COL_ROLE_NAME = "role_name";
-
-    public static final String COL_ROLE_KEY = "role_key";
-
-    public static final String COL_STATUS = "status";
-
-    public static final String COL_DISPLAY_ORDER = "display_order";
-
-    public static final String COL_CREATE_BY = "create_by";
-
-    public static final String COL_CREATE_AT = "create_at";
-
-    public static final String COL_UPDATE_BY = "update_by";
-
-    public static final String COL_UPDATE_AT = "update_at";
-
-    public static final String COL_REMARK = "remark";
-
-    public static final String COL_VALID = "valid";
 }

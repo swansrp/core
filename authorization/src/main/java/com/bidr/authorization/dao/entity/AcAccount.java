@@ -168,46 +168,4 @@ public class AcAccount {
     @TableField(value = "create_at")
     @ApiModelProperty(value = "创建时间")
     private Date createAt;
-
-    public static final String COL_ID = "id";
-
-    public static final String COL_NAME = "name";
-
-    public static final String COL_GENDER = "gender";
-
-    public static final String COL_NATIONALITY = "nationality";
-
-    public static final String COL_NATIVE_PLACE = "native_place";
-
-    public static final String COL_POLITICAL_OUTLOOK = "political_outlook";
-
-    public static final String COL_WORK_DATE = "work_date";
-
-    public static final String COL_ID_NUMBER = "id_number";
-
-    public static final String COL_PROFESSION = "profession";
-
-    public static final String COL_TALENT = "talent";
-
-    public static final String COL_EMAIL = "email";
-
-    public static final String COL_MOBILE = "mobile";
-
-    public static final String COL_CATEGORY = "category";
-
-    public static final String COL_DEPARTMENT = "department";
-
-    public static final String COL_ORG = "org";
-
-    public static final String COL_USER_NAME = "user_name";
-
-    public static final String COL_PICTURE_LINK = "picture_link";
-
-    public static final String COL_SIGNATURE_LINK = "signature_link";
-
-    public static final String COL_EMPLOY_STATUS = "employ_status";
-
-    public static final String COL_STATUS = "status";
-
-    public static final String COL_CREATE_AT = "create_at";
 }

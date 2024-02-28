@@ -184,44 +184,4 @@ public class AcDept {
     @ApiModelProperty(value = "有效性")
     @Size(max = 1, message = "有效性最大长度要小于 1")
     private String valid;
-
-    public static final String COL_DEPT_ID = "dept_id";
-
-    public static final String COL_PID = "pid";
-
-    public static final String COL_GRAND_ID = "grand_id";
-
-    public static final String COL_ANCESTORS = "ancestors";
-
-    public static final String COL_NAME = "name";
-
-    public static final String COL_ABBREVIATE = "abbreviate";
-
-    public static final String COL_FOUNDED_TIME = "founded_time";
-
-    public static final String COL_CATEGORY = "category";
-
-    public static final String COL_TYPE = "type";
-
-    public static final String COL_FUNCTION = "function";
-
-    public static final String COL_LEADER = "leader";
-
-    public static final String COL_CONTACT = "contact";
-
-    public static final String COL_ADDRESS = "address";
-
-    public static final String COL_STATUS = "status";
-
-    public static final String COL_SHOW_ORDER = "show_order";
-
-    public static final String COL_CREATE_BY = "create_by";
-
-    public static final String COL_CREATE_AT = "create_at";
-
-    public static final String COL_UPDATE_BY = "update_by";
-
-    public static final String COL_UPDATE_AT = "update_at";
-
-    public static final String COL_VALID = "valid";
 }

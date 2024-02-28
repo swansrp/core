@@ -37,8 +37,4 @@ public class AcGroupType {
     @Size(max = 50, message = "最大长度要小于 50")
     @NotBlank(message = "不能为空")
     private String name;
-
-    public static final String COL_ID = "id";
-
-    public static final String COL_NAME = "name";
 }

@@ -107,24 +107,4 @@ public class AcPartner {
     @TableField(value = "update_at")
     @ApiModelProperty(value = "更新时间")
     private Date updateAt;
-
-    public static final String COL_ID = "id";
-
-    public static final String COL_APP_KEY = "app_key";
-
-    public static final String COL_APP_SECRET = "app_secret";
-
-    public static final String COL_PLATFORM = "platform";
-
-    public static final String COL_REMARK = "remark";
-
-    public static final String COL_STATUS = "status";
-
-    public static final String COL_CREATE_BY = "create_by";
-
-    public static final String COL_CREATE_AT = "create_at";
-
-    public static final String COL_UPDATE_BY = "update_by";
-
-    public static final String COL_UPDATE_AT = "update_at";
 }
