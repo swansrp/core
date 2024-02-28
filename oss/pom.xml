@@ -39,8 +39,8 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20240130160634-20</kernel.version>
-                <platform.version>20240130134737-12</platform.version>
+                <kernel.version>20240223112631-22</kernel.version>
+                <platform.version>20240223113234-13</platform.version>
             </properties>
         </profile>
     </profiles>
@@ -56,6 +56,19 @@
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
+        <!-- minio -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.2</version>
+        </dependency>
+        <!-- ali -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.5.0</version>
+        </dependency>
+
     </dependencies>
 
 </project>
