@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,8 @@ import java.util.List;
  * @since 2023/05/06 09:47
  */
 public abstract class BaseAdminOrderController<ENTITY, VO> extends BaseAdminController<ENTITY, VO> {
+
+    @ApiIgnore
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     @RequestMapping(value = "/order/update", method = RequestMethod.POST)
     public void updateOrder(@RequestBody List<IdOrderReqVO> idOrderReqVOList) {

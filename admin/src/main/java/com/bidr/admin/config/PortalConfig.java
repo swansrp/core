@@ -58,7 +58,7 @@ public class PortalConfig implements CommandLineRunner {
         if (FuncUtil.isNotEmpty(portalControllerList)) {
             map = new LinkedHashMap<>(portalControllerList.size());
             for (Class<?> portalControllerClass : portalControllerList) {
-                if(AdminControllerInf.class.isAssignableFrom(portalControllerClass)) {
+                if (AdminControllerInf.class.isAssignableFrom(portalControllerClass)) {
                     Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 0);
                     Class<?> voClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 1);
                     if (FuncUtil.isNotEmpty(entityClass) && FuncUtil.isNotEmpty(voClass)) {
@@ -74,11 +74,14 @@ public class PortalConfig implements CommandLineRunner {
     private void refreshPortalConfig(Map<Class<?>, List<Field>> map) {
         for (Map.Entry<Class<?>, List<Field>> entry : map.entrySet()) {
             Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(entry.getKey(), 0);
+            AdminPortal adminPortal = entry.getKey().getAnnotation(AdminPortal.class);
             List<SysPortal> portalList = sysPortalService.getByBeanName(entry.getKey().getName());
             if (FuncUtil.isEmpty(portalList)) {
                 SysPortal portal = new SysPortal();
                 portal.setBean(entry.getKey().getName());
-                portal.setName(entityClass.getSimpleName());
+                if (FuncUtil.isNotEmpty(adminPortal.value())) {
+                    portal.setName(adminPortal.value());
+                }
                 portal.setDisplayName(entityClass.getSimpleName());
                 portal.setUrl(entityClass.getSimpleName());
                 sysPortalService.save(portal);

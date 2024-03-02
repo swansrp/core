@@ -126,7 +126,11 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
             wrapper = new MPJLambdaWrapper<>(entityClass);
         }
         wrapper.selectAll(getEntityClass(), "t");
-        wrapper.groupByStr(getFieldSql("t"));
+        List<String> entityFieldList = getFieldSql("t");
+        if (FuncUtil.isNotEmpty(aliasMap) && FuncUtil.isNotEmpty(aliasMap.values())) {
+            entityFieldList.addAll(aliasMap.values());
+        }
+        wrapper.groupByStr(entityFieldList);
         parseAdvancedQuery(req, aliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
     }

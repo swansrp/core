@@ -153,17 +153,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @ApiOperation("高级查询数据")
     @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
     public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = null;
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            wrapper.setEntityClass(getEntityClass());
-        }
-        return Resp.convert(getRepo().select(req, aliasMap, wrapper, getVoClass()), getVoClass());
+        Page<ENTITY> result = queryByAdvancedReq(req);
+        return Resp.convert(result, getVoClass());
     }
 
     @Override
@@ -187,6 +178,21 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             fileName = fileName + ".csv";
         }
         HttpUtil.export(request, response, contentType, "UTF-8", fileName, exportBytes);
+    }
+
+    protected Page<ENTITY> queryByAdvancedReq(AdvancedQueryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        Map<String, String> aliasMap = null;
+        MPJLambdaWrapper<ENTITY> wrapper = null;
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getPortalService().getAliasMap();
+            wrapper = getPortalService().getJoinWrapper();
+            wrapper.setEntityClass(getEntityClass());
+        }
+        Page<ENTITY> result = getRepo().select(req, aliasMap, wrapper, getVoClass());
+        return result;
     }
 
     @Override

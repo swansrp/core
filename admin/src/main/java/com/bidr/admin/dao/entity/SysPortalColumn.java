@@ -6,19 +6,18 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
+import java.math.BigDecimal;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.math.BigDecimal;
+import lombok.Data;
 
  /**
  * Title: SysPortalColumn
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/01/17 16:22
+ * @since 2024/03/02 01:05
  */
 
 /**
@@ -146,24 +145,6 @@ public class SysPortalColumn {
     private String tooltip;
 
     /**
-     * 表格是否可以编辑
-     */
-    @TableField(value = "edit_able")
-    @ApiModelProperty(value = "表格是否可以编辑")
-    @Size(max = 1, message = "表格是否可以编辑最大长度要小于 1")
-    @NotBlank(message = "表格是否可以编辑不能为空")
-    private String editAble;
-
-    /**
-     * 是否必填
-     */
-    @TableField(value = "required")
-    @ApiModelProperty(value = "是否必填")
-    @Size(max = 1, message = "是否必填最大长度要小于 1")
-    @NotBlank(message = "是否必填不能为空")
-    private String required;
-
-    /**
      * 是否有效
      */
     @TableField(value = "`enable`")
@@ -182,6 +163,41 @@ public class SysPortalColumn {
     private String show;
 
     /**
+     * 是否可做筛选项
+     */
+    @TableField(value = "filter_able")
+    @ApiModelProperty(value = "是否可做筛选项")
+    @Size(max = 1, message = "是否可做筛选项最大长度要小于 1")
+    @NotBlank(message = "是否可做筛选项不能为空")
+    private String filterAble;
+
+    /**
+     * 是否可做排序项
+     */
+    @TableField(value = "sort_able")
+    @ApiModelProperty(value = "是否可做排序项")
+    @Size(max = 1, message = "是否可做排序项最大长度要小于 1")
+    @NotBlank(message = "是否可做排序项不能为空")
+    private String sortAble;
+
+    /**
+     * 表格是否可以编辑
+     */
+    @TableField(value = "edit_able")
+    @ApiModelProperty(value = "表格是否可以编辑")
+    @Size(max = 1, message = "表格是否可以编辑最大长度要小于 1")
+    @NotBlank(message = "表格是否可以编辑不能为空")
+    private String editAble;
+
+    /**
+     * 字段分组名称
+     */
+    @TableField(value = "display_group_name")
+    @ApiModelProperty(value = "字段分组名称")
+    @Size(max = 50, message = "字段分组名称最大长度要小于 50")
+    private String displayGroupName;
+
+    /**
      * 详情时是否显示
      */
     @TableField(value = "detail_show")
@@ -197,6 +213,14 @@ public class SysPortalColumn {
     @ApiModelProperty(value = "详情弹框布局大小")
     @NotNull(message = "详情弹框布局大小不能为null")
     private Integer detailSize;
+
+    /**
+     * 详情布局显示后占位填充
+     */
+    @TableField(value = "detail_padding")
+    @ApiModelProperty(value = "详情布局显示后占位填充")
+    @NotNull(message = "详情布局显示后占位填充不能为null")
+    private Integer detailPadding;
 
     /**
      * 添加时是否显示
@@ -224,6 +248,15 @@ public class SysPortalColumn {
     private Integer addPadding;
 
     /**
+     * 新增弹框disable显示
+     */
+    @TableField(value = "add_disabled")
+    @ApiModelProperty(value = "新增弹框disable显示")
+    @Size(max = 50, message = "新增弹框disable显示最大长度要小于 50")
+    @NotBlank(message = "新增弹框disable显示不能为空")
+    private String addDisabled;
+
+    /**
      * 编辑框是否显示
      */
     @TableField(value = "edit_show")
@@ -249,22 +282,22 @@ public class SysPortalColumn {
     private Integer editPadding;
 
     /**
-     * 是否可做筛选项
+     * 编辑弹框布局disable显示
      */
-    @TableField(value = "filter_able")
-    @ApiModelProperty(value = "是否可做筛选项")
-    @Size(max = 1, message = "是否可做筛选项最大长度要小于 1")
-    @NotBlank(message = "是否可做筛选项不能为空")
-    private String filterAble;
+    @TableField(value = "edit_disabled")
+    @ApiModelProperty(value = "编辑弹框布局disable显示")
+    @Size(max = 50, message = "编辑弹框布局disable显示最大长度要小于 50")
+    @NotBlank(message = "编辑弹框布局disable显示不能为空")
+    private String editDisabled;
 
     /**
-     * 是否可做排序项
+     * 是否必填
      */
-    @TableField(value = "sort_able")
-    @ApiModelProperty(value = "是否可做排序项")
-    @Size(max = 1, message = "是否可做排序项最大长度要小于 1")
-    @NotBlank(message = "是否可做排序项不能为空")
-    private String sortAble;
+    @TableField(value = "required")
+    @ApiModelProperty(value = "是否必填")
+    @Size(max = 1, message = "是否必填最大长度要小于 1")
+    @NotBlank(message = "是否必填不能为空")
+    private String required;
 
     /**
      * 最小值(长度)

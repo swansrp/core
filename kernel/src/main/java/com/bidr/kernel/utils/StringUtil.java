@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -133,7 +134,7 @@ public class StringUtil {
         return sb.toString().replaceFirst(spliter, "");
     }
 
-    public static String joinWith(String spliter, List<String> list) {
+    public static String joinWith(String spliter, Collection<String> list) {
         StringBuilder sb = new StringBuilder();
         String[] strArray = new String[list.size()];
         list.toArray(strArray);
