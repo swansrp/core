@@ -40,7 +40,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <kernel.version>20240304142404-24</kernel.version>
-                <platform.version>20240223113234-13</platform.version>
+                <platform.version>20240304142546-15</platform.version>
             </properties>
         </profile>
     </profiles>
