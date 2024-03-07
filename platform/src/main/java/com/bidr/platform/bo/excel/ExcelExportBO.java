@@ -2,10 +2,7 @@ package com.bidr.platform.bo.excel;
 
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: ExcelExportBO
@@ -21,7 +18,7 @@ public class ExcelExportBO {
     private List<List<String>> records;
 
     public ExcelExportBO() {
-        columnTitles = new HashSet<>();
+        columnTitles = new LinkedHashSet<>();
         records = new ArrayList<>();
     }
 }

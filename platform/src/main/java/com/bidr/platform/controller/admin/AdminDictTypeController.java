@@ -6,6 +6,7 @@ import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.platform.config.portal.AdminPortal;
 import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.vo.dict.AddDictReq;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 
 @Api(tags = "系统管理 - 字典管理")
+@AdminPortal
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dict/admin"})

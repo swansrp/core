@@ -87,9 +87,10 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
     public List<TreeDataResVO> getTreeData(@RequestBody AdvancedQueryReq req) {
         List<TreeDataItemVO> list = new ArrayList<>();
         req.setPageSize(60000L);
-        Page<ENTITY> entityList = queryByAdvancedReq(req);
+        Page<VO> entityList = queryByAdvancedReq(req);
         if (FuncUtil.isNotEmpty(entityList.getRecords())) {
-            for (ENTITY entity : entityList.getRecords()) {
+            for (VO vo : entityList.getRecords()) {
+                ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
                 list.add(new TreeDataItemVO(id().apply(entity), pid().apply(entity), name().apply(entity)));
             }
         }

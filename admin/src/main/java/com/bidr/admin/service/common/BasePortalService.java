@@ -4,11 +4,14 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.config.PortalEntityField;
+import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.constant.dict.UploadProgressStep;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.service.excel.handler.PortalExcelInsertHandlerInf;
+import com.bidr.admin.service.excel.handler.PortalExcelParseHandlerInf;
+import com.bidr.admin.service.excel.handler.PortalExcelTemplateHandlerInf;
 import com.bidr.admin.service.excel.handler.PortalExcelUpdateHandlerInf;
 import com.bidr.admin.service.excel.listener.PortalExcelInsertListener;
 import com.bidr.admin.service.excel.listener.PortalExcelUpdateListener;
@@ -30,20 +33,18 @@ import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.platform.bo.excel.ExcelExportBO;
 import com.bidr.platform.service.cache.dict.DictCacheService;
+import com.diboot.core.binding.annotation.BindField;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.jxls.common.Context;
-import org.jxls.util.JxlsHelper;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 
 import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -61,30 +62,51 @@ import java.util.Map;
 @Slf4j
 @SuppressWarnings("rawtypes, unchecked")
 public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner,
-        PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY> {
+        PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>,
+        PortalExcelTemplateHandlerInf {
 
     protected Map<String, String> aliasMap = new HashMap<>(32);
     @Resource
-    private SysPortalService sysPortalService;
+    protected SysPortalService sysPortalService;
     @Resource
-    private DictCacheService dictCacheService;
+    protected DictCacheService dictCacheService;
     @Resource
-    private TokenService tokenService;
+    protected TokenService tokenService;
     @Resource
-    private DataSourceTransactionManager dataSourceTransactionManager;
+    protected DataSourceTransactionManager dataSourceTransactionManager;
     @Resource
-    private TransactionDefinition transactionDefinition;
+    protected TransactionDefinition transactionDefinition;
     @Resource
-    private ApplicationContext applicationContext;
+    protected ApplicationContext applicationContext;
 
     @Override
     public void run(String... args) {
         for (Field field : ReflectionUtil.getFields(getVoClass())) {
+            PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+            if (FuncUtil.isNotEmpty(portalNoFilterField)) {
+                continue;
+            }
             PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
             if (FuncUtil.isNotEmpty(portalEntityField)) {
-                aliasMap.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+                if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
+                    aliasMap.put(field.getName(),
+                            getAlias(portalEntityField.entity(), portalEntityField.field(), portalEntityField.alias()));
+                } else {
+                    aliasMap.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+                }
+                continue;
+            }
+            BindField bindField = field.getAnnotation(BindField.class);
+            if (FuncUtil.isNotEmpty(bindField)) {
+                aliasMap.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+                continue;
             }
         }
+    }
+
+    private String getAlias(Class<?> clazz, String fieldName, String alias) {
+        String selectSqlName = DbUtil.getSelectSqlName(clazz, fieldName);
+        return alias + "." + selectSqlName;
     }
 
     private String getAlias(Class<?> clazz, String fieldName) {
@@ -144,18 +166,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         return export(bo);
     }
 
-    private byte[] export(ExcelExportBO data) throws IOException {
-        try (InputStream is = new ClassPathResource("excel/portalExportTemplate.xlsx").getInputStream()) {
-            try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-                Context context = new Context();
-                context.putVar("data", data);
-                JxlsHelper jxlsHelper = JxlsHelper.getInstance();
-                jxlsHelper.setUseFastFormulaProcessor(false);
-                jxlsHelper.processTemplate(is, os, context);
-                return os.toByteArray();
-            }
-        }
-    }
 
     @Override
     public byte[] templateExport(String portalName) {
@@ -175,15 +185,17 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public void readExcelForInsert(InputStream is, String portalName) {
         validateReadExcel();
+        TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
         try {
             startUploadProgress(0);
             PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName);
-            EasyExcel.read(is).sheet().registerReadListener(
-                    new PortalExcelInsertListener(portal, this, this, dataSourceTransactionManager,
-                            transactionDefinition)).head(buildExcelHead(portal)).doRead();
+            handleExcelInsert(is, portal);
+            dataSourceTransactionManager.commit(transactionStatus);
         } catch (Exception e) {
             log.error("读取excel插入数据失败", e);
             uploadProgressException(e.getMessage());
+            dataSourceTransactionManager.rollback(transactionStatus);
+
         }
     }
 
@@ -194,14 +206,19 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         try {
             startUploadProgress(0);
             PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName);
-            EasyExcel.read(is).sheet().registerReadListener(
-                    new PortalExcelUpdateListener(portal, this, this, dataSourceTransactionManager,
-                            transactionDefinition)).head(buildExcelHead(portal)).doRead();
+            handleExcelUpdate(is, portal);
         } catch (Exception e) {
             log.error("读取excel更新数据失败", e);
             uploadProgressException(e.getMessage());
         }
 
+    }
+
+    protected void handleExcelUpdate(InputStream is, PortalWithColumnsRes portal) {
+        EasyExcel.read(is).sheet().registerReadListener(
+                        new PortalExcelUpdateListener<Map<Integer, String>>(portal, this,
+                                (PortalExcelParseHandlerInf<ENTITY, Map<Integer, String>>) this::parseEntity, this))
+                .head(buildExcelHead(portal)).doRead();
     }
 
     @Override
@@ -217,6 +234,94 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             Validator.assertTrue(FuncUtil.notEquals(uploadProgress.getStep(), UploadProgressStep.SAVE),
                     ErrCodeSys.SYS_ERR_MSG, "当前已有上传任务正在执行");
         }
+    }
+
+    protected void handleExcelInsert(InputStream is, PortalWithColumnsRes portal) {
+        EasyExcel.read(is).sheet().registerReadListener(new PortalExcelInsertListener(portal, this,
+                        (PortalExcelParseHandlerInf<ENTITY, Map<Integer, String>>) this::parseEntity, this))
+                .head(buildExcelHead(portal)).doRead();
+    }
+
+    public ENTITY parseEntity(PortalWithColumnsRes portal, Map<Integer, String> data,
+                              Map<String, Map<String, Object>> entityCache) {
+        ENTITY entity = ReflectionUtil.newInstance(getEntityClass());
+        for (int columnIndex = 0; columnIndex < portal.getColumns().size(); columnIndex++) {
+            SysPortalColumn column = portal.getColumns().get(columnIndex);
+            String value = data.get(columnIndex);
+            if (FuncUtil.isNotEmpty(value)) {
+                Class<?> clazz = null;
+                Object result;
+                String field = column.getProperty();
+                try {
+                    switch (DictEnumUtil.getEnumByValue(column.getFieldType(), PortalFieldDict.class)) {
+                        case ENUM:
+                            clazz = ReflectionUtil.getField(entity, field).getType();
+                            result = dictCacheService.getDictByLabel(column.getReference(), value).getDictValue();
+                            break;
+                        case ENTITY:
+                            field = column.getDbField();
+                            clazz = ReflectionUtil.getField(entity, field).getType();
+                            result = parseReferenceEntity(column, entityCache, value);
+                            break;
+                        case DATETIME:
+                            result = DateUtil.formatDate(value, DateUtil.DATE_TIME_NORMAL);
+                            break;
+                        case DATE:
+                            result = DateUtil.formatDate(value, DateUtil.DATE);
+                            break;
+                        default:
+                            clazz = ReflectionUtil.getField(entity, field).getType();
+                            result = value;
+                            break;
+                    }
+                    if (FuncUtil.isNotEmpty(clazz)) {
+                        result = JsonUtil.readJson(result, clazz);
+                    }
+                    ReflectionUtil.setValue(entity, field, result);
+                } catch (Exception e) {
+                    log.error("", e);
+                }
+            } else {
+                Validator.assertFalse(StringUtil.convertSwitch(column.getRequired()), ErrCodeSys.SYS_ERR_MSG,
+                        "字段[" + column.getDisplayName() + "]必填");
+            }
+
+        }
+        return entity;
+    }
+
+    @SneakyThrows
+    protected Object parseReferenceEntity(SysPortalColumn column, Map<String, Map<String, Object>> entityCache,
+                                          String entityName) {
+        SysPortal entityPortal = sysPortalService.getByName(column.getReference());
+        if (FuncUtil.isEmpty(entityCache.get(column.getReference()))) {
+            entityCache.put(column.getReference(), new HashMap(16));
+        }
+        Object result = entityCache.get(column.getReference()).get(entityName);
+        if (FuncUtil.isEmpty(result)) {
+            AdminControllerInf bean = (AdminControllerInf) BeanUtil.getBean(Class.forName(entityPortal.getBean()));
+            Validator.assertNotNull(bean, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
+            AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(), AdvancedQuery.class);
+            AdvancedQueryReq req = new AdvancedQueryReq();
+            req.setCondition(entityCondition);
+            AdvancedQuery query = new AdvancedQuery(entityPortal.getNameColumn(), entityName);
+            mergeQuery(req, query);
+            Page page = bean.advancedQuery(req);
+            Validator.assertTrue(page.getRecords().size() == 1, ErrCodeSys.SYS_ERR_MSG, "匹配实体数据失败");
+            result = ReflectionUtil.getValue(page.getRecords().get(0), column.getEntityField(), Object.class);
+            entityCache.get(column.getReference()).put(entityName, result);
+        }
+        return result;
+    }
+
+    protected void mergeQuery(AdvancedQueryReq req, AdvancedQuery condition) {
+        AdvancedQuery mergedQuery = new AdvancedQuery();
+        mergedQuery.setAndOr(SqlConstant.AND);
+        mergedQuery.getConditionList().add(condition);
+        if (FuncUtil.isNotEmpty(req.getCondition())) {
+            mergedQuery.getConditionList().add(req.getCondition());
+        }
+        req.setCondition(mergedQuery);
     }
 
     @Override
@@ -269,89 +374,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         for (ENTITY entity : entityList) {
             afterUpdate(entity);
         }
-    }
-
-    @Override
-    public ENTITY parseEntity(PortalWithColumnsRes portal, Map<Integer, String> data,
-                              Map<String, Map<String, Object>> entityCache) {
-        ENTITY entity = ReflectionUtil.newInstance(getEntityClass());
-        for (int columnIndex = 0; columnIndex < portal.getColumns().size(); columnIndex++) {
-            SysPortalColumn column = portal.getColumns().get(columnIndex);
-            String value = data.get(columnIndex);
-            if (FuncUtil.isNotEmpty(value)) {
-                Class<?> clazz = null;
-                Object result;
-                String field = column.getProperty();
-                try {
-                    switch (DictEnumUtil.getEnumByValue(column.getFieldType(), PortalFieldDict.class)) {
-                        case ENUM:
-                            clazz = ReflectionUtil.getField(entity, field).getType();
-                            result = dictCacheService.getDictByLabel(column.getReference(), value).getDictValue();
-                            break;
-                        case ENTITY:
-                            field = column.getDbField();
-                            clazz = ReflectionUtil.getField(entity, field).getType();
-                            result = parseReferenceEntity(column, entityCache, value);
-                            break;
-                        case DATETIME:
-                            result = DateUtil.formatDate(value, DateUtil.DATE_TIME_NORMAL);
-                            break;
-                        case DATE:
-                            result = DateUtil.formatDate(value, DateUtil.DATE);
-                            break;
-                        default:
-                            clazz = ReflectionUtil.getField(entity, field).getType();
-                            result = value;
-                            break;
-                    }
-                    if (FuncUtil.isNotEmpty(clazz)) {
-                        result = JsonUtil.readJson(result, clazz);
-                    }
-                    ReflectionUtil.setValue(entity, field, result);
-                } catch (Exception e) {
-                    log.error("", e);
-                }
-            } else {
-                Validator.assertFalse(StringUtil.convertSwitch(column.getRequired()), ErrCodeSys.SYS_ERR_MSG,
-                        "字段[" + column.getDisplayName() + "]必填");
-            }
-
-        }
-        return entity;
-    }
-
-    @SneakyThrows
-    private Object parseReferenceEntity(SysPortalColumn column, Map<String, Map<String, Object>> entityCache,
-                                        String entityName) {
-        SysPortal entityPortal = sysPortalService.getByName(column.getReference());
-        if (FuncUtil.isEmpty(entityCache.get(column.getReference()))) {
-            entityCache.put(column.getReference(), new HashMap(16));
-        }
-        Object result = entityCache.get(column.getReference()).get(entityName);
-        if (FuncUtil.isEmpty(result)) {
-            AdminControllerInf bean = (AdminControllerInf) BeanUtil.getBean(Class.forName(entityPortal.getBean()));
-            Validator.assertNotNull(bean, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
-            AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(), AdvancedQuery.class);
-            AdvancedQueryReq req = new AdvancedQueryReq();
-            req.setCondition(entityCondition);
-            AdvancedQuery query = new AdvancedQuery(entityPortal.getNameColumn(), entityName);
-            mergeQuery(req, query);
-            Page page = bean.advancedQuery(req);
-            Validator.assertTrue(page.getRecords().size() == 1, ErrCodeSys.SYS_ERR_MSG, "匹配实体数据失败");
-            result = ReflectionUtil.getValue(page.getRecords().get(0), column.getEntityField(), Object.class);
-            entityCache.get(column.getReference()).put(entityName, result);
-        }
-        return result;
-    }
-
-    protected void mergeQuery(AdvancedQueryReq req, AdvancedQuery condition) {
-        AdvancedQuery mergedQuery = new AdvancedQuery();
-        mergedQuery.setAndOr(SqlConstant.AND);
-        mergedQuery.getConditionList().add(condition);
-        if (FuncUtil.isNotEmpty(req.getCondition())) {
-            mergedQuery.getConditionList().add(req.getCondition());
-        }
-        req.setCondition(mergedQuery);
     }
 
     @Override

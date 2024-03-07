@@ -10,7 +10,7 @@ import java.util.Map;
  * @author Sharp
  * @since 2024/02/15 22:56
  */
-public interface PortalExcelUpdateHandlerInf<ENTITY> extends PortalExcelHandlerInf<ENTITY> {
+public interface PortalExcelUpdateHandlerInf<ENTITY> extends PortalExcelHandlerInf {
 
     /**
      * 预处理修改数据

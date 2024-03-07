@@ -12,7 +12,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Title: PortalExcelHandlerInf
@@ -21,7 +20,7 @@ import java.util.Map;
  * @author Sharp
  * @since 2024/02/15 22:56
  */
-public interface PortalExcelHandlerInf<ENTITY> {
+public interface PortalExcelHandlerInf {
 
     /**
      * 导出excel模版
@@ -52,17 +51,6 @@ public interface PortalExcelHandlerInf<ENTITY> {
         }
         return head;
     }
-
-    /**
-     * 当前行数据转换成entity
-     *
-     * @param portal      配置名称
-     * @param data        当前行数据
-     * @param entityCache 关联数据缓存
-     * @return
-     */
-    ENTITY parseEntity(PortalWithColumnsRes portal, Map<Integer, String> data,
-                       Map<String, Map<String, Object>> entityCache);
 
 
 }

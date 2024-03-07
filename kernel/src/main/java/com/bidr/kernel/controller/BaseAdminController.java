@@ -153,7 +153,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @ApiOperation("高级查询数据")
     @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
     public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
-        Page<ENTITY> result = queryByAdvancedReq(req);
+        Page<VO> result = queryByAdvancedReq(req);
         return Resp.convert(result, getVoClass());
     }
 
@@ -180,7 +180,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         HttpUtil.export(request, response, contentType, "UTF-8", fileName, exportBytes);
     }
 
-    protected Page<ENTITY> queryByAdvancedReq(AdvancedQueryReq req) {
+    protected Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -189,9 +189,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
-            wrapper.setEntityClass(getEntityClass());
         }
-        Page<ENTITY> result = getRepo().select(req, aliasMap, wrapper, getVoClass());
+        Page<VO> result = getRepo().select(req, aliasMap, wrapper, getVoClass());
         return result;
     }
 

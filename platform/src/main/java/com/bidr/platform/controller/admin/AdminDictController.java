@@ -6,6 +6,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.platform.config.portal.AdminPortal;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
@@ -29,6 +30,7 @@ import java.util.List;
  * @since 2023/03/28 08:49
  */
 @Api(tags = "系统管理 - 字典管理")
+@AdminPortal
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dict/item/admin"})

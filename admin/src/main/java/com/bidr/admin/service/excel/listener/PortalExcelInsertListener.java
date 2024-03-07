@@ -1,6 +1,7 @@
 package com.bidr.admin.service.excel.listener;
 
 import com.bidr.admin.service.excel.handler.PortalExcelInsertHandlerInf;
+import com.bidr.admin.service.excel.handler.PortalExcelParseHandlerInf;
 import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import lombok.Getter;
@@ -21,21 +22,19 @@ import java.util.Map;
 @Slf4j
 @Getter
 @SuppressWarnings("rawtypes, unchecked")
-public class PortalExcelInsertListener extends BasePortalExcelListener {
+public class PortalExcelInsertListener<EXCEL> extends BasePortalExcelListener<EXCEL> {
     private final PortalExcelInsertHandlerInf portalExcelHandlerInf;
 
     public PortalExcelInsertListener(PortalWithColumnsRes portal, PortalExcelUploadProgressInf uploadProgress,
-                                     PortalExcelInsertHandlerInf portalExcelInsertHandlerInf,
-                                     DataSourceTransactionManager dataSourceTransactionManager,
-                                     TransactionDefinition transactionDefinition) {
-        super(portal, uploadProgress, dataSourceTransactionManager, transactionDefinition);
+                                     PortalExcelParseHandlerInf portalExcelParseHandlerInf,
+                                     PortalExcelInsertHandlerInf portalExcelInsertHandlerInf) {
+        super(portal, portalExcelParseHandlerInf, uploadProgress);
         this.portalExcelHandlerInf = portalExcelInsertHandlerInf;
     }
 
     @Override
-    protected Object parse(PortalWithColumnsRes portal, Map<Integer, String> data,
-                           Map<String, Map<String, Object>> entityCache) {
-        return portalExcelHandlerInf.parseEntity(portal, data, entityCache);
+    protected Object parse(PortalWithColumnsRes portal, EXCEL data, Map<String, EXCEL> entityCache) {
+        return portalExcelParseHandlerInf.parseEntity(portal, data, entityCache);
     }
 
     @Override

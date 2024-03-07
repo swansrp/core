@@ -19,7 +19,7 @@ import lombok.Data;
 /**
  * 字典类型表
  */
-@ApiModel(value = "字典类型表")
+@ApiModel(description = "字典类型表")
 @Data
 @TableName(value = "sys_dict_type")
 public class SysDictType {

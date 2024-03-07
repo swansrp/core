@@ -32,9 +32,9 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(QueryConditionReq req);
 
-    Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<?> vo);
+    <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo);
 
-    Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper, Class<?> vo);
+    <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

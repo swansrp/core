@@ -4,13 +4,16 @@ import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalColumnService;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.platform.config.portal.AdminPortal;
+import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -54,15 +57,18 @@ public class PortalConfig implements CommandLineRunner {
     public void run(String... args) {
         Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> portalControllerList = reflections.getTypesAnnotatedWith(AdminPortal.class);
-        Map<Class<?>, List<Field>> map;
+        Map<Class<?>, Collection<Field>> map;
         if (FuncUtil.isNotEmpty(portalControllerList)) {
             map = new LinkedHashMap<>(portalControllerList.size());
-            for (Class<?> portalControllerClass : portalControllerList) {
+            TreeSet<Class<?>> portalControllerSet = new TreeSet<>(
+                    (o1, o2) -> StringUtils.compare(o1.getName(), o2.getName()));
+            portalControllerSet.addAll(portalControllerList);
+            for (Class<?> portalControllerClass : portalControllerSet) {
                 if (AdminControllerInf.class.isAssignableFrom(portalControllerClass)) {
                     Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 0);
                     Class<?> voClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 1);
                     if (FuncUtil.isNotEmpty(entityClass) && FuncUtil.isNotEmpty(voClass)) {
-                        map.put(portalControllerClass, ReflectionUtil.getFields(voClass));
+                        map.put(portalControllerClass, ReflectionUtil.getFieldMap(voClass).values());
                     }
                 }
             }
@@ -71,18 +77,26 @@ public class PortalConfig implements CommandLineRunner {
 
     }
 
-    private void refreshPortalConfig(Map<Class<?>, List<Field>> map) {
-        for (Map.Entry<Class<?>, List<Field>> entry : map.entrySet()) {
+    private void refreshPortalConfig(Map<Class<?>, Collection<Field>> map) {
+        for (Map.Entry<Class<?>, Collection<Field>> entry : map.entrySet()) {
             Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(entry.getKey(), 0);
             AdminPortal adminPortal = entry.getKey().getAnnotation(AdminPortal.class);
+            ApiModel apiModel = entityClass.getAnnotation(ApiModel.class);
             List<SysPortal> portalList = sysPortalService.getByBeanName(entry.getKey().getName());
             if (FuncUtil.isEmpty(portalList)) {
                 SysPortal portal = new SysPortal();
                 portal.setBean(entry.getKey().getName());
                 if (FuncUtil.isNotEmpty(adminPortal.value())) {
                     portal.setName(adminPortal.value());
+                } else {
+                    portal.setName(entityClass.getSimpleName());
                 }
-                portal.setDisplayName(entityClass.getSimpleName());
+                if (FuncUtil.isNotEmpty(apiModel)) {
+                    portal.setDisplayName(apiModel.description());
+                } else {
+                    portal.setDisplayName(entityClass.getSimpleName());
+                }
+                portal.setDisplayName(portal.getDisplayName() + "(默认)");
                 portal.setUrl(entityClass.getSimpleName());
                 sysPortalService.save(portal);
                 portalList.add(portal);
@@ -112,7 +126,13 @@ public class PortalConfig implements CommandLineRunner {
                             } else {
                                 column.setFieldType(portalFieldDict.getValue());
                             }
-                            sysPortalColumnService.insert(column);
+                            PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+                            if (FuncUtil.isNotEmpty(portalNoFilterField)) {
+                                column.setFilterAble(CommonConst.NO);
+                            } else {
+                                column.setFilterAble(CommonConst.YES);
+                            }
+                            sysPortalColumnService.insertOrUpdate(column);
                         } else {
                             propertyListSaved.add(field.getName());
                         }

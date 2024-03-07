@@ -21,6 +21,13 @@ public @interface PortalEntityField {
     Class<?> entity();
 
     /**
+     * 表别名
+     *
+     * @return
+     */
+    String alias() default "";
+
+    /**
      * 对应字段名
      *
      * @return

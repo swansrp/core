@@ -27,7 +27,7 @@ import javax.annotation.Resource;
 @AdminPortal
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = {"/web/config/admin", "/web/portal/sysConfig"})
+@RequestMapping(path = {"/web/config/admin"})
 public class AdminConfigController extends BaseAdminController<SysConfig, SysConfigRes> {
 
     @Resource

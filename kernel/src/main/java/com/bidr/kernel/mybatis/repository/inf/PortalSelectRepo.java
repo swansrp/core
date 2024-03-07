@@ -293,7 +293,7 @@ public interface PortalSelectRepo<T> {
                 columnName = aliasMap.get(condition.getProperty());
             }
             if (FuncUtil.isEmpty(columnName)) {
-                columnName = getColumnName(condition.getProperty(), entityClass);
+                columnName = "t." + getColumnName(condition.getProperty(), entityClass);
             }
             return columnName;
         }

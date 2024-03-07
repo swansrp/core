@@ -78,7 +78,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public boolean insert(Collection<T> entity) {
-        return super.updateBatchByMultiId(entity);
+        return super.saveBatch(entity);
     }
 
     @Override
@@ -115,15 +115,15 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<?> vo) {
+    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo) {
         return select(req, aliasMap, null, vo);
     }
 
     @Override
-    public Page<T> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
-                          Class<?> vo) {
+    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
+                                Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<>(entityClass);
+            wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
         wrapper.selectAll(getEntityClass(), "t");
         List<String> entityFieldList = getFieldSql("t");
