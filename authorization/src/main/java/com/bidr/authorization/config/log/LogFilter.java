@@ -71,6 +71,7 @@ public class LogFilter extends OncePerRequestFilter {
             MDC.put("URI", request.getRequestURI());
             MDC.put("method", request.getMethod());
             MDC.put("status", String.valueOf(response.getStatus()));
+            MDC.put("IP", HttpUtil.getRemoteIp(request));
 
             if (!isMultipartContent) {
                 wrappedRequest = new MultiReadHttpServletRequest(request);
@@ -107,12 +108,7 @@ public class LogFilter extends OncePerRequestFilter {
 
 
         } finally {
-            MDC.remove("logToken");
-            MDC.remove("reqToken");
-            MDC.remove("URI");
-            MDC.remove("totalTime");
-            MDC.remove("method");
-            MDC.remove("status");
+            MdcConfig.destroyMdc();
         }
     }
 

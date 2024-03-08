@@ -2,12 +2,12 @@ package com.bidr.authorization.config.async;
 
 import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.bo.token.TokenInfo;
+import com.bidr.authorization.config.log.MdcConfig;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TokenHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
@@ -17,6 +17,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -69,21 +70,37 @@ public class AsyncContextTreadPoolConfig implements AsyncConfigurer {
         @Override
         public Runnable decorate(Runnable runnable) {
             // 复制线程上下文信息
-            RequestAttributes context = RequestContextHolder.currentRequestAttributes();
-            AccountInfo accountInfo = AccountContext.get();
-            TokenInfo tokenInfo = TokenHolder.get();
+            Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
             return () -> {
                 try {
-                    RequestContextHolder.setRequestAttributes(context);
-                    AccountContext.set(accountInfo);
-                    TokenHolder.set(tokenInfo);
+                    MdcConfig.forkLogInfo(copyOfContextMap);
+                    forkLocalTreadInfo();
                     runnable.run();
                 } finally {
-                    RequestContextHolder.resetRequestAttributes();
-                    AccountContext.remove();
-                    TokenHolder.remove();
+                    destroyLocalTreadInfo();
+                    MdcConfig.destroyMdc();
                 }
             };
+        }
+
+        private void forkLocalTreadInfo() {
+            try {
+                RequestAttributes context = RequestContextHolder.currentRequestAttributes();
+                RequestContextHolder.setRequestAttributes(context);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            AccountInfo accountInfo = AccountContext.get();
+            TokenInfo tokenInfo = TokenHolder.get();
+
+            AccountContext.set(accountInfo);
+            TokenHolder.set(tokenInfo);
+        }
+
+        private void destroyLocalTreadInfo() {
+            RequestContextHolder.resetRequestAttributes();
+            AccountContext.remove();
+            TokenHolder.remove();
         }
     }
 }
