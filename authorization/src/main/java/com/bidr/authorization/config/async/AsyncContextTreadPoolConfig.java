@@ -71,30 +71,21 @@ public class AsyncContextTreadPoolConfig implements AsyncConfigurer {
         public Runnable decorate(Runnable runnable) {
             // 复制线程上下文信息
             Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
+            RequestAttributes context = RequestContextHolder.currentRequestAttributes();
+            AccountInfo accountInfo = AccountContext.get();
+            TokenInfo tokenInfo = TokenHolder.get();
             return () -> {
                 try {
                     MdcConfig.forkLogInfo(copyOfContextMap);
-                    forkLocalTreadInfo();
+                    RequestContextHolder.setRequestAttributes(context);
+                    AccountContext.set(accountInfo);
+                    TokenHolder.set(tokenInfo);
                     runnable.run();
                 } finally {
                     destroyLocalTreadInfo();
                     MdcConfig.destroyMdc();
                 }
             };
-        }
-
-        private void forkLocalTreadInfo() {
-            try {
-                RequestAttributes context = RequestContextHolder.currentRequestAttributes();
-                RequestContextHolder.setRequestAttributes(context);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            AccountInfo accountInfo = AccountContext.get();
-            TokenInfo tokenInfo = TokenHolder.get();
-
-            AccountContext.set(accountInfo);
-            TokenHolder.set(tokenInfo);
         }
 
         private void destroyLocalTreadInfo() {
