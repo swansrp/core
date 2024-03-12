@@ -4,6 +4,7 @@ import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalColumnService;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.admin.vo.*;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -33,25 +35,29 @@ import java.util.List;
 public class PortalService {
     private final SysPortalService sysPortalService;
     private final SysPortalColumnService sysPortalColumnService;
+    private final PortalConfigService portalConfigService;
 
     public PortalWithColumnsRes getPortalWithColumnsConfig(PortalReq req) {
-        return getPortalWithColumnsConfig(req.getName());
+        if (FuncUtil.isEmpty(req.getRoleId())) {
+            req.setRoleId(PortalConfigContext.getPortalConfigRoleId());
+        }
+        return getPortalWithColumnsConfig(req.getName(), req.getRoleId());
     }
 
-    public PortalWithColumnsRes getPortalWithColumnsConfig(String name) {
-        SysPortal portal = sysPortalService.getByName(name);
+    public PortalWithColumnsRes getPortalWithColumnsConfig(String name, Long roleId) {
+        SysPortal portal = sysPortalService.getByName(name, roleId);
         Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         return Resp.convert(portal, PortalWithColumnsRes.class);
     }
 
     public PortalUpdateReq getPortalConfig(PortalReq req) {
-        SysPortal portal = sysPortalService.getByName(req.getName());
+        SysPortal portal = sysPortalService.getByName(req.getName(), req.getRoleId());
         Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         return Resp.convert(portal, PortalUpdateReq.class);
     }
 
     public List<KeyValueResVO> getPortalList(PortalReq req) {
-        return sysPortalService.getPortalList(req.getName());
+        return sysPortalService.getPortalList(req.getName(), req.getRoleId());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -85,35 +91,46 @@ public class PortalService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deletePortalConfig(IdReqVO req) {
-        sysPortalService.deleteById(req.getId());
-        sysPortalColumnService.deleteByPortalId(req.getId());
+        SysPortal sysPortal = sysPortalService.selectById(req.getId());
+        List<SysPortal> portalList = sysPortalService.getByBeanName(sysPortal.getBean());
+        for (SysPortal portal : portalList) {
+            sysPortalService.deleteById(portal.getId());
+            sysPortalColumnService.deleteByPortalId(req.getId());
+        }
+
     }
 
     public void validatePortalExisted(PortalReq req) {
-        Validator.assertFalse(sysPortalService.existedByName(req.getName()), ErrCodeSys.SYS_ERR_MSG,
-                "表格编码已存在,请删除原有表格或者使用其他编码");
+        Validator.assertFalse(sysPortalService.existedByName(req.getName(), PortalConfigService.DEFAULT_CONFIG_ROLE_ID),
+                ErrCodeSys.SYS_ERR_MSG, "表格编码已存在,请删除原有表格或者使用其他编码");
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void copyPortalConfig(PortalCopyReq req) {
-        Validator.assertFalse(sysPortalService.existedByName(req.getTargetName()), ErrCodeSys.PA_DATA_HAS_EXIST,
-                "表格编码");
+        Validator.assertFalse(sysPortalService.existedByName(req.getTargetName(), req.getRoleId()),
+                ErrCodeSys.PA_DATA_HAS_EXIST, "表格编码");
         SysPortal sourcePortal = sysPortalService.getById(req.getSourceConfigId());
         Validator.assertNotNull(sourcePortal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         PortalWithColumnsRes sourcePortalWithColumn = Resp.convert(sourcePortal, PortalWithColumnsRes.class);
-        SysPortal targetPortal = ReflectionUtil.copy(sourcePortal, SysPortal.class);
-        targetPortal.setId(null);
-        targetPortal.setName(req.getTargetName());
-        targetPortal.setDisplayName(req.getTargetDisplayName());
-        sysPortalService.insert(targetPortal);
-        List<SysPortalColumn> columnList = new ArrayList<>();
-        if (FuncUtil.isNotEmpty(sourcePortalWithColumn.getColumns())) {
-            for (SysPortalColumn column : sourcePortalWithColumn.getColumns()) {
-                column.setId(null);
-                column.setPortalId(targetPortal.getId());
-                columnList.add(column);
+        Collection<Long> bindRoleIdList = portalConfigService.getBindRoleIdList();
+        for (Long roleId : bindRoleIdList) {
+            SysPortal targetPortal = ReflectionUtil.copy(sourcePortal, SysPortal.class);
+            targetPortal.setRoleId(roleId);
+            targetPortal.setId(null);
+            targetPortal.setName(req.getTargetName());
+            targetPortal.setDisplayName(req.getTargetDisplayName());
+            sysPortalService.insert(targetPortal);
+            List<SysPortalColumn> columnList = new ArrayList<>();
+            if (FuncUtil.isNotEmpty(sourcePortalWithColumn.getColumns())) {
+                for (SysPortalColumn column : sourcePortalWithColumn.getColumns()) {
+                    column.setId(null);
+                    column.setPortalId(targetPortal.getId());
+                    column.setRoleId(roleId);
+                    columnList.add(column);
+                }
             }
+            sysPortalColumnService.insert(columnList);
         }
-        sysPortalColumnService.insert(columnList);
+
     }
 }

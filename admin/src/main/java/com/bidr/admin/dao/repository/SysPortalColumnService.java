@@ -19,10 +19,11 @@ import java.util.List;
 @Service
 public class SysPortalColumnService extends BaseSqlRepo<SysPortalColumnMapper, SysPortalColumn> {
 
-    public boolean existed(Long portalId, String property) {
+    public boolean existed(Long portalId, String property, Long roleId) {
         LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper();
         wrapper.eq(SysPortalColumn::getPortalId, portalId);
         wrapper.eq(SysPortalColumn::getProperty, property);
+        wrapper.eq(SysPortalColumn::getRoleId, roleId);
         return existed(wrapper);
     }
 
@@ -32,10 +33,17 @@ public class SysPortalColumnService extends BaseSqlRepo<SysPortalColumnMapper, S
         delete(wrapper);
     }
 
-    public List<SysPortalColumn> getPropertyListByPortalId(Long portalId) {
+    public List<SysPortalColumn> getPropertyListByPortalId(Long portalId, Long roleId) {
         LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper();
         wrapper.select(SysPortalColumn::getId, SysPortalColumn::getProperty);
         wrapper.eq(SysPortalColumn::getPortalId, portalId);
+        wrapper.eq(SysPortalColumn::getRoleId, roleId);
         return select(wrapper);
+    }
+
+    public boolean deleteByRoleId(Long roleId) {
+        LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper()
+                .eq(SysPortalColumn::getRoleId, roleId);
+        return super.delete(wrapper);
     }
 }

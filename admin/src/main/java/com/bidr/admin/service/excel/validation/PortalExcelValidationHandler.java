@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
@@ -78,7 +79,7 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
     private List<String> getEntityConstraint(SysPortalColumn column) throws ClassNotFoundException {
         List<String> constraint;
         SysPortal entityPortal = BeanUtil.getBean(SysPortalService.class)
-                .getByName(column.getReference());
+                .getByName(column.getReference(),  PortalConfigContext.getPortalConfigRoleId());
         AdvancedQueryReq req = new AdvancedQueryReq();
         if (FuncUtil.isNotEmpty(column.getEntityCondition())) {
             AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(),

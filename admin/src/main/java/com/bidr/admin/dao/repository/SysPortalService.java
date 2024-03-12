@@ -24,8 +24,9 @@ import java.util.List;
 @Service
 public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
 
-    public SysPortal getByName(String name) {
-        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name);
+    public SysPortal getByName(String name, Long roleId) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name)
+                .eq(FuncUtil.isNotEmpty(roleId), SysPortal::getRoleId, roleId);
         return super.selectOne(wrapper);
     }
 
@@ -34,25 +35,29 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         return super.select(wrapper);
     }
 
-    public List<KeyValueResVO> getPortalList(String name) {
+    public List<KeyValueResVO> getPortalList(String name, Long roleId) {
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper<>();
         wrapper.selectAs(SysPortal::getDisplayName, KeyValueResVO::getLabel);
         wrapper.selectAs(SysPortal::getName, KeyValueResVO::getValue);
+        wrapper.eq(SysPortal::getRoleId, roleId);
         wrapper.like(FuncUtil.isNotEmpty(name), SysPortal::getName, name);
         wrapper.or().like(FuncUtil.isNotEmpty(name), SysPortal::getDisplayName, name);
         wrapper.orderByAsc(SysPortal::getDisplayName);
         return selectJoinList(KeyValueResVO.class, wrapper);
     }
 
-    public Boolean existedByName(String name) {
-        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name);
+    public Boolean existedByName(String name, Long roleId) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name)
+                .eq(SysPortal::getRoleId, roleId);
         return super.existed(wrapper);
     }
 
-    public PortalWithColumnsRes getImportPortal(String portalName) {
+    public PortalWithColumnsRes getImportPortal(String portalName, Long roleId) {
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper();
         wrapper.selectCollection(SysPortalColumn.class, PortalWithColumnsRes::getColumns);
         wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);
+        wrapper.eq(SysPortal::getRoleId, roleId);
+        wrapper.eq(SysPortalColumn::getRoleId, roleId);
         wrapper.eq(SysPortalColumn::getEnable, CommonConst.YES);
         wrapper.eq(SysPortalColumn::getAddShow, CommonConst.YES);
         wrapper.eq(SysPortal::getName, portalName);
@@ -60,14 +65,32 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         return selectJoinOne(PortalWithColumnsRes.class, wrapper);
     }
 
-    public PortalWithColumnsRes getExportPortal(String portalName) {
+    public PortalWithColumnsRes getExportPortal(String portalName, Long roleId) {
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper();
         wrapper.selectCollection(SysPortalColumn.class, PortalWithColumnsRes::getColumns);
         wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);
+        wrapper.eq(SysPortal::getRoleId, roleId);
+        wrapper.eq(SysPortalColumn::getRoleId, roleId);
         wrapper.eq(SysPortalColumn::getEnable, CommonConst.YES);
         wrapper.eq(SysPortalColumn::getDetailShow, CommonConst.YES);
         wrapper.eq(SysPortal::getName, portalName);
         wrapper.orderByAsc(SysPortalColumn::getDisplayOrder);
         return selectJoinOne(PortalWithColumnsRes.class, wrapper);
+    }
+
+    public List<PortalWithColumnsRes> getPortalWithColumnsByRoleId(Long roleId) {
+        MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper();
+        wrapper.selectCollection(SysPortalColumn.class, PortalWithColumnsRes::getColumns);
+        wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);
+        wrapper.eq(SysPortal::getRoleId, roleId);
+        wrapper.eq(SysPortalColumn::getRoleId, roleId);
+        wrapper.orderByAsc(SysPortalColumn::getDisplayOrder);
+        return selectJoinList(PortalWithColumnsRes.class, wrapper);
+    }
+
+    public boolean deleteByRoleId(Long roleId) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper()
+                .eq(SysPortal::getRoleId, roleId);
+        return super.delete(wrapper);
     }
 }

@@ -8,7 +8,7 @@ import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/02/13 17:09
+ * @since 2024/03/09 22:17
  */
 public interface SysPortalMapper extends MyBaseMapper<SysPortal> {
 }

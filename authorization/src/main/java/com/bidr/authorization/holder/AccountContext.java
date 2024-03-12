@@ -8,6 +8,7 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: AccountContextHolder
@@ -32,6 +33,10 @@ public class AccountContext {
 
     public static void removeExtraData(String key) {
         ACCOUNT_INFO_HOLDER.get().getExtraData().remove(key);
+    }
+
+    public static Map<String, Object> getExtraData() {
+        return ACCOUNT_INFO_HOLDER.get().getExtraData();
     }
 
     public static Object getExtraData(String key) {

@@ -14,6 +14,10 @@ import javax.validation.constraints.NotEmpty;
  */
 @Data
 public class PortalCopyReq {
+    @NotEmpty(message = "所属角色不能为空")
+    @ApiModelProperty("所属角色")
+    private Long roleId;
+
     @NotEmpty(message = "源表格id不能为空")
     @ApiModelProperty("源表格id")
     private Long sourceConfigId;

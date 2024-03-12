@@ -16,7 +16,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/02/13 17:09
+ * @since 2024/03/09 22:17
  */
 
 /**
@@ -33,6 +33,14 @@ public class SysPortal {
     @ApiModelProperty(value = "id")
     @NotNull(message = "id不能为null")
     private Long id;
+
+    /**
+     * 对应角色id
+     */
+    @TableField(value = "role_id")
+    @ApiModelProperty(value = "对应角色id")
+    @NotNull(message = "对应角色id不能为null")
+    private Long roleId;
 
     /**
      * 英文名
@@ -66,7 +74,7 @@ public class SysPortal {
      */
     @TableField(value = "bean")
     @ApiModelProperty(value = "接口bean")
-    @Size(max = 50, message = "接口bean最大长度要小于 50")
+    @Size(max = 200, message = "接口bean最大长度要小于 200")
     @NotBlank(message = "接口bean不能为空")
     private String bean;
 

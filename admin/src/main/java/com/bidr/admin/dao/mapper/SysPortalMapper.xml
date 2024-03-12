@@ -5,10 +5,11 @@
     <!--@mbg.generated-->
     <!--@Table sys_portal-->
     <id column="id" jdbcType="BIGINT" property="id" />
-    <result column="db_entity" jdbcType="VARCHAR" property="dbEntity" />
+    <result column="role_id" jdbcType="BIGINT" property="roleId" />
     <result column="name" jdbcType="VARCHAR" property="name" />
     <result column="display_name" jdbcType="VARCHAR" property="displayName" />
     <result column="url" jdbcType="VARCHAR" property="url" />
+    <result column="bean" jdbcType="VARCHAR" property="bean" />
     <result column="size" jdbcType="VARCHAR" property="size" />
     <result column="read_only" jdbcType="VARCHAR" property="readOnly" />
     <result column="summary" jdbcType="VARCHAR" property="summary" />
@@ -27,8 +28,8 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, db_entity, `name`, display_name, url, `size`, read_only, summary, id_column,
-    pid_column, tree_drag, name_column, order_column, table_drag, add_width, edit_width,
+    id, role_id, `name`, display_name, url, bean, `size`, read_only, summary, id_column, 
+    pid_column, tree_drag, name_column, order_column, table_drag, add_width, edit_width, 
     detail_width, description_count, export_able, import_able
   </sql>
 </mapper>

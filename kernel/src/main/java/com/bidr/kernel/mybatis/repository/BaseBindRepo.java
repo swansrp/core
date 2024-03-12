@@ -89,7 +89,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
         wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
         attachRepo().parseQueryCondition(req, wrapper);
-        wrapper.and(w -> w.ne(bindEntityId(), req.getEntityId()).or(ww -> ww.isNull(bindEntityId())));
+        wrapper.and(w -> w.isNull(bindEntityId()));
         attachRepo().parseSort(req, wrapper);
         return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
                 getAttachClass(), wrapper);
@@ -159,7 +159,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
         wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
         attachRepo().parseAdvancedQuery(req, null, wrapper);
-        wrapper.and(w -> w.ne(bindEntityId(), req.getEntityId()).or(ww -> ww.isNull(bindEntityId())));
+        wrapper.and(w -> w.isNull(bindEntityId()));
         attachRepo().parseSort(req, wrapper);
         return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), true),
                 getAttachClass(), wrapper);

@@ -35,6 +35,7 @@ public class AdminRoleController extends BaseAdminController<AcRole, RoleRes> {
     @ApiOperation(value = "获取角色列表", notes = "全部")
     @RequestMapping(value = "/query", method = RequestMethod.POST)
     public Page<RoleRes> queryRole(@RequestBody QueryRoleReq req) {
+        req.setPageSize(30000L);
         return adminRoleService.queryRole(req);
     }
 

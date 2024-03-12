@@ -9,6 +9,7 @@ import com.bidr.admin.constant.dict.UploadProgressStep;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.admin.service.excel.handler.PortalExcelInsertHandlerInf;
 import com.bidr.admin.service.excel.handler.PortalExcelParseHandlerInf;
 import com.bidr.admin.service.excel.handler.PortalExcelTemplateHandlerInf;
@@ -127,7 +128,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @SneakyThrows
     @Override
     public byte[] export(List<VO> dataList, String portalName) {
-        PortalWithColumnsRes portal = sysPortalService.getExportPortal(portalName);
+        PortalWithColumnsRes portal = sysPortalService.getExportPortal(portalName,
+                PortalConfigContext.getPortalConfigRoleId());
         ExcelExportBO bo = new ExcelExportBO();
         bo.setTitle(portal.getDisplayName());
         if (FuncUtil.isNotEmpty(dataList)) {
@@ -170,7 +172,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public byte[] templateExport(String portalName) {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName);
+        PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName,
+                PortalConfigContext.getPortalConfigRoleId());
         templateExcel(os, portal);
         return os.toByteArray();
     }
@@ -188,7 +191,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
         try {
             startUploadProgress(0);
-            PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName);
+            PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName,
+                    PortalConfigContext.getPortalConfigRoleId());
             handleExcelInsert(is, portal);
             dataSourceTransactionManager.commit(transactionStatus);
         } catch (Exception e) {
@@ -205,7 +209,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         validateReadExcel();
         try {
             startUploadProgress(0);
-            PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName);
+            PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName,
+                    PortalConfigContext.getPortalConfigRoleId());
             handleExcelUpdate(is, portal);
         } catch (Exception e) {
             log.error("读取excel更新数据失败", e);
@@ -293,7 +298,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @SneakyThrows
     protected Object parseReferenceEntity(SysPortalColumn column, Map<String, Map<String, Object>> entityCache,
                                           String entityName) {
-        SysPortal entityPortal = sysPortalService.getByName(column.getReference());
+        SysPortal entityPortal = sysPortalService.getByName(column.getReference(),
+                PortalConfigContext.getPortalConfigRoleId());
         if (FuncUtil.isEmpty(entityCache.get(column.getReference()))) {
             entityCache.put(column.getReference(), new HashMap(16));
         }

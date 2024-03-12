@@ -7,6 +7,7 @@ package com.bidr.authorization.config.log;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.utils.HttpUtil;
+import com.bidr.kernel.utils.RandomUtil;
 import com.bidr.kernel.utils.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
@@ -44,7 +45,7 @@ public class LogFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String requestId = request.getHeader("X-Request-Id");
         if (!org.springframework.util.StringUtils.hasText(requestId)) {
-            requestId = UUID.randomUUID().toString().replaceAll("-", "").toUpperCase();
+            requestId = RandomUtil.getUUID();
         }
         MultiReadHttpServletRequest wrappedRequest;
         MultiReadHttpServletResponse wrappedResponse;

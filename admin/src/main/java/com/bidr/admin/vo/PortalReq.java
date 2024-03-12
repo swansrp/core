@@ -17,4 +17,7 @@ public class PortalReq {
     @NotEmpty(message = "表格名称不能为空")
     @ApiModelProperty("管理表格名称")
     private String name;
+
+    @ApiModelProperty("对应角色")
+    private Long roleId;
 }

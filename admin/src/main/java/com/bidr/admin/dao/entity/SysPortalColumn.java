@@ -17,7 +17,7 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2024/03/02 01:05
+ * @since 2024/03/09 22:17
  */
 
 /**
@@ -34,6 +34,14 @@ public class SysPortalColumn {
     @ApiModelProperty(value = "id")
     @NotNull(message = "id不能为null")
     private Long id;
+
+    /**
+     * 对应角色id
+     */
+    @TableField(value = "role_id")
+    @ApiModelProperty(value = "对应角色id")
+    @NotNull(message = "对应角色id不能为null")
+    private Long roleId;
 
     /**
      * 表id

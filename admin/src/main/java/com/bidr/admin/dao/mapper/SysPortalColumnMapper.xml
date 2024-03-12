@@ -5,6 +5,7 @@
     <!--@mbg.generated-->
     <!--@Table sys_portal_column-->
     <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="role_id" jdbcType="BIGINT" property="roleId" />
     <result column="portal_id" jdbcType="BIGINT" property="portalId" />
     <result column="property" jdbcType="VARCHAR" property="property" />
     <result column="db_field" jdbcType="VARCHAR" property="dbField" />
@@ -42,9 +43,9 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, portal_id, property, db_field, display_name, field_type, reference, entity_field, 
-    entity_condition, display_order, align, width, fixed, tooltip, `enable`, `show`, 
-    filter_able, sort_able, edit_able, display_group_name, detail_show, detail_size, 
+    id, role_id, portal_id, property, db_field, display_name, field_type, reference, 
+    entity_field, entity_condition, display_order, align, width, fixed, tooltip, `enable`, 
+    `show`, filter_able, sort_able, edit_able, display_group_name, detail_show, detail_size, 
     detail_padding, add_show, add_size, add_padding, add_disabled, edit_show, edit_size, 
     edit_padding, edit_disabled, required, `min`, `max`, default_value
   </sql>

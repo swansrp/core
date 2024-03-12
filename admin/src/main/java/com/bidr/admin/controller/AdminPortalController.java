@@ -1,5 +1,6 @@
 package com.bidr.admin.controller;
 
+import com.bidr.admin.service.PortalConfigService;
 import com.bidr.admin.service.PortalService;
 import com.bidr.admin.vo.*;
 import com.bidr.kernel.config.response.Resp;
@@ -30,6 +31,7 @@ import java.util.List;
 public class AdminPortalController {
 
     private final PortalService portalService;
+    private final PortalConfigService portalConfigService;
 
     @RequestMapping(path = {"/list"}, method = {RequestMethod.GET})
     @ApiOperation(value = "获取管理配置列表")
@@ -82,5 +84,25 @@ public class AdminPortalController {
     public void copyPortalConfig(@RequestBody PortalCopyReq req) {
         portalService.copyPortalConfig(req);
         Resp.notice("复制表格配置成功");
+    }
+
+    @RequestMapping(path = {"/role/bind"}, method = {RequestMethod.POST})
+    @ApiOperation(value = "初始化角色配置")
+    public void bindRole(@RequestBody PortalRoleBindReq req) {
+        portalConfigService.bindRole(req.getRoleId(), req.getTemplateRoleId());
+        Resp.notice("初始化角色配置成功");
+    }
+
+    @RequestMapping(path = {"/role/unbind"}, method = {RequestMethod.POST})
+    @ApiOperation(value = "删除角色配置")
+    public void unBindRole(@RequestBody PortalRoleUnBindReq req) {
+        portalConfigService.unBindRole(req.getRoleId());
+        Resp.notice("删除角色配置成功");
+    }
+
+    @RequestMapping(path = {"/role"}, method = {RequestMethod.GET})
+    @ApiOperation(value = "查看已经绑定配置的角色列表")
+    public List<KeyValueResVO> getBindRoleDict() {
+        return portalConfigService.getBindRoleDict();
     }
 }
