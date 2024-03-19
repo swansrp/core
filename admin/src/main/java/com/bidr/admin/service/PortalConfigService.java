@@ -24,6 +24,7 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.portal.AdminPortal;
+import com.diboot.core.binding.annotation.BindField;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
@@ -191,6 +192,11 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setFilterAble(CommonConst.NO);
         } else {
             column.setFilterAble(CommonConst.YES);
+        }
+        BindField bindFieldAnno = field.getAnnotation(BindField.class);
+        if (FuncUtil.isNotEmpty(bindFieldAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
         }
         column.setRoleId(roleId);
         return column;
