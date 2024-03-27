@@ -186,11 +186,13 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         }
         Map<String, String> aliasMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = null;
+        boolean needGroup = false;
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            needGroup = getPortalService().needGroup();
         }
-        Page<VO> result = getRepo().select(req, aliasMap, wrapper, getVoClass());
+        Page<VO> result = getRepo().select(req, aliasMap, wrapper, needGroup, getVoClass());
         return result;
     }
 
@@ -221,6 +223,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public void importAdd(@RequestParam(required = false) String name, MultipartFile file) {
         Validator.assertNotNull(getPortalService(), ErrCodeSys.PA_DATA_NOT_SUPPORT, "导入新增操作");
         try {
+            getPortalService().validateReadExcel();
             getPortalService().readExcelForInsert(file.getInputStream(), name);
         } catch (IOException e) {
             log.error("", e);
@@ -244,6 +247,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public void importUpdate(@RequestParam(required = false) String name, MultipartFile file) {
         Validator.assertNotNull(getPortalService(), ErrCodeSys.PA_DATA_NOT_SUPPORT, "导入修改操作");
         try {
+            getPortalService().validateReadExcel();
             getPortalService().readExcelForUpdate(file.getInputStream(), name);
         } catch (IOException e) {
             log.error("", e);

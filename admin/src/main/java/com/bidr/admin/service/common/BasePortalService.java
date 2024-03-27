@@ -206,7 +206,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Async
     @Override
     public void readExcelForUpdate(InputStream is, String portalName) {
-        validateReadExcel();
         try {
             startUploadProgress(0);
             PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName,
@@ -227,11 +226,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     @Override
-    public Object getUploadProgressRes(String portal) {
-        return getUploadProgress();
-    }
-
-    private void validateReadExcel() {
+    public void validateReadExcel() {
         PortalUploadProgressRes uploadProgress = getUploadProgress();
         if (FuncUtil.isNotEmpty(uploadProgress)) {
             Validator.assertTrue(FuncUtil.notEquals(uploadProgress.getStep(), UploadProgressStep.VALIDATE),
@@ -239,6 +234,11 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             Validator.assertTrue(FuncUtil.notEquals(uploadProgress.getStep(), UploadProgressStep.SAVE),
                     ErrCodeSys.SYS_ERR_MSG, "当前已有上传任务正在执行");
         }
+    }
+
+    @Override
+    public Object getUploadProgressRes(String portal) {
+        return getUploadProgress();
     }
 
     protected void handleExcelInsert(InputStream is, PortalWithColumnsRes portal) {

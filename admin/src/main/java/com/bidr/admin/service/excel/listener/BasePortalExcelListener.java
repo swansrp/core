@@ -3,6 +3,7 @@ package com.bidr.admin.service.excel.listener;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.event.AnalysisEventListener;
 import com.alibaba.excel.read.metadata.holder.ReadSheetHolder;
+import com.alibaba.excel.util.ListUtils;
 import com.bidr.admin.service.excel.handler.PortalExcelParseHandlerInf;
 import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
 import com.bidr.admin.vo.PortalWithColumnsRes;
@@ -24,14 +25,29 @@ import java.util.Map;
 @Slf4j
 @SuppressWarnings("rawtypes, unchecked")
 public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T> {
-    protected final List dataList;
     protected final PortalWithColumnsRes portal;
     protected final PortalExcelUploadProgressInf uploadProgress;
     protected final Map<String, T> entityCache;
     protected final PortalExcelParseHandlerInf portalExcelParseHandlerInf;
     protected final Map<Object, Object> validateMap;
     protected final Integer BATCH_SIZE = 100;
+    protected final Integer RECORD_BATCH_SIZE;
+    protected List dataList;
     protected Integer maxLine = -1;
+
+    private Integer currentPage;
+
+    public BasePortalExcelListener(PortalWithColumnsRes portal, PortalExcelParseHandlerInf portalExcelParseHandlerInf,
+                                   PortalExcelUploadProgressInf uploadProgress, Integer recordBatchSize) {
+        this.dataList = new ArrayList<>();
+        this.validateMap = new HashMap<>();
+        this.entityCache = new HashMap<>();
+        this.portal = portal;
+        this.portalExcelParseHandlerInf = portalExcelParseHandlerInf;
+        this.uploadProgress = uploadProgress;
+        this.RECORD_BATCH_SIZE = recordBatchSize;
+        this.currentPage = 0;
+    }
 
     public BasePortalExcelListener(PortalWithColumnsRes portal, PortalExcelParseHandlerInf portalExcelParseHandlerInf,
                                    PortalExcelUploadProgressInf uploadProgress) {
@@ -41,6 +57,8 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
         this.portal = portal;
         this.portalExcelParseHandlerInf = portalExcelParseHandlerInf;
         this.uploadProgress = uploadProgress;
+        this.RECORD_BATCH_SIZE = Integer.MAX_VALUE;
+        this.currentPage = 0;
     }
 
     @Override
@@ -62,7 +80,15 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
         prepare(entity);
         validate(entity, dataList, validateMap);
         dataList.add(entity);
-        uploadProgress.addUploadProgress(dataList.size());
+        if (currentPage == 0) {
+            uploadProgress.addUploadProgress(dataList.size());
+        }
+        if (dataList.size() >= RECORD_BATCH_SIZE) {
+            saveData();
+            memoryFree();
+            dataList = ListUtils.newArrayListWithExpectedSize(RECORD_BATCH_SIZE);
+            currentPage++;
+        }
     }
 
     /**
@@ -91,36 +117,37 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
      */
     protected abstract void validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap);
 
-    @Override
-    public void doAfterAllAnalysed(AnalysisContext analysisContext) {
-        if (FuncUtil.isNotEmpty(dataList)) {
+    private void saveData() {
+        if (currentPage == 0) {
             uploadProgress.startSaveRecord();
-            int pageSize = Math.min(dataList.size(), BATCH_SIZE);
-            int result = 0;
-            List<Object> cachedList = new ArrayList<>();
-            try {
-                for (Object entity : dataList) {
-                    cachedList.add(entity);
-                    result++;
-                    if (cachedList.size() == pageSize) {
-                        handle(cachedList);
-                        afterHandle(cachedList);
-                        cachedList.clear();
-                        uploadProgress.addUploadProgress(result);
-                    }
-                }
-                if (FuncUtil.isNotEmpty(cachedList)) {
+        }
+        int pageSize = Math.min(dataList.size(), BATCH_SIZE);
+        int result = RECORD_BATCH_SIZE * currentPage;
+        List<Object> cachedList = ListUtils.newArrayListWithExpectedSize(pageSize);
+        try {
+            for (Object entity : dataList) {
+                cachedList.add(entity);
+                result++;
+                if (cachedList.size() == pageSize) {
                     handle(cachedList);
                     afterHandle(cachedList);
+                    cachedList = ListUtils.newArrayListWithExpectedSize(pageSize);
+                    uploadProgress.addUploadProgress(result);
                 }
-                uploadProgress.uploadProgressFinish();
-            } catch (Exception e) {
-                log.error("处理excel数据失败", e);
-                uploadProgress.uploadProgressException(e.getMessage());
             }
-        } else {
-            uploadProgress.uploadProgressFinish();
+            if (FuncUtil.isNotEmpty(cachedList)) {
+                handle(cachedList);
+                afterHandle(cachedList);
+            }
+        } catch (Exception e) {
+            log.error("处理excel数据失败", e);
+            uploadProgress.uploadProgressException(e.getMessage());
         }
+    }
+
+    private void memoryFree() {
+        dataList = null;
+        System.gc();
     }
 
     /**
@@ -136,4 +163,14 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
      * @param cachedList 待存数据
      */
     protected abstract void afterHandle(List<Object> cachedList);
+
+    @Override
+    public void doAfterAllAnalysed(AnalysisContext analysisContext) {
+        if (FuncUtil.isNotEmpty(dataList)) {
+            saveData();
+        }
+        uploadProgress.uploadProgressFinish();
+        memoryFree();
+        currentPage = 0;
+    }
 }

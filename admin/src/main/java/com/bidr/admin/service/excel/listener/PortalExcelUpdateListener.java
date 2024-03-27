@@ -30,6 +30,13 @@ public class PortalExcelUpdateListener<EXCEL> extends BasePortalExcelListener<EX
         this.portalExcelHandlerInf = portalExcelInsertHandlerInf;
     }
 
+    public PortalExcelUpdateListener(PortalWithColumnsRes portal, PortalExcelUploadProgressInf uploadProgress,
+                                     PortalExcelParseHandlerInf portalExcelParseHandlerInf,
+                                     PortalExcelUpdateHandlerInf portalExcelInsertHandlerInf, Integer recordBatchSize) {
+        super(portal, portalExcelParseHandlerInf, uploadProgress, recordBatchSize);
+        this.portalExcelHandlerInf = portalExcelInsertHandlerInf;
+    }
+
     @Override
     protected Object parse(PortalWithColumnsRes portal, EXCEL data, Map<String, EXCEL> entityCache) {
         return portalExcelParseHandlerInf.parseEntity(portal, data, entityCache);

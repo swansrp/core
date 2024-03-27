@@ -25,14 +25,9 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 public interface PortalCommonService<ENTITY, VO> {
 
-    default Class<ENTITY> getEntityClass() {
-        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
-    }
-
     default Class<VO> getVoClass() {
         return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     }
-
 
     /**
      * 是否查看全局数据
@@ -166,6 +161,24 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 获取entity类型
+     *
+     * @return entity类型
+     */
+    default Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
+    /**
+     * Join Wrapper 查询是否需要对结果进行group
+     *
+     * @return 结果是否需要group
+     */
+    default boolean needGroup() {
+        return false;
+    }
+
+    /**
      * 生成联表查询别名
      *
      * @return 别名map
@@ -237,6 +250,11 @@ public interface PortalCommonService<ENTITY, VO> {
      * @param portal 配置
      */
     void readExcelForUpdate(InputStream is, String portal);
+
+    /**
+     * 判断当前是否有Excel读取任务
+     */
+    void validateReadExcel();
 
     /**
      * 获取上传处理进度

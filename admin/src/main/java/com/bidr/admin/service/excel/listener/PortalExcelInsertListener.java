@@ -6,8 +6,6 @@ import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +27,13 @@ public class PortalExcelInsertListener<EXCEL> extends BasePortalExcelListener<EX
                                      PortalExcelParseHandlerInf portalExcelParseHandlerInf,
                                      PortalExcelInsertHandlerInf portalExcelInsertHandlerInf) {
         super(portal, portalExcelParseHandlerInf, uploadProgress);
+        this.portalExcelHandlerInf = portalExcelInsertHandlerInf;
+    }
+
+    public PortalExcelInsertListener(PortalWithColumnsRes portal, PortalExcelUploadProgressInf uploadProgress,
+                                     PortalExcelParseHandlerInf portalExcelParseHandlerInf,
+                                     PortalExcelInsertHandlerInf portalExcelInsertHandlerInf, Integer recordBatchSize) {
+        super(portal, portalExcelParseHandlerInf, uploadProgress, recordBatchSize);
         this.portalExcelHandlerInf = portalExcelInsertHandlerInf;
     }
 
