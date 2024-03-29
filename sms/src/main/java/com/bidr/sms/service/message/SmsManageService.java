@@ -5,6 +5,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.sms.constant.dict.AliMessageTemplateConfirmStatusDict;
+import com.bidr.sms.constant.err.AliSmsErrorCode;
 import com.bidr.sms.constant.err.SmsErrorCode;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsTemplateService;
@@ -137,23 +138,6 @@ public class SmsManageService {
         return saSmsTemplate;
     }
 
-    public SaSmsTemplate getSmsTemplate(String templateCode) {
-        SaSmsTemplate saSmsTemplate = saSmsTemplateService.selectOneByTemplateCode(templateCode);
-        if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
-                saSmsTemplate.getConfirmStatus())) {
-            return saSmsTemplate;
-        }
-        QuerySmsTemplateResponseBody response = aliSmsManageService.getSmsTemplateStatus(saSmsTemplate);
-        saSmsTemplate.setConfirmStatus(response.getTemplateStatus());
-        saSmsTemplate.setReason(response.getReason());
-        if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
-                saSmsTemplate.getConfirmStatus())) {
-            saSmsTemplate.setConfirmAt(new Date());
-        }
-        saSmsTemplateService.updateById(saSmsTemplate);
-        return saSmsTemplate;
-    }
-
     public void syncTemplateConfirmStatus() {
         List<SaSmsTemplate> noConfirmTemplate = saSmsTemplateService.getNoConfirmTemplate();
         if (CollectionUtils.isNotEmpty(noConfirmTemplate)) {
@@ -166,6 +150,29 @@ public class SmsManageService {
                 }
             }
             saSmsTemplateService.updateBatchById(noConfirmTemplate);
+        }
+    }
+
+    public void refreshTemplateConfirmStatus(String platform) {
+        List<SaSmsTemplate> templates = saSmsTemplateService.getTemplateByPlatform(platform);
+        if (CollectionUtils.isNotEmpty(templates)) {
+            for (SaSmsTemplate saSmsTemplate : templates) {
+                QuerySmsTemplateResponseBody response = aliSmsManageService.getSmsTemplateStatus(saSmsTemplate);
+                if (response.getCode().equals(AliSmsErrorCode.TEMPLATE_ILLEGAL)) {
+                    saSmsTemplate.setId(null);
+                    saSmsTemplate.setRemark("重新申请: 从短信模版(" + saSmsTemplate.getTemplateCode() + ")复制");
+                    AddSmsTemplateResponseBody responseBody = aliSmsManageService.applySmsTemplate(saSmsTemplate);
+                    saSmsTemplate.setTemplateCode(responseBody.getTemplateCode());
+                    saSmsTemplateService.insert(saSmsTemplate);
+                } else {
+                    saSmsTemplate.setConfirmStatus(response.getTemplateStatus());
+                    if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
+                            saSmsTemplate.getConfirmStatus())) {
+                        saSmsTemplate.setConfirmAt(new Date());
+                    }
+                    saSmsTemplateService.updateById(saSmsTemplate);
+                }
+            }
         }
     }
 
@@ -190,6 +197,23 @@ public class SmsManageService {
         SmsTemplateCodeRes res = new SmsTemplateCodeRes();
         res.setTemplateCode(saSmsTemplate.getTemplateCode());
         return res;
+    }
+
+    public SaSmsTemplate getSmsTemplate(String templateCode) {
+        SaSmsTemplate saSmsTemplate = saSmsTemplateService.selectOneByTemplateCode(templateCode);
+        if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
+                saSmsTemplate.getConfirmStatus())) {
+            return saSmsTemplate;
+        }
+        QuerySmsTemplateResponseBody response = aliSmsManageService.getSmsTemplateStatus(saSmsTemplate);
+        saSmsTemplate.setConfirmStatus(response.getTemplateStatus());
+        saSmsTemplate.setReason(response.getReason());
+        if ((AliMessageTemplateConfirmStatusDict.AUDIT_STATE_PASS.getValue()).equals(
+                saSmsTemplate.getConfirmStatus())) {
+            saSmsTemplate.setConfirmAt(new Date());
+        }
+        saSmsTemplateService.updateById(saSmsTemplate);
+        return saSmsTemplate;
     }
 
     public SmsTemplateCodeRes deleteSmsTemplate(String templateId) {
