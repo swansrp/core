@@ -1,4 +1,4 @@
-package com.bidr.authorization.controller.login;
+package com.bidr.authorization.controller.common;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthToken;

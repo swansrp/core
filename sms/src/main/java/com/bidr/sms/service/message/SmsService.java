@@ -2,6 +2,7 @@ package com.bidr.sms.service.message;
 
 import com.bidr.sms.vo.SendSmsReq;
 import com.bidr.sms.vo.SendSmsRes;
+import com.bidr.sms.bo.SmsReq;
 
 /**
  * Title: SmsService
@@ -33,4 +34,12 @@ public interface SmsService {
      * @return 发送结果
      */
     SendSmsRes getSendSmsRes(String requestId);
+
+    /**
+     * 内部服务调用发送短信
+     *
+     * @param smsSendReq
+     * @return 结果
+     */
+    SendSmsRes sendSms(SmsReq smsSendReq);
 }

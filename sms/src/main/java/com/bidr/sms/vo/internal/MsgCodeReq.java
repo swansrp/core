@@ -1,4 +1,4 @@
-package com.bidr.authorization.vo.msg;
+package com.bidr.sms.vo.internal;
 
 import com.bidr.authorization.vo.captcha.ICaptchaVerificationReq;
 import io.swagger.annotations.ApiModelProperty;

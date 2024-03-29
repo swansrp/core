@@ -108,7 +108,11 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes loginOrReg(String phoneNumber) {
-        return null;
+        AcUser user = acUserService.getUserByPhoneNumber(phoneNumber);
+        if (FuncUtil.isEmpty(user)) {
+            user = creatUserService.createUserWithName(phoneNumber, phoneNumber);
+        }
+        return buildLoginRes(user);
     }
 
     @Override

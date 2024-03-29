@@ -18,6 +18,8 @@ import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.cache.SmsTemplateCacheService;
 import com.bidr.sms.vo.SendSmsReq;
 import com.bidr.sms.vo.SendSmsRes;
+import com.bidr.sms.bo.SmsReq;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ import org.springframework.web.context.WebApplicationContext;
 import javax.annotation.Resource;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Title: BaseSmsService
@@ -63,13 +66,10 @@ public abstract class BaseSmsService implements SmsService {
     public SendSmsRes sendAsyncSms(SendSmsReq sendSmsReq) {
         SendSmsRes res = new SendSmsRes();
         try {
-            SaSmsSend saSmsSend = webApplicationContext.getBean(this.getClass()).initSendSms(sendSmsReq);
-            res.setRequestId(saSmsSend.getSendId());
-            res.setBizId(sendSmsReq.getBizId());
             webApplicationContext.getBean(this.getClass()).send(sendSmsReq, res);
         } catch (ServiceException e) {
             res.setStatus(e.getErrCode().getErrCode());
-            res.setMessage(e.getErrCode().getErrText());
+            res.setMessage(e.getMessage());
         }
         return res;
     }
@@ -78,6 +78,32 @@ public abstract class BaseSmsService implements SmsService {
     public SendSmsRes getSendSmsRes(String requestId) {
         SaSmsSend smsSend = saSmsSendService.getSaSmsSendByRequestId(requestId);
         return Resp.convert(smsSend, SendSmsRes.class);
+    }
+
+    @Override
+    public SendSmsRes sendSms(SmsReq smsSendReq) {
+        SendSmsRes res = new SendSmsRes();
+        webApplicationContext.getBean(this.getClass()).send(smsSendReq, res);
+        return res;
+    }
+
+    public void send(SmsReq sendSmsReq, SendSmsRes res) {
+        SaSmsSend saSmsSend = webApplicationContext.getBean(this.getClass()).initSendSms(sendSmsReq);
+        res.setRequestId(saSmsSend.getSendId());
+        res.setBizId(saSmsSend.getBizId());
+        sendMessage(saSmsSend, res);
+        saveSendSms(saSmsSend);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SaSmsSend initSendSms(SmsReq sendSmsReq) {
+        SaSmsTemplate saSmsTemplate = smsTemplateCacheService.getCache(sendSmsReq.getSendSmsType());
+        SaSmsSend saSmsSend = buildSaSmsSend(UUID.randomUUID().toString(), sendSmsReq.getPhoneNumbers(),
+                sendSmsReq.getParamMap(), saSmsTemplate);
+        saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
+        saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
+        saSmsSendService.insert(saSmsSend);
+        return saSmsSend;
     }
 
     @Async
@@ -138,22 +164,7 @@ public abstract class BaseSmsService implements SmsService {
         if (FuncUtil.isEmpty(saSmsTemplate)) {
             saSmsTemplate = smsTemplateCacheService.getCache(sendSmsReq.getSendSmsType());
         }
-        Validator.assertNotNull(saSmsTemplate, ErrCodeSys.PA_DATA_NOT_EXIST, "短信模板");
-        validateProperty(saSmsTemplate, sendSmsReq.getParamMap());
-        String templateCode = saSmsTemplate.getTemplateCode();
-        SaSmsSend smsSend = new SaSmsSend();
-        smsSend.setMobile(phoneNumber);
-        if (FuncUtil.isNotEmpty(sendSmsReq.getParamMap())) {
-            smsSend.setSendParam(JsonUtil.toJson(sendSmsReq.getParamMap()));
-        }
-        smsSend.setSendSign(saSmsTemplate.getSign());
-        smsSend.setBizId(sendSmsReq.getBizId());
-        smsSend.setPlatform(saSmsTemplate.getPlatform());
-        smsSend.setTemplateCode(templateCode);
-        smsSend.setSendId(saSmsTemplate.getSign());
-        smsSend.setSendType(sendSmsReq.getSendSmsType());
-        smsSend.setSendAt(new Date());
-        return smsSend;
+        return buildSaSmsSend(sendSmsReq.getBizId(), phoneNumber, sendSmsReq.getParamMap(), saSmsTemplate);
     }
 
     private SendSmsRes buildSendSmsRes(SaSmsSend smsSend, SendSmsRes res) {
@@ -161,6 +172,26 @@ public abstract class BaseSmsService implements SmsService {
         res.setStatus(smsSend.getSendStatus());
         res.setMessage(smsSend.getSendResult());
         return res;
+    }
+
+    @NotNull
+    private SaSmsSend buildSaSmsSend(String bizId, String phoneNumber, Map<String, String> paramMap,
+                                     SaSmsTemplate saSmsTemplate) {
+        Validator.assertNotNull(saSmsTemplate, ErrCodeSys.PA_DATA_NOT_EXIST, "短信模板");
+        validateProperty(saSmsTemplate, paramMap);
+        String templateCode = saSmsTemplate.getTemplateCode();
+        SaSmsSend smsSend = new SaSmsSend();
+        smsSend.setMobile(phoneNumber);
+        if (FuncUtil.isNotEmpty(paramMap)) {
+            smsSend.setSendParam(JsonUtil.toJson(paramMap));
+        }
+        smsSend.setSendSign(saSmsTemplate.getSign());
+        smsSend.setBizId(bizId);
+        smsSend.setPlatform(saSmsTemplate.getPlatform());
+        smsSend.setTemplateCode(templateCode);
+        smsSend.setSendType(saSmsTemplate.getSmsType());
+        smsSend.setSendAt(new Date());
+        return smsSend;
     }
 
     private void validateProperty(SaSmsTemplate saSmsTemplate, Map<String, String> paramMap) {

@@ -1,9 +1,6 @@
 package com.bidr.sms.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -24,12 +21,11 @@ import java.util.Date;
 @ApiModel(value = "短信发送记录")
 @Data
 @TableName(value = "sa_sms_send")
-// @KeySequence("SA_SMS_SEND_SEND_ID_SEQ")
 public class SaSmsSend {
     /**
      * 发送流水号
      */
-    @TableId(value = "send_id", type = IdType.INPUT)
+    @TableId(value = "send_id", type = IdType.ASSIGN_UUID)
     @ApiModelProperty(value = "发送流水号")
     private String sendId;
 

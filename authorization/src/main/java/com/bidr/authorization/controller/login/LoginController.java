@@ -3,11 +3,13 @@ package com.bidr.authorization.controller.login;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.annotation.captcha.CaptchaVerify;
+import com.bidr.authorization.annotation.msg.MsgCodeVerify;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.login.PasswordService;
 import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;
@@ -72,9 +74,9 @@ public class LoginController {
 
     @Auth(AuthToken.class)
     @RequestMapping(value = "/msg", method = RequestMethod.POST)
-    @CaptchaVerify("LOGIN_MSG_CODE_CAPTCHA")
-    public LoginRes login(String phoneNumber) {
-        LoginRes res = loginService.loginOrReg(phoneNumber);
+    @MsgCodeVerify("LOGIN_MSG_CODE")
+    public LoginRes login(@Validated MsgLoginReq req) {
+        LoginRes res = loginService.loginOrReg(req.getPhoneNumber());
         afterLogin(res);
         return res;
     }

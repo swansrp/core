@@ -1,5 +1,7 @@
 package com.bidr.authorization.config.msg;
 
+import com.bidr.authorization.config.captcha.ICaptchaVerification;
+
 /**
  * Title: IMsgVerification
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
@@ -7,27 +9,13 @@ package com.bidr.authorization.config.msg;
  * @author Sharp
  * @since 2021/8/24 10:02
  */
-public interface IMsgVerification {
-    /**
-     * 获取短信验证码类型名称
-     *
-     * @return
-     */
-    String name();
-
+public interface IMsgVerification extends ICaptchaVerification {
     /**
      * 获取短信验证码获取间隔时间
      *
      * @return
      */
     int getInternal();
-
-    /**
-     * 获取短信验证码过期时间
-     *
-     * @return
-     */
-    int getTimeout();
 
     /**
      * 短信验证码长度
