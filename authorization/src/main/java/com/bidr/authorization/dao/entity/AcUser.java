@@ -5,20 +5,11 @@ import com.bidr.authorization.mybatis.anno.AccountContextFill;
 import com.bidr.kernel.mybatis.anno.AutoInsert;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-
+import java.util.Date;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.util.Date;
-
- /**
- * Title: AcUser
- * Description: Copyright: Copyright (c) 2023
- *
- * @author Sharp
- * @since 2023/05/29 16:54
- */
+import lombok.Data;
 
 /**
  * 用户信息表
@@ -45,6 +36,22 @@ public class AcUser {
     @NotBlank(message = "用户编码不能为空")
     @AutoInsert(seq = "AC_USER_CUSTOMER_NUMBER_SEQ")
     private String customerNumber;
+
+    /**
+     * 微信id
+     */
+    @TableField(value = "wechat_id")
+    @ApiModelProperty(value = "微信id")
+    @Size(max = 50, message = "微信id最大长度要小于 50")
+    private String wechatId;
+
+    /**
+     * 身份证id
+     */
+    @TableField(value = "id_number")
+    @ApiModelProperty(value = "身份证id")
+    @Size(max = 50, message = "身份证id最大长度要小于 50")
+    private String idNumber;
 
     /**
      * 用户姓名
@@ -104,14 +111,6 @@ public class AcUser {
     private String phoneNumber;
 
     /**
-     * 身份证号码
-     */
-    @TableField(value = "id_number")
-    @ApiModelProperty(value = "身份证号码")
-    @Size(max = 20, message = "身份证号码最大长度要小于 20")
-    private String idNumber;
-
-    /**
      * 用户性别（1男 2女）
      */
     @TableField(value = "sex")
@@ -124,7 +123,7 @@ public class AcUser {
      */
     @TableField(value = "avatar")
     @ApiModelProperty(value = "头像地址")
-    @Size(max = 100, message = "头像地址最大长度要小于 100")
+    @Size(max = 500, message = "头像地址最大长度要小于 500")
     private String avatar;
 
     /**

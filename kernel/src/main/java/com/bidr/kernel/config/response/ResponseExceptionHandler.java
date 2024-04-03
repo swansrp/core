@@ -50,8 +50,8 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
     @Resource
     private ApplicationContext applicationContext;
-    @Value("${bidr.result.format-bean}")
-    private String externalFormatBeanName;
+    @Resource
+    private ResponseResultProperty responseResultProperty;
     @Value("${my.base-package}")
     private String basePackage;
 
@@ -73,19 +73,19 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     }
 
     @ResponseBody
-    @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    public ResponseEntity<Response<String>> errorHandler(MethodArgumentNotValidException ex) {
-        ServiceException serviceException = new ServiceException(ex);
-        return errorHandler(serviceException);
-    }
-
-    @ResponseBody
     @ExceptionHandler(value = ServiceException.class)
     public static ResponseEntity<Response<String>> errorHandler(ServiceException ex) {
         log.warn("", ex);
         Response<String> res = new Response<>(ex);
         HttpStatus status = STATUS_MAP.getOrDefault(ex.getErrCode().getErrType(), HttpStatus.INTERNAL_SERVER_ERROR);
         return new ResponseEntity<>(res, status);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    public ResponseEntity<Response<String>> errorHandler(MethodArgumentNotValidException ex) {
+        ServiceException serviceException = new ServiceException(ex);
+        return errorHandler(serviceException);
     }
 
     @ResponseBody
@@ -97,19 +97,18 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        if (!applicationContext.containsBean(externalFormatBeanName)) {
-            return returnType.getDeclaringClass().getName().startsWith(basePackage);
+        if (!applicationContext.containsBean(responseResultProperty.getFormatBean())) {
+            return returnType.getDeclaringClass().getName().startsWith(basePackage)
+                    && !responseResultProperty.getClassWhiteList().contains(returnType.getDeclaringClass().getName());
         } else {
             return false;
         }
     }
 
     @Override
-    public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
-                                  Class<? extends HttpMessageConverter<?>> selectedConverterType,
-                                  ServerHttpRequest request, ServerHttpResponse response) {
+    public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
         Response<?> res = body instanceof Response ? (Response<?>) body : new Response<>(body);
-        return MappingJackson2HttpMessageConverter.class.isAssignableFrom(selectedConverterType) ? res :
-                JsonUtil.toJson(res, false, false, true);
+        return MappingJackson2HttpMessageConverter.class.isAssignableFrom(selectedConverterType)
+                ? res : JsonUtil.toJson(res, false, false, true);
     }
 }

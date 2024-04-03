@@ -168,6 +168,8 @@ DROP TABLE IF EXISTS `ac_user`
 CREATE TABLE IF NOT EXISTS `ac_user` (
   `user_id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户ID',
   `customer_number` varchar(50) NOT NULL COMMENT '用户编码',
+  `wechat_id` VARCHAR(50) NULL COMMENT '微信id',
+  `id_number` VARCHAR(50) NULL COMMENT '身份证id',
   `name` varchar(50) DEFAULT NULL COMMENT '用户姓名',
   `dept_id` varchar(50) DEFAULT NULL COMMENT '部门ID',
   `user_name` varchar(30) NOT NULL COMMENT '用户账号',
@@ -175,7 +177,7 @@ CREATE TABLE IF NOT EXISTS `ac_user` (
   `user_type` varchar(2) DEFAULT '00' COMMENT '用户类型（00系统用户）',
   `email` varchar(50) DEFAULT '' COMMENT '用户邮箱',
   `phone_number` varchar(11) DEFAULT '' COMMENT '手机号码',
-  `sex` char(1) DEFAULT '0' COMMENT '用户性别（1男 2女）',
+  `sex` char(1) DEFAULT '1' COMMENT '用户性别（1男 2女）',
   `avatar` varchar(500) DEFAULT '' COMMENT '头像地址',
   `password` varchar(100) DEFAULT '' COMMENT '密码',
   `password_error_time` int DEFAULT NULL COMMENT '密码输入错误次数',

@@ -59,8 +59,7 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes login(AcUser user) {
-        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
-                AccountErrCode.AC_LOCK);
+        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()), AccountErrCode.AC_LOCK);
         return buildLoginRes(user);
     }
 
@@ -75,8 +74,7 @@ public class LoginServiceImpl implements LoginService {
             user = acUserService.getUserByEmail(loginId);
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
-        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
-                AccountErrCode.AC_LOCK);
+        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()), AccountErrCode.AC_LOCK);
         verifyPassword(user, user.getPassword(), password);
         return login(user);
     }
@@ -98,8 +96,7 @@ public class LoginServiceImpl implements LoginService {
                 Validator.assertException(AccountErrCode.AC_PASSWORD_MAX_ERROR_TIMES);
             }
             acUserService.updateById(user);
-            Validator.assertException(AccountErrCode.AC_PASSWORD_NOT_RIGHT,
-                    String.valueOf(passwordMistakeMaxTime - user.getPasswordErrorTime()));
+            Validator.assertException(AccountErrCode.AC_PASSWORD_NOT_RIGHT, String.valueOf(passwordMistakeMaxTime - user.getPasswordErrorTime()));
         } else {
             user.setPasswordErrorTime(0);
         }
@@ -117,17 +114,26 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes loginOrRegByWechatMiniOpenId(String wechatOpenId) {
-        return null;
+        return loginOrRegByWechatPhoneNumber(wechatOpenId, null, null, null);
     }
 
     @Override
-    public LoginRes loginOrRegByWechatUnionId(String wechatUnionId, String nickName) {
-        return null;
+    public LoginRes loginOrRegByWechatUnionId(String wechatUnionId, String nickName, String avatar) {
+        return loginOrRegByWechatPhoneNumber(wechatUnionId, nickName, null, avatar);
     }
 
     @Override
-    public LoginRes loginOrRegByWechatPhoneNumber(String wechatId, String nickName, String phoneNumber) {
-        return null;
+    public LoginRes loginOrRegByWechatPhoneNumber(String wechatId, String nickName, String phoneNumber, String avatar) {
+        AcUser wechatUser = acUserService.getUserByWechatId(wechatId);
+        if (FuncUtil.isEmpty(wechatUser)) {
+            AcUser phoneNumberUser = acUserService.getUserByPhoneNumber(phoneNumber);
+            if (FuncUtil.isNotEmpty(phoneNumberUser)) {
+                wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumber, avatar);
+            } else {
+                wechatUser = creatUserService.createUserFromWechat(wechatId, nickName, phoneNumber, avatar);
+            }
+        }
+        return buildLoginRes(wechatUser);
     }
 
     @Override
@@ -144,13 +150,16 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
-    public LoginRes register(String userId, String password) {
-        return null;
+    public LoginRes register(String userName, String password) {
+        return register(userName, password, null);
     }
 
     @Override
-    public LoginRes register(String userId, String password, String email) {
-        return null;
+    public LoginRes register(String userName, String password, String email) {
+        AcUser user = acUserService.getUserByUserName(userName);
+        Validator.assertNull(user, AccountErrCode.AC_USER_ALREADY_EXISTED);
+        user = creatUserService.createUser(userName, password, null, null, email, null);
+        return buildLoginRes(user);
     }
 
     @Override
@@ -209,8 +218,7 @@ public class LoginServiceImpl implements LoginService {
         res.setAccessToken(AuthTokenUtil.getToken(accessToken));
         res.setRefreshToken(AuthTokenUtil.getToken(refreshToken));
         String clientType = ClientTypeHolder.get();
-        UserRolePermitInfo info = acUserRoleMenuService.getByCustomerNumberAndClientType(acUser.getCustomerNumber(),
-                clientType);
+        UserRolePermitInfo info = acUserRoleMenuService.getByCustomerNumberAndClientType(acUser.getCustomerNumber(), clientType);
         buildPermitTree(info, accessToken);
         buildAccountInfo(info, accessToken);
         TokenHolder.set(accessToken);

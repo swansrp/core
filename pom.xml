@@ -18,6 +18,7 @@
         <module>neo4j</module>
         <module>admin</module>
         <module>oss</module>
+        <module>wechat</module>
     </modules>
     <packaging>pom</packaging>
 

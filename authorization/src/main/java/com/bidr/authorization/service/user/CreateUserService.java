@@ -53,13 +53,26 @@ public interface CreateUserService {
     String changeAccountStatus(String customerNumber, Integer status);
 
     /**
+     * 创建微信用户
+     *
+     * @param unionId
+     * @param nickName
+     * @param phoneNumber
+     * @param avatar
+     * @return
+     */
+    AcUser createUserFromWechat(String unionId, String nickName, String phoneNumber, String avatar);
+
+    /**
      * 将微信用户合并至已有手机号账户
      *
      * @param unionId
      * @param nickName
      * @param phoneNumber
+     * @param avatar
+     * @return
      */
-    void mergeWechatPhoneNumber(String unionId, String nickName, String phoneNumber);
+    AcUser mergeWechatPhoneNumber(String unionId, String nickName, String phoneNumber, String avatar);
 
     /**
      * 将白名单用户加入用户表

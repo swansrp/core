@@ -23,6 +23,7 @@ bidr:
     class-white-list:
       - springfox.documentation.swagger.web.ApiResourceController
       - springfox.documentation.oas.web.OpenApiControllerWebMvc
+      - com.bidr.wechat.controller.WechatController
     format-bean: resultMatcher
 
   # 用户配置

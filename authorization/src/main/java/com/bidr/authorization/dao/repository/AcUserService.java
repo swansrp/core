@@ -62,8 +62,22 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
                 .nested(wr -> wr.eq(FuncUtil.isNotEmpty(req.getPhoneNumber()), AcUser::getPhoneNumber,
                                 req.getPhoneNumber()).or()
                         .eq(FuncUtil.isNotEmpty(req.getEmail()), AcUser::getEmail, req.getEmail()).or()
-                        .eq(FuncUtil.isNotEmpty(req.getUserName()), AcUser::getUserName, req.getUserName()));
+                        .eq(FuncUtil.isNotEmpty(req.getUserName()), AcUser::getUserName, req.getUserName()).or()
+                        .eq(FuncUtil.isNotEmpty(req.getName()), AcUser::getName, req.getName()).or()
+                        .eq(FuncUtil.isNotEmpty(req.getIdNumber()), AcUser::getIdNumber, req.getIdNumber()));
         return select(wrapper);
+    }
+
+    public AcUser getUserByWechatId(String wechatOpenId) {
+        LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getWechatId, wechatOpenId)
+                .eq(AcUser::getValid, CommonConst.YES);
+        return selectOne(wrapper);
+    }
+
+    public void deleteByUserName(String userName) {
+        LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getUserName, userName)
+                .eq(AcUser::getValid, CommonConst.YES);
+        super.delete(wrapper);
     }
 }
 

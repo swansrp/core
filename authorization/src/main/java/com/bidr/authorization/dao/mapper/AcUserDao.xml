@@ -6,6 +6,8 @@
     <!--@Table ac_user-->
     <id column="user_id" jdbcType="BIGINT" property="userId" />
     <result column="customer_number" jdbcType="VARCHAR" property="customerNumber" />
+    <result column="wechat_id" jdbcType="VARCHAR" property="wechatId" />
+    <result column="id_number" jdbcType="VARCHAR" property="idNumber" />
     <result column="name" jdbcType="VARCHAR" property="name" />
     <result column="dept_id" jdbcType="VARCHAR" property="deptId" />
     <result column="user_name" jdbcType="VARCHAR" property="userName" />
@@ -30,8 +32,9 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    user_id, customer_number, `name`, dept_id, user_name, nick_name, user_type, email, 
-    phone_number, sex, avatar, `password`, password_error_time, password_last_time, `status`, 
-    login_ip, login_date, create_by, create_at, update_by, update_at, remark, `valid`
+    user_id, customer_number, wechat_id, id_number, `name`, dept_id, user_name, nick_name, 
+    user_type, email, phone_number, sex, avatar, `password`, password_error_time, password_last_time, 
+    `status`, login_ip, login_date, create_by, create_at, update_by, update_at, remark, 
+    `valid`
   </sql>
 </mapper>

@@ -3,6 +3,7 @@ package com.bidr.sms.vo.internal;
 import com.bidr.sms.vo.SendSmsRes;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * Title: MsgCodeRes
@@ -12,6 +13,7 @@ import lombok.Data;
  * @since 2021/8/23 15:43
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class MsgCodeRes extends SendSmsRes {
     @ApiModelProperty("短信验证码获取间隔")
     private Integer internal;

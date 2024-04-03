@@ -13,11 +13,13 @@ import com.bidr.authorization.service.login.RoleBindService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.Md5Util;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,8 +56,7 @@ public class CreateUserServiceImpl implements CreateUserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AcUser createUser(String loginId, String password, String name, String phoneNumber, String email,
-                             String avatar) {
+    public AcUser createUser(String loginId, String password, String name, String phoneNumber, String email, String avatar) {
         AcUser user = buildBaseUser();
         user.setUserName(loginId);
         user.setPhoneNumber(phoneNumber);
@@ -79,8 +80,34 @@ public class CreateUserServiceImpl implements CreateUserService {
     }
 
     @Override
-    public void mergeWechatPhoneNumber(String unionId, String nickName, String phoneNumber) {
+    public AcUser createUserFromWechat(String unionId, String nickName, String phoneNumber, String avatar) {
+        AcUser user = buildBaseUser();
+        user.setUserName(unionId);
+        if (FuncUtil.isNotEmpty(phoneNumber)) {
+            user.setPhoneNumber(phoneNumber);
+        }
+        if (FuncUtil.isNotEmpty(nickName)) {
+            user.setNickName(nickName);
+        }
+        if (FuncUtil.isNotEmpty(avatar)) {
+            user.setAvatar(avatar);
+        }
+        acUserService.insert(user);
+        bindDefaultRole(user);
+        return user;
+    }
 
+    @Override
+    public AcUser mergeWechatPhoneNumber(String unionId, String nickName, String phoneNumber, String avatar) {
+        AcUser user = acUserService.getUserByPhoneNumber(phoneNumber);
+        Validator.assertBlank(user.getWechatId(), ErrCodeSys.SYS_ERR_MSG, "手机号账户已绑定微信");
+        user.setWechatId(unionId);
+        if (StringUtils.isBlank(user.getName())) {
+            user.setName(nickName);
+        }
+        acUserService.deleteByUserName(unionId);
+        acUserService.updateById(user);
+        return user;
     }
 
     @Override

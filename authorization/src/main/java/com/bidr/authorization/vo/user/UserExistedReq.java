@@ -14,4 +14,6 @@ public class UserExistedReq {
     private String phoneNumber;
     private String email;
     private String userName;
+    private String name;
+    private String idNumber;
 }
