@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `sys_config` (
   `config_name` varchar(100)  DEFAULT '' COMMENT '参数名称',
   `config_key` varchar(100)  DEFAULT '' COMMENT '参数键名',
   `config_value` varchar(500)  DEFAULT '' COMMENT '参数键值',
-  `config_type` char(1)  DEFAULT '0' COMMENT '系统内置',
+  `config_type` varchar(20)  DEFAULT '0' COMMENT '系统内置',
   `create_by` bigint DEFAULT NULL COMMENT '创建者',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_by` bigint DEFAULT NULL COMMENT '更新者',

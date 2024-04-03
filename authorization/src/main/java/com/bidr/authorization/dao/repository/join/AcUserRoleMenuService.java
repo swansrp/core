@@ -47,6 +47,18 @@ public class AcUserRoleMenuService {
         return res;
     }
 
+    public UserPermitInfo getByRoleIdListAndClientType(List<Long> roleIdList, String clientType) {
+        MPJLambdaWrapper<AcUser> wrapper = new MPJLambdaWrapper<AcUser>().selectAll(AcUser.class)
+                .selectCollection(AcMenu.class, UserPermitInfo::getMenuList)
+                .leftJoin(AcUserRole.class, AcUserRole::getUserId, AcUser::getUserId)
+                .leftJoin(AcRole.class, AcRole::getRoleId, AcUserRole::getRoleId)
+                .leftJoin(AcRoleMenu.class, AcRoleMenu::getRoleId, AcRole::getRoleId)
+                .leftJoin(AcMenu.class, AcMenu::getMenuId, AcRoleMenu::getMenuId)
+                .in(AcRole::getRoleId, roleIdList).eq(AcMenu::getClientType, clientType)
+                .eq(AcMenu::getStatus, CommonConst.YES).orderByAsc(AcMenu::getShowOrder);
+        return acUserService.selectJoinOne(UserPermitInfo.class, wrapper);
+    }
+
     public List<RoleInfo> getRole(String customerNumber) {
         MPJLambdaWrapper<AcRole> wrapper = new MPJLambdaWrapper<AcRole>().selectAll(AcRole.class)
                 .rightJoin(AcUserRole.class, AcUserRole::getRoleId, AcRole::getRoleId)

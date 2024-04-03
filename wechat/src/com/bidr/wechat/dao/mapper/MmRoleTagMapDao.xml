@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.wechat.dao.mapper.MmRoleTagMapDao">
+  <resultMap id="BaseResultMap" type="com.bidr.wechat.dao.entity.MmRoleTagMap">
+    <!--@mbg.generated generated on Mon Jun 27 10:02:30 CST 2022.-->
+    <!--@Table mm_role_tag_map-->
+    <id column="role_id" jdbcType="VARCHAR" property="roleId" />
+    <id column="tag_id" jdbcType="INTEGER" property="tagId" />
+    <result column="tag_name" jdbcType="VARCHAR" property="tagName" />
+    <result column="menu_id" jdbcType="VARCHAR" property="menuId" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated generated on Mon Jun 27 10:02:30 CST 2022.-->
+    role_id, tag_id, tag_name, menu_id
+  </sql>
+</mapper>

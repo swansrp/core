@@ -104,6 +104,14 @@ public class AcUser {
     private String phoneNumber;
 
     /**
+     * 身份证号码
+     */
+    @TableField(value = "id_number")
+    @ApiModelProperty(value = "身份证号码")
+    @Size(max = 20, message = "身份证号码最大长度要小于 20")
+    private String idNumber;
+
+    /**
      * 用户性别（1男 2女）
      */
     @TableField(value = "sex")
