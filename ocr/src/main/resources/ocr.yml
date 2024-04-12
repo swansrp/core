@@ -1,0 +1,10 @@
+ai:
+  ocr:
+    rotate-threshold: 0.8
+    device-type: cpu
+    detect-url: /model/ocr/detect.model
+    detect-quick-url: /model/ocr/detect_mobile.model
+    recognize-url: /model/ocr/detect_mobile.model
+    recognize-quick-url: /model/ocr/recognize.model
+    rotate-url: /model/ocr/rotate.model
+

@@ -23,6 +23,7 @@ target/
 *.nar
 *.ear
 *.zip
+!/ocr/src/main/resources/model/ocr/*.zip
 *.tar.gz
 *.rar
 
