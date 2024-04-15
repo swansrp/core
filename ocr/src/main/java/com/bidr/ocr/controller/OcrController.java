@@ -8,10 +8,12 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,7 +35,7 @@ public class OcrController {
     @ApiOperation("ocr识别")
     @RequestMapping(value = "", method = RequestMethod.POST)
     public List<DetectObjectRes> ocr(@RequestPart MultipartFile image,
-                                     @PathVariable(required = false) OcrType type) throws IOException {
+                                     OcrType type) {
         DetectedObjects result = ocrService.ocr(image.getInputStream(), type);
         return result.items().stream().map(DetectObjectRes::new).collect(Collectors.toList());
     }
