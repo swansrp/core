@@ -1,5 +1,6 @@
 package com.bidr.authorization.service.permit;
 
+import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.repository.AcMenuService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
@@ -10,6 +11,7 @@ import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -33,8 +35,7 @@ public class MenuService {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
         List<AcMenu> menuList = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
-        // List<AcMenu> menuList = acMenuService.getAllMenu();
-
+        Validator.assertNotEmpty(menuList, AccountErrCode.AC_PERMIT_NOT_EXISTED);
         for (AcMenu acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
@@ -47,7 +48,7 @@ public class MenuService {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
         List<AcMenu> allPermit = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
-        // List<AcMenu> allPermit = acMenuService.getAllMenu();
+        Validator.assertNotEmpty(allPermit, AccountErrCode.AC_PERMIT_NOT_EXISTED);
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }
 

@@ -59,7 +59,8 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes login(AcUser user) {
-        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()), AccountErrCode.AC_LOCK);
+        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
+                AccountErrCode.AC_LOCK);
         return buildLoginRes(user);
     }
 
@@ -74,7 +75,8 @@ public class LoginServiceImpl implements LoginService {
             user = acUserService.getUserByEmail(loginId);
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
-        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()), AccountErrCode.AC_LOCK);
+        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
+                AccountErrCode.AC_LOCK);
         verifyPassword(user, user.getPassword(), password);
         return login(user);
     }
@@ -96,7 +98,8 @@ public class LoginServiceImpl implements LoginService {
                 Validator.assertException(AccountErrCode.AC_PASSWORD_MAX_ERROR_TIMES);
             }
             acUserService.updateById(user);
-            Validator.assertException(AccountErrCode.AC_PASSWORD_NOT_RIGHT, String.valueOf(passwordMistakeMaxTime - user.getPasswordErrorTime()));
+            Validator.assertException(AccountErrCode.AC_PASSWORD_NOT_RIGHT,
+                    String.valueOf(passwordMistakeMaxTime - user.getPasswordErrorTime()));
         } else {
             user.setPasswordErrorTime(0);
         }
@@ -216,9 +219,13 @@ public class LoginServiceImpl implements LoginService {
         TokenInfo accessToken = buildAccessToken(acUser.getUserId(), acUser.getCustomerNumber(), acUser.getName());
         TokenInfo refreshToken = buildRefreshToken(acUser.getCustomerNumber());
         res.setAccessToken(AuthTokenUtil.getToken(accessToken));
-        res.setRefreshToken(AuthTokenUtil.getToken(refreshToken));
+        if (FuncUtil.isNotEmpty(refreshToken)) {
+            // 微信相关不存在refreshToken
+            res.setRefreshToken(AuthTokenUtil.getToken(refreshToken));
+        }
         String clientType = ClientTypeHolder.get();
-        UserRolePermitInfo info = acUserRoleMenuService.getByCustomerNumberAndClientType(acUser.getCustomerNumber(), clientType);
+        UserRolePermitInfo info = acUserRoleMenuService.getByCustomerNumberAndClientType(acUser.getCustomerNumber(),
+                clientType);
         buildPermitTree(info, accessToken);
         buildAccountInfo(info, accessToken);
         TokenHolder.set(accessToken);
@@ -233,6 +240,8 @@ public class LoginServiceImpl implements LoginService {
             accessToken = tokenService.buildAppAccessToken(customerNumber);
         } else if (FuncUtil.equals(clientType, ClientType.WECHAT.getValue())) {
             accessToken = tokenService.buildWechatToken(customerNumber);
+        } else if (FuncUtil.equals(clientType, ClientType.PUBLIC.getValue())) {
+            accessToken = tokenService.buildWxPlatformToken(customerNumber);
         }
         tokenService.putItem(accessToken, TokenItem.USER_ID.name(), userId);
         tokenService.putItem(accessToken, TokenItem.OPERATOR.name(), customerNumber);
@@ -252,8 +261,9 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private void buildPermitTree(UserPermitInfo info, TokenInfo accessToken) {
-        Validator.assertNotEmpty(info.getMenuList(), AccountErrCode.AC_PERMIT_NOT_EXISTED);
-        tokenService.putItem(accessToken, TokenItem.PERMIT_TREE.name(), info.getMenuList());
+        if (FuncUtil.isNotEmpty(info.getMenuList())) {
+            tokenService.putItem(accessToken, TokenItem.PERMIT_TREE.name(), info.getMenuList());
+        }
     }
 
     private void buildAccountInfo(UserRolePermitInfo info, TokenInfo accessToken) {

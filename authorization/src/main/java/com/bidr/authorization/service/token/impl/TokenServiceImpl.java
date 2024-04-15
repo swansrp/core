@@ -156,6 +156,15 @@ public class TokenServiceImpl implements TokenService {
     }
 
     @Override
+    public TokenInfo buildWxPlatformToken(String customerNumber) {
+        boolean loginSingleton = frameCacheService.getParamSwitch(AccountParam.LOGIN_SINGLETON);
+        if (loginSingleton) {
+            removeTokenForLoginSingleton(customerNumber, TokenType.PLATFORM_TOKEN);
+        }
+        return buildToken(customerNumber, TokenType.PLATFORM_TOKEN);
+    }
+
+    @Override
     public TokenInfo buildIotToken(String customerNumber) {
         return buildToken(customerNumber, TokenType.IOT_TOKEN);
     }

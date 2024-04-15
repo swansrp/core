@@ -1,5 +1,7 @@
 package com.bidr.wechat.controller;
 
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.kernel.utils.FuncUtil;
@@ -27,8 +29,9 @@ import java.util.List;
  * @since 2020/6/19 10:50
  */
 @Slf4j
+@Auth(AuthToken.class)
 @RestController
-@RequestMapping(value = "/wechat/auth")
+@RequestMapping(value = "/web/wechat/auth")
 @Api(value = "微信-公众号鉴权", tags = "微信-公众号鉴权")
 public class WechatAuthController {
 
@@ -42,23 +45,29 @@ public class WechatAuthController {
 
 
     @ApiOperation(value = "获取OAuth2登录url", notes = "获取OAuth2登录url")
-    @ApiImplicitParams({@ApiImplicitParam(paramType = "query", dataType = "string", name = "redirectUrl", value = "重定向url", required = true), @ApiImplicitParam(paramType = "query", dataType = "string", name = "state", value = "状态")})
+    @ApiImplicitParams(
+            {@ApiImplicitParam(paramType = "query", dataType = "string", name = "redirectUrl", value = "重定向url",
+                               required = true),
+             @ApiImplicitParam(paramType = "query", dataType = "string", name = "state", value = "状态")})
     @RequestMapping(value = "", method = RequestMethod.GET)
     public AuthUrlRes getAuthUrl(AuthUrlReq req) {
         return wechatAuthService.getOAuthUrl(req);
     }
 
     @ApiOperation(value = "使用鉴权码登录", notes = "使用鉴权码登录")
-    @ApiImplicitParams({@ApiImplicitParam(paramType = "query", dataType = "string", name = "code", value = "鉴权码", required = true)})
+    @ApiImplicitParams({@ApiImplicitParam(paramType = "query", dataType = "string", name = "code", value = "鉴权码",
+                                          required = true)})
     @RequestMapping(value = "", method = RequestMethod.POST)
-    public LoginRes getAuthUrl(AuthReq req) {
+    public LoginRes authLogin(AuthReq req) {
         LoginRes res = wechatAuthService.login(req);
         afterLogin(res);
         return res;
     }
 
     @ApiOperation(value = "获取js sdk鉴权信息", notes = "获取js sdk鉴权信息")
-    @ApiImplicitParams({@ApiImplicitParam(paramType = "query", dataType = "string", name = "baseUrl", value = "应用域名", required = true)})
+    @ApiImplicitParams(
+            {@ApiImplicitParam(paramType = "query", dataType = "string", name = "baseUrl", value = "应用域名",
+                               required = true)})
     @RequestMapping(value = "/jsApi", method = RequestMethod.GET)
     public AuthJdkApiRes getJsApiTicket(AuthJdkApiReq req) {
         return wechatAuthJdkService.getAuthJdkApiSignature(req);

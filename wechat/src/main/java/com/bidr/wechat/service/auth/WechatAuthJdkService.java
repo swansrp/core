@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.net.URLDecoder;
 
 /**
  * Title: WechatAuthJdkService
@@ -50,7 +51,7 @@ public class WechatAuthJdkService {
         signature.setJsApiTicket(buildJsApiTicket());
         signature.setNonceStr(RandomUtil.getString(16));
         signature.setTimestamp(String.valueOf(System.currentTimeMillis() / 1000));
-        signature.setUrl(baseUrl);
+        signature.setUrl(URLDecoder.decode(baseUrl));
         signature.setSignatureStr(buildSignatureStr(signature));
         return signature;
     }

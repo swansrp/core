@@ -42,7 +42,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
@@ -62,9 +62,7 @@ import java.util.Map;
  */
 @Slf4j
 @SuppressWarnings("rawtypes, unchecked")
-public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner,
-        PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>,
-        PortalExcelTemplateHandlerInf {
+public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelTemplateHandlerInf {
 
     protected Map<String, String> aliasMap = new HashMap<>(32);
     @Resource
@@ -186,25 +184,24 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     @Async
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void readExcelForInsert(InputStream is, String portalName) {
         validateReadExcel();
-        TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
         try {
             startUploadProgress(0);
             PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName,
                     PortalConfigContext.getPortalConfigRoleId());
             handleExcelInsert(is, portal);
-            dataSourceTransactionManager.commit(transactionStatus);
         } catch (Exception e) {
             log.error("读取excel插入数据失败", e);
             uploadProgressException(e.getMessage());
-            dataSourceTransactionManager.rollback(transactionStatus);
-
+            throw e;
         }
     }
 
     @Async
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void readExcelForUpdate(InputStream is, String portalName) {
         try {
             startUploadProgress(0);
@@ -214,6 +211,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         } catch (Exception e) {
             log.error("读取excel更新数据失败", e);
             uploadProgressException(e.getMessage());
+            throw e;
         }
 
     }

@@ -73,6 +73,13 @@ public interface TokenService {
     TokenInfo buildWechatToken(String customerNumber);
 
     /**
+     * 获取公众号token
+     *
+     * @return 小程序Token string
+     */
+    TokenInfo buildWxPlatformToken(String customerNumber);
+
+    /**
      * 获取IOT token
      *
      * @return iot Token string
