@@ -6,6 +6,7 @@ import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.MethodParameter;
@@ -63,6 +64,9 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         return new ResponseEntity<>(res, status);
     }
+
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbortException(ClientAbortException e){}
 
     @ResponseBody
     @ExceptionHandler(value = NoticeException.class)
