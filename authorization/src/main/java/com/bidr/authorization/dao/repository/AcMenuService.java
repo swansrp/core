@@ -28,16 +28,16 @@ public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
     }
 
     public List<AcMenu> getAllMenu() {
-        LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper()
-                .eq(AcMenu::getStatus, CommonConst.YES)
+        LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper().eq(AcMenu::getStatus, CommonConst.YES)
                 .eq(AcMenu::getVisible, CommonConst.YES).orderByAsc(AcMenu::getShowOrder);
         return super.select(wrapper);
     }
 
     public List<AcMenu> getSubMenu(Long menuId) {
         LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper().eq(AcMenu::getGrandId, menuId)
-                .eq(AcMenu::getMenuType, MenuTypeDict.SUB_MENU.getValue()).eq(AcMenu::getStatus, CommonConst.YES)
-                .eq(AcMenu::getVisible, CommonConst.YES).orderByAsc(AcMenu::getShowOrder);
+                .in(AcMenu::getMenuType, MenuTypeDict.SUB_MENU.getValue(), MenuTypeDict.BUTTON.getValue())
+                .eq(AcMenu::getStatus, CommonConst.YES).eq(AcMenu::getVisible, CommonConst.YES)
+                .orderByAsc(AcMenu::getShowOrder);
         return super.select(wrapper);
     }
 

@@ -75,10 +75,7 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
 
     @RequestMapping(value = "/add/button", method = RequestMethod.POST)
     public void addButton(@RequestBody AcMenu entity) {
-        entity.setKey(entity.getMenuId());
-        entity.setMenuType(MenuTypeDict.BUTTON.getValue());
-        entity.setKey(entity.getMenuId());
-        getRepo().updateById(entity);
+        adminMenuService.addMenu(entity, MenuTypeDict.BUTTON);
         Resp.notice("添加按钮成功");
     }
 

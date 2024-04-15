@@ -23,8 +23,6 @@ public class MenuTreeItem extends AcMenu {
     @ApiModelProperty(value = "显示顺序")
     private Integer showOrder;
 
-
-    @JsonIgnore
     private Integer menuType;
 
     @JsonIgnore
