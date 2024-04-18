@@ -20,6 +20,7 @@
         <module>oss</module>
         <module>wechat</module>
         <module>ocr</module>
+        <module>qichacha</module>
     </modules>
     <packaging>pom</packaging>
 
