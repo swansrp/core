@@ -47,7 +47,7 @@ public class AuthLogin implements AuthRole {
         }
         TokenInfo token = AuthTokenUtil.extractToken(request);
         Validator.assertNotNull(token, SYS_SESSION_TIME_OUT);
-        tokenService.verifyToken(token);
+        Validator.assertTrue(tokenService.verifyToken(token), SYS_SESSION_TIME_OUT);
         buildContext(token);
     }
 
