@@ -2,6 +2,8 @@ package com.bidr.platform.config.rest;
 
 import com.bidr.platform.exception.RestTemplateException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpHost;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,19 +37,7 @@ import java.util.Collections;
 @Configuration
 public class RestTemplateConfig {
 
-    @Value("${my.rest.proxy.enable}")
-    private boolean proxyEnable;
-    @Value("${my.rest.proxy.host}")
-    private String proxyHost;
-    @Value("${my.rest.proxy.port}")
-    private String proxyPort;
-    @Value("${my.rest.config.request.timeout}")
-    private int requestTimeout;
-    @Value("${my.rest.config.connect.timeout}")
-    private int connectTimeout;
-    @Value("${my.rest.config.read.timeout}")
-    private int readTimeout;
-    private ResponseErrorHandler responseErrorHandler = new ResponseErrorHandler() {
+    private final ResponseErrorHandler responseErrorHandler = new ResponseErrorHandler() {
 
         @Override
         public boolean hasError(ClientHttpResponse clientHttpResponse) throws IOException {
@@ -61,19 +51,33 @@ public class RestTemplateConfig {
             throw new RestTemplateException(clientHttpResponse.getStatusCode(), repErrorString);
         }
     };
+    @Value("${my.rest.proxy.enable}")
+    private boolean proxyEnable;
+    @Value("${my.rest.proxy.host}")
+    private String proxyHost;
+    @Value("${my.rest.proxy.port}")
+    private Integer proxyPort;
+    @Value("${my.rest.config.request.timeout}")
+    private int requestTimeout;
+    @Value("${my.rest.config.connect.timeout}")
+    private int connectTimeout;
+    @Value("${my.rest.config.read.timeout}")
+    private int readTimeout;
 
     @Bean
     public RestTemplate restTemplate() {
         HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
         httpRequestFactory.setConnectTimeout(connectTimeout);
         httpRequestFactory.setReadTimeout(readTimeout);
-
+        if (proxyEnable) {
+            HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+            httpRequestFactory.setHttpClient(HttpClients.custom().setProxy(proxy).build());
+        }
         RestTemplate restTemplate = new RestTemplate(httpRequestFactory);
         restTemplate.getMessageConverters().add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
-        MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter =
-                new MappingJackson2HttpMessageConverter();
-        mappingJackson2HttpMessageConverter
-                .setSupportedMediaTypes(Arrays.asList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN));
+        MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
+        mappingJackson2HttpMessageConverter.setSupportedMediaTypes(
+                Arrays.asList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN));
         restTemplate.getMessageConverters().add(1, mappingJackson2HttpMessageConverter);
         restTemplate.setInterceptors(Collections.singletonList(new AgentInterceptor()));
         restTemplate.setErrorHandler(responseErrorHandler);
@@ -82,8 +86,8 @@ public class RestTemplateConfig {
 
     public class AgentInterceptor implements ClientHttpRequestInterceptor {
         @Override
-        public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
-                throws IOException {
+        public ClientHttpResponse intercept(HttpRequest request, byte[] body,
+                                            ClientHttpRequestExecution execution) throws IOException {
             HttpHeaders headers = request.getHeaders();
             if (headers.getContentType() == null) {
                 headers.setContentType(MediaType.APPLICATION_JSON);
