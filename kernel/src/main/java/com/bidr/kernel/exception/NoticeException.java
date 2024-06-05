@@ -13,7 +13,15 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class NoticeException extends RuntimeException {
+
+    private Object obj;
+
     public NoticeException(String msg) {
         super(msg);
+    }
+
+    public NoticeException(Object obj, String msg) {
+        super(msg);
+        this.obj = obj;
     }
 }

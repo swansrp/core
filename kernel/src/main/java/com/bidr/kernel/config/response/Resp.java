@@ -30,6 +30,10 @@ public class Resp {
         throw new NoticeException(String.format(noticeFormat, parameter));
     }
 
+    public static void notice(Object resp, String noticeFormat, Object... parameter) {
+        throw new NoticeException(resp, String.format(noticeFormat, parameter));
+    }
+
     /**
      * 将制定源数据转换成目标
      *
