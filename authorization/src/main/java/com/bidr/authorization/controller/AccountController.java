@@ -35,5 +35,17 @@ public class AccountController {
         return accountService.getAccount(req);
     }
 
+    /**
+     * 通过用户姓名/组织名称/用户id获取用户信息
+     *
+     * @param names 用户姓名/组织名称/用户id列表
+     * @return 用户信息
+     */
+    @ApiOperation(value = "获取用户信息")
+    @RequestMapping(value = "/search", method = RequestMethod.POST)
+    public List<AccountRes> getAccountByUserNameOrDeptName(@RequestBody List<String> names) {
+        return accountService.getAccountByUserNameOrDeptNameOrAccountId(names);
+    }
+
 
 }

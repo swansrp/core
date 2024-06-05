@@ -2,11 +2,13 @@ package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcAccount;
+import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.mapper.AcAccountDao;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -58,6 +60,20 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
         wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
                 .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue());
         return super.select(wrapper);
+    }
+
+    public List<AcAccount> getAccountByUserNameOrDeptNameOrAccountId(List<String> names) {
+        MPJLambdaWrapper<AcAccount> wrapper = new MPJLambdaWrapper<>();
+        wrapper.leftJoin(AcDept.class, AcDept::getDeptId, AcAccount::getDepartment);
+        wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
+                .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue());
+        wrapper.nested(wr -> {
+            for (String name : names) {
+                wr.or(rr -> rr.like(AcAccount::getName, name).or(r -> r.like(AcDept::getName, name))
+                        .or(r -> r.eq(AcAccount::getId, name)).or(r -> r.like(AcAccount::getUserName, name)));
+            }
+        });
+        return selectJoinList(AcAccount.class, wrapper);
     }
 }
 

@@ -36,5 +36,8 @@ public class AuthAccountService {
         return accountService.getAccountByUserName(userName);
     }
 
-
+    public List<AccountRes> getAccountByUserNameOrDeptNameOrAccountId(List<String> names) {
+        List<AcAccount> res = accountService.getAccountByUserNameOrDeptNameOrAccountId(names);
+        return Resp.convert(res, AccountRes.class);
+    }
 }
