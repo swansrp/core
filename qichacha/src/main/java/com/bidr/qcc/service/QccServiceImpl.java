@@ -2,6 +2,7 @@ package com.bidr.qcc.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.Md5Util;
 import com.bidr.platform.service.rest.RestService;
@@ -66,7 +67,9 @@ public class QccServiceImpl implements QccService {
         handleError(res);
         Page<T> result = new Page<>(res.getPaging().getPageIndex(), res.getPaging().getPageSize(),
                 res.getPaging().getTotalRecords());
-        result.setRecords(JsonUtil.readJson(res.getResult(), List.class, clazz));
+        if (FuncUtil.isNotEmpty(res.getResult())) {
+            result.setRecords(JsonUtil.readJson(res.getResult(), List.class, clazz));
+        }
         return result;
     }
 
@@ -82,25 +85,30 @@ public class QccServiceImpl implements QccService {
 
     @Override
     @Cacheable(condition = "#result != null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
-    public Page<NameSearchRes> enterpriseSearch(NameSearchReq req) {
-        return getPage(QiChaChaUrl.NAME_SEARCH_URL, req, NameSearchRes.class);
+    public NameSearchRes enterpriseSearch(NameSearchReq req) {
+        return get(QiChaChaUrl.NAME_SEARCH_URL + "?searchName=" + req.getSearchName(), new QccReq(),
+                NameSearchRes.class);
     }
 
     @Override
     @Cacheable(condition = "#result != null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public EnterpriseRes getEnterpriseInfo(EnterpriseReq req) {
-        return get(QiChaChaUrl.ENTERPRISE_INFO_URL, req, EnterpriseRes.class);
+        String searchKey = req.getSearchKey();
+        req.setSearchKey(null);
+        return get(QiChaChaUrl.ENTERPRISE_INFO_URL + "?searchKey=" + searchKey, req,
+                EnterpriseRes.class);
     }
 
     @Override
     @Cacheable(condition = "#result != null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public EnterpriseAdvancedRes getEnterpriseAdvancedInfo(EnterpriseAdvancedReq req) {
-        return get(QiChaChaUrl.ENTERPRISE_ADVANCED_INFO_URL, req, EnterpriseAdvancedRes.class);
+        return get(QiChaChaUrl.ENTERPRISE_ADVANCED_INFO_URL + "?keyword=" + req.getKeyword(), new QccReq(),
+                EnterpriseAdvancedRes.class);
     }
 
     @Override
     @Cacheable(condition = "#result != null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public CreditCodeRes getCreditCode(CreditCodeReq req) {
-        return get(QiChaChaUrl.CREDIT_INFO_URL, req, CreditCodeRes.class);
+        return get(QiChaChaUrl.CREDIT_INFO_URL + "?keyWord=" + req.getKeyWord(), new QccReq(), CreditCodeRes.class);
     }
 }

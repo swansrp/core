@@ -1,6 +1,5 @@
 package com.bidr.qcc.service;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.qcc.dto.credit.CreditCodeReq;
 import com.bidr.qcc.dto.credit.CreditCodeRes;
 import com.bidr.qcc.dto.enterprise.EnterpriseAdvancedReq;
@@ -28,7 +27,7 @@ public interface QccService {
      * @param req 企业名称（模糊匹配）
      * @return 数据信息
      */
-    Page<NameSearchRes> enterpriseSearch(NameSearchReq req);
+    NameSearchRes enterpriseSearch(NameSearchReq req);
 
     /**
      * 886 0.10元/次
