@@ -67,7 +67,7 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
         wrapper.leftJoin(AcDept.class, AcDept::getDeptId, AcAccount::getDepartment);
         wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
                 .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue());
-        wrapper.nested(wr -> {
+        wrapper.nested(FuncUtil.isNotEmpty(names), wr -> {
             for (String name : names) {
                 wr.or(rr -> rr.like(AcAccount::getName, name).or(r -> r.like(AcDept::getName, name))
                         .or(r -> r.eq(AcAccount::getId, name)).or(r -> r.like(AcAccount::getUserName, name)));

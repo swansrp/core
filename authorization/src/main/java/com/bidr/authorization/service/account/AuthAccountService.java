@@ -7,9 +7,11 @@ import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.vo.account.AccountReq;
 import com.bidr.authorization.vo.account.AccountRes;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,7 +39,10 @@ public class AuthAccountService {
     }
 
     public List<AccountRes> getAccountByUserNameOrDeptNameOrAccountId(List<String> names) {
-        List<AcAccount> res = accountService.getAccountByUserNameOrDeptNameOrAccountId(names);
+        List<AcAccount> res = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(names)) {
+            res = accountService.getAccountByUserNameOrDeptNameOrAccountId(names);
+        }
         return Resp.convert(res, AccountRes.class);
     }
 }
