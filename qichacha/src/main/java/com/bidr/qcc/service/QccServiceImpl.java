@@ -129,7 +129,7 @@ public class QccServiceImpl implements QccService {
     public RestTemplate getRestTemplate() {
         RestTemplate restTemp = restService.getNoProxyRestTemplate();
         if (proxyEnable) {
-            HttpComponentsClientHttpRequestFactory httpRequestFactory = (HttpComponentsClientHttpRequestFactory) restTemp.getRequestFactory();
+            HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
             HttpHost proxy = new HttpHost(proxyHost, proxyPort);
             httpRequestFactory.setHttpClient(HttpClients.custom().setProxy(proxy).build());
             restTemp.setRequestFactory(httpRequestFactory);
