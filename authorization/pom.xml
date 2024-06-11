@@ -36,7 +36,7 @@
                 <java.version>1.8</java.version>
                 <kernel.version>20240605170210-26</kernel.version>
                 <platform.version>20240611100048-18</platform.version>
-                <redis.version>20240605170751-21</redis.version>
+                <redis.version>20240611111408-22</redis.version>
             </properties>
         </profile>
     </profiles>
