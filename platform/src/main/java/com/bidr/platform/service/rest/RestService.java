@@ -10,6 +10,7 @@ package com.bidr.platform.service.rest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
@@ -201,5 +202,204 @@ public interface RestService {
      * @throws IOException
      */
     void saveFile(String destUrl, File file) throws IOException;
+
+    /**
+     * Get t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T get(RestTemplate restTemplate, String url, Class<?> collectionClass, Class<?>... elementClasses);
+
+    /**
+     * Get t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T get(RestTemplate restTemplate, String url, HttpHeaders header, Class<?> collectionClass,
+              Class<?>... elementClasses);
+
+    /**
+     * Get t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param param           the param
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T get(RestTemplate restTemplate, String url, Object param, Class<?> collectionClass,
+              Class<?>... elementClasses);
+
+    /**
+     * Get t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param param           the param
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T get(RestTemplate restTemplate, String url, HttpHeaders header, Object param, Class<?> collectionClass,
+              Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, Object body, Class<?> collectionClass,
+               Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, LinkedMultiValueMap body, Class<?> collectionClass,
+               Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, HttpHeaders header, Object body, Class<?> collectionClass,
+               Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, HttpHeaders header, LinkedMultiValueMap body,
+               Class<?> collectionClass, Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, Object param, Object body, Class<?> collectionClass,
+               Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, Object param, LinkedMultiValueMap body, Class<?> collectionClass,
+               Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, HttpHeaders header, Object param, Object body,
+               Class<?> collectionClass, Class<?>... elementClasses);
+
+    /**
+     * Post t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param header          the header
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T post(RestTemplate restTemplate, String url, HttpHeaders header, Object param, LinkedMultiValueMap body,
+               Class<?> collectionClass, Class<?>... elementClasses);
+
+    /**
+     * Exec t.
+     *
+     * @param restTemplate    template
+     * @param <T>             the type parameter
+     * @param url             the url
+     * @param method          the method
+     * @param header          the header
+     * @param param           the param
+     * @param body            the body
+     * @param collectionClass collectionClass
+     * @param elementClasses  elementClasses array
+     * @return the t
+     */
+    <T> T exec(RestTemplate restTemplate, String url, HttpMethod method, HttpHeaders header, Object param, Object body,
+               Class<?> collectionClass, Class<?>... elementClasses);
+
+    /**
+     * 获取除代理的基本配置的RestTemplate
+     *
+     * @return
+     */
+    RestTemplate getNoProxyRestTemplate();
 
 }

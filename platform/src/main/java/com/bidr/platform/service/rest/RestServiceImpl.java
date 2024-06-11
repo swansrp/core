@@ -18,6 +18,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -118,10 +119,18 @@ public class RestServiceImpl implements RestService {
     }
 
     @Override
-    @Retryable(value = {Exception.class}, maxAttempts = 4, backoff = @Backoff(delay = 1000L, multiplier = 2))
     public <T> T exec(String url, HttpMethod method, HttpHeaders header, Object param, Object body,
                       Class<?> collectionClass, Class<?>... elementClasses) {
+        return exec(restTemplate, url, method, header, param, body, collectionClass, elementClasses);
+    }
+
+    @Override
+    @Retryable(value = {Exception.class}, maxAttempts = 4, backoff = @Backoff(delay = 1000L, multiplier = 2))
+    public <T> T exec(RestTemplate template, String url, HttpMethod method, HttpHeaders header, Object param,
+                      Object body, Class<?> collectionClass, Class<?>... elementClasses) {
         ResponseEntity<T> response;
+        RestTemplate restTemp = template == null ? restTemplate : template;
+
         ParameterizedTypeReference<T> parameter = new ParameterizedTypeReference<T>() {
         };
         if (param != null) {
@@ -134,7 +143,7 @@ public class RestServiceImpl implements RestService {
         try {
             log.debug("[{}]==> {}", transactionId, JsonUtil.toJson(body));
             long startTime = System.currentTimeMillis();
-            response = restTemplate.exchange(url, method, entity, parameter);
+            response = restTemp.exchange(url, method, entity, parameter);
             long endTime = System.currentTimeMillis();
             String duration = String.valueOf(endTime - startTime);
             try {
@@ -147,6 +156,17 @@ public class RestServiceImpl implements RestService {
             log.error("[{}]通信异常: {}", transactionId, e.getMsg());
             throw e;
         }
+    }
+
+    @Override
+    public RestTemplate getNoProxyRestTemplate() {
+        HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+        RestTemplate restTemp = new RestTemplate(httpRequestFactory);
+        restTemp.setRequestFactory(httpRequestFactory);
+        restTemp.setErrorHandler(restTemplate.getErrorHandler());
+        restTemp.setMessageConverters(restTemplate.getMessageConverters());
+        restTemp.setInterceptors(restTemplate.getInterceptors());
+        return restTemp;
     }
 
     public String buildUrl(String url, Object param) {
@@ -193,5 +213,82 @@ public class RestServiceImpl implements RestService {
         fos.close();
         bis.close();
         httpconn.disconnect();
+    }
+
+    @Override
+    public <T> T get(RestTemplate template, String url, Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.GET, new HttpHeaders(), null, null, collectionClass,
+                elementClasses);
+    }
+
+    @Override
+    public <T> T get(RestTemplate template, String url, HttpHeaders header, Class<?> collectionClass,
+                     Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.GET, header, null, null, collectionClass, elementClasses);
+    }
+
+    @Override
+    public <T> T get(RestTemplate template, String url, Object param, Class<?> collectionClass,
+                     Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.GET, new HttpHeaders(), param, null, collectionClass,
+                elementClasses);
+    }
+
+    @Override
+    public <T> T get(RestTemplate template, String url, HttpHeaders header, Object param, Class<?> collectionClass,
+                     Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.GET, header, param, null, collectionClass, elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, Object body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, new HttpHeaders(), null, body, collectionClass,
+                elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, LinkedMultiValueMap body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, new HttpHeaders(), null, body, collectionClass,
+                elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, HttpHeaders header, Object body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, header, null, body, collectionClass, elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, HttpHeaders header, LinkedMultiValueMap body,
+                      Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, header, null, body, collectionClass, elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, Object param, Object body, Class<?> collectionClass,
+                      Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, new HttpHeaders(), param, body, collectionClass,
+                elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, Object param, LinkedMultiValueMap body,
+                      Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, new HttpHeaders(), param, body, collectionClass,
+                elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, HttpHeaders header, Object param, Object body,
+                      Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, header, param, body, collectionClass, elementClasses);
+    }
+
+    @Override
+    public <T> T post(RestTemplate template, String url, HttpHeaders header, Object param, LinkedMultiValueMap body,
+                      Class<?> collectionClass, Class<?>... elementClasses) {
+        return getSelf().exec(template, url, HttpMethod.POST, header, param, body, collectionClass, elementClasses);
     }
 }
