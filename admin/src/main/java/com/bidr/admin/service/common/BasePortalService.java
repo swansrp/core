@@ -5,6 +5,7 @@ import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.config.PortalEntityField;
 import com.bidr.admin.config.PortalNoFilterField;
+import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.dict.UploadProgressStep;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
@@ -22,7 +23,6 @@ import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.db.SqlConstant;
-import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
@@ -33,6 +33,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.platform.bo.excel.ExcelExportBO;
+import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.diboot.core.binding.annotation.BindField;
 import lombok.SneakyThrows;
@@ -98,7 +99,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             BindField bindField = field.getAnnotation(BindField.class);
             if (FuncUtil.isNotEmpty(bindField)) {
                 aliasMap.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
-                continue;
             }
         }
     }
@@ -141,7 +141,19 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                     try {
                         switch (DictEnumUtil.getEnumByValue(column.getFieldType(), PortalFieldDict.class)) {
                             case ENUM:
-                                result = dictCacheService.getDictByValue(reference, result).getDictLabel();
+                                String[] split = result.split(",");
+                                List<String> dictResult = new ArrayList<>();
+                                for (String s : split) {
+                                    try {
+                                        SysDict dictByValue = dictCacheService.getDictByValue(reference, s);
+                                        if (FuncUtil.isNotEmpty(dictByValue)) {
+                                            dictResult.add(dictByValue.getDictLabel());
+                                        }
+                                    } catch (Exception e) {
+                                        log.error("", e);
+                                    }
+                                }
+                                result = StringUtil.join(dictResult.toArray(new String[0]));
                                 break;
                             case DATE:
                                 result = StringUtil.parse(value, DateUtil.DATE_NORMAL);

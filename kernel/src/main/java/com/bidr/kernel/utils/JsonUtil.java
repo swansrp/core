@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -107,6 +108,19 @@ public class JsonUtil {
         JavaType javaType = mapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);
         try {
             return mapper.readValue(jsonStr, javaType);
+        } catch (Exception e) {
+            log.error("", e);
+            return null;
+        }
+    }
+
+    public static <T> T readStreamJson(InputStream jsonIs, Class<?> collectionClass, Class<?>... elementClasses) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        JavaType javaType = mapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);
+        try {
+            return mapper.readValue(jsonIs, javaType);
         } catch (Exception e) {
             log.error("", e);
             return null;

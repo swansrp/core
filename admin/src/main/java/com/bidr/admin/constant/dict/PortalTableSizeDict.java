@@ -1,4 +1,4 @@
-package com.bidr.platform.constant.dict.portal;
+package com.bidr.admin.constant.dict;
 
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;

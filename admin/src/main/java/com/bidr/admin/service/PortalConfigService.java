@@ -1,6 +1,7 @@
 package com.bidr.admin.service;
 
 import com.bidr.admin.config.PortalNoFilterField;
+import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
@@ -15,16 +16,17 @@ import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.portal.AdminPortal;
 import com.diboot.core.binding.annotation.BindField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +38,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Title: PortalConfigService
@@ -63,7 +67,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         FIELD_MAP.put(Date.class, PortalFieldDict.DATE);
         FIELD_MAP.put(LocalDateTime.class, PortalFieldDict.DATE);
         FIELD_MAP.put(Integer.class, PortalFieldDict.NUMBER);
-        FIELD_MAP.put(BigDecimal.class, PortalFieldDict.NUMBER);
+        FIELD_MAP.put(BigDecimal.class, PortalFieldDict.MONEY);
         FIELD_MAP.put(Long.class, PortalFieldDict.NUMBER);
         FIELD_MAP.put(Double.class, PortalFieldDict.NUMBER);
         ROLE_BIND_PORTAL_MAP.put(DEFAULT_CONFIG_ROLE_ID, "默认配置");
@@ -93,13 +97,21 @@ public class PortalConfigService implements LoginFillTokenInf {
                     Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 0);
                     Class<?> voClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 1);
                     if (FuncUtil.isNotEmpty(entityClass) && FuncUtil.isNotEmpty(voClass)) {
-                        map.put(portalControllerClass, ReflectionUtil.getFieldMap(voClass).values());
+                        map.put(portalControllerClass, getFields(voClass));
                     }
                 }
             }
             refreshPortalConfig(map);
         }
 
+    }
+
+    private List<Field> getFields(Class<?> clazz) {
+        Collection<Field> fields = ReflectionUtil.getFieldMap(clazz).values();
+        return fields.stream().filter(field -> {
+            JsonIgnore annotation = field.getAnnotation(JsonIgnore.class);
+            return annotation == null;
+        }).collect(Collectors.toList());
     }
 
     private void refreshPortalConfig(Map<Class<?>, Collection<Field>> map) {
@@ -263,5 +275,28 @@ public class PortalConfigService implements LoginFillTokenInf {
         sysPortalService.deleteByRoleId(roleId);
         sysPortalColumnService.deleteByRoleId(roleId);
         ROLE_BIND_PORTAL_MAP.remove(roleId);
+    }
+
+    public void importConfig(InputStream inputStream) {
+        PortalWithColumnsRes portalWithColumns = JsonUtil.readStreamJson(inputStream, PortalWithColumnsRes.class);
+        Validator.assertNotNull(portalWithColumns, ErrCodeSys.SYS_ERR_MSG, "配置解析失败");
+        Validator.assertNotEmpty(portalWithColumns.getColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "字段配置信息");
+        SysPortal portal = sysPortalService.getByName(portalWithColumns.getName(), portalWithColumns.getRoleId());
+        if (FuncUtil.isNotEmpty(portal)) {
+            portalWithColumns.setId(portal.getId());
+            List<SysPortalColumn> columns = sysPortalColumnService.getPropertyListByPortalId(portal.getId(),
+                    portal.getRoleId());
+            Map<String, SysPortalColumn> map = ReflectionUtil.reflectToMap(columns, "portalId", "roleId", "property");
+            if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
+                for (SysPortalColumn column : portalWithColumns.getColumns()) {
+                    SysPortalColumn sysPortalColumn = map.get(
+                            StringUtil.join(column.getPortalId().toString(), column.getRoleId().toString(),
+                                    column.getProperty()));
+                    column.setId(sysPortalColumn.getId());
+                }
+                sysPortalColumnService.updateById(portalWithColumns.getColumns());
+            }
+            sysPortalService.updateById(portalWithColumns);
+        }
     }
 }

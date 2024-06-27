@@ -4,6 +4,8 @@ import com.bidr.admin.service.PortalConfigService;
 import com.bidr.admin.service.PortalService;
 import com.bidr.admin.vo.*;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.utils.HttpUtil;
+import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
@@ -14,7 +16,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -105,4 +111,21 @@ public class AdminPortalController {
     public List<KeyValueResVO> getBindRoleDict() {
         return portalConfigService.getBindRoleDict();
     }
+
+    @RequestMapping(path = {"/config/export"}, method = {RequestMethod.GET})
+    @ApiOperation(value = "导出指定配置")
+    public void exportConfig(HttpServletRequest request, HttpServletResponse response, PortalReq req) {
+        PortalWithColumnsRes res = portalService.getPortalWithColumnsConfig(req.getName(), req.getRoleId());
+        HttpUtil.export(request, response, "application/json", "utf-8", "portalConfig.dat",
+                JsonUtil.toJson(res).getBytes());
+    }
+
+    @RequestMapping(path = {"/config/import"}, method = {RequestMethod.POST})
+    @ApiOperation(value = "导入指定配置")
+    public void importConfig(MultipartFile file) throws IOException {
+        portalConfigService.importConfig(file.getInputStream());
+        Resp.notice("导入配置成功");
+    }
+
+
 }

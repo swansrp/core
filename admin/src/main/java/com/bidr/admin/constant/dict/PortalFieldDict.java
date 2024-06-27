@@ -1,4 +1,4 @@
-package com.bidr.kernel.constant.dict.portal;
+package com.bidr.admin.constant.dict;
 
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
@@ -34,6 +34,8 @@ public enum PortalFieldDict implements Dict {
     VIDEO("13", "视频"),
     AUDIO("14", "音频"),
     FILE("15", "文件"),
+    MONEY("16", "货币"),
+    PERCENT("17", "百分比"),
     DEFAULT("0", "默认");
 
     private final String value;

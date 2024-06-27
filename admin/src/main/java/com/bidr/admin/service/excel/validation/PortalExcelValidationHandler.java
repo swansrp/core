@@ -4,12 +4,12 @@ import com.alibaba.excel.write.handler.SheetWriteHandler;
 import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
 import com.alibaba.excel.write.metadata.holder.WriteWorkbookHolder;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.admin.vo.PortalWithColumnsRes;
-import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.vo.common.KeyValueResVO;
@@ -79,7 +79,7 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
     private List<String> getEntityConstraint(SysPortalColumn column) throws ClassNotFoundException {
         List<String> constraint;
         SysPortal entityPortal = BeanUtil.getBean(SysPortalService.class)
-                .getByName(column.getReference(),  PortalConfigContext.getPortalConfigRoleId());
+                .getByName(column.getReference(), PortalConfigContext.getPortalConfigRoleId());
         AdvancedQueryReq req = new AdvancedQueryReq();
         if (FuncUtil.isNotEmpty(column.getEntityCondition())) {
             AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(),

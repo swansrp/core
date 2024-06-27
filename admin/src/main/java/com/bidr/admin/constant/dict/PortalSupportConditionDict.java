@@ -1,8 +1,7 @@
-package com.bidr.platform.constant.dict.portal;
+package com.bidr.admin.constant.dict;
 
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
-import com.bidr.kernel.constant.dict.portal.PortalFieldDict;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.dao.entity.SysDict;
@@ -32,30 +31,42 @@ public class PortalSupportConditionDict implements IDynamicDict {
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.NOT_EQUAL});
         MAP.put(PortalFieldDict.NUMBER,
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.NOT_EQUAL,
-                        PortalConditionDict.BETWEEN, PortalConditionDict.GREATER, PortalConditionDict.GREATER_EQUAL,
-                        PortalConditionDict.LESS, PortalConditionDict.LESS_EQUAL});
+                                          PortalConditionDict.BETWEEN, PortalConditionDict.GREATER,
+                                          PortalConditionDict.GREATER_EQUAL,
+                                          PortalConditionDict.LESS, PortalConditionDict.LESS_EQUAL});
         MAP.put(PortalFieldDict.ENUM,
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.NOT_EQUAL,
-                        PortalConditionDict.IN});
+                                          PortalConditionDict.IN});
         MAP.put(PortalFieldDict.TREE, new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.IN});
         MAP.put(PortalFieldDict.DATE,
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.BETWEEN,
-                        PortalConditionDict.GREATER, PortalConditionDict.GREATER_EQUAL, PortalConditionDict.LESS,
-                        PortalConditionDict.LESS_EQUAL});
+                                          PortalConditionDict.GREATER, PortalConditionDict.GREATER_EQUAL,
+                                          PortalConditionDict.LESS,
+                                          PortalConditionDict.LESS_EQUAL});
         MAP.put(PortalFieldDict.DATETIME,
                 new PortalConditionDict[]{PortalConditionDict.BETWEEN, PortalConditionDict.GREATER,
-                        PortalConditionDict.GREATER_EQUAL, PortalConditionDict.LESS, PortalConditionDict.LESS_EQUAL});
+                                          PortalConditionDict.GREATER_EQUAL, PortalConditionDict.LESS,
+                                          PortalConditionDict.LESS_EQUAL});
         MAP.put(PortalFieldDict.LINK, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.HTML, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.TEXT, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.ENTITY,
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.IN,
-                        PortalConditionDict.NOT_EQUAL, PortalConditionDict.NOT_IN});
+                                          PortalConditionDict.NOT_EQUAL, PortalConditionDict.NOT_IN});
         MAP.put(PortalFieldDict.IMAGE, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.VIDEO, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.AUDIO, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.FILE, new PortalConditionDict[]{PortalConditionDict.LIKE});
-
+        MAP.put(PortalFieldDict.MONEY,
+                new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.NOT_EQUAL,
+                                          PortalConditionDict.BETWEEN, PortalConditionDict.GREATER,
+                                          PortalConditionDict.GREATER_EQUAL,
+                                          PortalConditionDict.LESS, PortalConditionDict.LESS_EQUAL});
+        MAP.put(PortalFieldDict.PERCENT,
+                new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.NOT_EQUAL,
+                                          PortalConditionDict.BETWEEN, PortalConditionDict.GREATER,
+                                          PortalConditionDict.GREATER_EQUAL,
+                                          PortalConditionDict.LESS, PortalConditionDict.LESS_EQUAL});
         MAP.put(PortalFieldDict.DEFAULT, new PortalConditionDict[]{PortalConditionDict.EQUAL});
     }
 

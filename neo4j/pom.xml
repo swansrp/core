@@ -24,6 +24,7 @@
 
                 <bidr.core.kernel.version>${jarVersion}</bidr.core.kernel.version>
                 <bidr.core.authorization.version>${jarVersion}</bidr.core.authorization.version>
+                <bidr.core.admin.version>${jarVersion}</bidr.core.admin.version>
             </properties>
         </profile>
         <profile>
@@ -38,6 +39,7 @@
 
                 <bidr.core.authorization.version>20231031143836-9</bidr.core.authorization.version>
                 <bidr.core.kernel.version>20231122181007-10-SNAPSHOT</bidr.core.kernel.version>
+                <bidr.core.admin.version>${jarVersion}</bidr.core.admin.version>
             </properties>
         </profile>
     </profiles>
@@ -57,6 +59,11 @@
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
             <version>${bidr.core.kernel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>admin</artifactId>
+            <version>${bidr.core.admin.version}</version>
         </dependency>
     </dependencies>
 

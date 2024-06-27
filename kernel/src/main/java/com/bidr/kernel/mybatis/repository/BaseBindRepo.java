@@ -145,7 +145,8 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     @Transactional(rollbackFor = Exception.class)
     public void bindAll(AdvancedQueryBindReq req) {
         IPage<ATTACH> res = advancedQueryUnbindList(req);
-        Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG, "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
+        Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG,
+                "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
         List attachIdList = new ArrayList();
         if (FuncUtil.isNotEmpty(res.getRecords())) {
             for (ATTACH record : res.getRecords()) {
@@ -160,7 +161,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
         attachRepo().parseAdvancedQuery(req, null, wrapper);
         wrapper.and(w -> w.isNull(bindEntityId()));
-        attachRepo().parseSort(req, wrapper);
+        attachRepo().parseSort(req, null, wrapper);
         return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), true),
                 getAttachClass(), wrapper);
     }
@@ -206,7 +207,8 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     public void advancedReplace(AdvancedQueryBindReq req) {
         IPage<ATTACH> res = advancedQueryUnbindList(req);
-        Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG, "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
+        Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG,
+                "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
         List attachIdList = new ArrayList();
         if (FuncUtil.isNotEmpty(res.getRecords())) {
             for (ATTACH record : res.getRecords()) {

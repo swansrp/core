@@ -1,4 +1,4 @@
-package com.bidr.platform.constant.dict.portal;
+package com.bidr.admin.constant.dict;
 
 /**
  * Title: PortalAlignDict

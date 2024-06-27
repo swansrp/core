@@ -155,7 +155,8 @@ public class DbUtil {
     public static String getTableName(Class<?> clazz) {
         TableName annotation = clazz.getAnnotation(TableName.class);
         Validator.assertNotNull(annotation, ErrCodeSys.PA_DATA_NOT_EXIST, "表名");
-        return annotation.value();
+        String[] split = annotation.value().split("\\.");
+        return split[split.length - 1];
     }
 
     public static String getSelectSqlName(Class<?> clazz, String fieldName) {

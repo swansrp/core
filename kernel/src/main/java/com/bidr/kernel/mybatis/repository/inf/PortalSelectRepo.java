@@ -198,7 +198,7 @@ public interface PortalSelectRepo<T> {
 
     default void buildQueryWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap, ConditionVO condition) {
         formatDateValue(condition);
-        String columnName = getColumnName(condition, aliasMap, wrapper.getEntityClass());
+        String columnName = getColumnName(condition.getProperty(), aliasMap, wrapper.getEntityClass());
         switch (PortalConditionDict.of(condition.getRelation())) {
             case EQUAL:
                 wrapper.eq(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0));
@@ -280,20 +280,20 @@ public interface PortalSelectRepo<T> {
     /**
      * 获取数据库字段名
      *
-     * @param condition   查询条件
+     * @param property    字段名
      * @param aliasMap    别名表
      * @param entityClass 所属数据库entity
      * @return 字段名
      */
 
-    default String getColumnName(ConditionVO condition, Map<String, String> aliasMap, Class<?> entityClass) {
-        if (FuncUtil.isNotEmpty(condition.getProperty())) {
+    default String getColumnName(String property, Map<String, String> aliasMap, Class<?> entityClass) {
+        if (FuncUtil.isNotEmpty(property)) {
             String columnName = null;
             if (FuncUtil.isNotEmpty(aliasMap)) {
-                columnName = aliasMap.get(condition.getProperty());
+                columnName = aliasMap.get(property);
             }
             if (FuncUtil.isEmpty(columnName)) {
-                columnName = "t." + getColumnName(condition.getProperty(), entityClass);
+                columnName = "t." + getColumnName(property, entityClass);
             }
             return columnName;
         }
@@ -336,15 +336,16 @@ public interface PortalSelectRepo<T> {
         if (FuncUtil.isNotEmpty(req.getCondition())) {
             parseAdvancedQuery(req.getCondition(), aliasMap, wrapper);
         }
-        parseSort(req, wrapper);
+        parseSort(req, aliasMap, wrapper);
         return wrapper;
     }
 
-    default MPJLambdaWrapper<T> parseSort(AdvancedQueryReq req, MPJLambdaWrapper<T> wrapper) {
+    default MPJLambdaWrapper<T> parseSort(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                          MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             for (SortVO sortVO : req.getSortList()) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
-                    String columnName = getColumnName(sortVO.getProperty(), wrapper.getEntityClass());
+                    String columnName = getColumnName(sortVO.getProperty(), aliasMap, wrapper.getEntityClass());
                     switch (PortalSortDict.of(sortVO.getType())) {
                         case ASC:
                             wrapper.orderByAsc(columnName);
