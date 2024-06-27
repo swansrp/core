@@ -49,6 +49,17 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         if (init) {
             this.init();
         }
+        syncSysDictType(buildSysDictType(config.getDictName(), config.getDictTitle()));
+    }
+
+    private void buildSysDictMap(List<SysDict> sysDictCache, Map<String, LinkedHashMap<String, SysDict>> map) {
+        for (SysDict dict : sysDictCache) {
+            for (DictTypeEnum value : DictTypeEnum.values()) {
+                LinkedHashMap<String, SysDict> typeMap = map.getOrDefault(value.name(), new LinkedHashMap<>());
+                typeMap.put(value.getGetFunc().apply(dict), dict);
+                map.put(value.name(), typeMap);
+            }
+        }
     }
 
     @Override
@@ -112,16 +123,6 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
 
     private void buildDbSysDictCacheList(List<SysDict> sysDictCache) {
         sysDictCache.addAll(sysDictService.getSysDictByName(config.getDictName()));
-    }
-
-    private static void buildSysDictMap(List<SysDict> sysDictCache, Map<String, LinkedHashMap<String, SysDict>> map) {
-        for (SysDict dict : sysDictCache) {
-            for (DictTypeEnum value : DictTypeEnum.values()) {
-                LinkedHashMap<String, SysDict> typeMap = map.getOrDefault(value.name(), new LinkedHashMap<>());
-                typeMap.put(value.getGetFunc().apply(dict), dict);
-                map.put(value.name(), typeMap);
-            }
-        }
     }
 
     private void syncSysDictType(SysDictType sysDictType) {

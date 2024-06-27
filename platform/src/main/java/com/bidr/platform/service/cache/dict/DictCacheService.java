@@ -20,9 +20,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,17 +36,15 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DictCacheService {
-
-    @Value("${my.base-package}")
-    private String basePackage;
+public class DictCacheService implements CommandLineRunner {
 
     private final Integer DEFAULT_EXPIRED = 24 * 60;
-
     private final SysDictTypeService sysDictTypeService;
     private final SysDictService sysDictService;
     private final DynamicMemoryCacheManager dynamicMemoryCacheManager;
     private final Map<String, DictCacheProvider> MAP = new ConcurrentHashMap<>();
+    @Value("${my.base-package}")
+    private String basePackage;
 
     public SysDict getDictByName(String dictName, String name) {
         return getDict(dictName, dictName, DictTypeEnum.NAME);
@@ -79,13 +77,16 @@ public class DictCacheService {
         DictCacheProvider dictCacheProvider = MAP.get(dictName);
         if (FuncUtil.isNotEmpty(dictCacheProvider)) {
             LinkedHashMap<String, SysDict> valueMap = dictCacheProvider.getCache(DictTypeEnum.VALUE.name());
-            Validator.assertNotEmpty(valueMap, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
-            valueMap.forEach((key, value) -> {
-                KeyValueResVO res = new KeyValueResVO();
-                res.setValue(key);
-                res.setLabel(value.getDictLabel());
-                resList.add(res);
-            });
+            // Validator.assertNotEmpty(valueMap, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
+            if (FuncUtil.isNotEmpty(valueMap)) {
+                valueMap.forEach((key, value) -> {
+                    KeyValueResVO res = new KeyValueResVO();
+                    res.setValue(key);
+                    res.setLabel(value.getDictLabel());
+                    resList.add(res);
+                });
+            }
+
         }
         return resList;
 
@@ -105,12 +106,12 @@ public class DictCacheService {
                 entry.getValue().refresh();
             }
         } else {
-            run();
+            run(null);
         }
     }
 
-    @PostConstruct
-    public void run() {
+    @Override
+    public void run(String... args) {
         List<SysDictType> sysDictTypeList = sysDictTypeService.getNotReadOnlySysDictType();
         if (FuncUtil.isNotEmpty(sysDictTypeList)) {
             for (SysDictType sysDictType : sysDictTypeList) {
