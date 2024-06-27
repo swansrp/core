@@ -9,9 +9,7 @@ import com.bidr.platform.redis.cache.RedisCacheConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.data.redis.connection.MessageListener;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -27,7 +25,14 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Set<String> keys(String prefix) {
-        return keysByPattern(getKey(prefix) + "*");
+        Set<String> keys = new HashSet<>();
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(getKey(prefix) + "*").count(Long.MAX_VALUE).build();
+        Cursor<String> cursor = redisTemplate.scan(scanOptions);
+        while (cursor.hasNext()) {
+            keys.add(cursor.next());
+        }
+        cursor.close();
+        return keys;
     }
 
     @Override
