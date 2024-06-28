@@ -244,6 +244,18 @@ public interface PortalSelectRepo<T> {
                 wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0),
                         condition.getValue().get(1));
                 break;
+            case CONTAIN:
+                wrapper.nested(
+                        w -> w.apply(
+                                String.format("FIND_IN_SET('%s', %s) > 0", condition.getValue().get(0), columnName)));
+                break;
+            case CONTAIN_IN:
+                wrapper.nested(w -> {
+                    for (Object value : condition.getValue()) {
+                        w.or().apply(String.format("FIND_IN_SET('%s', %s) > 0", value, columnName));
+                    }
+                });
+                break;
             default:
                 break;
         }

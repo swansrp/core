@@ -33,7 +33,11 @@ public enum PortalConditionDict implements Dict {
     IN(11, "介于"),
     NOT_IN(12, "不介于"),
     BETWEEN(13, "之间"),
-    NOT_BETWEEN(14, "之外");
+    NOT_BETWEEN(14, "之外"),
+
+    CONTAIN(15, "其中之一"),
+
+    CONTAIN_IN(16, "多个其中之一");
 
     @Getter
     private final Integer value;
