@@ -179,6 +179,16 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 配置select字段
+     * null 代表使用全体字段
+     *
+     * @return 字段列表
+     */
+    default List<String> selectColumns() {
+        return getRepo().getFieldSql("t");
+    }
+
+    /**
      * 生成联表查询别名
      *
      * @return 别名map

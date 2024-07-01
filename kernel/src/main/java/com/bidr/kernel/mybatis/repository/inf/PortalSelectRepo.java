@@ -332,13 +332,22 @@ public interface PortalSelectRepo<T> {
             }
         } else {
             if (FuncUtil.isNotEmpty(req.getProperty()) && FuncUtil.isNotEmpty(req.getRelation())) {
-                buildQueryWrapper(wrapper, aliasMap, req);
-            } else {
-                if (FuncUtil.equals(andOr, SqlConstant.AND)) {
-                    wrapper.apply("1 = 1");
+                if (req.getRelation().equals(PortalConditionDict.NULL.getValue()) ||
+                        req.getRelation().equals(PortalConditionDict.NOT_NULL.getValue())) {
+                    buildQueryWrapper(wrapper, aliasMap, req);
+                    return;
                 } else {
-                    wrapper.apply("1 = 0");
+                    if (FuncUtil.isNotEmpty(req.getValue())) {
+                        buildQueryWrapper(wrapper, aliasMap, req);
+                        return;
+                    }
                 }
+                buildQueryWrapper(wrapper, aliasMap, req);
+            }
+            if (FuncUtil.equals(andOr, SqlConstant.AND)) {
+                wrapper.apply("1 = 1");
+            } else {
+                wrapper.apply("1 = 0");
             }
         }
     }

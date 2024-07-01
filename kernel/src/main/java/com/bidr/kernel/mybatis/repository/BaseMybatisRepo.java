@@ -14,10 +14,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.anno.EnableTruncate;
 import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
-import com.bidr.kernel.utils.DbUtil;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.yulichang.toolkit.LambdaUtils;
@@ -31,6 +28,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -261,27 +259,45 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     public List<String> getFieldSql(String prefix) {
+        return getFieldSql(prefix, (field) -> true);
+    }
+
+    public List<String> getFieldSql(String prefix, Predicate<Field> predicate) {
         List<String> list = new ArrayList<>();
         Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
-        map.forEach((name, field) -> {
+        map.values().stream().filter(predicate).forEach((field) -> {
             if (!Modifier.isFinal(field.getModifiers())) {
                 String columnName = getSelectSqlName(field);
-                list.add(prefix + "." + columnName);
+                if (FuncUtil.isNotEmpty(prefix)) {
+                    list.add(prefix + "." + columnName);
+                } else {
+                    list.add(columnName);
+                }
+
             }
         });
         return list;
     }
 
+    public List<String> getFieldSql(Predicate<Field> predicate) {
+        return getFieldSql("", predicate);
+    }
+
     public List<String> getFieldSql() {
+        return getFieldSql("", (field) -> true);
+    }
+
+    public List<String> getFieldSql(String prefix, SFunction<T, ?>... columns) {
         List<String> list = new ArrayList<>();
-        Map<String, Field> map = ReflectionUtil.getFieldMap(entityClass);
-        map.forEach((name, field) -> {
-            if (!Modifier.isFinal(field.getModifiers())) {
-                String columnName = getSelectSqlName(field);
-                list.add(columnName);
-            }
-        });
-        return list;
+        if (FuncUtil.isNotEmpty(prefix)) {
+            return Arrays.stream(columns).map(c -> prefix + "." + getSelectSqlName(LambdaUtil.getField(c)))
+                    .collect(Collectors.toList());
+        } else {
+            return Arrays.stream(columns).map(c -> getSelectSqlName(LambdaUtil.getField(c)))
+                    .collect(Collectors.toList());
+
+        }
+
     }
 
     public List<T> group(QueryWrapper<T> wrapper, SFunction<T, ?> column, SFunction<T, ?>... columns) {

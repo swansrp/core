@@ -116,21 +116,27 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo) {
-        return select(req, aliasMap, null, false, vo);
+        return select(req, aliasMap, null, null, false, vo);
     }
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
-                                boolean needGroup, Class<VO> vo) {
+                                List<String> selectColumns, boolean needGroup, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        wrapper.selectAll(getEntityClass(), "t");
+        List<String> entityFieldList;
+        if (FuncUtil.isEmpty(selectColumns)) {
+            wrapper.selectAll(getEntityClass(), "t");
+            entityFieldList = getFieldSql("t");
+        } else {
+            wrapper.select(selectColumns.toArray(new String[0]));
+            entityFieldList = selectColumns;
+        }
+        if (FuncUtil.isNotEmpty(aliasMap) && FuncUtil.isNotEmpty(aliasMap.values())) {
+            entityFieldList.addAll(aliasMap.values());
+        }
         if (needGroup) {
-            List<String> entityFieldList = getFieldSql("t");
-            if (FuncUtil.isNotEmpty(aliasMap) && FuncUtil.isNotEmpty(aliasMap.values())) {
-                entityFieldList.addAll(aliasMap.values());
-            }
             wrapper.groupByStr(entityFieldList);
         }
         parseAdvancedQuery(req, aliasMap, wrapper);
