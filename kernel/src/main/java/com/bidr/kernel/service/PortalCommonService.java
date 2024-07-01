@@ -3,6 +3,7 @@ package com.bidr.kernel.service;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -172,10 +173,23 @@ public interface PortalCommonService<ENTITY, VO> {
     /**
      * Join Wrapper 查询是否需要对结果进行group
      *
-     * @return 结果是否需要group
+     * @return 需要group的Columns
      */
-    default boolean needGroup() {
-        return false;
+    default List<String> groupColumns() {
+        return null;
+    }
+
+    /**
+     * 通用获取group列的方法
+     *
+     * @return
+     */
+    default List<String> defaultGroupColumns() {
+        List<String> entityFieldList = selectColumns();
+        if (FuncUtil.isNotEmpty(getAliasMap()) && FuncUtil.isNotEmpty(getAliasMap().values())) {
+            entityFieldList.addAll(getAliasMap().values());
+        }
+        return entityFieldList;
     }
 
     /**

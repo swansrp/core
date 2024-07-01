@@ -186,15 +186,15 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         }
         Map<String, String> aliasMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = null;
-        boolean needGroup = false;
+        List<String> groupColumns = null;
         List<String> selectColumns = null;
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
-            needGroup = getPortalService().needGroup();
+            groupColumns = getPortalService().groupColumns();
             selectColumns = getPortalService().selectColumns();
         }
-        Page<VO> result = getRepo().select(req, aliasMap, wrapper, selectColumns, needGroup, getVoClass());
+        Page<VO> result = getRepo().select(req, aliasMap, wrapper, selectColumns, groupColumns, getVoClass());
         return result;
     }
 

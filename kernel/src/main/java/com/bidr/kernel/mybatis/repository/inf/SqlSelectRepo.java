@@ -35,7 +35,7 @@ public interface SqlSelectRepo<T> {
     <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo);
 
     <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
-                         List<String> selectColumns, boolean needGroup, Class<VO> vo);
+                         List<String> selectColumns, List<String> groupColumns, Class<VO> vo);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

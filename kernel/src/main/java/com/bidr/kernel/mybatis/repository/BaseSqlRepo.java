@@ -116,28 +116,22 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo) {
-        return select(req, aliasMap, null, null, false, vo);
+        return select(req, aliasMap, null, null, null, vo);
     }
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
-                                List<String> selectColumns, boolean needGroup, Class<VO> vo) {
+                                List<String> selectColumns, List<String> groupColumns, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        List<String> entityFieldList;
         if (FuncUtil.isEmpty(selectColumns)) {
             wrapper.selectAll(getEntityClass(), "t");
-            entityFieldList = getFieldSql("t");
         } else {
             wrapper.select(selectColumns.toArray(new String[0]));
-            entityFieldList = selectColumns;
         }
-        if (FuncUtil.isNotEmpty(aliasMap) && FuncUtil.isNotEmpty(aliasMap.values())) {
-            entityFieldList.addAll(aliasMap.values());
-        }
-        if (needGroup) {
-            wrapper.groupByStr(entityFieldList);
+        if (FuncUtil.isNotEmpty(groupColumns)) {
+            wrapper.groupByStr(groupColumns);
         }
         parseAdvancedQuery(req, aliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
