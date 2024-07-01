@@ -81,6 +81,11 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     @Override
     public void run(String... args) {
+        aliasMap.putAll(initAliasMap());
+    }
+
+    protected Map<String, String> initAliasMap() {
+        Map<String, String> map = new HashMap<>(32);
         for (Field field : ReflectionUtil.getFields(getVoClass())) {
             PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
             if (FuncUtil.isNotEmpty(portalNoFilterField)) {
@@ -89,18 +94,19 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
             if (FuncUtil.isNotEmpty(portalEntityField)) {
                 if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
-                    aliasMap.put(field.getName(),
+                    map.put(field.getName(),
                             getAlias(portalEntityField.entity(), portalEntityField.field(), portalEntityField.alias()));
                 } else {
-                    aliasMap.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+                    map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
                 }
                 continue;
             }
             BindField bindField = field.getAnnotation(BindField.class);
             if (FuncUtil.isNotEmpty(bindField)) {
-                aliasMap.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+                map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
             }
         }
+        return map;
     }
 
     private String getAlias(Class<?> clazz, String fieldName, String alias) {
@@ -116,6 +122,10 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     protected void addAliasMap(GetFunc reqFiled, String alias, GetFunc entityField) {
         aliasMap.put(LambdaUtil.getFieldNameByGetFunc(reqFiled), alias + "." + DbUtil.getSelectSqlName(entityField));
+    }
+
+    protected void addAliasMap(GetFunc<VO, ?> field) {
+        aliasMap.put(LambdaUtil.getFieldNameByGetFunc(field), LambdaUtil.getFieldNameByGetFunc(field));
     }
 
     @Override
