@@ -20,12 +20,13 @@ public enum PortalFieldDict implements Dict {
      *
      */
     STRING("1", "单行文本"),
+    ENUM("4", "下拉选择"),
+    ENUM_MULTI_IN_ONE("18", "下拉选择(逗号隔开)"),
+    ENTITY("11", "关联实体"),
     BOOLEAN("2", "真值"),
     NUMBER("3", "数字"),
     MONEY("16", "货币"),
     PERCENT("17", "百分比"),
-    ENUM("4", "下拉选择"),
-    ENUM_MULTI_IN_ONE("18", "下拉选择(逗号隔开)"),
     TREE("5", "树形下拉选择"),
     TREE_MULTI_IN_ONE("19", "树形下拉选择(逗号隔开)"),
     DATE("6", "日期"),
@@ -33,7 +34,6 @@ public enum PortalFieldDict implements Dict {
     LINK("8", "超链接"),
     HTML("9", "富文本"),
     TEXT("10", "多行文本"),
-    ENTITY("11", "关联实体"),
     IMAGE("12", "图片"),
     VIDEO("13", "视频"),
     AUDIO("14", "音频"),

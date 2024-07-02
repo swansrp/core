@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.admin.dao.mapper.SysPortalAssociateMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalAssociate">
+    <!--@mbg.generated-->
+    <!--@Table sys_portal_associate-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="role_id" jdbcType="BIGINT" property="roleId" />
+    <result column="portal_id" jdbcType="BIGINT" property="portalId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="bind_type" jdbcType="VARCHAR" property="bindType" />
+    <result column="bind_portal_id" jdbcType="BIGINT" property="bindPortalId" />
+    <result column="bind_property" jdbcType="VARCHAR" property="bindProperty" />
+    <result column="bind_sort_property" jdbcType="VARCHAR" property="bindSortProperty" />
+    <result column="bind_sort_type" jdbcType="VARCHAR" property="bindSortType" />
+    <result column="tree_mode" jdbcType="VARCHAR" property="treeMode" />
+    <result column="tree_check_strict" jdbcType="VARCHAR" property="treeCheckStrict" />
+    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, role_id, portal_id, title, bind_type, bind_portal_id, bind_property, bind_sort_property, 
+    bind_sort_type, tree_mode, tree_check_strict, display_order
+  </sql>
+</mapper>

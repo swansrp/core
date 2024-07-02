@@ -35,6 +35,12 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         return super.select(wrapper);
     }
 
+    public List<SysPortal> getAllPortalList() {
+        MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper<>();
+        wrapper.orderByAsc(SysPortal::getDisplayName);
+        return select(wrapper);
+    }
+
     public List<KeyValueResVO> getPortalList(String name, Long roleId) {
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper<>();
         wrapper.selectAs(SysPortal::getDisplayName, KeyValueResVO::getLabel);
