@@ -318,7 +318,7 @@ public class RedisServiceImpl implements RedisService {
     public <T> List<T> getSetMembers(String key, Class<T> clazz) {
         Validator.assertNotBlank(key, ErrCodeSys.PA_DATA_NOT_EXIST, "key");
         Set<?> res = redisTemplate.opsForSet().members(getKey(key));
-        return ReflectionUtil.copyList(res, clazz);
+        return JsonUtil.readJson(res, Set.class, clazz);
     }
 
     @Override
@@ -414,7 +414,7 @@ public class RedisServiceImpl implements RedisService {
     public <T> Set<T> zSetRange(String key, long start, long end, Class<T> clazz) {
         Validator.assertNotBlank(key, ErrCodeSys.PA_DATA_NOT_EXIST, "key");
         Set<Object> res = redisTemplate.opsForZSet().range(getKey(key), start, end);
-        return ReflectionUtil.copySet(res, clazz);
+        return JsonUtil.readJson(res, Set.class, clazz);
     }
 
     @Override
@@ -452,7 +452,7 @@ public class RedisServiceImpl implements RedisService {
     public <T> Set<T> zSetRevRange(String key, long start, long end, Class<T> clazz) {
         Validator.assertNotBlank(key, ErrCodeSys.PA_DATA_NOT_EXIST, "key");
         Set<Object> res = redisTemplate.opsForZSet().reverseRange(getKey(key), start, end);
-        return ReflectionUtil.copySet(res, clazz);
+        return JsonUtil.readJson(res, Set.class, clazz);
     }
 
     @Override
