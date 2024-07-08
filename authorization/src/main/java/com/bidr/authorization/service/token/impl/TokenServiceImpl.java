@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Title: TokenServiceImpl
@@ -35,6 +36,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class TokenServiceImpl implements TokenService {
+
+    private static final String LOGIN_STATUS = "LOGIN_STATUS";
     private static final String GUEST_OPERATOR = "GUEST";
     private static final String EXPIRED_PARAM_SUFFIX = "_EXPIRED";
     private static final int TOKEN_DEFAULT_TIMEOUT = 1200;
@@ -51,14 +54,17 @@ public class TokenServiceImpl implements TokenService {
     }
 
     private void saveToken(TokenInfo token, String customerNumber, int expired) {
+        Date now = new Date();
         Map<String, Object> tokenMap = new HashMap<>(16);
         tokenMap.put(token.getType().name(), AuthTokenUtil.getToken(token));
         tokenMap.put(TokenItem.OPERATOR.name(), customerNumber);
-        tokenMap.put(TokenItem.TIMESTAMP.name(), DateUtil.formatDate(new Date(), DateUtil.DATE_TIME_NORMAL));
+        tokenMap.put(TokenItem.TIMESTAMP.name(), DateUtil.formatDate(now, DateUtil.DATE_TIME_NORMAL));
         tokenMap.put(TokenItem.EXPIRED.name(), expired);
         String key = AuthTokenUtil.getKey(token);
         redisService.hashSet(key, tokenMap);
         redisService.expire(key, expired);
+        redisService.zSetRemoveByScore(LOGIN_STATUS, 0, now.getTime());
+        redisService.zSetAdd(LOGIN_STATUS, key, now.getTime() + expired * 1000L);
     }
 
     @Override
@@ -98,11 +104,17 @@ public class TokenServiceImpl implements TokenService {
     }
 
     private void removeTokenForLoginSingleton(String customerNumber, TokenType tokenType) {
+        Date now = new Date();
         String prefixKeys = AuthTokenUtil.getPrefix(tokenType, customerNumber);
-        Set<String> tokenSet = redisService.keys(prefixKeys);
-        log.info("用户:{}, 类型:{}, 已登录数: {} ", customerNumber, tokenType.name(), tokenSet.size());
-        if (CollectionUtils.isNotEmpty(tokenSet)) {
-            redisService.delete(new ArrayList<>(tokenSet));
+        redisService.zSetRemoveByScore(LOGIN_STATUS, 0, now.getTime());
+        long count = redisService.zSetSize(LOGIN_STATUS);
+        Set<String> loginTokens = redisService.zSetRange(LOGIN_STATUS, 0, count, String.class);
+        List<String> tokenList = loginTokens.stream().filter(token -> token.startsWith(prefixKeys))
+                .collect(Collectors.toList());
+        log.info("用户:{}, 类型:{}, 已登录数: {} ", customerNumber, tokenType.name(), tokenList.size());
+        if (CollectionUtils.isNotEmpty(tokenList)) {
+            redisService.delete(tokenList);
+            redisService.zSetRemoveBySet(LOGIN_STATUS, new HashSet<>(tokenList));
         }
     }
 
