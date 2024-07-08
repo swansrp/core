@@ -1,5 +1,6 @@
 package com.bidr.admin.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
@@ -30,8 +31,16 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @BindField(entity = AcRole.class, field = "roleName", condition = "this.roleId = role_id")
     private String roleName;
 
+    @TableField(value = "title")
+    @ApiModelProperty(value = "显示名称")
+    private String title;
+
     @ApiModelProperty(value = "实体id")
     private Long portalId;
+
+    @BindField(entity = SysPortal.class, field = "name", condition = "this.roleId = role_id and this.portalId = id")
+    @ApiModelProperty(value = "本实体英文名称")
+    private String portalName;
 
     @ApiModelProperty(value = "实体关系")
     private String bindType;
@@ -40,7 +49,7 @@ public class PortalAssociateRes extends SysPortalAssociate {
     private Long bindPortalId;
 
     @BindField(entity = SysPortal.class, field = "name", condition = "this.roleId = role_id and this.bindPortalId = id")
-    @ApiModelProperty(value = "实体英文名称")
+    @ApiModelProperty(value = "目标实体英文名称")
     private String bindPortalName;
 
 

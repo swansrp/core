@@ -4,7 +4,9 @@ import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
 import com.bidr.admin.dao.entity.SysPortal;
+import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
+import com.bidr.admin.dao.repository.SysPortalAssociateService;
 import com.bidr.admin.dao.repository.SysPortalColumnService;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.vo.PortalWithColumnsRes;
@@ -75,6 +77,7 @@ public class PortalConfigService implements LoginFillTokenInf {
 
     private final SysPortalService sysPortalService;
     private final SysPortalColumnService sysPortalColumnService;
+    private final SysPortalAssociateService sysPortalAssociateService;
     private final TokenService tokenService;
     private final AcRoleService acRoleService;
 
@@ -284,19 +287,41 @@ public class PortalConfigService implements LoginFillTokenInf {
         SysPortal portal = sysPortalService.getByName(portalWithColumns.getName(), portalWithColumns.getRoleId());
         if (FuncUtil.isNotEmpty(portal)) {
             portalWithColumns.setId(portal.getId());
-            List<SysPortalColumn> columns = sysPortalColumnService.getPropertyListByPortalId(portal.getId(),
-                    portal.getRoleId());
-            Map<String, SysPortalColumn> map = ReflectionUtil.reflectToMap(columns, "portalId", "roleId", "property");
-            if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
-                for (SysPortalColumn column : portalWithColumns.getColumns()) {
-                    SysPortalColumn sysPortalColumn = map.get(
-                            StringUtil.join(column.getPortalId().toString(), column.getRoleId().toString(),
-                                    column.getProperty()));
-                    column.setId(sysPortalColumn.getId());
-                }
-                sysPortalColumnService.updateById(portalWithColumns.getColumns());
-            }
+            updateColumnConfig(portalWithColumns, portal);
+            updateAssociateConfig(portalWithColumns, portal);
             sysPortalService.updateById(portalWithColumns);
+        }
+    }
+
+    private void updateColumnConfig(PortalWithColumnsRes portalWithColumns, SysPortal portal) {
+        List<SysPortalColumn> columns = sysPortalColumnService.getPropertyListByPortalId(portal.getId(),
+                portal.getRoleId());
+        Map<String, SysPortalColumn> map = ReflectionUtil.reflectToMap(columns, "portalId", "roleId", "property");
+        if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
+            for (SysPortalColumn column : portalWithColumns.getColumns()) {
+                SysPortalColumn sysPortalColumn = map.get(
+                        StringUtil.join(column.getPortalId().toString(), column.getRoleId().toString(),
+                                column.getProperty()));
+                column.setId(sysPortalColumn.getId());
+            }
+            sysPortalColumnService.updateById(portalWithColumns.getColumns());
+        }
+    }
+
+    private void updateAssociateConfig(PortalWithColumnsRes portalWithColumns, SysPortal portal) {
+        List<SysPortalAssociate> associates = sysPortalAssociateService.getPropertyListByPortalId(portal.getId(),
+                portal.getRoleId());
+        Map<String, SysPortalAssociate> map = ReflectionUtil.reflectToMap(associates, "portalId", "roleId", "title");
+        List<SysPortalAssociate> resList = ReflectionUtil.copyList(portalWithColumns.getAssociates(),
+                SysPortalAssociate.class);
+        if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
+            for (SysPortalAssociate associate : resList) {
+                SysPortalAssociate sysPortalAssociate = map.get(
+                        StringUtil.join(associate.getPortalId().toString(), associate.getRoleId().toString(),
+                                associate.getTitle()));
+                sysPortalAssociate.setId(sysPortalAssociate.getId());
+            }
+            sysPortalAssociateService.updateById(resList);
         }
     }
 }

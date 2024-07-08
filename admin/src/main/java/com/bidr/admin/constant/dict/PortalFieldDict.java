@@ -38,7 +38,7 @@ public enum PortalFieldDict implements Dict {
     VIDEO("13", "视频"),
     AUDIO("14", "音频"),
     FILE("15", "文件"),
-
+    ENTITY_CONDITION("20", "实体条件"),
     DEFAULT("0", "默认");
 
     private final String value;

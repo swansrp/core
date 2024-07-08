@@ -3,7 +3,7 @@
 <mapper namespace="com.bidr.admin.dao.mapper.SysPortalColumnMapper">
   <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalColumn">
     <!--@mbg.generated-->
-    <!--@Table sys_portal_column-->
+    <!--@Table erp.sys_portal_column-->
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="role_id" jdbcType="BIGINT" property="roleId" />
     <result column="portal_id" jdbcType="BIGINT" property="portalId" />
@@ -40,6 +40,7 @@
     <result column="min" jdbcType="DECIMAL" property="min" />
     <result column="max" jdbcType="DECIMAL" property="max" />
     <result column="default_value" jdbcType="VARCHAR" property="defaultValue" />
+    <result column="mobile_display_type" jdbcType="VARCHAR" property="mobileDisplayType" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
@@ -47,6 +48,6 @@
     entity_field, entity_condition, display_order, align, width, fixed, tooltip, `enable`, 
     `show`, filter_able, sort_able, edit_able, display_group_name, detail_show, detail_size, 
     detail_padding, add_show, add_size, add_padding, add_disabled, edit_show, edit_size, 
-    edit_padding, edit_disabled, required, `min`, `max`, default_value
+    edit_padding, edit_disabled, required, `min`, `max`, default_value, mobile_display_type
   </sql>
 </mapper>

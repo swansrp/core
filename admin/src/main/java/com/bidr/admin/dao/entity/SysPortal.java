@@ -11,20 +11,12 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;
 
- /**
- * Title: SysPortal
- * Description: Copyright: Copyright (c) 2023
- *
- * @author Sharp
- * @since 2024/03/09 22:17
- */
-
 /**
  * 后台管理表
  */
 @ApiModel(description = "后台管理表")
 @Data
-@TableName(value = "sys_portal")
+@TableName(value = "erp.sys_portal")
 public class SysPortal {
     /**
      * id
@@ -204,4 +196,18 @@ public class SysPortal {
     @Size(max = 1, message = "支持导入最大长度要小于 1")
     @NotBlank(message = "支持导入不能为空")
     private String importAble;
+
+    /**
+     * 默认搜索字段
+     */
+    @TableField(value = "default_condition")
+    @ApiModelProperty(value = "默认搜索字段")
+    private String defaultCondition;
+
+    /**
+     * 默认排序字段
+     */
+    @TableField(value = "default_sort")
+    @ApiModelProperty(value = "默认排序字段")
+    private String defaultSort;
 }

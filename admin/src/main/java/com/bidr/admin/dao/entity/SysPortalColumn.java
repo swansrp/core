@@ -12,20 +12,12 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;
 
- /**
- * Title: SysPortalColumn
- * Description: Copyright: Copyright (c) 2023
- *
- * @author Sharp
- * @since 2024/03/09 22:17
- */
-
 /**
  * 系统表表头
  */
 @ApiModel(description = "系统表表头")
 @Data
-@TableName(value = "sys_portal_column")
+@TableName(value = "erp.sys_portal_column")
 public class SysPortalColumn {
     /**
      * id
@@ -328,4 +320,13 @@ public class SysPortalColumn {
     @ApiModelProperty(value = "默认内容")
     @Size(max = 200, message = "默认内容最大长度要小于 200")
     private String defaultValue;
+
+    /**
+     * 移动端显示类型
+     */
+    @TableField(value = "mobile_display_type")
+    @ApiModelProperty(value = "移动端显示类型")
+    @Size(max = 2, message = "移动端显示类型最大长度要小于 2")
+    @NotBlank(message = "移动端显示类型不能为空")
+    private String mobileDisplayType;
 }

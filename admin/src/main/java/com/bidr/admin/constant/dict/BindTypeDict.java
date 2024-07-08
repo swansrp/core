@@ -20,8 +20,10 @@ public enum BindTypeDict implements Dict {
     /**
      * 对齐方式字典
      */
-    MASTER_ATTACH("0", "主键关联"),
-    ATTACH_MASTER("1", "关联主键"),
+    MASTER_ATTACH("0", "本实体主键:目标实体字段"),
+    MASTER_ATTACH_MULTI_IN_ONE("3", "本实体主键:目标实体字段(逗号隔开)"),
+    ATTACH_MASTER("1", "本实体字段:目标实体主键"),
+    ATTACH_MASTER_MULTI_IN_ONE("4", "本实体字段:目标实体主键(逗号隔开)"),
     _N_N("2", "多对多");
 
     private final String value;

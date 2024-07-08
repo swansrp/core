@@ -71,6 +71,7 @@ public class PortalSupportConditionDict implements IDynamicDict {
                                           PortalConditionDict.BETWEEN, PortalConditionDict.GREATER,
                                           PortalConditionDict.GREATER_EQUAL,
                                           PortalConditionDict.LESS, PortalConditionDict.LESS_EQUAL});
+        MAP.put(PortalFieldDict.ENTITY_CONDITION, new PortalConditionDict[]{PortalConditionDict.LIKE});
         MAP.put(PortalFieldDict.DEFAULT, new PortalConditionDict[]{PortalConditionDict.EQUAL});
     }
 
@@ -81,7 +82,7 @@ public class PortalSupportConditionDict implements IDynamicDict {
         MAP.forEach((key, values) -> {
             List<String> conditions = new ArrayList<>();
             for (PortalConditionDict value : values) {
-                conditions.add(StringUtil.parse(value.getValue()));
+                conditions.add(StringUtil.parse(value.getValue()) + ":" + value.getLabel());
             }
             list.add(buildSysDict(key, conditions.toArray(new String[0])));
         });

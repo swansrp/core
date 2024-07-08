@@ -3,7 +3,7 @@
 <mapper namespace="com.bidr.admin.dao.mapper.SysPortalMapper">
   <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortal">
     <!--@mbg.generated-->
-    <!--@Table sys_portal-->
+    <!--@Table erp.sys_portal-->
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="role_id" jdbcType="BIGINT" property="roleId" />
     <result column="name" jdbcType="VARCHAR" property="name" />
@@ -25,11 +25,13 @@
     <result column="description_count" jdbcType="INTEGER" property="descriptionCount" />
     <result column="export_able" jdbcType="VARCHAR" property="exportAble" />
     <result column="import_able" jdbcType="VARCHAR" property="importAble" />
+    <result column="default_condition" jdbcType="VARCHAR" property="defaultCondition" />
+    <result column="default_sort" jdbcType="VARCHAR" property="defaultSort" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     id, role_id, `name`, display_name, url, bean, `size`, read_only, summary, id_column, 
     pid_column, tree_drag, name_column, order_column, table_drag, add_width, edit_width, 
-    detail_width, description_count, export_able, import_able
+    detail_width, description_count, export_able, import_able, default_condition, default_sort
   </sql>
 </mapper>
