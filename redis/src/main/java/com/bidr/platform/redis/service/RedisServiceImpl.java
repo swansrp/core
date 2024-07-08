@@ -20,13 +20,14 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 public class RedisServiceImpl implements RedisService {
+    private static final Long SCAN_SIZE = 1000L;
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public Set<String> keys(String prefix) {
         Set<String> keys = new HashSet<>();
-        ScanOptions scanOptions = ScanOptions.scanOptions().match(getKey(prefix) + "*").count(Long.MAX_VALUE).build();
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(getKey(prefix) + "*").count(SCAN_SIZE).build();
         Cursor<String> cursor = redisTemplate.scan(scanOptions);
         while (cursor.hasNext()) {
             keys.add(cursor.next());
