@@ -302,6 +302,7 @@ public class PortalConfigService implements LoginFillTokenInf {
                 SysPortalColumn sysPortalColumn = map.get(
                         StringUtil.join(portal.getId().toString(), column.getRoleId().toString(),
                                 column.getProperty()));
+                column.setPortalId(portal.getId());
                 column.setId(sysPortalColumn.getId());
             }
             sysPortalColumnService.updateById(portalWithColumns.getColumns());
@@ -317,8 +318,9 @@ public class PortalConfigService implements LoginFillTokenInf {
         if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
             for (SysPortalAssociate associate : resList) {
                 SysPortalAssociate sysPortalAssociate = map.get(
-                        StringUtil.join(associate.getPortalId().toString(), associate.getRoleId().toString(),
+                        StringUtil.join(portal.getId().toString(), associate.getRoleId().toString(),
                                 associate.getTitle()));
+                sysPortalAssociate.setPortalId(portal.getId());
                 sysPortalAssociate.setId(sysPortalAssociate.getId());
             }
             sysPortalAssociateService.updateById(resList);
