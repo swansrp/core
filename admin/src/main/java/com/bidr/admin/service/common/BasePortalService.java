@@ -96,8 +96,10 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
                     map.put(field.getName(),
                             getAlias(portalEntityField.entity(), portalEntityField.field(), portalEntityField.alias()));
-                } else {
+                } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
                     map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+                } else {
+                    map.put(field.getName(), portalEntityField.field());
                 }
                 continue;
             }

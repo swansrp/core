@@ -18,7 +18,7 @@ public @interface PortalEntityField {
      * 对应的entity类
      * @return
      */
-    Class<?> entity();
+    Class<?> entity() default Object.class;
 
     /**
      * 表别名
