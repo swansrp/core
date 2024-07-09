@@ -297,13 +297,10 @@ public class PortalConfigService implements LoginFillTokenInf {
         List<SysPortalColumn> columns = sysPortalColumnService.getPropertyListByPortalId(portal.getId(),
                 portal.getRoleId());
         Map<String, SysPortalColumn> map = ReflectionUtil.reflectToMap(columns, "portalId", "roleId", "property");
-        log.info(JsonUtil.toJson(map));
         if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
             for (SysPortalColumn column : portalWithColumns.getColumns()) {
-                log.info(StringUtil.join(column.getPortalId().toString(), column.getRoleId().toString(),
-                        column.getProperty()));
                 SysPortalColumn sysPortalColumn = map.get(
-                        StringUtil.join(column.getPortalId().toString(), column.getRoleId().toString(),
+                        StringUtil.join(portal.getId().toString(), column.getRoleId().toString(),
                                 column.getProperty()));
                 column.setId(sysPortalColumn.getId());
             }
