@@ -121,7 +121,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         Map<Long, AcRole> roleCachedMap = new HashMap<>();
         for (Map.Entry<Class<?>, Collection<Field>> entry : map.entrySet()) {
             Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(entry.getKey(), 0);
-            List<SysPortal> portalList = sysPortalService.getByBeanName(entry.getKey().getName());
+            List<SysPortal> portalList = sysPortalService.getByBeanName(entry.getKey().getSimpleName());
             if (FuncUtil.isEmpty(portalList)) {
                 SysPortal portal = buildSysPortal(entry.getKey(), entityClass);
                 sysPortalService.save(portal);
@@ -139,7 +139,6 @@ public class PortalConfigService implements LoginFillTokenInf {
                         if (FuncUtil.isNotEmpty(role)) {
                             ROLE_BIND_PORTAL_MAP.put(portal.getRoleId(), role.getRoleName());
                         }
-
                     }
                 }
             }
@@ -150,7 +149,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         AdminPortal adminPortal = controllerClass.getAnnotation(AdminPortal.class);
         ApiModel apiModel = entityClass.getAnnotation(ApiModel.class);
         SysPortal portal = new SysPortal();
-        portal.setBean(controllerClass.getName());
+        portal.setBean(controllerClass.getSimpleName());
         if (FuncUtil.isNotEmpty(adminPortal.value())) {
             portal.setName(adminPortal.value());
         } else {
