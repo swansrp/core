@@ -10,8 +10,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.SortVO;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.apache.commons.collections4.CollectionUtils;
@@ -135,6 +137,28 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         }
         parseAdvancedQuery(req, aliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
+    }
+
+    @Override
+    public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, Map<String, String> aliasMap,
+                                MPJLambdaWrapper<T> wrapper, List<String> selectColumns, List<String> groupColumns,
+                                Class<VO> vo) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<T>(entityClass);
+        }
+        if (FuncUtil.isEmpty(selectColumns)) {
+            wrapper.selectAll(getEntityClass(), "t");
+        } else {
+            wrapper.select(selectColumns.toArray(new String[0]));
+        }
+        if (FuncUtil.isNotEmpty(groupColumns)) {
+            wrapper.groupByStr(groupColumns);
+        }
+        if (FuncUtil.isNotEmpty(condition)) {
+            parseAdvancedQuery(condition, aliasMap, wrapper);
+        }
+        parseSort(sortList, aliasMap, wrapper);
+        return selectJoinList(vo, wrapper);
     }
 
     @Override

@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Title: AdvancedQueryReq
@@ -22,4 +21,14 @@ public class AdvancedQueryReq extends QueryReqVO {
     private AdvancedQuery condition;
     @ApiModelProperty("排序")
     private List<SortVO> sortList;
+
+    public AdvancedQueryReq() {
+        super();
+    }
+
+    public AdvancedQueryReq(AdvancedQuery condition, List<SortVO> sortList, Long currentPage, Long pageSize) {
+        super(currentPage, pageSize);
+        this.condition = condition;
+        this.sortList = sortList;
+    }
 }

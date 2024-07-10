@@ -1,13 +1,16 @@
 package com.bidr.kernel.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.SortVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
@@ -287,5 +290,38 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 当前进度
      */
     Object getUploadProgressRes(String portal);
+
+    /**
+     * 获取分页数据
+     *
+     * @param req 条件/排序/分页
+     * @return 数据
+     */
+    default Page<VO> query(AdvancedQueryReq req) {
+        return getRepo().select(req, getAliasMap(), getJoinWrapper(), selectColumns(), groupColumns(), getVoClass());
+    }
+
+    /**
+     * 获取指定数据
+     *
+     * @param condition 条件
+     * @return 数据
+     */
+    default List<VO> select(AdvancedQuery condition) {
+        return getRepo().select(condition, null, getAliasMap(), getJoinWrapper(), selectColumns(), groupColumns(),
+                getVoClass());
+    }
+
+    /**
+     * 获取指定数据
+     *
+     * @param condition 条件
+     * @param sortList  排序
+     * @return 数据
+     */
+    default List<VO> query(AdvancedQuery condition, List<SortVO> sortList) {
+        return getRepo().select(condition, sortList, getAliasMap(), getJoinWrapper(), selectColumns(), groupColumns(),
+                getVoClass());
+    }
 
 }

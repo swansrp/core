@@ -14,6 +14,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -364,19 +365,25 @@ public interface PortalSelectRepo<T> {
     default MPJLambdaWrapper<T> parseSort(AdvancedQueryReq req, Map<String, String> aliasMap,
                                           MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
-            for (SortVO sortVO : req.getSortList()) {
-                if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
-                    String columnName = getColumnName(sortVO.getProperty(), aliasMap, wrapper.getEntityClass());
-                    switch (PortalSortDict.of(sortVO.getType())) {
-                        case ASC:
-                            wrapper.orderByAsc(columnName);
-                            break;
-                        case DESC:
-                            wrapper.orderByDesc(columnName);
-                            break;
-                        default:
-                            break;
-                    }
+            return parseSort(req.getSortList(), aliasMap, wrapper);
+        }
+        return wrapper;
+    }
+
+    default MPJLambdaWrapper<T> parseSort(List<SortVO> sortList, Map<String, String> aliasMap,
+                                          MPJLambdaWrapper<T> wrapper) {
+        for (SortVO sortVO : sortList) {
+            if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
+                String columnName = getColumnName(sortVO.getProperty(), aliasMap, wrapper.getEntityClass());
+                switch (PortalSortDict.of(sortVO.getType())) {
+                    case ASC:
+                        wrapper.orderByAsc(columnName);
+                        break;
+                    case DESC:
+                        wrapper.orderByDesc(columnName);
+                        break;
+                    default:
+                        break;
                 }
             }
         }

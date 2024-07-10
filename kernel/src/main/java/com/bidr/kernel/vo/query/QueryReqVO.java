@@ -15,8 +15,18 @@ import lombok.Data;
 @Data
 public class QueryReqVO {
     @ApiModelProperty("当前页")
-    private Long currentPage = 1L;
+    private Long currentPage;
     @ApiModelProperty("每页大小")
-    private Long pageSize = 20L;
+    private Long pageSize;
+
+    public QueryReqVO() {
+        this.currentPage = 1L;
+        this.pageSize = 20L;
+    }
+
+    public QueryReqVO(Long currentPage, Long pageSize) {
+        this.currentPage = currentPage;
+        this.pageSize = pageSize;
+    }
 
 }
