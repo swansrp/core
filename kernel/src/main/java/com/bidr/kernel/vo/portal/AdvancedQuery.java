@@ -49,7 +49,7 @@ public class AdvancedQuery extends ConditionVO {
     }
 
     public void addCondition(String property, PortalConditionDict relation, List<?> data) {
-        if (FuncUtil.isNotEmpty(data)) {
+        if (FuncUtil.isNotEmpty(data) && FuncUtil.isNotEmpty(data.get(0))) {
             AdvancedQuery condition = new AdvancedQuery();
             condition.setProperty(property);
             condition.setRelation(relation.getValue());

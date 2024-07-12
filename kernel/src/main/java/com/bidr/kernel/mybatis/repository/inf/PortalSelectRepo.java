@@ -372,18 +372,20 @@ public interface PortalSelectRepo<T> {
 
     default MPJLambdaWrapper<T> parseSort(List<SortVO> sortList, Map<String, String> aliasMap,
                                           MPJLambdaWrapper<T> wrapper) {
-        for (SortVO sortVO : sortList) {
-            if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
-                String columnName = getColumnName(sortVO.getProperty(), aliasMap, wrapper.getEntityClass());
-                switch (PortalSortDict.of(sortVO.getType())) {
-                    case ASC:
-                        wrapper.orderByAsc(columnName);
-                        break;
-                    case DESC:
-                        wrapper.orderByDesc(columnName);
-                        break;
-                    default:
-                        break;
+        if (FuncUtil.isNotEmpty(sortList)) {
+            for (SortVO sortVO : sortList) {
+                if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
+                    String columnName = getColumnName(sortVO.getProperty(), aliasMap, wrapper.getEntityClass());
+                    switch (PortalSortDict.of(sortVO.getType())) {
+                        case ASC:
+                            wrapper.orderByAsc(columnName);
+                            break;
+                        case DESC:
+                            wrapper.orderByDesc(columnName);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
