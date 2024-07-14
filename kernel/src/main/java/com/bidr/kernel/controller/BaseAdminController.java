@@ -159,6 +159,15 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
+    @ApiOperation("高级查询数据(不分页)")
+    @RequestMapping(value = "/advanced/select", method = RequestMethod.POST)
+    public List<VO> advancedSelect(@RequestBody AdvancedQueryReq req) {
+        List<VO> result = selectByAdvancedReq(req);
+        return Resp.convert(result, getVoClass());
+    }
+
+    @Override
+    @ApiIgnore
     @SneakyThrows
     @ApiOperation("数据导出")
     @RequestMapping(value = "/advanced/query/export", method = RequestMethod.POST)
@@ -197,6 +206,24 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         Page<VO> result = getRepo().select(req, aliasMap, wrapper, selectColumns, groupColumns, getVoClass());
         return result;
     }
+
+    protected List<VO> selectByAdvancedReq(AdvancedQueryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        Map<String, String> aliasMap = null;
+        MPJLambdaWrapper<ENTITY> wrapper = null;
+        List<String> groupColumns = null;
+        List<String> selectColumns = null;
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getPortalService().getAliasMap();
+            wrapper = getPortalService().getJoinWrapper();
+            groupColumns = getPortalService().groupColumns();
+            selectColumns = getPortalService().selectColumns();
+        }
+        return getRepo().select(req.getCondition(), req.getSortList(), aliasMap, wrapper, selectColumns, groupColumns, getVoClass());
+    }
+
 
     @Override
     @ApiIgnore

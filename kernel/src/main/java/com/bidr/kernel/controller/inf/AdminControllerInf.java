@@ -89,6 +89,14 @@ public interface AdminControllerInf<ENTITY, VO> {
     Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req);
 
     /**
+     * 高级查询(不分页)
+     *
+     * @param req 高级查询条件
+     * @return 数据
+     */
+    List<VO> advancedSelect(@RequestBody AdvancedQueryReq req);
+
+    /**
      * 导出
      *
      * @param req      查询条件
