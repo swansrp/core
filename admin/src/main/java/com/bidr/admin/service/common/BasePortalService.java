@@ -36,13 +36,15 @@ import com.bidr.platform.bo.excel.ExcelExportBO;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.diboot.core.binding.annotation.BindField;
+import com.github.yulichang.toolkit.support.ColumnCache;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectCache;
+import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
@@ -73,15 +75,39 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Resource
     protected TokenService tokenService;
     @Resource
-    protected DataSourceTransactionManager dataSourceTransactionManager;
-    @Resource
-    protected TransactionDefinition transactionDefinition;
-    @Resource
     protected ApplicationContext applicationContext;
 
     @Override
     public void run(String... args) {
         aliasMap.putAll(initAliasMap());
+    }
+
+    /**
+     * 根据vo
+     * 生成生成联表查询wrapper
+     * select as 其他表字段
+     *
+     * @return 联表wrapper
+     */
+    protected MPJLambdaWrapper<ENTITY> getJoinWrapperWithSelectAs() {
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        for (Field field : ReflectionUtil.getFields(getVoClass())) {
+            PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+            if (FuncUtil.isNotEmpty(portalEntityField)) {
+                String alias = portalEntityField.alias();
+                if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
+                    if (FuncUtil.isEmpty(alias)) {
+                        alias = DbUtil.getTableName(portalEntityField.entity());
+                    }
+                    Map<String, SelectCache> cacheMap = ColumnCache.getMapField(portalEntityField.entity());
+                    SelectCache cache = cacheMap.get(portalEntityField.field());
+                    wrapper.getSelectColum()
+                            .add(new SelectString(alias + "." + cache.getColumn() + " AS " + field.getName(),
+                                    wrapper.isHasAlias(), wrapper.getAlias()));
+                }
+            }
+        }
+        return wrapper;
     }
 
     protected Map<String, String> initAliasMap() {
