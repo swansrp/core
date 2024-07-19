@@ -23,6 +23,7 @@
     <result column="show" jdbcType="VARCHAR" property="show" />
     <result column="filter_able" jdbcType="VARCHAR" property="filterAble" />
     <result column="sort_able" jdbcType="VARCHAR" property="sortAble" />
+    <result column="summary_able" jdbcType="VARCHAR" property="summaryAble" />
     <result column="edit_able" jdbcType="VARCHAR" property="editAble" />
     <result column="display_group_name" jdbcType="VARCHAR" property="displayGroupName" />
     <result column="detail_show" jdbcType="VARCHAR" property="detailShow" />
@@ -46,8 +47,8 @@
     <!--@mbg.generated-->
     id, role_id, portal_id, property, db_field, display_name, field_type, reference, 
     entity_field, entity_condition, display_order, align, width, fixed, tooltip, `enable`, 
-    `show`, filter_able, sort_able, edit_able, display_group_name, detail_show, detail_size, 
-    detail_padding, add_show, add_size, add_padding, add_disabled, edit_show, edit_size, 
-    edit_padding, edit_disabled, required, `min`, `max`, default_value, mobile_display_type
+    `show`, filter_able, sort_able, summary_able, edit_able, display_group_name, detail_show, 
+    detail_size, detail_padding, add_show, add_size, add_padding, add_disabled, edit_show, 
+    edit_size, edit_padding, edit_disabled, required, `min`, `max`, default_value, mobile_display_type
   </sql>
 </mapper>

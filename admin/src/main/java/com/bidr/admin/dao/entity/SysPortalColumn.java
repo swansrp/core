@@ -181,6 +181,15 @@ public class SysPortalColumn {
     private String sortAble;
 
     /**
+     * 是否汇总
+     */
+    @TableField(value = "summary_able")
+    @ApiModelProperty(value = "是否汇总")
+    @Size(max = 1, message = "是否汇总最大长度要小于 1")
+    @NotBlank(message = "是否汇总不能为空")
+    private String summaryAble;
+
+    /**
      * 表格是否可以编辑
      */
     @TableField(value = "edit_able")
