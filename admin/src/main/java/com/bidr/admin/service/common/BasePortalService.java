@@ -5,6 +5,7 @@ import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.config.PortalEntityField;
 import com.bidr.admin.config.PortalNoFilterField;
+import com.bidr.admin.config.PortalSelect;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.dict.UploadProgressStep;
 import com.bidr.admin.dao.entity.SysPortal;
@@ -51,10 +52,7 @@ import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: BasePortalService
@@ -68,6 +66,7 @@ import java.util.Map;
 public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelTemplateHandlerInf {
 
     protected Map<String, String> aliasMap = new HashMap<>(32);
+    protected Map<String, String> summaryAliasMap = new HashMap<>(32);
     @Resource
     protected SysPortalService sysPortalService;
     @Resource
@@ -80,6 +79,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public void run(String... args) {
         aliasMap.putAll(initAliasMap());
+        summaryAliasMap.putAll(initSummaryAliasMap());
     }
 
     /**
@@ -89,29 +89,98 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
      *
      * @return 联表wrapper
      */
-    protected MPJLambdaWrapper<ENTITY> getJoinWrapperWithSelectAs() {
+    @Override
+    public MPJLambdaWrapper<ENTITY> getJoinWrapper() {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        Map<String, String> selectColumnMap = new LinkedHashMap<>();
+        List<String> groupColumns = new ArrayList<>();
         for (Field field : ReflectionUtil.getFields(getVoClass())) {
-            PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
-            if (FuncUtil.isNotEmpty(portalEntityField)) {
-                String alias = portalEntityField.alias();
-                if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
-                    if (FuncUtil.isEmpty(alias)) {
-                        alias = DbUtil.getTableName(portalEntityField.entity());
-                    }
-                    Map<String, SelectCache> cacheMap = ColumnCache.getMapField(portalEntityField.entity());
-                    SelectCache cache = cacheMap.get(portalEntityField.field());
-                    wrapper.getSelectColum()
-                            .add(new SelectString(alias + "." + cache.getColumn() + " AS " + field.getName(),
-                                    wrapper.isHasAlias(), wrapper.getAlias()));
-                } else {
-                    wrapper.getSelectColum()
-                            .add(new SelectString(portalEntityField.field() + " AS " + field.getName(),
-                                    wrapper.isHasAlias(), wrapper.getAlias()));
-                }
+            parsePortalEntityField(wrapper, field);
+            parsePortalSelect(selectColumnMap, groupColumns, field);
+        }
+        if (FuncUtil.isNotEmpty(selectColumnMap)) {
+            for (Map.Entry<String, String> entry : selectColumnMap.entrySet()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(StringUtil.joinWith(" as ", entry.getKey(), entry.getValue()),
+                                wrapper.isHasAlias(), wrapper.getAlias()));
+            }
+        }
+        if (FuncUtil.isNotEmpty(groupColumns)) {
+            for (String groupColumn : groupColumns) {
+                wrapper.groupBy(groupColumn);
             }
         }
         return wrapper;
+    }
+
+    private void parsePortalSelect(Map<String, String> selectColumnMap, List<String> groupColumns, Field field) {
+        PortalSelect portalSelect = field.getAnnotation(PortalSelect.class);
+        if (FuncUtil.isNotEmpty(portalSelect)) {
+            String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
+            selectColumnMap.put(sqlFieldName, field.getName());
+            if (portalSelect.group()) {
+                groupColumns.add(sqlFieldName);
+            }
+        }
+    }
+
+    private void parsePortalEntityField(MPJLambdaWrapper<ENTITY> wrapper, Field field) {
+        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        if (FuncUtil.isNotEmpty(portalEntityField)) {
+            String alias = portalEntityField.alias();
+            String sqlFieldName = portalEntityField.field();
+            if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
+                if (FuncUtil.isEmpty(alias)) {
+                    alias = DbUtil.getTableName(portalEntityField.entity());
+                }
+                Map<String, SelectCache> cacheMap = ColumnCache.getMapField(portalEntityField.entity());
+                SelectCache cache = cacheMap.get(portalEntityField.field());
+                sqlFieldName = StringUtil.joinWith(".", alias, cache.getColumn());
+                wrapper.getSelectColum()
+                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.isHasAlias(),
+                                wrapper.getAlias()));
+            } else {
+                wrapper.getSelectColum()
+                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.isHasAlias(),
+                                wrapper.getAlias()));
+            }
+            if (portalEntityField.group()) {
+                wrapper.groupBy(field.getName());
+            }
+        }
+    }
+
+    protected Map<String, String> initSummaryAliasMap() {
+        Map<String, String> map = new HashMap<>(32);
+        for (Field field : ReflectionUtil.getFields(getVoClass())) {
+            PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+            if (FuncUtil.isNotEmpty(portalNoFilterField)) {
+                continue;
+            }
+            PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+            if (FuncUtil.isNotEmpty(portalEntityField)) {
+                if (FuncUtil.isNotEmpty(portalEntityField.origFieldName())) {
+                    map.put(field.getName(), portalEntityField.origFieldName());
+                } else {
+                    if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
+                        map.put(field.getName(),
+                                getAlias(portalEntityField.entity(), portalEntityField.field(),
+                                        portalEntityField.alias()));
+                    } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
+                        map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+                    } else {
+                        map.put(field.getName(), portalEntityField.field());
+                    }
+                }
+                continue;
+            } else {
+                BindField bindField = field.getAnnotation(BindField.class);
+                if (FuncUtil.isNotEmpty(bindField)) {
+                    map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+                }
+            }
+        }
+        return map;
     }
 
     protected Map<String, String> initAliasMap() {
@@ -132,10 +201,11 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                     map.put(field.getName(), portalEntityField.field());
                 }
                 continue;
-            }
-            BindField bindField = field.getAnnotation(BindField.class);
-            if (FuncUtil.isNotEmpty(bindField)) {
-                map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+            } else {
+                BindField bindField = field.getAnnotation(BindField.class);
+                if (FuncUtil.isNotEmpty(bindField)) {
+                    map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+                }
             }
         }
         return map;

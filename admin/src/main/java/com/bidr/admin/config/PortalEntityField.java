@@ -32,5 +32,11 @@ public @interface PortalEntityField {
      *
      * @return
      */
-    String field();
+    String field() default "";
+
+    boolean group() default false;
+
+    boolean aggregation() default false;
+
+    String origFieldName() default "";
 }
