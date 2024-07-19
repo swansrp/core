@@ -215,6 +215,15 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 生成汇总别名表
+     *
+     * @return 别名map
+     */
+    default Map<String, String> getSummaryAliasMap() {
+        return null;
+    }
+
+    /**
      * 导出文件流
      *
      * @param dataList   数据集
@@ -298,7 +307,7 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 数据
      */
     default Page<VO> query(AdvancedQueryReq req) {
-        return getRepo().select(req, getAliasMap(), getJoinWrapper(), selectColumns(), groupColumns(), getVoClass());
+        return getRepo().select(req, getAliasMap(), getJoinWrapper(), getVoClass());
     }
 
     /**
@@ -308,8 +317,7 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 数据
      */
     default List<VO> select(AdvancedQuery condition) {
-        return getRepo().select(condition, null, getAliasMap(), getJoinWrapper(), selectColumns(), groupColumns(),
-                getVoClass());
+        return getRepo().select(condition, null, getAliasMap(), getJoinWrapper(), getVoClass());
     }
 
     /**
@@ -320,8 +328,7 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 数据
      */
     default List<VO> query(AdvancedQuery condition, List<SortVO> sortList) {
-        return getRepo().select(condition, sortList, getAliasMap(), getJoinWrapper(), selectColumns(), groupColumns(),
-                getVoClass());
+        return getRepo().select(condition, sortList, getAliasMap(), getJoinWrapper(), getVoClass());
     }
 
 }

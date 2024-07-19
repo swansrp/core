@@ -118,22 +118,14 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo) {
-        return select(req, aliasMap, null, null, null, vo);
+        return select(req, aliasMap, null, vo);
     }
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
-                                List<String> selectColumns, List<String> groupColumns, Class<VO> vo) {
+                                Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
-        }
-        if (FuncUtil.isEmpty(selectColumns)) {
-            wrapper.selectAll(getEntityClass(), "t");
-        } else {
-            wrapper.select(selectColumns.toArray(new String[0]));
-        }
-        if (FuncUtil.isNotEmpty(groupColumns)) {
-            wrapper.groupByStr(groupColumns);
         }
         parseAdvancedQuery(req, aliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
@@ -141,18 +133,9 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, Map<String, String> aliasMap,
-                                MPJLambdaWrapper<T> wrapper, List<String> selectColumns, List<String> groupColumns,
-                                Class<VO> vo) {
+                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
-        }
-        if (FuncUtil.isEmpty(selectColumns)) {
-            wrapper.selectAll(getEntityClass(), "t");
-        } else {
-            wrapper.select(selectColumns.toArray(new String[0]));
-        }
-        if (FuncUtil.isNotEmpty(groupColumns)) {
-            wrapper.groupByStr(groupColumns);
         }
         if (FuncUtil.isNotEmpty(condition)) {
             parseAdvancedQuery(condition, aliasMap, wrapper);

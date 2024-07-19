@@ -16,8 +16,10 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -168,6 +170,15 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
+    @ApiOperation("汇总")
+    @RequestMapping(value = "/advanced/summary", method = RequestMethod.POST)
+    public Map<String, Object> advancedSummary(@RequestBody AdvancedSummaryReq req) {
+        return summaryByAdvancedReq(req);
+    }
+
+
+    @Override
+    @ApiIgnore
     @SneakyThrows
     @ApiOperation("数据导出")
     @RequestMapping(value = "/advanced/query/export", method = RequestMethod.POST)
@@ -194,16 +205,12 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             beforeQuery(req);
         }
         Map<String, String> aliasMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = null;
-        List<String> groupColumns = null;
-        List<String> selectColumns = null;
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
-            groupColumns = getPortalService().groupColumns();
-            selectColumns = getPortalService().selectColumns();
         }
-        Page<VO> result = getRepo().select(req, aliasMap, wrapper, selectColumns, groupColumns, getVoClass());
+        Page<VO> result = getRepo().select(req, aliasMap, wrapper, getVoClass());
         return result;
     }
 
@@ -212,16 +219,41 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             beforeQuery(req);
         }
         Map<String, String> aliasMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = null;
-        List<String> groupColumns = null;
-        List<String> selectColumns = null;
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
-            groupColumns = getPortalService().groupColumns();
-            selectColumns = getPortalService().selectColumns();
         }
-        return getRepo().select(req.getCondition(), req.getSortList(), aliasMap, wrapper, selectColumns, groupColumns, getVoClass());
+        return getRepo().select(req.getCondition(), req.getSortList(), aliasMap, wrapper, getVoClass());
+    }
+
+    protected Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        Map<String, String> summaryAliasMap = null;
+        Map<String, String> aliasMap = null;
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getPortalService().getAliasMap();
+            summaryAliasMap = getPortalService().getSummaryAliasMap();
+            wrapper = getPortalService().getJoinWrapper();
+        }
+        wrapper.getSelectColumns().clear();
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                String columnName = getRepo().getColumnName(column, summaryAliasMap, getEntityClass());
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", columnName, column), wrapper.isHasAlias(),
+                                wrapper.getAlias()));
+            }
+        }
+        if (FuncUtil.isNotEmpty(req.getCondition())) {
+            getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, wrapper);
+        }
+        // 去除group by成分
+        wrapper.getExpression().getGroupBy().clear();
+        return getRepo().selectJoinMap(wrapper);
     }
 
 
@@ -298,5 +330,4 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
                 StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
     }
-
 }

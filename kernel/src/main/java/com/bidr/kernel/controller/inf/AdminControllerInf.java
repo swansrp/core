@@ -12,6 +12,7 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -95,6 +96,14 @@ public interface AdminControllerInf<ENTITY, VO> {
      * @return 数据
      */
     List<VO> advancedSelect(@RequestBody AdvancedQueryReq req);
+
+    /**
+     * 汇总
+     *
+     * @param req 高级查询条件
+     * @return 数据
+     */
+    Map<String, Object> advancedSummary(@RequestBody AdvancedSummaryReq req);
 
     /**
      * 导出
@@ -264,7 +273,7 @@ public interface AdminControllerInf<ENTITY, VO> {
      */
     default <T> boolean update(IdReqVO vo, SFunction<ENTITY, ?> bizFunc, T bizValue) {
         Validator.assertNotNull(vo.getId(), ErrCodeSys.PA_PARAM_NULL, "id");
-        ENTITY entity = (ENTITY) getRepo().getById(vo.getId());
+        ENTITY entity = getRepo().getById(vo.getId());
         Validator.assertNotNull(entity, ErrCodeSys.PA_DATA_NOT_EXIST, "节点");
         LambdaUtil.setValue(entity, bizFunc, bizValue);
         return getRepo().updateById(entity, false);
@@ -286,7 +295,7 @@ public interface AdminControllerInf<ENTITY, VO> {
      */
     default boolean update(IdReqVO vo, Map<SFunction<ENTITY, ?>, ?> valueMap) {
         Validator.assertNotNull(vo.getId(), ErrCodeSys.PA_PARAM_NULL, "id");
-        ENTITY entity = (ENTITY) getRepo().getById(vo.getId());
+        ENTITY entity = getRepo().getById(vo.getId());
         Validator.assertNotNull(entity, ErrCodeSys.PA_DATA_NOT_EXIST, "节点");
         if (FuncUtil.isNotEmpty(valueMap)) {
             for (Map.Entry<SFunction<ENTITY, ?>, ?> entry : valueMap.entrySet()) {
@@ -350,6 +359,4 @@ public interface AdminControllerInf<ENTITY, VO> {
             getPortalService().beforeQuery(req);
         }
     }
-
-
 }
