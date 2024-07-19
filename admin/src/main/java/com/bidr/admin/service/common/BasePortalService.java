@@ -104,6 +104,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                         .add(new SelectString(StringUtil.joinWith(" as ", entry.getKey(), entry.getValue()),
                                 wrapper.isHasAlias(), wrapper.getAlias()));
             }
+        } else {
+            wrapper.selectAll(getEntityClass(), "t");
         }
         if (FuncUtil.isNotEmpty(groupColumns)) {
             for (String groupColumn : groupColumns) {
