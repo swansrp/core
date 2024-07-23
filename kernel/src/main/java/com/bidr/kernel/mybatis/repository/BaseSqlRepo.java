@@ -4,16 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.SortVO;
+import com.bidr.kernel.vo.portal.*;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.apache.commons.collections4.CollectionUtils;
@@ -109,11 +105,26 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public Page<T> select(QueryConditionReq req) {
-        QueryWrapper<T> wrapper = Wrappers.query();
-        wrapper.setEntityClass(entityClass);
-        parseQueryCondition(req, wrapper);
-        return select(wrapper, req);
+    public <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
+                                MPJLambdaWrapper<T> wrapper,
+                                Class<VO> vo) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<T>(entityClass);
+        }
+        parseGeneralQuery(req.getConditionList(), aliasMap, havingFields, wrapper);
+        parseSort(req.getSortList(), aliasMap, wrapper);
+        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
+    }
+
+    @Override
+    public <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList, Map<String, String> aliasMap,
+                                Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<T>(entityClass);
+        }
+        parseGeneralQuery(conditionList, aliasMap, havingFields, wrapper);
+        parseSort(sortList, aliasMap, wrapper);
+        return selectJoinList(vo, wrapper);
     }
 
     @Override

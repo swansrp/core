@@ -2,14 +2,12 @@ package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.SortVO;
+import com.bidr.kernel.vo.portal.*;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +30,11 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
 
-    Page<T> select(QueryConditionReq req);
+    <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
+                         MPJLambdaWrapper<T> wrapper, Class<VO> vo);
+
+    <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList, Map<String, String> aliasMap,
+                         Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
     <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo);
 

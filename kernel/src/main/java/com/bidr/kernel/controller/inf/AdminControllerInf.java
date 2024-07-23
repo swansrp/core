@@ -13,7 +13,10 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
+import com.bidr.kernel.vo.portal.GeneralSummaryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
@@ -80,6 +83,43 @@ public interface AdminControllerInf<ENTITY, VO> {
      * @return 数据
      */
     Page<VO> generalQuery(@RequestBody QueryConditionReq req);
+
+    /**
+     * 普通查询(不分页)
+     *
+     * @param req 查询条件
+     * @return 数据
+     */
+    List<VO> generalSelect(@RequestBody QueryConditionReq req);
+
+    /**
+     * 汇总
+     *
+     * @param req 高级查询条件
+     * @return 数据
+     */
+    Map<String, Object> generalSummary(@RequestBody GeneralSummaryReq req);
+
+    /**
+     * 构造汇总sql select
+     *
+     * @param summaryColumns  汇总字段
+     * @param summaryAliasMap 汇总字段别名
+     * @param wrapper         wrapper
+     */
+    default void buildSummaryWrapper(List<String> summaryColumns, Map<String, String> summaryAliasMap,
+                                     MPJLambdaWrapper<ENTITY> wrapper) {
+        if (FuncUtil.isNotEmpty(summaryColumns)) {
+            for (String column : summaryColumns) {
+                String columnName = getRepo().getColumnName(column, summaryAliasMap, getEntityClass());
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", columnName, column), wrapper.isHasAlias(),
+                                wrapper.getAlias()));
+            }
+        }
+        // 去除group by成分
+        wrapper.getExpression().getGroupBy().clear();
+    }
 
     /**
      * 高级查询

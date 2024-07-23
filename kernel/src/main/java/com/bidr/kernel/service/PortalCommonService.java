@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Title: PortalCommonService
@@ -28,10 +29,6 @@ import java.util.Map;
  */
 @SuppressWarnings("unchecked")
 public interface PortalCommonService<ENTITY, VO> {
-
-    default Class<VO> getVoClass() {
-        return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
-    }
 
     /**
      * 是否查看全局数据
@@ -156,24 +153,6 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
-     * 生成联表查询wrapper
-     *
-     * @return 联表wrapper
-     */
-    default MPJLambdaWrapper<ENTITY> getJoinWrapper() {
-        return new MPJLambdaWrapper<>(getEntityClass());
-    }
-
-    /**
-     * 获取entity类型
-     *
-     * @return entity类型
-     */
-    default Class<ENTITY> getEntityClass() {
-        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
-    }
-
-    /**
      * Join Wrapper 查询是否需要对结果进行group
      *
      * @return 需要group的Columns
@@ -215,11 +194,27 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 数据库repo
+     *
+     * @return repo
+     */
+    BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
+
+    /**
      * 生成汇总别名表
      *
      * @return 别名map
      */
     default Map<String, String> getSummaryAliasMap() {
+        return null;
+    }
+
+    /**
+     * 生成需要HAVING查询的字段map
+     *
+     * @return 别名map
+     */
+    default Set<String> getHavingFields() {
         return null;
     }
 
@@ -254,13 +249,6 @@ public interface PortalCommonService<ENTITY, VO> {
     default void batchInsert(List<ENTITY> dataList) {
         getRepo().saveBatch(dataList);
     }
-
-    /**
-     * 数据库repo
-     *
-     * @return repo
-     */
-    BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
 
     /**
      * 批量修改
@@ -308,6 +296,28 @@ public interface PortalCommonService<ENTITY, VO> {
      */
     default Page<VO> query(AdvancedQueryReq req) {
         return getRepo().select(req, getAliasMap(), getJoinWrapper(), getVoClass());
+    }
+
+    /**
+     * 生成联表查询wrapper
+     *
+     * @return 联表wrapper
+     */
+    default MPJLambdaWrapper<ENTITY> getJoinWrapper() {
+        return new MPJLambdaWrapper<>(getEntityClass());
+    }
+
+    default Class<VO> getVoClass() {
+        return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
+    }
+
+    /**
+     * 获取entity类型
+     *
+     * @return entity类型
+     */
+    default Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
     }
 
     /**
