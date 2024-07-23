@@ -13,6 +13,7 @@
     <result column="size" jdbcType="VARCHAR" property="size" />
     <result column="read_only" jdbcType="VARCHAR" property="readOnly" />
     <result column="summary" jdbcType="VARCHAR" property="summary" />
+    <result column="advanced" jdbcType="VARCHAR" property="advanced" />
     <result column="id_column" jdbcType="VARCHAR" property="idColumn" />
     <result column="pid_column" jdbcType="VARCHAR" property="pidColumn" />
     <result column="tree_drag" jdbcType="VARCHAR" property="treeDrag" />
@@ -30,8 +31,9 @@
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    id, role_id, `name`, display_name, url, bean, `size`, read_only, summary, id_column, 
-    pid_column, tree_drag, name_column, order_column, table_drag, add_width, edit_width, 
-    detail_width, description_count, export_able, import_able, default_condition, default_sort
+    id, role_id, `name`, display_name, url, bean, `size`, read_only, summary, advanced, 
+    id_column, pid_column, tree_drag, name_column, order_column, table_drag, add_width, 
+    edit_width, detail_width, description_count, export_able, import_able, default_condition, 
+    default_sort
   </sql>
 </mapper>

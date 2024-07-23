@@ -67,6 +67,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     protected Map<String, String> aliasMap = new HashMap<>(32);
     protected Map<String, String> summaryAliasMap = new HashMap<>(32);
+    protected Set<String> havingFields = new HashSet<>();
     @Resource
     protected SysPortalService sysPortalService;
     @Resource
@@ -78,8 +79,75 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     @Override
     public void run(String... args) {
-        aliasMap.putAll(initAliasMap());
-        summaryAliasMap.putAll(initSummaryAliasMap());
+        for (Field field : ReflectionUtil.getFields(getVoClass())) {
+            setAlias(field, aliasMap);
+            setSummaryAlias(field, summaryAliasMap);
+            setHavingField(field, havingFields);
+        }
+    }
+
+    protected void setAlias(Field field, Map<String, String> map) {
+        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+        if (FuncUtil.isNotEmpty(portalNoFilterField)) {
+            return;
+        }
+        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        if (FuncUtil.isNotEmpty(portalEntityField)) {
+            if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
+                map.put(field.getName(),
+                        getAlias(portalEntityField.entity(), portalEntityField.field(), portalEntityField.alias()));
+            } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
+                map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+            } else {
+                map.put(field.getName(), portalEntityField.field());
+            }
+        } else {
+            BindField bindField = field.getAnnotation(BindField.class);
+            if (FuncUtil.isNotEmpty(bindField)) {
+                map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+            }
+        }
+    }
+
+    protected void setSummaryAlias(Field field, Map<String, String> map) {
+        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+        if (FuncUtil.isNotEmpty(portalNoFilterField)) {
+            return;
+        }
+        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        if (FuncUtil.isNotEmpty(portalEntityField)) {
+            if (FuncUtil.isNotEmpty(portalEntityField.origFieldName())) {
+                map.put(field.getName(), portalEntityField.origFieldName());
+            } else {
+                if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
+                    map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field(),
+                            portalEntityField.alias()));
+                } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
+                    map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
+                } else {
+                    map.put(field.getName(), portalEntityField.field());
+                }
+            }
+        } else {
+            BindField bindField = field.getAnnotation(BindField.class);
+            if (FuncUtil.isNotEmpty(bindField)) {
+                map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+            }
+        }
+    }
+
+    protected void setHavingField(Field field, Set<String> set) {
+        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        if (FuncUtil.isNotEmpty(portalEntityField)) {
+            if (portalEntityField.aggregation()) {
+                set.add(field.getName());
+            }
+        }
+    }
+
+    private String getAlias(Class<?> clazz, String fieldName, String alias) {
+        String selectSqlName = DbUtil.getSelectSqlName(clazz, fieldName);
+        return alias + "." + selectSqlName;
     }
 
     /**
@@ -115,6 +183,20 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         return wrapper;
     }
 
+    private String getAlias(Class<?> clazz, String fieldName) {
+        String tableName = DbUtil.getTableName(clazz);
+        String selectSqlName = DbUtil.getSelectSqlName(clazz, fieldName);
+        return tableName + "." + selectSqlName;
+    }
+
+    protected void addAliasMap(GetFunc reqFiled, String alias, GetFunc entityField) {
+        aliasMap.put(LambdaUtil.getFieldNameByGetFunc(reqFiled), alias + "." + DbUtil.getSelectSqlName(entityField));
+    }
+
+    protected void addAliasMap(GetFunc<VO, ?> field) {
+        aliasMap.put(LambdaUtil.getFieldNameByGetFunc(field), LambdaUtil.getFieldNameByGetFunc(field));
+    }
+
     private void parsePortalSelect(Map<String, String> selectColumnMap, List<String> groupColumns, Field field) {
         PortalSelect portalSelect = field.getAnnotation(PortalSelect.class);
         if (FuncUtil.isNotEmpty(portalSelect)) {
@@ -124,6 +206,25 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 groupColumns.add(sqlFieldName);
             }
         }
+    }
+
+    @Override
+    public void prepareInsert(ENTITY entity) {
+        if (isAdmin()) {
+            adminBeforeAdd(entity);
+        } else {
+            beforeAdd(entity);
+        }
+    }
+
+    @Override
+    public void validateInsert(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
+
+    }
+
+    @Override
+    public void handleInsert(List<ENTITY> entityList) {
+        batchInsert(entityList);
     }
 
     private void parsePortalEntityField(MPJLambdaWrapper<ENTITY> wrapper, Field field) {
@@ -152,90 +253,65 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
     }
 
-    protected Map<String, String> initSummaryAliasMap() {
-        Map<String, String> map = new HashMap<>(32);
-        for (Field field : ReflectionUtil.getFields(getVoClass())) {
-            PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
-            if (FuncUtil.isNotEmpty(portalNoFilterField)) {
-                continue;
-            }
-            PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
-            if (FuncUtil.isNotEmpty(portalEntityField)) {
-                if (FuncUtil.isNotEmpty(portalEntityField.origFieldName())) {
-                    map.put(field.getName(), portalEntityField.origFieldName());
-                } else {
-                    if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
-                        map.put(field.getName(),
-                                getAlias(portalEntityField.entity(), portalEntityField.field(),
-                                        portalEntityField.alias()));
-                    } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
-                        map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
-                    } else {
-                        map.put(field.getName(), portalEntityField.field());
-                    }
-                }
-                continue;
-            } else {
-                BindField bindField = field.getAnnotation(BindField.class);
-                if (FuncUtil.isNotEmpty(bindField)) {
-                    map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
-                }
-            }
+    @Override
+    public void afterInsert(List<ENTITY> entityList) {
+        for (ENTITY entity : entityList) {
+            afterAdd(entity);
         }
-        return map;
     }
 
-    protected Map<String, String> initAliasMap() {
-        Map<String, String> map = new HashMap<>(32);
-        for (Field field : ReflectionUtil.getFields(getVoClass())) {
-            PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
-            if (FuncUtil.isNotEmpty(portalNoFilterField)) {
-                continue;
-            }
-            PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
-            if (FuncUtil.isNotEmpty(portalEntityField)) {
-                if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
-                    map.put(field.getName(),
-                            getAlias(portalEntityField.entity(), portalEntityField.field(), portalEntityField.alias()));
-                } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
-                    map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
-                } else {
-                    map.put(field.getName(), portalEntityField.field());
-                }
-                continue;
-            } else {
-                BindField bindField = field.getAnnotation(BindField.class);
-                if (FuncUtil.isNotEmpty(bindField)) {
-                    map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
-                }
-            }
+    @Override
+    public void prepareUpdate(ENTITY entity) {
+        if (isAdmin()) {
+            adminBeforeUpdate(entity);
+        } else {
+            beforeUpdate(entity);
         }
-        return map;
     }
 
-    private String getAlias(Class<?> clazz, String fieldName, String alias) {
-        String selectSqlName = DbUtil.getSelectSqlName(clazz, fieldName);
-        return alias + "." + selectSqlName;
+    @Override
+    public void validateUpdate(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
+
     }
 
-    private String getAlias(Class<?> clazz, String fieldName) {
-        String tableName = DbUtil.getTableName(clazz);
-        String selectSqlName = DbUtil.getSelectSqlName(clazz, fieldName);
-        return tableName + "." + selectSqlName;
+    @Override
+    public void handleUpdate(List<ENTITY> entityList) {
+        batchUpdate(entityList);
     }
 
-    protected void addAliasMap(GetFunc reqFiled, String alias, GetFunc entityField) {
-        aliasMap.put(LambdaUtil.getFieldNameByGetFunc(reqFiled), alias + "." + DbUtil.getSelectSqlName(entityField));
+    @Override
+    public void afterUpdate(List<ENTITY> entityList) {
+        for (ENTITY entity : entityList) {
+            afterUpdate(entity);
+        }
     }
 
-    protected void addAliasMap(GetFunc<VO, ?> field) {
-        aliasMap.put(LambdaUtil.getFieldNameByGetFunc(field), LambdaUtil.getFieldNameByGetFunc(field));
+    @Override
+    public TokenService getTokenService() {
+        return tokenService;
     }
+
+    @Override
+    public String getProgressKey() {
+        return "UPLOAD_PROGRESS_" + getEntityClass().getSimpleName();
+    }
+
 
     @Override
     public Map<String, String> getAliasMap() {
         return aliasMap;
     }
+
+    @Override
+    public Map<String, String> getSummaryAliasMap() {
+        return summaryAliasMap;
+    }
+
+    @Override
+    public Set<String> getHavingFields() {
+        return havingFields;
+    }
+
 
     @SneakyThrows
     @Override
@@ -302,11 +378,13 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         return os.toByteArray();
     }
 
+
     @Override
     public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
                 StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
     }
+
 
     @Async
     @Override
@@ -325,6 +403,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
     }
 
+
     @Async
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -341,6 +420,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
 
     }
+
 
     protected void handleExcelUpdate(InputStream is, PortalWithColumnsRes portal) {
         EasyExcel.read(is).sheet().registerReadListener(
@@ -454,65 +534,5 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         req.setCondition(mergedQuery);
     }
 
-    @Override
-    public void prepareInsert(ENTITY entity) {
-        if (isAdmin()) {
-            adminBeforeAdd(entity);
-        } else {
-            beforeAdd(entity);
-        }
-    }
 
-    @Override
-    public void validateInsert(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
-
-    }
-
-    @Override
-    public void handleInsert(List<ENTITY> entityList) {
-        batchInsert(entityList);
-    }
-
-    @Override
-    public void afterInsert(List<ENTITY> entityList) {
-        for (ENTITY entity : entityList) {
-            afterAdd(entity);
-        }
-    }
-
-    @Override
-    public void prepareUpdate(ENTITY entity) {
-        if (isAdmin()) {
-            adminBeforeUpdate(entity);
-        } else {
-            beforeUpdate(entity);
-        }
-    }
-
-    @Override
-    public void validateUpdate(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
-
-    }
-
-    @Override
-    public void handleUpdate(List<ENTITY> entityList) {
-        batchUpdate(entityList);
-    }
-
-    @Override
-    public void afterUpdate(List<ENTITY> entityList) {
-        for (ENTITY entity : entityList) {
-            afterUpdate(entity);
-        }
-    }
-
-    @Override
-    public TokenService getTokenService() {
-        return tokenService;
-    }
-
-    @Override
-    public String getProgressKey() {
-        return "UPLOAD_PROGRESS_" + getEntityClass().getSimpleName();
-    }
 }

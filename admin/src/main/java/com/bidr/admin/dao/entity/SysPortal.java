@@ -98,6 +98,15 @@ public class SysPortal {
     private String summary;
 
     /**
+     * 是否支持高级查询
+     */
+    @TableField(value = "advanced")
+    @ApiModelProperty(value = "是否支持高级查询")
+    @Size(max = 1, message = "是否支持高级查询最大长度要小于 1")
+    @NotBlank(message = "是否支持高级查询不能为空")
+    private String advanced;
+
+    /**
      * 行id字段名
      */
     @TableField(value = "id_column")

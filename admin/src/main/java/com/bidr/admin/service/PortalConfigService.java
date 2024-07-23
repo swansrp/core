@@ -1,5 +1,6 @@
 package com.bidr.admin.service;
 
+import com.bidr.admin.config.PortalEntityField;
 import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
@@ -123,7 +124,7 @@ public class PortalConfigService implements LoginFillTokenInf {
             Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(entry.getKey(), 0);
             List<SysPortal> portalList = sysPortalService.getByBeanName(entry.getKey().getSimpleName());
             if (FuncUtil.isEmpty(portalList)) {
-                SysPortal portal = buildSysPortal(entry.getKey(), entityClass);
+                SysPortal portal = buildSysPortal(entry.getKey(), entityClass, entry.getValue());
                 sysPortalService.save(portal);
                 portalList.add(portal);
             }
@@ -145,7 +146,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
-    private SysPortal buildSysPortal(Class<?> controllerClass, Class<?> entityClass) {
+    private SysPortal buildSysPortal(Class<?> controllerClass, Class<?> entityClass, Collection<Field> fields) {
         AdminPortal adminPortal = controllerClass.getAnnotation(AdminPortal.class);
         ApiModel apiModel = entityClass.getAnnotation(ApiModel.class);
         SysPortal portal = new SysPortal();
@@ -163,6 +164,17 @@ public class PortalConfigService implements LoginFillTokenInf {
         portal.setDisplayName(portal.getDisplayName() + "(默认)");
         portal.setUrl(entityClass.getSimpleName());
         portal.setRoleId(DEFAULT_CONFIG_ROLE_ID);
+        boolean aggregation = false;
+        if (FuncUtil.isNotEmpty(fields)) {
+            for (Field field : fields) {
+                PortalEntityField entityField = field.getAnnotation(PortalEntityField.class);
+                if (FuncUtil.isNotEmpty(entityField) && entityField.aggregation()) {
+                    aggregation = true;
+                    break;
+                }
+            }
+        }
+        portal.setAdvanced(StringUtil.convertSwitch(aggregation));
         return portal;
     }
 
