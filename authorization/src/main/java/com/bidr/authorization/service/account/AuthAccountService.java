@@ -38,10 +38,10 @@ public class AuthAccountService {
         return accountService.getAccountByUserName(userName);
     }
 
-    public List<AccountRes> getAccountByUserNameOrDeptNameOrAccountId(List<String> names) {
+    public List<AccountRes> getAccountByUserNameOrDeptNameOrAccountId(List<String> names, boolean active) {
         List<AcAccount> res = new ArrayList<>();
         if (FuncUtil.isNotEmpty(names)) {
-            res = accountService.getAccountByUserNameOrDeptNameOrAccountId(names);
+            res = accountService.getAccountByUserNameOrDeptNameOrAccountId(names, active);
         }
         return Resp.convert(res, AccountRes.class);
     }

@@ -7,10 +7,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -43,8 +40,11 @@ public class AccountController {
      */
     @ApiOperation(value = "获取用户信息")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
-    public List<AccountRes> getAccountByUserNameOrDeptName(@RequestBody List<String> names) {
-        return accountService.getAccountByUserNameOrDeptNameOrAccountId(names);
+    public List<AccountRes> getAccountByUserNameOrDeptName(@RequestBody List<String> names,
+                                                           @RequestParam(name = "active", required = false,
+                                                                         defaultValue = "true")
+                                                           boolean active) {
+        return accountService.getAccountByUserNameOrDeptNameOrAccountId(names, active);
     }
 
 

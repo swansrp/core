@@ -62,11 +62,11 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
         return super.select(wrapper);
     }
 
-    public List<AcAccount> getAccountByUserNameOrDeptNameOrAccountId(List<String> names) {
+    public List<AcAccount> getAccountByUserNameOrDeptNameOrAccountId(List<String> names, boolean active) {
         MPJLambdaWrapper<AcAccount> wrapper = new MPJLambdaWrapper<>();
         wrapper.leftJoin(AcDept.class, AcDept::getDeptId, AcAccount::getDepartment);
-        wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
-                .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue());
+        wrapper.eq(active, AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
+                .eq(active, AcAccount::getEmployStatus, BoolDict.YES.getValue());
         wrapper.nested(FuncUtil.isNotEmpty(names), wr -> {
             for (String name : names) {
                 wr.or(rr -> rr.like(AcAccount::getName, name).or(r -> r.like(AcDept::getName, name))
