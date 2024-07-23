@@ -24,11 +24,13 @@ public enum PortalMobileDisplayTypeDict implements Dict {
     TITLE("1", "标题"),
     SUB_TITLE("2", "副标题"),
     BADGE("3", "徽标"),
-    CONTENT("4", "内容"),
+    CONTENT("4", "内容(长)"),
     TAG("5", "标签"),
     OWNER("6", "人员"),
     TIME("7", "时间"),
-    REMARK("8", "备注文字");
+    REMARK("8", "备注文字"),
+    LABEL("9", "内容(短)"),
+    ;
 
     private final String value;
     private final String label;
