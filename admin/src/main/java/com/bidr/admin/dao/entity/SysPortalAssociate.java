@@ -16,7 +16,7 @@ import lombok.Data;
  */
 @ApiModel(description = "关联表格配置")
 @Data
-@TableName(value = "erp.sys_portal_associate")
+@TableName(value = "sys_portal_associate")
 public class SysPortalAssociate {
     /**
      * id

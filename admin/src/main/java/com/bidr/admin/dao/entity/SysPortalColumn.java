@@ -17,7 +17,7 @@ import lombok.Data;
  */
 @ApiModel(description = "系统表表头")
 @Data
-@TableName(value = "erp.sys_portal_column")
+@TableName(value = "sys_portal_column")
 public class SysPortalColumn {
     /**
      * id

@@ -3,7 +3,7 @@
 <mapper namespace="com.bidr.admin.dao.mapper.SysPortalColumnMapper">
   <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalColumn">
     <!--@mbg.generated-->
-    <!--@Table erp.sys_portal_column-->
+    <!--@Table sys_portal_column-->
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="role_id" jdbcType="BIGINT" property="roleId" />
     <result column="portal_id" jdbcType="BIGINT" property="portalId" />
