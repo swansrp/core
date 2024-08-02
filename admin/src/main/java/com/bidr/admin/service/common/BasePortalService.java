@@ -162,9 +162,14 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         Map<String, String> selectColumnMap = new LinkedHashMap<>();
         List<String> groupColumns = new ArrayList<>();
-        for (Field field : ReflectionUtil.getFields(getVoClass())) {
-            parsePortalEntityField(wrapper, field);
-            parsePortalSelect(selectColumnMap, groupColumns, field);
+        List<String> unSelectFields = new ArrayList<>();
+        for (Field field : ReflectionUtil.getFieldMap(getVoClass()).values()) {
+            boolean selected = false;
+            selected |= parsePortalEntityField(wrapper, field);
+            selected |= parsePortalSelect(selectColumnMap, groupColumns, field);
+            if (!selected) {
+                unSelectFields.add(field.getName());
+            }
         }
         if (FuncUtil.isNotEmpty(selectColumnMap)) {
             for (Map.Entry<String, String> entry : selectColumnMap.entrySet()) {
@@ -173,7 +178,18 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                                 wrapper.isHasAlias(), wrapper.getAlias()));
             }
         } else {
-            wrapper.selectAll(getEntityClass(), "t");
+            if (FuncUtil.isNotEmpty(unSelectFields)) {
+                Map<String, Field> fieldMap = ReflectionUtil.getFieldMap(getEntityClass());
+                for (String unselectedField : unSelectFields) {
+                    Field field = fieldMap.get(unselectedField);
+                    if (FuncUtil.isNotEmpty(field)) {
+                        String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
+                        wrapper.getSelectColum()
+                                .add(new SelectString(StringUtil.joinWith(" as ", sqlFieldName, field.getName()),
+                                        wrapper.isHasAlias(), wrapper.getAlias()));
+                    }
+                }
+            }
         }
         if (FuncUtil.isNotEmpty(groupColumns)) {
             for (String groupColumn : groupColumns) {
@@ -182,6 +198,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
         return wrapper;
     }
+
 
     private String getAlias(Class<?> clazz, String fieldName) {
         String tableName = DbUtil.getTableName(clazz);
@@ -197,7 +214,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         aliasMap.put(LambdaUtil.getFieldNameByGetFunc(field), LambdaUtil.getFieldNameByGetFunc(field));
     }
 
-    private void parsePortalSelect(Map<String, String> selectColumnMap, List<String> groupColumns, Field field) {
+    private boolean parsePortalSelect(Map<String, String> selectColumnMap, List<String> groupColumns, Field field) {
         PortalSelect portalSelect = field.getAnnotation(PortalSelect.class);
         if (FuncUtil.isNotEmpty(portalSelect)) {
             String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
@@ -205,6 +222,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             if (portalSelect.group()) {
                 groupColumns.add(sqlFieldName);
             }
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -227,7 +247,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         batchInsert(entityList);
     }
 
-    private void parsePortalEntityField(MPJLambdaWrapper<ENTITY> wrapper, Field field) {
+    private boolean parsePortalEntityField(MPJLambdaWrapper<ENTITY> wrapper, Field field) {
         PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
         if (FuncUtil.isNotEmpty(portalEntityField)) {
             String alias = portalEntityField.alias();
@@ -250,6 +270,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             if (portalEntityField.group()) {
                 wrapper.groupBy(field.getName());
             }
+            return true;
+        } else {
+            return false;
         }
     }
 
