@@ -4,6 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.exception.NoticeException;
@@ -36,9 +37,12 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
 
 /**
  * Title: BaseAdminController
@@ -48,7 +52,7 @@ import java.util.Set;
  * @since 2023/03/31 11:42
  */
 @Slf4j
-@SuppressWarnings("rawtypes, unchecked")
+@SuppressWarnings("unchecked")
 public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTITY, VO> {
 
     @Resource
@@ -82,14 +86,27 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void delete(@RequestBody IdReqVO vo) {
+        deleteEntity(vo);
+        Resp.notice("删除成功");
+    }
+
+    public void deleteEntity(IdReqVO vo) {
         if (isAdmin()) {
             adminBeforeDelete(vo);
         } else {
             beforeDelete(vo);
         }
-        getRepo().deleteById(vo.getId());
+        boolean result;
+        Field validField = ReflectionUtil.getField(getEntityClass(), VALID_FIELD);
+        if (FuncUtil.isNotEmpty(validField)) {
+            ENTITY entity = getRepo().selectById(vo.getId());
+            ReflectionUtil.setValue(validField, entity, CommonConst.NO);
+            result = getRepo().updateById(entity);
+        } else {
+            result = getRepo().deleteById(vo.getId());
+        }
+        Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "删除失败");
         afterDelete(vo);
-        Resp.notice("删除成功");
     }
 
     @Override
