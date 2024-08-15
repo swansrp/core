@@ -321,6 +321,7 @@ public class ReflectionUtil {
         if (aClass != null) {
             getFieldMap(fieldMap, aClass.getSuperclass());
             for (Field field : aClass.getDeclaredFields()) {
+                fieldMap.remove(field.getName());
                 fieldMap.put(field.getName(), field);
             }
         }
@@ -730,10 +731,29 @@ public class ReflectionUtil {
             }
         }
         if (FuncUtil.isNotEmpty(classList)) {
-            return ReflectionUtils.invokeMethod(
-                    getMethod(obj.getClass(), methodName, classList.toArray(new Class<?>[0])), obj, paramArray);
+            if (obj instanceof Class) {
+                try {
+                    return getMethod(obj, methodName, classList.toArray(new Class<?>[0])).invoke(null, paramArray);
+                } catch (Exception var4) {
+                    ReflectionUtils.handleReflectionException(var4);
+                    throw new IllegalStateException("Should never get here");
+                }
+            } else {
+                return ReflectionUtils.invokeMethod(
+                        getMethod(obj.getClass(), methodName, classList.toArray(new Class<?>[0])), obj, paramArray);
+            }
+
         } else {
-            return ReflectionUtils.invokeMethod(getMethod(obj.getClass(), methodName), obj);
+            if (obj instanceof Class) {
+                try {
+                    return getMethod(obj, methodName, classList.toArray(new Class<?>[0])).invoke(null);
+                } catch (Exception var4) {
+                    ReflectionUtils.handleReflectionException(var4);
+                    throw new IllegalStateException("Should never get here");
+                }
+            } else {
+                return ReflectionUtils.invokeMethod(getMethod(obj.getClass(), methodName), obj);
+            }
         }
 
     }
