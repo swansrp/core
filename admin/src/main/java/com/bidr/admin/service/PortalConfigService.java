@@ -1,5 +1,7 @@
 package com.bidr.admin.service;
 
+import com.bidr.admin.config.PortalDisplayNoneField;
+import com.bidr.admin.config.PortalDisplayOnlyField;
 import com.bidr.admin.config.PortalEntityField;
 import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.constant.dict.PortalFieldDict;
@@ -39,6 +41,7 @@ import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
@@ -162,7 +165,12 @@ public class PortalConfigService implements LoginFillTokenInf {
             portal.setDisplayName(entityClass.getSimpleName());
         }
         portal.setDisplayName(portal.getDisplayName() + "(默认)");
-        portal.setUrl(entityClass.getSimpleName());
+        RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
+        if (FuncUtil.isNotEmpty(requestMapping)) {
+            portal.setUrl(requestMapping.path()[0]);
+        } else {
+            portal.setUrl(entityClass.getSimpleName());
+        }
         portal.setRoleId(DEFAULT_CONFIG_ROLE_ID);
         boolean aggregation = false;
         if (FuncUtil.isNotEmpty(fields)) {
@@ -218,6 +226,20 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setFilterAble(CommonConst.NO);
         } else {
             column.setFilterAble(CommonConst.YES);
+        }
+        PortalDisplayOnlyField portalDisplayOnlyField = field.getAnnotation(PortalDisplayOnlyField.class);
+        if (FuncUtil.isNotEmpty(portalDisplayOnlyField)) {
+            column.setShow(portalDisplayOnlyField.table());
+            column.setDetailShow(portalDisplayOnlyField.detail());
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+        }
+        PortalDisplayNoneField portalDisplayNoneField = field.getAnnotation(PortalDisplayNoneField.class);
+        if (FuncUtil.isNotEmpty(portalDisplayNoneField)) {
+            column.setShow(CommonConst.NO);
+            column.setDetailShow(CommonConst.NO);
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
         }
         BindField bindFieldAnno = field.getAnnotation(BindField.class);
         if (FuncUtil.isNotEmpty(bindFieldAnno)) {

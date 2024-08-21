@@ -27,7 +27,7 @@ public class SysPortalColumnService extends BaseSqlRepo<SysPortalColumnMapper, S
         return existed(wrapper);
     }
 
-    public void deleteByPortalId(String portalId) {
+    public void deleteByPortalId(Long portalId) {
         LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper();
         wrapper.eq(SysPortalColumn::getPortalId, portalId);
         delete(wrapper);

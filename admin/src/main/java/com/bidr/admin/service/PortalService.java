@@ -91,11 +91,11 @@ public class PortalService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deletePortalConfig(IdReqVO req) {
-        SysPortal sysPortal = sysPortalService.selectById(req.getId());
+        SysPortal sysPortal = sysPortalService.getByName(req.getId(), PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
         List<SysPortal> portalList = sysPortalService.getByBeanName(sysPortal.getBean());
         for (SysPortal portal : portalList) {
             sysPortalService.deleteById(portal.getId());
-            sysPortalColumnService.deleteByPortalId(req.getId());
+            sysPortalColumnService.deleteByPortalId(portal.getId());
         }
 
     }
