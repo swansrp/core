@@ -101,5 +101,15 @@ public interface ObjectStorageService {
      */
     void delete(Long id);
 
+    /**
+     * 根据url获取访问url
+     *
+     * @param url
+     * @return
+     */
+    default String getReadUrl(String url) {
+        return url;
+    }
+
 
 }

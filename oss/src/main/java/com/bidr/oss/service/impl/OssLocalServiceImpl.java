@@ -2,7 +2,6 @@ package com.bidr.oss.service.impl;
 
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.oss.constant.OssConst;
-import com.bidr.oss.constant.param.OssParam;
 import com.bidr.oss.dao.entity.SaObjectStorage;
 import com.bidr.oss.service.BaseOssService;
 import com.bidr.oss.vo.UploadRes;
@@ -28,11 +27,11 @@ import java.nio.file.StandardCopyOption;
 @Slf4j
 @Service
 public class OssLocalServiceImpl extends BaseOssService {
+
     @Override
     public String buildAccessUrl(String objectName) {
         String bucketName = getUploadPath();
-        String accessDomain = sysConfigCacheService.getSysConfigValue(OssParam.OSS_ACCESS_ENDPOINT);
-        return accessDomain + bucketName + OssConst.SEP + objectName;
+        return endpoint + bucketName + OssConst.SEP + objectName;
     }
 
     @Override
@@ -58,8 +57,7 @@ public class OssLocalServiceImpl extends BaseOssService {
     }
 
     private String getUploadPath() {
-        String bucket = sysConfigCacheService.getSysConfigValue(OssParam.OSS_BUCKET);
-        return OssConst.SEP + "oss" + OssConst.SEP + bucket;
+        return OssConst.SEP + "oss" + OssConst.SEP + bucketName;
     }
 
     @Override

@@ -1,14 +1,14 @@
 package com.bidr.oss.config.minio;
 
 import cn.hutool.core.io.FastByteArrayOutputStream;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.oss.bo.OssItem;
-import com.bidr.oss.constant.param.OssParam;
-import com.bidr.platform.service.cache.SysConfigCacheService;
 import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.Bucket;
 import io.minio.messages.Item;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,16 +28,23 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 public class MinioTemplate {
-    private final MinioClient minioClient;
-    private final String bucketName;
 
-    public MinioTemplate(SysConfigCacheService sysConfigCacheService) {
-        String accessKeyId = sysConfigCacheService.getParamValueAvail(OssParam.OSS_ACCESS_KEY);
-        String accessKeySecret = sysConfigCacheService.getParamValueAvail(OssParam.OSS_ACCESS_SECRET);
-        String endpoint = sysConfigCacheService.getParamValueAvail(OssParam.OSS_ACCESS_ENDPOINT);
-        this.minioClient = MinioClient.builder().endpoint(endpoint).credentials(accessKeyId, accessKeySecret).build();
-        String bucketName = sysConfigCacheService.getParamValueAvail(OssParam.OSS_BUCKET);
-        this.bucketName = bucketName;
+    @Value("${oss.appKey}")
+    private String appKey;
+    @Value("${oss.appSecret}")
+    private String appSecret;
+    @Value("${oss.endpoint}")
+    private String endpoint;
+    @Value("${oss.bucket}")
+    private String bucketName;
+    
+    private MinioClient minioClient;
+
+    public MinioClient getClient() {
+        if (FuncUtil.isEmpty(minioClient)) {
+            this.minioClient = MinioClient.builder().endpoint(endpoint).credentials(appKey, appSecret).build();
+        }
+        return minioClient;
     }
 
     /**
@@ -48,7 +55,7 @@ public class MinioTemplate {
      */
     @SneakyThrows
     public boolean bucketExists(String bucketName) {
-        return minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+        return getClient().bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
     }
 
     /**
@@ -59,7 +66,7 @@ public class MinioTemplate {
      */
     @SneakyThrows
     public boolean createBucket(String bucketName) {
-        minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+        getClient().makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
         return true;
     }
 
@@ -72,7 +79,7 @@ public class MinioTemplate {
      */
     @SneakyThrows
     public void setBucketPolicy(String bucketName, String bucketPolicyJson) {
-        minioClient.setBucketPolicy(SetBucketPolicyArgs.builder().bucket(bucketName).config(bucketPolicyJson).build());
+        getClient().setBucketPolicy(SetBucketPolicyArgs.builder().bucket(bucketName).config(bucketPolicyJson).build());
     }
 
     /**
@@ -82,7 +89,7 @@ public class MinioTemplate {
      */
     @SneakyThrows
     public List<String> listBucketNames() {
-        List<Bucket> bucketList = minioClient.listBuckets();
+        List<Bucket> bucketList = getClient().listBuckets();
         List<String> bucketListName = new ArrayList<>();
         for (Bucket bucket : bucketList) {
             bucketListName.add(bucket.name());
@@ -116,7 +123,7 @@ public class MinioTemplate {
         if (contentType != null) {
             builder.contentType(contentType);
         }
-        minioClient.putObject(builder.build());
+        getClient().putObject(builder.build());
     }
 
     /**
@@ -149,7 +156,7 @@ public class MinioTemplate {
      */
     @SneakyThrows
     public void putObject(PutObjectArgs objectArgs) {
-        minioClient.putObject(objectArgs);
+        getClient().putObject(objectArgs);
     }
 
 
@@ -175,7 +182,7 @@ public class MinioTemplate {
     public String getObjectLink(String bucketName, String objectName) {
         GetPresignedObjectUrlArgs build = GetPresignedObjectUrlArgs.builder().bucket(bucketName).object(objectName)
                 .method(Method.GET).build();
-        return minioClient.getPresignedObjectUrl(build);
+        return getClient().getPresignedObjectUrl(build);
     }
 
     /**
@@ -204,7 +211,7 @@ public class MinioTemplate {
     public String getObjectLink(String bucketName, String objectName, int expiryDuration, TimeUnit unit) {
         GetPresignedObjectUrlArgs build = GetPresignedObjectUrlArgs.builder().bucket(bucketName).object(objectName)
                 .expiry(expiryDuration, unit).method(Method.GET).build();
-        return minioClient.getPresignedObjectUrl(build);
+        return getClient().getPresignedObjectUrl(build);
     }
 
     /**
@@ -245,7 +252,7 @@ public class MinioTemplate {
     @SneakyThrows
     public List<OssItem> listObjects(ListObjectsArgs listObjectsArgs) {
 
-        Iterable<Result<Item>> results = minioClient.listObjects(listObjectsArgs);
+        Iterable<Result<Item>> results = getClient().listObjects(listObjectsArgs);
         List<OssItem> items = new ArrayList<>();
         for (Result<Item> result : results) {
             Item item = result.get();
@@ -299,7 +306,7 @@ public class MinioTemplate {
     @SneakyThrows
     public GetObjectResponse getObject(String bucketName, String objectName) {
         GetObjectArgs objectArgs = GetObjectArgs.builder().bucket(bucketName).object(objectName).build();
-        return minioClient.getObject(objectArgs);
+        return getClient().getObject(objectArgs);
     }
 
     /**
@@ -384,7 +391,7 @@ public class MinioTemplate {
     @SneakyThrows
     public void removeObject(String bucketName, String objectName) {
         RemoveObjectArgs args = RemoveObjectArgs.builder().bucket(bucketName).object(objectName).build();
-        minioClient.removeObject(args);
+        getClient().removeObject(args);
     }
 
 }

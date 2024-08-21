@@ -2,12 +2,11 @@ package com.bidr.oss.service.impl;
 
 import com.bidr.oss.config.minio.MinioTemplate;
 import com.bidr.oss.constant.OssConst;
-import com.bidr.oss.constant.param.OssParam;
 import com.bidr.oss.dao.entity.SaObjectStorage;
 import com.bidr.oss.service.BaseOssService;
 import com.bidr.oss.vo.UploadRes;
-import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,17 +19,15 @@ import javax.servlet.http.HttpServletRequest;
  * @author Sharp
  * @since 2024/02/24 23:53
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OssMinioServiceImpl extends BaseOssService {
     private final MinioTemplate minioTemplate;
-    private final SysConfigCacheService sysConfigCacheService;
 
     @Override
     public String buildAccessUrl(String objectName) {
-        String accessDomain = sysConfigCacheService.getSysConfigValue(OssParam.OSS_ACCESS_ENDPOINT);
-        String bucketName = sysConfigCacheService.getSysConfigValue(OssParam.OSS_BUCKET);
-        return accessDomain + OssConst.SEP + bucketName + OssConst.SEP + objectName;
+        return endpoint + OssConst.SEP + bucketName + OssConst.SEP + objectName;
     }
 
     @Override
@@ -40,7 +37,9 @@ public class OssMinioServiceImpl extends BaseOssService {
         minioTemplate.putObject(objectName, file);
         String url = buildAccessUrl(objectName);
         SaObjectStorage oss = record(objectName, type, url, file.getSize());
-        return buildUploadVO(oss);
+        UploadRes uploadRes = buildUploadVO(oss);
+        uploadRes.setUrl(minioTemplate.getObjectLink(oss.getKey()));
+        return uploadRes;
     }
 
     @Override
@@ -48,4 +47,10 @@ public class OssMinioServiceImpl extends BaseOssService {
 
     }
 
+    @Override
+    public String getReadUrl(String url) {
+        String key = url.split(bucketName)[1].substring(1).split("\\?")[0];
+        log.info("getReadUrl == {}", key);
+        return minioTemplate.getObjectLink(bucketName, key);
+    }
 }

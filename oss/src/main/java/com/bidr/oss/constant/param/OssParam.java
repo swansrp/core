@@ -19,11 +19,7 @@ public enum OssParam implements Param {
     /**
      *
      */
-    OSS_SERVER_TYPE("对象服务器类型", "1", "Local Minio Ali"),
-    OSS_BUCKET("对象存储桶名称", "oss", "上传路径 桶名称"),
-    OSS_ACCESS_ENDPOINT("对象存储接入地址", "http://127.0.0.1", "访问域名"),
-    OSS_ACCESS_KEY("对象存储接入key", "", "OSS APP KEY"),
-    OSS_ACCESS_SECRET("对象存储接入秘钥", "", "OSS APP SECRET");
+    OSS_SERVER_TYPE("对象服务器类型", "1", "Local Minio Ali");
 
 
     private final String title;

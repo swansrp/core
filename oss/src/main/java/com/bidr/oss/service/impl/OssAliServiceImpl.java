@@ -4,7 +4,6 @@ import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.oss.constant.OssConst;
-import com.bidr.oss.constant.param.OssParam;
 import com.bidr.oss.dao.entity.SaObjectStorage;
 import com.bidr.oss.service.BaseOssService;
 import com.bidr.oss.vo.UploadRes;
@@ -25,16 +24,12 @@ import javax.servlet.http.HttpServletRequest;
 @Service
 public class OssAliServiceImpl extends BaseOssService {
     private OSS getOss() {
-        String accessKeyId = sysConfigCacheService.getParamValueAvail(OssParam.OSS_ACCESS_KEY);
-        String accessKeySecret = sysConfigCacheService.getParamValueAvail(OssParam.OSS_ACCESS_SECRET);
-        String endpoint = sysConfigCacheService.getParamValueAvail(OssParam.OSS_ACCESS_ENDPOINT);
-        return new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        return new OSSClientBuilder().build(endpoint, appKey, appSecret);
     }
 
     @Override
     public String buildAccessUrl(String objectName) {
-        String accessDomain = sysConfigCacheService.getSysConfigValue(OssParam.OSS_ACCESS_ENDPOINT);
-        return accessDomain + OssConst.SEP + objectName;
+        return endpoint + OssConst.SEP + objectName;
     }
 
     @Override
@@ -42,7 +37,6 @@ public class OssAliServiceImpl extends BaseOssService {
                             String fileName) {
         OSS client = getOss();
         String objectName = buildObjectName(request, file, folder, type, fileName);
-        String bucketName = sysConfigCacheService.getParamValueAvail(OssParam.OSS_BUCKET);
         try {
             log.info("添加对象存储: {}", objectName);
             client.putObject(bucketName, objectName, file.getInputStream());

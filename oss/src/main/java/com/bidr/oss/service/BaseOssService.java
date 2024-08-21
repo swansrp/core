@@ -7,8 +7,8 @@ import com.bidr.oss.constant.dict.OssTypeDict;
 import com.bidr.oss.dao.entity.SaObjectStorage;
 import com.bidr.oss.dao.repository.SaObjectStorageService;
 import com.bidr.oss.vo.UploadRes;
-import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,8 +26,14 @@ import java.util.Date;
 @Service
 public abstract class BaseOssService implements ObjectStorageService {
 
-    @Resource
-    protected SysConfigCacheService sysConfigCacheService;
+    @Value("${oss.appKey}")
+    protected String appKey;
+    @Value("${oss.appSecret}")
+    protected String appSecret;
+    @Value("${oss.endpoint}")
+    protected String endpoint;
+    @Value("${oss.bucket}")
+    protected String bucketName;
     @Resource
     private SaObjectStorageService saObjectStorageService;
 
