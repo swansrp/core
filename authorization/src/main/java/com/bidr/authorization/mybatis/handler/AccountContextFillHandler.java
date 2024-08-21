@@ -74,9 +74,9 @@ public class AccountContextFillHandler implements MetaObjectHandler {
                 }
                 if (FuncUtil.equals(fieldName, contextFill.updateAt())) {
                     if (field.getType().equals(Date.class)) {
-                        this.fillStrategy(metaObject, fieldName, new Date());
+                        this.setFieldValByName(fieldName, new Date(), metaObject);
                     } else if (field.getType().equals(LocalDateTime.class)) {
-                        this.fillStrategy(metaObject, fieldName, LocalDateTime.now());
+                        this.setFieldValByName(fieldName, LocalDateTime.now(), metaObject);
                     }
                 }
             }
