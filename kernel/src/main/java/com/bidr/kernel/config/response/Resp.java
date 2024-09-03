@@ -61,7 +61,9 @@ public class Resp {
     }
 
     private static <T, VO> void fieldConvert(List<T> entityList, Class<VO> voClass) {
-        entityList.forEach(entity -> fieldConvert(entity, voClass));
+        if (FuncUtil.isNotEmpty(entityList)) {
+            entityList.forEach(entity -> fieldConvert(entity, voClass));
+        }
     }
 
     /**
