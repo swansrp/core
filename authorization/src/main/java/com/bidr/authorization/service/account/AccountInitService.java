@@ -40,6 +40,11 @@ public class AccountInitService {
                 AcUser user = acUserService.getByCustomerNumber(account.getId());
                 if (FuncUtil.isEmpty(user)) {
                     createUserService.createUser(account);
+                } else {
+                    if (!FuncUtil.equals(account.getDepartment(), user.getDeptId())) {
+                        user.setDeptId(account.getDepartment());
+                        acUserService.updateById(user);
+                    }
                 }
             }
         }
