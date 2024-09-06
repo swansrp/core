@@ -119,6 +119,8 @@ public interface AdminControllerInf<ENTITY, VO> {
         }
         // 去除group by成分
         wrapper.getExpression().getGroupBy().clear();
+        // 去除order by成分
+        wrapper.getExpression().getOrderBy().clear();
     }
 
     /**
