@@ -32,6 +32,7 @@ import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.portal.AdminPortal;
 import com.diboot.core.binding.annotation.BindField;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
@@ -151,6 +152,7 @@ public class PortalConfigService implements LoginFillTokenInf {
 
     private SysPortal buildSysPortal(Class<?> controllerClass, Class<?> entityClass, Collection<Field> fields) {
         AdminPortal adminPortal = controllerClass.getAnnotation(AdminPortal.class);
+        Api api = controllerClass.getAnnotation(Api.class);
         ApiModel apiModel = entityClass.getAnnotation(ApiModel.class);
         SysPortal portal = new SysPortal();
         portal.setBean(controllerClass.getSimpleName());
@@ -159,10 +161,14 @@ public class PortalConfigService implements LoginFillTokenInf {
         } else {
             portal.setName(entityClass.getSimpleName());
         }
-        if (FuncUtil.isNotEmpty(apiModel)) {
-            portal.setDisplayName(apiModel.description());
+        if (FuncUtil.isNotEmpty(api) && FuncUtil.isNotEmpty(api.tags())) {
+            portal.setDisplayName(api.tags()[0]);
         } else {
-            portal.setDisplayName(entityClass.getSimpleName());
+            if (FuncUtil.isNotEmpty(apiModel)) {
+                portal.setDisplayName(apiModel.description());
+            } else {
+                portal.setDisplayName(entityClass.getSimpleName());
+            }
         }
         portal.setDisplayName(portal.getDisplayName() + "(默认)");
         RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
