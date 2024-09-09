@@ -173,7 +173,11 @@ public class PortalConfigService implements LoginFillTokenInf {
         portal.setDisplayName(portal.getDisplayName() + "(默认)");
         RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
         if (FuncUtil.isNotEmpty(requestMapping)) {
-            portal.setUrl(requestMapping.value()[0]);
+            if (FuncUtil.isNotEmpty(requestMapping.value())) {
+                portal.setUrl(requestMapping.value()[0]);
+            } else if (FuncUtil.isNotEmpty(requestMapping.path())) {
+                portal.setUrl(requestMapping.path()[0]);
+            }
         } else {
             portal.setUrl(entityClass.getSimpleName());
         }
