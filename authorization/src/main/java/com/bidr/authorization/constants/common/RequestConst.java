@@ -17,6 +17,7 @@ public class RequestConst {
     public static final String AUTHORIZATION = "Authorization";
     public static final String CLIENT_TYPE = "client-type";
     public static final String X_REQUESTED = "X-Requested-With";
+    public static final String X_API_KEY = "x-api-key";
 
     public static final String GET = "GET";
     public static final String POST = "POST";
@@ -35,7 +36,7 @@ public class RequestConst {
 
     public static String getAllHeader() {
         return StringUtil.joinWith(",", TOKEN, ID_TOKEN, API_VERSION, OPERATOR, AUTHORIZATION, CLIENT_TYPE, CONTENT_TYPE,
-                X_REQUESTED);
+                X_REQUESTED, X_API_KEY);
     }
 
     public static String getAllMethod() {

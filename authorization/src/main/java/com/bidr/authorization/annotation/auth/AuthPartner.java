@@ -42,7 +42,7 @@ public class AuthPartner implements AuthRole {
 
     @Override
     public void validate(HttpServletRequest request, String... args) {
-        String header = request.getHeader(RequestConst.AUTHORIZATION);
+        String header = request.getHeader(RequestConst.X_API_KEY);
         String[] info = Base64Util.decode(header).split(":");
         AcPartner acPartner = acPartnerService.getByAppKey(info[0]);
         Validator.assertEquals(acPartner.getAppSecret(), info[1], SYS_SESSION_TIME_OUT);
