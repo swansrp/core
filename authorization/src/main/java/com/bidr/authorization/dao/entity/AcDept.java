@@ -11,7 +11,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.util.Date;
 
- /**
+/**
  * Title: AcDept
  * Description: Copyright: Copyright (c) 2023
  *
@@ -32,7 +32,6 @@ public class AcDept {
      */
     @TableId(value = "dept_id", type = IdType.INPUT)
     @AutoInsert(seq = "AC_DEPT_ID_SEQ")
-    @TableField(value = "dept_id", fill = FieldFill.INSERT)
     @ApiModelProperty(value = "部门id")
     @Size(max = 20, message = "部门id最大长度要小于 20")
     @NotBlank(message = "部门id不能为空")
