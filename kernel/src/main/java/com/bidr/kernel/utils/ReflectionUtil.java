@@ -688,9 +688,11 @@ public class ReflectionUtil {
 
     public static <T, K> Map<K, T> reflectToMap(Collection<T> list, GetFunc<T, K> getFunc) {
         Map<K, T> map = new HashMap<>(list.size());
-        for (T t : list) {
-            K key = getFunc.apply(t);
-            map.put(key, t);
+        if (CollectionUtils.isNotEmpty(list)) {
+            for (T t : list) {
+                K key = getFunc.apply(t);
+                map.put(key, t);
+            }
         }
         return map;
     }
