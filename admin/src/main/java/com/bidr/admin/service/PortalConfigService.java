@@ -161,8 +161,12 @@ public class PortalConfigService implements LoginFillTokenInf {
         } else {
             portal.setName(entityClass.getSimpleName());
         }
-        if (FuncUtil.isNotEmpty(api) && FuncUtil.isNotEmpty(api.tags())) {
-            portal.setDisplayName(api.tags()[0]);
+        if (FuncUtil.isNotEmpty(api)) {
+            if (FuncUtil.isNotEmpty(api.tags()) && FuncUtil.isNotEmpty(api.tags()[0])) {
+                portal.setDisplayName(api.tags()[0]);
+            } else if (FuncUtil.isNotEmpty(api.value())) {
+                portal.setDisplayName(api.value());
+            }
         } else {
             if (FuncUtil.isNotEmpty(apiModel)) {
                 portal.setDisplayName(apiModel.description());
