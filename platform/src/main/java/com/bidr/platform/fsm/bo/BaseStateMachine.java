@@ -2,6 +2,7 @@ package com.bidr.platform.fsm.bo;
 
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.DictEnumUtil;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
@@ -125,8 +126,10 @@ public abstract class BaseStateMachine implements StateMachine {
                     .append(" : ").append(transition.getOperate().getLabel()).append(LF);
             Set<MachineRole> machineRoles = acceptRoles.get(transition.getOperate());
             List<String> roles = ReflectionUtil.getFieldList(machineRoles, MachineRole::getLabel);
-            sb.append("note on link ").append(LF).append("\t").append(StringUtil.joinWith(StringUtil.COMMA, roles))
-                    .append(LF).append("end note").append(LF);
+            if (FuncUtil.isNotEmpty(roles)) {
+                sb.append("note on link ").append(LF).append("\t").append(StringUtil.joinWith(StringUtil.COMMA, roles))
+                        .append(LF).append("end note").append(LF);
+            }
             if (isEndState(transition.getTo())) {
                 if (!needFinish.contains(transition.getTo())) {
                     sb.append(transition.getTo().getLabel()).append("--> [*]").append(LF);
@@ -148,6 +151,11 @@ public abstract class BaseStateMachine implements StateMachine {
 
     public String generatePlantUML() {
         return generatePlantUML(false);
+    }
+
+    protected void printPlantUML() {
+        init();
+        System.out.println(generatePlantUML(false));
     }
 
     protected void regTransition(MachineState from, MachineState to, MachineOperate... operates) {
@@ -206,6 +214,5 @@ public abstract class BaseStateMachine implements StateMachine {
             resList.add(res);
         }
         return resList;
-
     }
 }
