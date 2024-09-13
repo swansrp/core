@@ -82,16 +82,20 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
                 .getByName(column.getReference(), PortalConfigContext.getPortalConfigRoleId());
         AdvancedQueryReq req = new AdvancedQueryReq();
         if (FuncUtil.isNotEmpty(column.getEntityCondition())) {
-            AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(),
-                    AdvancedQuery.class);
+            AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(), AdvancedQuery.class);
             req.setCondition(entityCondition);
         }
-        req.setPageSize(60000L);
+        req.setPageSize(100L);
         Page page = ((AdminControllerInf) BeanUtil.getBean(
-                Class.forName(entityPortal.getBean()))).advancedQuery(req);
-        constraint = ReflectionUtil.getFieldList(page.getRecords(), entityPortal.getNameColumn(),
-                String.class);
-        return constraint;
+                StringUtil.firstLowerCamelCase(entityPortal.getBean()))).advancedQuery(req);
+        if (page.getPages() > 1) {
+            log.warn("目标实体数量过多:{} 放弃excel数据校验", page.getTotal());
+            return null;
+        } else {
+            constraint = ReflectionUtil.getFieldList(page.getRecords(), entityPortal.getNameColumn(), String.class);
+            return constraint;
+        }
+
     }
 
     private void setDataValidation(WriteSheetHolder writeSheetHolder, int columnIndex, SysPortalColumn column,
