@@ -323,4 +323,13 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         Validator.assertNotNull(annotation, ErrCodeSys.PA_DATA_NOT_EXIST, "表名");
         return annotation.value();
     }
+
+    public String getIdField() {
+        List<String> fieldSql = getFieldSql("t", (field) -> {
+            TableId idField = field.getAnnotation(TableId.class);
+            return idField != null;
+        });
+        Validator.assertNotEmpty(fieldSql, ErrCodeSys.PA_PARAM_NULL, "id字段");
+        return fieldSql.get(0);
+    }
 }

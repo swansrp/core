@@ -97,12 +97,12 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             beforeDelete(vo);
         }
         boolean result;
-        try {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
             Field validField = ReflectionUtil.getField(getEntityClass(), VALID_FIELD);
             ENTITY entity = getRepo().selectById(vo.getId());
             ReflectionUtil.setValue(validField, entity, CommonConst.NO);
             result = getRepo().updateById(entity);
-        } catch (Exception e) {
+        } else {
             result = getRepo().deleteById(vo.getId());
         }
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "删除失败");
@@ -154,7 +154,11 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @ApiOperation("根据id获取详情")
     @RequestMapping(value = "/id", method = RequestMethod.GET)
     public VO queryById(IdReqVO req) {
-        return Resp.convert(getRepo().selectById(req.getId()), getVoClass());
+        if (FuncUtil.isEmpty(getPortalService())) {
+            return Resp.convert(getRepo().selectById(req.getId()), getVoClass());
+        } else {
+            return getPortalService().selectById(req.getId());
+        }
     }
 
     @Override

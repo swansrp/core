@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.*;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -21,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
+
 /**
  * Title: SqlDeleteRepository
  * Description: Copyright: Copyright (c) 2022 Company: bidr
@@ -29,18 +33,19 @@ import java.util.Map;
  */
 
 @CacheConfig(cacheNames = "DB-CACHE", keyGenerator = "cacheKeyByParam")
-public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K, T> implements SqlCountRepo<T>,
-        SqlSelectRepo<T>, SqlInsertRpo<T>, SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo<T> {
+public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K, T> implements SqlCountRepo<T>, SqlSelectRepo<T>, SqlInsertRpo<T>, SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo<T> {
 
     @Override
     public long count(T entity) {
-        Wrapper<T> wrapper = getQueryWrapper(entity);
+        QueryWrapper<T> wrapper = getQueryWrapper(entity);
+        wrapper.eq(ReflectionUtil.existedField(getEntityClass(), VALID_FIELD), VALID_FIELD, CommonConst.YES);
         return super.getBaseMapper().selectCount(wrapper);
     }
 
     @Override
     public long count(Map<String, Object> propertyMap) {
-        Wrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
+        QueryWrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
+        wrapper.eq(ReflectionUtil.existedField(getEntityClass(), VALID_FIELD), VALID_FIELD, CommonConst.YES);
         return super.getBaseMapper().selectCount(wrapper);
     }
 
@@ -106,8 +111,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
-                                MPJLambdaWrapper<T> wrapper,
-                                Class<VO> vo) {
+                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
@@ -254,6 +258,12 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     @Override
     public T selectById(Serializable id) {
         return super.getById(id);
+    }
+
+    @Override
+    public <VO> VO selectById(Serializable id, MPJLambdaWrapper<T> wrapper, Class<VO> voClass) {
+        wrapper.eq(super.getIdField(), id);
+        return super.selectJoinOne(voClass, wrapper);
     }
 
     @Override

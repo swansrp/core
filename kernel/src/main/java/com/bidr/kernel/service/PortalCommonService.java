@@ -321,6 +321,16 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
+     * 根据id获取数据
+     *
+     * @param id id
+     * @return 数据
+     */
+    default VO selectById(String id) {
+        return getRepo().selectById(id, getJoinWrapper(), getVoClass());
+    }
+
+    /**
      * 获取指定数据
      *
      * @param condition 条件
