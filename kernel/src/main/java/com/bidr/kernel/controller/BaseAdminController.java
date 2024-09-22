@@ -97,12 +97,12 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             beforeDelete(vo);
         }
         boolean result;
-        Field validField = ReflectionUtil.getField(getEntityClass(), VALID_FIELD);
-        if (FuncUtil.isNotEmpty(validField)) {
+        try {
+            Field validField = ReflectionUtil.getField(getEntityClass(), VALID_FIELD);
             ENTITY entity = getRepo().selectById(vo.getId());
             ReflectionUtil.setValue(validField, entity, CommonConst.NO);
             result = getRepo().updateById(entity);
-        } else {
+        } catch (Exception e) {
             result = getRepo().deleteById(vo.getId());
         }
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "删除失败");
