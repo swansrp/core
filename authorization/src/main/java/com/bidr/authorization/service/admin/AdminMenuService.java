@@ -38,6 +38,7 @@ public class AdminMenuService {
 
     @Transactional(rollbackFor = Exception.class)
     public void addMenu(AcMenu entity, MenuTypeDict menuType) {
+        entity.setShowOrder(acMenuService.countByPid(entity.getPid()) + 1);
         entity.setMenuType(menuType.getValue());
         entity.setStatus(CommonConst.YES);
         entity.setVisible(CommonConst.YES);

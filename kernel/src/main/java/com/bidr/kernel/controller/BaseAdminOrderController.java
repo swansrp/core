@@ -53,4 +53,10 @@ public abstract class BaseAdminOrderController<ENTITY, VO> extends BaseAdminCont
     protected abstract SFunction<ENTITY, ?> id();
 
     protected abstract SFunction<ENTITY, Integer> order();
+
+    @Override
+    public void beforeAdd(ENTITY entity) {
+        super.beforeAdd(entity);
+        LambdaUtil.setValue(entity, order(), new Long(getRepo().count()).intValue() + 1);
+    }
 }

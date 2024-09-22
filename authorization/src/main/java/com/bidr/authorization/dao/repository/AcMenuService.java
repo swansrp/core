@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.mapper.AcMenuDao;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -46,6 +47,13 @@ public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
                 .eq(AcMenu::getMenuType, MenuTypeDict.CONTENT.getValue()).eq(AcMenu::getStatus, CommonConst.YES)
                 .eq(AcMenu::getVisible, CommonConst.YES).orderByAsc(AcMenu::getShowOrder);
         return super.select(wrapper);
+    }
+
+    public int countByPid(Long pid) {
+        LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper();
+        wrapper.eq(FuncUtil.isNotEmpty(pid), AcMenu::getPid, pid);
+        wrapper.isNull(FuncUtil.isEmpty(pid), AcMenu::getPid);
+        return new Long(super.count(wrapper)).intValue();
     }
 }
 

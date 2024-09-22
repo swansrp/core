@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdPidReqVO;
 import com.bidr.kernel.vo.common.TreeDataItemVO;
@@ -96,6 +97,17 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
         }
         return ReflectionUtil.buildTree(TreeDataResVO::setChildren, list, TreeDataItemVO::getId, TreeDataItemVO::getPid,
                 null);
+    }
+
+    @Override
+    public void beforeAdd(ENTITY entity) {
+        super.beforeAdd(entity);
+        Object pid = LambdaUtil.getValue(pid(), entity);
+        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+        wrapper.eq(FuncUtil.isNotEmpty(pid), pid(), pid);
+        wrapper.isNull(FuncUtil.isEmpty(pid), pid());
+        long count = getRepo().count(wrapper);
+        LambdaUtil.setValue(entity, order(), new Long(count).intValue() + 1);
     }
 
 }
