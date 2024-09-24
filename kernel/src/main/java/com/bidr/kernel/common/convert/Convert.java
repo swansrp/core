@@ -19,5 +19,7 @@ public @interface Convert {
 
     String bean() default "";
 
-    String method();
+    String method() default "";
+
+    String field() default "";
 }

@@ -102,12 +102,24 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
     @Override
     public void beforeAdd(ENTITY entity) {
         super.beforeAdd(entity);
-        Object pid = LambdaUtil.getValue(pid(), entity);
-        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
-        wrapper.eq(FuncUtil.isNotEmpty(pid), pid(), pid);
-        wrapper.isNull(FuncUtil.isEmpty(pid), pid());
-        long count = getRepo().count(wrapper);
-        LambdaUtil.setValue(entity, order(), new Long(count).intValue() + 1);
+        setOrderByPid(entity);
+    }
+
+    protected void setOrderByPid(ENTITY entity) {
+        if (FuncUtil.isEmpty(LambdaUtil.getValue(entity, order()))) {
+            Object pid = LambdaUtil.getValue(entity, pid());
+            LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+            wrapper.eq(FuncUtil.isNotEmpty(pid), pid(), pid);
+            wrapper.isNull(FuncUtil.isEmpty(pid), pid());
+            long count = getRepo().count(wrapper);
+            LambdaUtil.setValue(entity, order(), new Long(count).intValue() + 1);
+        }
+    }
+
+    @Override
+    public void adminBeforeAdd(ENTITY entity) {
+        super.adminBeforeAdd(entity);
+        setOrderByPid(entity);
     }
 
 }

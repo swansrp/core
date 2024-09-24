@@ -50,10 +50,15 @@ public class Resp {
         ReflectionUtil.getFields(voClass).stream().filter((field) -> field.getAnnotation(Convert.class) != null)
                 .forEach(field -> {
                     Convert convert = field.getAnnotation(Convert.class);
-                    Object value = ReflectionUtil.getValue(entity, field);
+                    Object value;
+                    if (FuncUtil.isNotEmpty(convert.field())) {
+                        value = ReflectionUtil.getValue(entity, convert.field(), Object.class);
+                    } else {
+                        value = ReflectionUtil.getValue(entity, field);
+                    }
                     if (FuncUtil.isNotEmpty(convert.bean())) {
                         value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value);
-                    } else {
+                    } else if (!FuncUtil.equals(convert.util(), Object.class)) {
                         value = ReflectionUtil.invoke(convert.util(), convert.method(), value);
                     }
                     ReflectionUtil.setValue(field, entity, value);

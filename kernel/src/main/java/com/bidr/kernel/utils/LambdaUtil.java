@@ -270,6 +270,24 @@ public class LambdaUtil {
         return null;
     }
 
+    public static <T, R> R getValue(T entity, SFunction<T, R> func) {
+        if (FuncUtil.isNotEmpty(entity)) {
+            Class<R> clazz = LambdaUtil.getMethodSignatureClass(func);
+            String fieldName = LambdaUtil.getFieldName(func);
+            return ReflectionUtil.getValue(entity, fieldName, clazz);
+        }
+        return null;
+    }
+
+    public static <T, R> R getValue(T entity, GetFunc<T, R> func) {
+        if (FuncUtil.isNotEmpty(entity)) {
+            Class<R> clazz = LambdaUtil.getMethodSignatureClass(func);
+            String fieldName = LambdaUtil.getFieldNameByGetFunc(func);
+            return ReflectionUtil.getValue(entity, fieldName, clazz);
+        }
+        return null;
+    }
+
     public static <T, R> void setValue(Object entity, SFunction<T, R> func, Object obj) {
         Object value = LambdaUtil.getValue(func, obj);
         String fieldName = LambdaUtil.getFieldName(func);

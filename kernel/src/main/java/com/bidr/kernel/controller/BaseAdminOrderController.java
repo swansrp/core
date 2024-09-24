@@ -3,6 +3,7 @@ package com.bidr.kernel.controller;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
@@ -57,6 +58,18 @@ public abstract class BaseAdminOrderController<ENTITY, VO> extends BaseAdminCont
     @Override
     public void beforeAdd(ENTITY entity) {
         super.beforeAdd(entity);
-        LambdaUtil.setValue(entity, order(), new Long(getRepo().count()).intValue() + 1);
+        setOrder(entity);
+    }
+
+    protected void setOrder(ENTITY entity) {
+        if (FuncUtil.isEmpty(LambdaUtil.getValue(entity, order()))) {
+            LambdaUtil.setValue(entity, order(), new Long(getRepo().count()).intValue() + 1);
+        }
+    }
+
+    @Override
+    public void adminBeforeAdd(ENTITY entity) {
+        super.adminBeforeAdd(entity);
+        setOrder(entity);
     }
 }
