@@ -30,8 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class BaseStateMachine implements StateMachine {
 
-    private final Set<MachineState> machineStates = new HashSet<>();
-    private final Set<MachineOperate> machineOperates = new HashSet<>();
+    private final Set<MachineState> machineStates = new LinkedHashSet<>();
+    private final Set<MachineOperate> machineOperates = new LinkedHashSet<>();
     /**
      * 合法的迁转路径(from+operate-->to)
      */
@@ -201,6 +201,7 @@ public abstract class BaseStateMachine implements StateMachine {
                 .getValue();
     }
 
+    @Override
     public List<StateMachineOperationVO> getStateMachineOperationConfig() {
         List<StateMachineOperationVO> resList = new ArrayList<>();
         for (MachineOperate operate : machineOperates) {

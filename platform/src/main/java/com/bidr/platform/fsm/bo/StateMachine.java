@@ -4,7 +4,9 @@ import com.bidr.platform.fsm.bo.operate.MachineOperate;
 import com.bidr.platform.fsm.bo.role.MachineRole;
 import com.bidr.platform.fsm.bo.state.MachineState;
 import com.bidr.platform.fsm.bo.transition.MachineTransition;
+import com.bidr.platform.vo.fsm.StateMachineOperationVO;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -12,9 +14,9 @@ import java.util.Set;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @since 2021/4/1 15:10
  * @description Project Name: Seed
  * @Package: com.srct.service.utils.fsm.bo
+ * @since 2021/4/1 15:10
  */
 public interface StateMachine {
     /**
@@ -128,4 +130,11 @@ public interface StateMachine {
      * @return
      */
     void generatePlantUmlFile(String filePath, boolean enumName);
+
+    /**
+     * 获取状态机配置
+     *
+     * @return 状态机配置
+     */
+    List<StateMachineOperationVO> getStateMachineOperationConfig();
 }
