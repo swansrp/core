@@ -1,6 +1,6 @@
 package com.bidr.admin.config;
 
-import com.bidr.kernel.constant.dict.Dict;
+import com.bidr.kernel.constant.dict.MetaDictName;
 
 import java.lang.annotation.*;
 
@@ -16,5 +16,5 @@ import java.lang.annotation.*;
 @Inherited
 @Documented
 public @interface PortalDictField {
-    Class<? extends Dict> value();
+    Class<? extends MetaDictName> value();
 }
