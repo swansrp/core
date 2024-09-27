@@ -2,15 +2,18 @@ package com.bidr.admin.service.excel.handler;
 
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.service.excel.validation.PortalExcelValidationHandler;
 import com.bidr.admin.vo.PortalWithColumnsRes;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -28,9 +31,9 @@ public interface PortalExcelHandlerInf {
      * @param os     文件输出流
      * @param portal 配置
      */
-    default void templateExcel(OutputStream os, PortalWithColumnsRes portal) {
+    default void templateExcel(OutputStream os, PortalWithColumnsRes portal, Class<?> voClass) {
         String hiddenSheetName = "数据有效范围";
-        List<List<String>> head = buildExcelHead(portal);
+        List<List<String>> head = buildExcelHead(portal, voClass);
         ExcelWriter excelWriter = EasyExcel.write(os).build();
         WriteSheet data = EasyExcel.writerSheet(0, portal.getDisplayName()).head(head)
                 .registerWriteHandler(new PortalExcelValidationHandler(portal, hiddenSheetName)).build();
@@ -44,10 +47,17 @@ public interface PortalExcelHandlerInf {
      * @param portal 配置
      * @return
      */
-    default List<List<String>> buildExcelHead(PortalWithColumnsRes portal) {
+    default List<List<String>> buildExcelHead(PortalWithColumnsRes portal, Class<?> voClazz) {
         List<List<String>> head = new ArrayList<>();
-        for (String column : ReflectionUtil.getFieldList(portal.getColumns(), SysPortalColumn::getDisplayName)) {
-            head.add(Collections.singletonList(column));
+        if (FuncUtil.isNotEmpty(portal.getColumns())) {
+            for (SysPortalColumn column : portal.getColumns()) {
+                if (ReflectionUtil.existedField(voClazz, column.getProperty())) {
+                    Field field = ReflectionUtil.getField(voClazz, column.getProperty());
+                    if (field.getAnnotation(ExcelProperty.class) != null) {
+                        head.add(Arrays.asList(field.getAnnotation(ExcelProperty.class).value()));
+                    }
+                }
+            }
         }
         return head;
     }

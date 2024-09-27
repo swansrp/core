@@ -63,7 +63,7 @@ import java.util.*;
  */
 @Slf4j
 @SuppressWarnings("rawtypes, unchecked")
-public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelTemplateHandlerInf {
+public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelParseHandlerInf<ENTITY, VO>, PortalExcelTemplateHandlerInf {
 
     protected Map<String, String> aliasMap = new HashMap<>(32);
     protected Map<String, String> summaryAliasMap = new HashMap<>(32);
@@ -120,8 +120,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 map.put(field.getName(), portalEntityField.origFieldName());
             } else {
                 if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
-                    map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field(),
-                            portalEntityField.alias()));
+                    map.put(field.getName(),
+                            getAlias(portalEntityField.entity(), portalEntityField.field(), portalEntityField.alias()));
                 } else if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
                     map.put(field.getName(), getAlias(portalEntityField.entity(), portalEntityField.field()));
                 } else {
@@ -397,7 +397,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         PortalWithColumnsRes portal = sysPortalService.getImportPortal(portalName,
                 PortalConfigContext.getPortalConfigRoleId());
-        templateExcel(os, portal);
+        templateExcel(os, portal, getVoClass());
         return os.toByteArray();
     }
 
@@ -444,12 +444,12 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     }
 
-
+    //todo 尚未验证
     protected void handleExcelUpdate(InputStream is, PortalWithColumnsRes portal) {
         EasyExcel.read(is).sheet().registerReadListener(
                         new PortalExcelUpdateListener<Map<Integer, String>>(portal, this,
-                                (PortalExcelParseHandlerInf<ENTITY, Map<Integer, String>>) this::parseEntity, this))
-                .head(buildExcelHead(portal)).doRead();
+                                (PortalExcelParseHandlerInf<ENTITY, Map<Integer, String>>) this::parseCommonEntity, this))
+                .head(buildExcelHead(portal, getVoClass())).doRead();
     }
 
     @Override
@@ -469,13 +469,17 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     protected void handleExcelInsert(InputStream is, PortalWithColumnsRes portal) {
-        EasyExcel.read(is).sheet().registerReadListener(new PortalExcelInsertListener(portal, this,
-                        (PortalExcelParseHandlerInf<ENTITY, Map<Integer, String>>) this::parseEntity, this))
-                .head(buildExcelHead(portal)).doRead();
+        EasyExcel.read(is, getVoClass(), new PortalExcelInsertListener(portal, this, this, this, 3000)).sheet()
+                .headRowNumber(1).doRead();
     }
 
-    public ENTITY parseEntity(PortalWithColumnsRes portal, Map<Integer, String> data,
-                              Map<String, Map<String, Object>> entityCache) {
+    @Override
+    public ENTITY parseEntity(PortalWithColumnsRes portal, VO data, Map<String, Map<String, Object>> entityCache) {
+        return ReflectionUtil.copy(data, getEntityClass());
+    }
+
+    protected ENTITY parseCommonEntity(PortalWithColumnsRes portal, Map<Integer, String> data,
+                                       Map<String, Map<String, Object>> entityCache) {
         ENTITY entity = ReflectionUtil.newInstance(getEntityClass());
         for (int columnIndex = 0; columnIndex < portal.getColumns().size(); columnIndex++) {
             SysPortalColumn column = portal.getColumns().get(columnIndex);
