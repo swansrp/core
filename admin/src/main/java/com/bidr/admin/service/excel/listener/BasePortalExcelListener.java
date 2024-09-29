@@ -78,8 +78,9 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
         }
         Object entity = parse(portal, data, entityCache);
         prepare(entity);
-        validate(entity, dataList, validateMap);
-        dataList.add(entity);
+        if (validate(entity, dataList, validateMap)) {
+            dataList.add(entity);
+        }
         if (currentPage == 0) {
             uploadProgress.addUploadProgress(dataList.size());
         }
@@ -114,8 +115,9 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
      * @param entity      数据
      * @param cachedList  已经读取的数据
      * @param validateMap 有效性检测缓存
+     * @return 是否添加入待操作数据列表
      */
-    protected abstract void validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap);
+    protected abstract boolean validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap);
 
     private void saveData() {
         if (currentPage == 0) {

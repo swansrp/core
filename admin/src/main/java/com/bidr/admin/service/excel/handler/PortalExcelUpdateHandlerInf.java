@@ -25,8 +25,9 @@ public interface PortalExcelUpdateHandlerInf<ENTITY> extends PortalExcelHandlerI
      * @param entity      当前行数据
      * @param cachedList  历史数据
      * @param validateMap 校验map
+     * @return 是否通过验证继续数据库操作
      */
-    void validateUpdate(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap);
+    boolean validateUpdate(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap);
 
     /**
      * 处理数据列表

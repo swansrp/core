@@ -48,8 +48,8 @@ public class PortalExcelInsertListener<EXCEL> extends BasePortalExcelListener<EX
     }
 
     @Override
-    protected void validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap) {
-        portalExcelHandlerInf.validateInsert(entity, cachedList, validateMap);
+    protected boolean validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap) {
+        return portalExcelHandlerInf.validateInsert(entity, cachedList, validateMap);
     }
 
     @Override

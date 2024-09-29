@@ -48,8 +48,8 @@ public class PortalExcelUpdateListener<EXCEL> extends BasePortalExcelListener<EX
     }
 
     @Override
-    protected void validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap) {
-        portalExcelHandlerInf.validateUpdate(entity, cachedList, validateMap);
+    protected boolean validate(Object entity, List<Object> cachedList, Map<Object, Object> validateMap) {
+        return portalExcelHandlerInf.validateUpdate(entity, cachedList, validateMap);
     }
 
     @Override

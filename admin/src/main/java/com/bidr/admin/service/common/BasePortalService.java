@@ -238,8 +238,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     @Override
-    public void validateInsert(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
-
+    public boolean validateInsert(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
+        return true;
     }
 
     @Override
@@ -293,8 +293,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     @Override
-    public void validateUpdate(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
-
+    public boolean validateUpdate(ENTITY entity, List<ENTITY> cachedList, Map<Object, Object> validateMap) {
+        return true;
     }
 
     @Override
