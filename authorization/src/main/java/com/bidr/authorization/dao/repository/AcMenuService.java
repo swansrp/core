@@ -55,6 +55,13 @@ public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
         wrapper.isNull(FuncUtil.isEmpty(pid), AcMenu::getPid);
         return new Long(super.count(wrapper)).intValue();
     }
+
+    public int countByGrandId(Long grandId) {
+        LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper();
+        wrapper.eq(FuncUtil.isNotEmpty(grandId), AcMenu::getGrandId, grandId);
+        wrapper.isNull(FuncUtil.isEmpty(grandId), AcMenu::getPid);
+        return new Long(super.count(wrapper)).intValue();
+    }
 }
 
 

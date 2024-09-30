@@ -48,6 +48,13 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
         return selectOne(wrapper);
     }
 
+    public List<AcAccount> getAccountByName(String name) {
+        LambdaQueryWrapper<AcAccount> wrapper = super.getQueryWrapper();
+        wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
+                .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue()).eq(AcAccount::getName, name);
+        return select(wrapper);
+    }
+
     public AcAccount getAccountByMobile(String mobile) {
         LambdaQueryWrapper<AcAccount> wrapper = super.getQueryWrapper();
         wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
