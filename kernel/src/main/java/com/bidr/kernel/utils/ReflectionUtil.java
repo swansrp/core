@@ -84,10 +84,15 @@ public class ReflectionUtil {
                 .filter(data -> Objects.equals(getIdFunc.apply(parentData), getPidFunc.apply(data)))
                 .collect(Collectors.toList());
 
+        List<R> childrenList = ReflectionUtil.getValue(res, LambdaUtil.getField(setChildrenFunc));
         if (CollectionUtils.isEmpty(list)) {
-            setChildrenFunc.apply(res, null);
+            if (FuncUtil.isEmpty(childrenList)) {
+                setChildrenFunc.apply(res, null);
+            }
         } else {
-            List<R> childrenList = new ArrayList<>();
+            if (FuncUtil.isEmpty(childrenList)) {
+                childrenList = new ArrayList<>();
+            }
             for (T childrenData : list) {
                 childrenList.add(buildTree(setChildrenFunc, childrenData, dataList, getIdFunc, getPidFunc));
             }
