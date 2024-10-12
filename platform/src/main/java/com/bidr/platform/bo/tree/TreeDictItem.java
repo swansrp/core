@@ -19,4 +19,6 @@ public class TreeDictItem {
     private Object value;
     private String label;
     private Integer order;
+    private Boolean isLeaf;
+    private Object property;
 }
