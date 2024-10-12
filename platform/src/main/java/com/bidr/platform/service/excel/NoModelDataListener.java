@@ -30,7 +30,7 @@ public class NoModelDataListener<T> extends AnalysisEventListener<Map<Integer, S
 
     @Override
     public void invoke(Map<Integer, String> data, AnalysisContext context) {
-        T entity = handler.parse(data, handleContext);
+        T entity = handler.parse(data, handleContext, context);
         log.trace("解析到一条数据:{}", JsonUtil.toJson(data));
         if (handler.validate(entity, cachedDataList, handleContext)) {
             cachedDataList.add(entity);
@@ -46,6 +46,7 @@ public class NoModelDataListener<T> extends AnalysisEventListener<Map<Integer, S
         saveData();
         log.trace("所有数据解析完成！");
         handleContext.clear();
+        cachedDataList.clear();
     }
 
     /**

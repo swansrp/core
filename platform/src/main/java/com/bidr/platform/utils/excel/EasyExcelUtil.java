@@ -35,4 +35,12 @@ public class EasyExcelUtil {
     public static void read(File file, EasyExcelHandler<?> handler) {
         EasyExcel.read(file, new NoModelDataListener<>(handler)).sheet().doRead();
     }
+
+    public static void readAll(InputStream is, EasyExcelHandler<?> handler) {
+        EasyExcel.read(is, new NoModelDataListener<>(handler)).doReadAll();
+    }
+
+    public static void readAll(File file, EasyExcelHandler<?> handler) {
+        EasyExcel.read(file, new NoModelDataListener<>(handler)).doReadAll();
+    }
 }
