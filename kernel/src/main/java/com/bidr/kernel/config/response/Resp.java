@@ -42,8 +42,12 @@ public class Resp {
      * @return 目标数据
      */
     public static <T, VO> VO convert(T entity, Class<VO> voClass) {
-        fieldConvert(entity, voClass);
-        return Binder.convertAndBindRelations(entity, voClass);
+        if (entity != null) {
+            fieldConvert(entity, voClass);
+            return Binder.convertAndBindRelations(entity, voClass);
+        } else {
+            return ReflectionUtil.newInstance(voClass);
+        }
     }
 
     private static <T, VO> void fieldConvert(T entity, Class<VO> voClass) {
