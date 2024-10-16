@@ -792,7 +792,7 @@ public class ReflectionUtil {
     }
 
     public static <T, K> K merge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
-        for (Field field : getFields(source)) {
+        for (Field field : getFields(dist)) {
             if (Modifier.isFinal(field.getModifiers())) {
                 continue;
             }
