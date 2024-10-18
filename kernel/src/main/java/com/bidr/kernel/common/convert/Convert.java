@@ -22,4 +22,6 @@ public @interface Convert {
     String method() default "";
 
     String field() default "";
+
+    boolean ignoreNull() default true;
 }

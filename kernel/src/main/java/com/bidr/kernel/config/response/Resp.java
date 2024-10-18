@@ -60,6 +60,9 @@ public class Resp {
                     } else {
                         value = ReflectionUtil.getValue(entity, field);
                     }
+                    if (FuncUtil.isEmpty(value) && convert.ignoreNull()) {
+                        return;
+                    }
                     if (FuncUtil.isNotEmpty(convert.bean())) {
                         value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value);
                     } else if (!FuncUtil.equals(convert.util(), Object.class)) {
@@ -71,7 +74,11 @@ public class Resp {
 
     private static <T, VO> void fieldConvert(List<T> entityList, Class<VO> voClass) {
         if (FuncUtil.isNotEmpty(entityList)) {
-            entityList.forEach(entity -> fieldConvert(entity, voClass));
+            entityList.forEach(entity -> {
+                if (FuncUtil.isNotEmpty(entity)) {
+                    fieldConvert(entity, voClass);
+                }
+            });
         }
     }
 

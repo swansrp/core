@@ -49,7 +49,8 @@ public class OssMinioServiceImpl extends BaseOssService {
 
     @Override
     public String getReadUrl(String url) {
-        String key = url.split(bucketName)[1].substring(1).split("\\?")[0];
+        String[] s = url.split(bucketName);
+        String key = url.substring(s[0].length() + bucketName.length() + 1).split("\\?")[0];
         log.info("getReadUrl == {}", key);
         return minioTemplate.getObjectLink(bucketName, key);
     }
