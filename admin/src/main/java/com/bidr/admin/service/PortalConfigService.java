@@ -74,7 +74,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         FIELD_MAP.put(Date.class, PortalFieldDict.DATE);
         FIELD_MAP.put(LocalDateTime.class, PortalFieldDict.DATE);
         FIELD_MAP.put(Integer.class, PortalFieldDict.NUMBER);
-        FIELD_MAP.put(BigDecimal.class, PortalFieldDict.MONEY);
+        FIELD_MAP.put(BigDecimal.class, PortalFieldDict.NUMBER);
         FIELD_MAP.put(Long.class, PortalFieldDict.NUMBER);
         FIELD_MAP.put(Double.class, PortalFieldDict.NUMBER);
         ROLE_BIND_PORTAL_MAP.put(DEFAULT_CONFIG_ROLE_ID, "默认配置");
