@@ -77,8 +77,8 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
             uploadProgress.startValidateRecord(maxLine);
         }
         Object entity = parse(portal, data, entityCache);
-        prepare(entity);
         if (validate(entity, dataList, validateMap)) {
+            prepare(entity);
             dataList.add(entity);
         }
         if (currentPage == 0) {
