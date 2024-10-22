@@ -227,12 +227,15 @@ public class PortalConfigService implements LoginFillTokenInf {
         column.setFieldType(portalFieldDict.getValue());
         handlePortalEntityField(portal, field, column);
         handlePortalNoFilterField(field, column);
+        handlePortalNoSortField(field, column);
         handlePortalDisplayOnlyField(field, column);
         handlePortalDisplayNoneField(field, column);
         handleBindField(field, column);
         handlePortalDictField(field, column);
         handlePortalMoneyField(field, column);
         handlePortalPercentField(field, column);
+        handlePortalImageField(field, column);
+        handlePortalTextAreaField(field, column);
         column.setRoleId(roleId);
         return column;
     }
@@ -267,6 +270,24 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setFieldType(PortalFieldDict.PERCENT.getValue());
             column.setReference(StringUtil.joinWith(",", Integer.valueOf(portalPercentField.fix()).toString(),
                     Integer.valueOf(portalPercentField.unit()).toString()));
+        }
+    }
+
+    private void handlePortalImageField(Field field, SysPortalColumn column) {
+        PortalImageField portalImageField = field.getAnnotation(PortalImageField.class);
+        if (FuncUtil.isNotEmpty(portalImageField)) {
+            column.setFieldType(PortalFieldDict.IMAGE.getValue());
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalTextAreaField(Field field, SysPortalColumn column) {
+        PortalTextAreaField portalTextAreaField = field.getAnnotation(PortalTextAreaField.class);
+        if (FuncUtil.isNotEmpty(portalTextAreaField)) {
+            column.setFieldType(PortalFieldDict.TEXT.getValue());
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
         }
     }
 
@@ -331,6 +352,16 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setFilterAble(CommonConst.YES);
         }
     }
+
+    private void handlePortalNoSortField(Field field, SysPortalColumn column) {
+        PortalNoSortField portalNoSortField = field.getAnnotation(PortalNoSortField.class);
+        if (FuncUtil.isNotEmpty(portalNoSortField)) {
+            column.setSortAble(CommonConst.NO);
+        } else {
+            column.setSortAble(CommonConst.YES);
+        }
+    }
+
 
     @Override
     public void fillToken(LoginRes token) {
