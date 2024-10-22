@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS `ac_partner` (
   KEY `app_key` (`app_key`)
 ) COMMENT='三方应用对接'
 /
+DROP TABLE IF EXISTS `ac_partner_history`
+/
 CREATE TABLE IF NOT EXISTS `ac_partner_history` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'id',
   `platform` varchar(50) NOT NULL COMMENT '平台',
@@ -28,7 +30,6 @@ CREATE TABLE IF NOT EXISTS `ac_partner_history` (
   PRIMARY KEY (`id`)
 ) COMMENT='对接接口访问记录'
 /
-DROP TABLE IF EXISTS `ac_partner_history`
-/
+
 
 
