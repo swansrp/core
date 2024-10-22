@@ -137,11 +137,11 @@ public class LogFilter extends OncePerRequestFilter {
         return sb.toString();
     }
 
-    private boolean isJsonResponse(HttpServletResponse response) {
+    public static boolean isJsonResponse(HttpServletResponse response) {
         return response.getContentType().contains("json");
     }
 
-    private String extractResultPayload(MultiReadHttpServletResponse response) {
+    public static String extractResultPayload(MultiReadHttpServletResponse response) {
         byte[] buf = response.getBody();
         String payload = "";
         if (buf.length > 0) {

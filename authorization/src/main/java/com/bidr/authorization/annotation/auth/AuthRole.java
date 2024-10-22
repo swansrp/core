@@ -1,6 +1,9 @@
 package com.bidr.authorization.annotation.auth;
 
+import org.springframework.web.servlet.ModelAndView;
+
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Title: AuthRole
@@ -16,6 +19,15 @@ public interface AuthRole {
      * @param request 请求
      */
     void validate(HttpServletRequest request, String... args);
+
+    /**
+     * 结束
+     *
+     * @param request  请求
+     * @param response 返回
+     */
+    default void completion(HttpServletRequest request, HttpServletResponse response) {
+    }
 
 
 }

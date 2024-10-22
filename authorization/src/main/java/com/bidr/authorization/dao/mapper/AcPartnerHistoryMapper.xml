@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.authorization.dao.mapper.AcPartnerHistoryMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.authorization.dao.entity.AcPartnerHistory">
+    <!--@mbg.generated-->
+    <!--@Table open_api.ac_partner_history-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="platform" jdbcType="VARCHAR" property="platform" />
+    <result column="app_key" jdbcType="VARCHAR" property="appKey" />
+    <result column="remote_ip" jdbcType="VARCHAR" property="remoteIp" />
+    <result column="url" jdbcType="VARCHAR" property="url" />
+    <result column="status" jdbcType="INTEGER" property="status" />
+    <result column="message" jdbcType="VARCHAR" property="message" />
+    <result column="request_at" jdbcType="TIMESTAMP" property="requestAt" />
+    <result column="response_at" jdbcType="TIMESTAMP" property="responseAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, platform, app_key, remote_ip, url, `status`, message, request_at, response_at
+  </sql>
+</mapper>

@@ -97,6 +97,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         } else if (clazz.isAnnotationPresent(Auth.class)) {
             auth = clazz.getDeclaredAnnotation(Auth.class);
         }
+        request.setAttribute(Auth.class.getName(), auth);
         if (auth != null) {
             for (Class<? extends AuthRole> authRoleClazz : auth.value()) {
                 ((AuthRole) applicationContext.getBean(
@@ -141,7 +142,20 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
                                 @Nullable Exception ex) {
+        authCompletion(request, response);
         TokenHolder.remove();
         AccountContext.remove();
+    }
+
+    private void authCompletion(HttpServletRequest request, HttpServletResponse response) {
+        Auth auth = (Auth) request.getAttribute(Auth.class.getName());
+        if (auth != null) {
+            for (Class<? extends AuthRole> authRoleClazz : auth.value()) {
+                ((AuthRole) applicationContext.getBean(
+                        StringUtils.uncapitalize(authRoleClazz.getSimpleName()))).completion(request, response);
+            }
+        } else {
+            applicationContext.getBean(AuthLogin.class).completion(request, response);
+        }
     }
 }
