@@ -1,5 +1,7 @@
 package com.bidr.qcc.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 /**
@@ -12,5 +14,6 @@ import lombok.Data;
 
 @Data
 public class QccReq {
+    @ApiModelProperty("企查查账号(默认不填)")
     private String key;
 }
