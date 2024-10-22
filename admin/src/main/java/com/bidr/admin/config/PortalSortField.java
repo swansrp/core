@@ -3,7 +3,7 @@ package com.bidr.admin.config;
 import java.lang.annotation.*;
 
 /**
- * Title: PortalNoSortField
+ * Title: PortalSortField
  * Description: Copyright: Copyright (c) 2024 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -14,5 +14,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface PortalNoSortField {
+public @interface PortalSortField {
 }
