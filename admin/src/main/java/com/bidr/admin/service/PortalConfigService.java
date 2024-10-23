@@ -225,6 +225,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         handleDisplayName(field, column);
         PortalFieldDict portalFieldDict = FIELD_MAP.getOrDefault(field.getType(), PortalFieldDict.STRING);
         column.setFieldType(portalFieldDict.getValue());
+        handlePortalField(portal, field);
         handlePortalEntityField(portal, field, column);
         handlePortalNoFilterField(field, column);
         handlePortalSortField(field, column);
@@ -261,6 +262,21 @@ public class PortalConfigService implements LoginFillTokenInf {
                 portal.setAdvanced(StringUtil.convertSwitch(false));
                 sysPortalService.updateById(portal);
             }
+        }
+    }
+
+    private void handlePortalField(SysPortal portal, Field field) {
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalIdField.class))) {
+            portal.setIdColumn(field.getName());
+        }
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalNameField.class))) {
+            portal.setNameColumn(field.getName());
+        }
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalPidField.class))) {
+            portal.setPidColumn(field.getName());
+        }
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalOrderField.class))) {
+            portal.setOrderColumn(field.getName());
         }
     }
 
