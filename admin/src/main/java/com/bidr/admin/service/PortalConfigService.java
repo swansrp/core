@@ -217,7 +217,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
-    private SysPortalColumn buildSysPortalColumn(SysPortal portal, int order, Field field, Long roleId) {
+    public SysPortalColumn buildSysPortalColumn(SysPortal portal, int order, Field field, Long roleId) {
         SysPortalColumn column = new SysPortalColumn();
         column.setPortalId(portal.getId());
         column.setProperty(field.getName());

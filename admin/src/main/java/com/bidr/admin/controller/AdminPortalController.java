@@ -79,6 +79,13 @@ public class AdminPortalController {
         Resp.notice("删除后台配置成功");
     }
 
+    @RequestMapping(path = {"/config/refresh"}, method = {RequestMethod.POST})
+    @ApiOperation(value = "恢复默认设置")
+    public void importConfig(@RequestBody IdReqVO req) {
+        portalService.refreshPortalConfig(req);
+        Resp.notice("恢复后台配置成功");
+    }
+
     @RequestMapping(path = {"/config/existed"}, method = {RequestMethod.GET})
     @ApiOperation(value = "检查后台管理配置是否存在")
     public void validatePortalExisted(PortalReq req) {

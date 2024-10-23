@@ -8,6 +8,8 @@ import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.admin.vo.*;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.controller.inf.AdminControllerInf;
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -19,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -97,7 +100,25 @@ public class PortalService {
             sysPortalService.deleteById(portal.getId());
             sysPortalColumnService.deleteByPortalId(portal.getId());
         }
+    }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void refreshPortalConfig(IdReqVO req) {
+        SysPortal sysPortal = sysPortalService.getByName(req.getId(), PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
+        List<SysPortal> portalList = sysPortalService.getByBeanName(sysPortal.getBean());
+        List<PortalWithColumnsRes> portalWithColumnsResList = Resp.convert(portalList, PortalWithColumnsRes.class);
+        for (PortalWithColumnsRes portalWithColumns : portalWithColumnsResList) {
+            AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(portalWithColumns.getBean());
+            Class<?> voClass = bean.getVoClass();
+            for (SysPortalColumn column : portalWithColumns.getColumns()) {
+                Field field = ReflectionUtil.getField(voClass, column.getProperty());
+                SysPortalColumn sysPortalColumn = portalConfigService.buildSysPortalColumn(portalWithColumns,
+                        column.getDisplayOrder(), field, column.getRoleId());
+                ReflectionUtil.merge(sysPortalColumn, column, true);
+                sysPortalColumnService.updateById(column);
+            }
+            sysPortalService.updateById(portalWithColumns);
+        }
     }
 
     public void validatePortalExisted(PortalReq req) {
