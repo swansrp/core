@@ -1,6 +1,7 @@
 package com.bidr.kernel.utils;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
 import java.io.File;
@@ -48,6 +49,15 @@ public class FileUtil {
     public static String readTxt(File file) throws IOException {
         StringBuilder prompt = new StringBuilder();
         LineIterator lineIterator = FileUtils.lineIterator(file, "UTF-8");
+        while (lineIterator.hasNext()) {
+            prompt.append(lineIterator.nextLine());
+        }
+        return prompt.toString();
+    }
+
+    public static String readTxt(InputStream is) {
+        StringBuilder prompt = new StringBuilder();
+        LineIterator lineIterator = IOUtils.lineIterator(is, "UTF-8");
         while (lineIterator.hasNext()) {
             prompt.append(lineIterator.nextLine());
         }
