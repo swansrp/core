@@ -103,9 +103,15 @@ public class PortalService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void refreshPortalConfig(IdReqVO req) {
-        SysPortal sysPortal = sysPortalService.getByName(req.getId(), PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
-        List<SysPortal> portalList = sysPortalService.getByBeanName(sysPortal.getBean());
+    public void refreshPortalConfig(PortalReq req) {
+        SysPortal sysPortal = sysPortalService.getByName(req.getName(), req.getRoleId());
+        List<SysPortal> portalList = new ArrayList<>();
+        if (FuncUtil.equals(req.getRoleId(), PortalConfigService.DEFAULT_CONFIG_ROLE_ID)) {
+            portalList.addAll(sysPortalService.getByBeanName(sysPortal.getBean()));
+        } else {
+            portalList.add(sysPortal);
+        }
+
         List<PortalWithColumnsRes> portalWithColumnsResList = Resp.convert(portalList, PortalWithColumnsRes.class);
         for (PortalWithColumnsRes portalWithColumns : portalWithColumnsResList) {
             AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(portalWithColumns.getBean());

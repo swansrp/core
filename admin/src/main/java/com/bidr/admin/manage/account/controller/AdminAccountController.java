@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Api(tags = "系统管理 - 白名单账户管理")
 @AdminPortal
-@RestController
+@RestController("AdminAccountController")
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/account"})
 public class AdminAccountController extends BaseAdminController<AcAccount, AccountVO> {

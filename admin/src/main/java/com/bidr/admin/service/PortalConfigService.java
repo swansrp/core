@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
@@ -155,7 +156,12 @@ public class PortalConfigService implements LoginFillTokenInf {
         Api api = controllerClass.getAnnotation(Api.class);
         ApiModel apiModel = entityClass.getAnnotation(ApiModel.class);
         SysPortal portal = new SysPortal();
-        portal.setBean(controllerClass.getSimpleName());
+        RestController restController = controllerClass.getAnnotation(RestController.class);
+        if (FuncUtil.isNotEmpty(restController) && FuncUtil.isNotEmpty(restController.value())) {
+            portal.setBean(restController.value());
+        } else {
+            portal.setBean(StringUtil.firstLowerCamelCase(controllerClass.getSimpleName()));
+        }
         if (FuncUtil.isNotEmpty(adminPortal.value())) {
             portal.setName(adminPortal.value());
         } else {
@@ -225,7 +231,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         handleDisplayName(field, column);
         PortalFieldDict portalFieldDict = FIELD_MAP.getOrDefault(field.getType(), PortalFieldDict.STRING);
         column.setFieldType(portalFieldDict.getValue());
-        handlePortalField(portal, field);
+        handlePortalField(portal, field, column);
         handlePortalEntityField(portal, field, column);
         handlePortalNoFilterField(field, column);
         handlePortalSortField(field, column);
@@ -265,18 +271,30 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
-    private void handlePortalField(SysPortal portal, Field field) {
+    private void handlePortalField(SysPortal portal, Field field, SysPortalColumn column) {
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalIdField.class))) {
             portal.setIdColumn(field.getName());
+            column.setShow(CommonConst.NO);
+            column.setDetailShow(CommonConst.NO);
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
         }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalNameField.class))) {
             portal.setNameColumn(field.getName());
         }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalPidField.class))) {
             portal.setPidColumn(field.getName());
+            column.setShow(CommonConst.NO);
+            column.setDetailShow(CommonConst.NO);
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
         }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalOrderField.class))) {
             portal.setOrderColumn(field.getName());
+            column.setShow(CommonConst.NO);
+            column.setDetailShow(CommonConst.NO);
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
         }
     }
 

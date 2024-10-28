@@ -1,10 +1,15 @@
 package com.bidr.admin.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.bidr.admin.config.*;
+import com.bidr.admin.constant.dict.AllPortalDict;
+import com.bidr.admin.constant.dict.BindTypeDict;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.authorization.dao.entity.AcRole;
+import com.bidr.kernel.constant.dict.common.BoolDict;
+import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.diboot.core.binding.annotation.BindField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -20,7 +25,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class PortalAssociateRes extends SysPortalAssociate {
-
+    @PortalIdField
     @ApiModelProperty(value = "id")
     private Long id;
 
@@ -31,10 +36,13 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @BindField(entity = AcRole.class, field = "roleName", condition = "this.roleId = role_id")
     private String roleName;
 
+    @PortalNameField
     @TableField(value = "title")
     @ApiModelProperty(value = "显示名称")
     private String title;
 
+    @PortalDisplayOnlyField
+    @PortalDictField(AllPortalDict.class)
     @ApiModelProperty(value = "实体id")
     private Long portalId;
 
@@ -42,10 +50,12 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @ApiModelProperty(value = "本实体英文名称")
     private String portalName;
 
+    @PortalDictField(BindTypeDict.class)
     @ApiModelProperty(value = "实体关系")
     private String bindType;
 
-    @ApiModelProperty(value = "目标实体id")
+    @PortalDictField(AllPortalDict.class)
+    @ApiModelProperty(value = "目标实体")
     private Long bindPortalId;
 
     @BindField(entity = SysPortal.class, field = "name", condition = "this.roleId = role_id and this.bindPortalId = id")
@@ -69,15 +79,19 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @ApiModelProperty(value = "默认排序字段名")
     private String bindSortPropertyName;
 
+    @PortalDictField(PortalSortDict.class)
     @ApiModelProperty(value = "默认排序方式")
     private String bindSortType;
 
+    @PortalDictField(BoolDict.class)
     @ApiModelProperty(value = "树形展示")
     private String treeMode;
 
+    @PortalDictField(BoolDict.class)
     @ApiModelProperty(value = "树形结构显示是否严格节点显示")
     private String treeCheckStrict;
 
+    @PortalOrderField
     @ApiModelProperty(value = "显示顺序")
     private Integer displayOrder;
 }
