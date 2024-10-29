@@ -157,7 +157,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         if (FuncUtil.isEmpty(getPortalService())) {
             return Resp.convert(getRepo().selectById(req.getId()), getVoClass());
         } else {
-            return getPortalService().selectById(req.getId());
+            return Resp.convert(getPortalService().selectById(req.getId()), getVoClass());
         }
     }
 
