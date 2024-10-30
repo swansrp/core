@@ -798,13 +798,15 @@ public class ReflectionUtil {
             if (Modifier.isFinal(field.getModifiers())) {
                 continue;
             }
-            Object sourceValue = getValue(source, field);
-            if (ignoreNull) {
-                if (sourceValue == null) {
-                    continue;
+            if (existedField(source.getClass(), field.getName())) {
+                Object sourceValue = getValue(source, field);
+                if (ignoreNull) {
+                    if (sourceValue == null) {
+                        continue;
+                    }
                 }
+                setValue(field, dist, sourceValue);
             }
-            setValue(field, dist, sourceValue);
         }
         return dist;
     }
