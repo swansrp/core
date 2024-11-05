@@ -1,19 +1,16 @@
 package com.bidr.admin.manage.user.controller;
 
-import com.bidr.admin.manage.user.service.UserGroupBindService;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.manage.user.vo.UserAdminRes;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.kernel.controller.BaseBindController;
-import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.platform.config.portal.AdminPortal;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.annotation.Resource;
 
 /**
  * Title: AdminUserController
@@ -30,11 +27,23 @@ import javax.annotation.Resource;
 public class AdminUserGroupBindController extends BaseBindController<AcUser, AcUserGroup, AcGroup, UserAdminRes,
         AcGroup> {
 
-    @Resource
-    private final UserGroupBindService userGroupBindService;
+    @Override
+    protected SFunction<AcUserGroup, ?> bindEntityId() {
+        return AcUserGroup::getUserId;
+    }
 
     @Override
-    protected BaseBindRepo<AcUser, AcUserGroup, AcGroup, UserAdminRes, AcGroup> bindRepo() {
-        return userGroupBindService;
+    protected SFunction<AcUserGroup, ?> bindAttachId() {
+        return AcUserGroup::getGroupId;
+    }
+
+    @Override
+    protected SFunction<AcGroup, ?> attachId() {
+        return AcGroup::getId;
+    }
+
+    @Override
+    protected SFunction<AcUser, ?> entityId() {
+        return AcUser::getUserId;
     }
 }

@@ -217,10 +217,12 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     private boolean parsePortalSelect(Map<String, String> selectColumnMap, List<String> groupColumns, Field field) {
         PortalSelect portalSelect = field.getAnnotation(PortalSelect.class);
         if (FuncUtil.isNotEmpty(portalSelect)) {
-            String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
-            selectColumnMap.put(sqlFieldName, field.getName());
-            if (portalSelect.group()) {
-                groupColumns.add(sqlFieldName);
+            if (portalSelect.value()) {
+                String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
+                selectColumnMap.put(sqlFieldName, field.getName());
+                if (portalSelect.group()) {
+                    groupColumns.add(sqlFieldName);
+                }
             }
             return true;
         } else {

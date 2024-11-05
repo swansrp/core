@@ -16,25 +16,6 @@ import org.springframework.stereotype.Service;
  * @since 2024/03/01 11:43
  */
 @Service
-public class UserGroupBindService extends BaseBindRepo<AcUser, AcUserGroup, AcGroup, UserAdminRes, AcGroup> {
+public class UserGroupBindService {
 
-    @Override
-    protected SFunction<AcUserGroup, ?> bindEntityId() {
-        return AcUserGroup::getUserId;
-    }
-
-    @Override
-    protected SFunction<AcUserGroup, ?> bindAttachId() {
-        return AcUserGroup::getGroupId;
-    }
-
-    @Override
-    protected SFunction<AcGroup, ?> attachId() {
-        return AcGroup::getId;
-    }
-
-    @Override
-    protected SFunction<AcUser, ?> entityId() {
-        return AcUser::getUserId;
-    }
 }
