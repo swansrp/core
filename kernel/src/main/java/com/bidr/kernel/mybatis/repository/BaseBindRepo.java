@@ -98,7 +98,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     @Transactional(rollbackFor = Exception.class)
     public void bind(Object attachId, Object entityId) {
         BIND bindEntity = buildBindEntity(attachId, entityId);
-        bindRepo().insertOrUpdate(bindEntity);
+        getBindRepo().insertOrUpdate(bindEntity);
     }
 
     protected BIND buildBindEntity(Object attachId, Object entityId) {
@@ -108,20 +108,20 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         return bindEntity;
     }
 
-    protected BaseSqlRepo bindRepo() {
+    protected BaseSqlRepo getBindRepo() {
         return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(getBindClass().getSimpleName()) + "Service");
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void unbind(Object attachId, Object entityId) {
         BIND bindEntity = buildBindEntity(attachId, entityId);
-        bindRepo().deleteById(bindEntity);
+        getBindRepo().deleteById(bindEntity);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void replace(List<Object> attachIdList, Object entityId) {
-        Wrapper<BIND> wrapper = (Wrapper<BIND>) bindRepo().getQueryWrapper().eq(bindEntityId(), entityId);
-        bindRepo().delete(wrapper);
+        Wrapper<BIND> wrapper = (Wrapper<BIND>) getBindRepo().getQueryWrapper().eq(bindEntityId(), entityId);
+        getBindRepo().delete(wrapper);
         List<BIND> bindList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
@@ -129,7 +129,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
                 bindList.add(bindEntity);
             }
         }
-        bindRepo().saveBatch(bindList);
+        getBindRepo().saveBatch(bindList);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -137,7 +137,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
-                bindRepo().deleteById(bindEntity);
+                getBindRepo().deleteById(bindEntity);
             }
         }
     }
@@ -171,16 +171,16 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
-                bindRepo().insertOrUpdate(bindEntity);
+                getBindRepo().insertOrUpdate(bindEntity);
             }
         }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void unbindAll(Object entityId) {
-        LambdaQueryWrapper wrapper = bindRepo().getQueryWrapper();
+        LambdaQueryWrapper wrapper = getBindRepo().getQueryWrapper();
         wrapper.eq(bindEntityId(), entityId);
-        bindRepo().delete(wrapper);
+        getBindRepo().delete(wrapper);
     }
 
     protected abstract SFunction<ENTITY, ?> entityId();

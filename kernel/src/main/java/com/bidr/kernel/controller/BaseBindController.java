@@ -24,15 +24,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/05/09 17:02
  */
-public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
-
-    protected Class<BIND> getBindClass() {
-        return (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
-    }
-
-    protected Class<ATTACH> getAttachClass() {
-        return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
-    }
+public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> extends BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     @ApiIgnore
     @ApiOperation(value = "获取已绑定(列表)")
@@ -42,7 +34,9 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         return Resp.convert(res, getAttachVoClass());
     }
 
-    protected abstract BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> bindRepo();
+    protected BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> bindRepo() {
+        return this;
+    }
 
     protected Class<ATTACH_VO> getAttachVoClass() {
         return (Class<ATTACH_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
@@ -83,7 +77,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiIgnore
     @ApiOperation(value = "全量绑定")
     @RequestMapping(value = "/bind/all", method = RequestMethod.POST)
-    public void bindAll(@RequestBody @Validated AdvancedQueryBindReq req) {
+    public void bindAllByCondition(@RequestBody @Validated AdvancedQueryBindReq req) {
         if (!isAdmin()) {
             beforeQuery(req);
         }
