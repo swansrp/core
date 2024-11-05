@@ -34,7 +34,7 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20240911134442-39</kernel.version>
+                <kernel.version>20241105150809-49</kernel.version>
                 <platform.version>20240912175113-20</platform.version>
                 <redis.version>20240708182043-25</redis.version>
             </properties>

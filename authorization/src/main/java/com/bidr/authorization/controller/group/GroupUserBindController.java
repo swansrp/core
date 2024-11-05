@@ -1,5 +1,6 @@
 package com.bidr.authorization.controller.group;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
@@ -34,14 +35,33 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController("GroupUserBindController")
 @RequestMapping(value = "/web/group/user")
-public class GroupUserBindController extends BaseBindController<AcGroup, AcUserGroup, AcUser, AcGroup,
-        GroupAccountRes> {
+public class GroupUserBindController extends BaseBindController<AcGroup, AcUserGroup, AcUser, AcGroup, GroupAccountRes> {
 
     private final AdminUserGroupBindService adminUserGroupBindService;
 
     @Override
     protected BaseBindRepo<AcGroup, AcUserGroup, AcUser, AcGroup, GroupAccountRes> bindRepo() {
         return adminUserGroupBindService;
+    }
+
+    @Override
+    protected SFunction<AcUserGroup, ?> bindEntityId() {
+        return AcUserGroup::getGroupId;
+    }
+
+    @Override
+    protected SFunction<AcUserGroup, ?> bindAttachId() {
+        return AcUserGroup::getUserId;
+    }
+
+    @Override
+    protected SFunction<AcUser, ?> attachId() {
+        return AcUser::getUserId;
+    }
+
+    @Override
+    protected SFunction<AcGroup, ?> entityId() {
+        return AcGroup::getId;
     }
 
     @ApiOperation(value = "绑定")

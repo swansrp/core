@@ -1,5 +1,6 @@
 package com.bidr.authorization.controller.admin;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserRole;
@@ -26,10 +27,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminRoleUserBindController extends BaseBindController<AcRole, AcUserRole, AcUser, RoleRes, UserRes> {
 
-    private final AdminRoleUserBindService adminRoleUserBindService;
+    @Override
+    protected SFunction<AcUserRole, ?> bindEntityId() {
+        return AcUserRole::getRoleId;
+    }
 
     @Override
-    protected BaseBindRepo<AcRole, AcUserRole, AcUser, RoleRes, UserRes> bindRepo() {
-        return adminRoleUserBindService;
+    protected SFunction<AcUserRole, ?> bindAttachId() {
+        return AcUserRole::getUserId;
+    }
+
+    @Override
+    protected SFunction<AcUser, ?> attachId() {
+        return AcUser::getUserId;
+    }
+
+    @Override
+    protected SFunction<AcRole, ?> entityId() {
+        return AcRole::getRoleId;
     }
 }

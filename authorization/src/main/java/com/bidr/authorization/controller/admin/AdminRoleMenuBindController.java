@@ -1,13 +1,12 @@
 package com.bidr.authorization.controller.admin;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
-import com.bidr.authorization.service.admin.AdminRoleMenuBindService;
 import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.controller.BaseBindController;
-import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import io.swagger.annotations.Api;
@@ -32,12 +31,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminRoleMenuBindController extends BaseBindController<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> {
 
-    private final AdminRoleMenuBindService adminRoleMenuBindService;
-
     @ApiOperation(value = "获取角色对应菜单树", notes = "全部")
     @RequestMapping(value = "/menu/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getMenuTree(Long entityId) {
-        List<AcMenu> bindList = adminRoleMenuBindService.getBindList(entityId);
+        List<AcMenu> bindList = super.getBindList(entityId);
         for (AcMenu acMenu : bindList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
@@ -48,7 +45,22 @@ public class AdminRoleMenuBindController extends BaseBindController<AcRole, AcRo
     }
 
     @Override
-    protected BaseBindRepo<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> bindRepo() {
-        return adminRoleMenuBindService;
+    protected SFunction<AcRoleMenu, ?> bindAttachId() {
+        return AcRoleMenu::getMenuId;
+    }
+
+    @Override
+    protected SFunction<AcMenu, ?> attachId() {
+        return AcMenu::getMenuId;
+    }
+
+    @Override
+    protected SFunction<AcRoleMenu, ?> bindEntityId() {
+        return AcRoleMenu::getRoleId;
+    }
+
+    @Override
+    protected SFunction<AcRole, ?> entityId() {
+        return AcRole::getRoleId;
     }
 }

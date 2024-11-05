@@ -1,5 +1,6 @@
 package com.bidr.authorization.controller.admin;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserRole;
@@ -34,8 +35,23 @@ public class AdminUserRoleBindController extends BaseBindController<AcUser, AcUs
     private final AdminUserRoleBindService adminUserRoleBindService;
 
     @Override
-    protected BaseBindRepo<AcUser, AcUserRole, AcRole, AccountRes, RoleRes> bindRepo() {
-        return adminUserRoleBindService;
+    protected SFunction<AcUserRole, ?> bindAttachId() {
+        return AcUserRole::getRoleId;
+    }
+
+    @Override
+    protected SFunction<AcRole, ?> attachId() {
+        return AcRole::getRoleId;
+    }
+
+    @Override
+    protected SFunction<AcUserRole, ?> bindEntityId() {
+        return AcUserRole::getUserId;
+    }
+
+    @Override
+    protected SFunction<AcUser, ?> entityId() {
+        return AcUser::getUserId;
     }
 
     @ApiOperation(value = "获取人员对应菜单树", notes = "全部")

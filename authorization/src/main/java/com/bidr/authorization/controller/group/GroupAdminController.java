@@ -60,6 +60,7 @@ public class GroupAdminController extends BaseAdminTreeController<AcGroup, Group
         Resp.notice("添加用户组成功");
     }
 
+    @Override
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     public void delete(@RequestBody IdReqVO vo) {

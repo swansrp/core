@@ -27,29 +27,9 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class AdminUserRoleBindService extends BaseBindRepo<AcUser, AcUserRole, AcRole, AccountRes, RoleRes> {
+public class AdminUserRoleBindService {
 
     private final AcUserRoleMenuService acUserRoleMenuService;
-
-    @Override
-    protected SFunction<AcUserRole, ?> bindAttachId() {
-        return AcUserRole::getRoleId;
-    }
-
-    @Override
-    protected SFunction<AcRole, ?> attachId() {
-        return AcRole::getRoleId;
-    }
-
-    @Override
-    protected SFunction<AcUserRole, ?> bindEntityId() {
-        return AcUserRole::getUserId;
-    }
-
-    @Override
-    protected SFunction<AcUser, ?> entityId() {
-        return AcUser::getUserId;
-    }
 
     public List<MenuTreeRes> getUserMenuTree(String userId) {
         List<AcMenu> allMenu = acUserRoleMenuService.getAllMenuByUserId(userId, ClientType.WEB.getValue());

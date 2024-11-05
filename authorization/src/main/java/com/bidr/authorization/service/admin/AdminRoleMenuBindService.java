@@ -16,24 +16,6 @@ import org.springframework.stereotype.Service;
  * @since 2023/05/08 13:38
  */
 @Service
-public class AdminRoleMenuBindService extends BaseBindRepo<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> {
-    @Override
-    protected SFunction<AcRoleMenu, ?> bindAttachId() {
-        return AcRoleMenu::getMenuId;
-    }
+public class AdminRoleMenuBindService {
 
-    @Override
-    protected SFunction<AcMenu, ?> attachId() {
-        return AcMenu::getMenuId;
-    }
-
-    @Override
-    protected SFunction<AcRoleMenu, ?> bindEntityId() {
-        return AcRoleMenu::getRoleId;
-    }
-
-    @Override
-    protected SFunction<AcRole, ?> entityId() {
-        return AcRole::getRoleId;
-    }
 }

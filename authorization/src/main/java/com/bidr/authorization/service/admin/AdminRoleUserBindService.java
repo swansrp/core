@@ -17,24 +17,6 @@ import org.springframework.stereotype.Service;
  * @since 2023/05/09 17:06
  */
 @Service
-public class AdminRoleUserBindService extends BaseBindRepo<AcRole, AcUserRole, AcUser, RoleRes, UserRes> {
-    @Override
-    protected SFunction<AcUserRole, ?> bindEntityId() {
-        return AcUserRole::getRoleId;
-    }
+public class AdminRoleUserBindService {
 
-    @Override
-    protected SFunction<AcUserRole, ?> bindAttachId() {
-        return AcUserRole::getUserId;
-    }
-
-    @Override
-    protected SFunction<AcUser, ?> attachId() {
-        return AcUser::getUserId;
-    }
-
-    @Override
-    protected SFunction<AcRole, ?> entityId() {
-        return AcRole::getRoleId;
-    }
 }

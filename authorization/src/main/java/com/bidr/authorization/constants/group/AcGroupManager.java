@@ -40,7 +40,7 @@ public class AcGroupManager implements CommandLineRunner {
                 if (Enum.class.isAssignableFrom(clazz) && Group.class.isAssignableFrom(clazz)) {
                     for (Group enumItem : clazz.getEnumConstants()) {
                         AcGroupType item = buildAcGroupType(enumItem);
-                        acGroupTypeService.delete(item);
+                        acGroupTypeService.deleteById(item);
                         acGroupTypeService.insert(item);
                     }
                 }
