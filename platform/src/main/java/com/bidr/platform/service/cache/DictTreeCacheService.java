@@ -2,6 +2,9 @@ package com.bidr.platform.service.cache;
 
 import com.bidr.kernel.cache.DynamicMemoryCache;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.bo.tree.TreeDict;
 import com.bidr.platform.constant.dict.IDynamicTree;
 import org.apache.commons.collections4.CollectionUtils;
@@ -12,10 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.WebApplicationContext;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: DictTreeCacheService
@@ -54,4 +54,17 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
         return map;
     }
 
+    public List<KeyValueResVO> getAll() {
+        Map<String, List<TreeDict>> cacheData = super.getAllCache();
+        List<KeyValueResVO> resList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(cacheData)) {
+            for (List<?> value : cacheData.values()) {
+                if (FuncUtil.isNotEmpty(value)) {
+                    TreeDict treeDict = JsonUtil.readJson(value.get(0), TreeDict.class);
+                    resList.add(new KeyValueResVO(treeDict.getTreeType(), treeDict.getTreeTitle()));
+                }
+            }
+        }
+        return resList;
+    }
 }
