@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.socket.io.dao.mapper.ChatFriendDao">
+    <resultMap id="BaseResultMap" type="com.bidr.socket.io.dao.entity.ChatFriend">
+        <!--@mbg.generated generated on Sun Feb 07 17:25:06 CST 2021.-->
+        <!--@Table chat_friend-->
+        <result column="user_id" jdbcType="VARCHAR" property="userId"/>
+        <result column="friend_id" jdbcType="VARCHAR" property="friendId"/>
+        <result column="confirm" jdbcType="VARCHAR" property="confirm"/>
+        <result column="confirm_at" jdbcType="TIMESTAMP" property="confirmAt"/>
+        <result column="create_at" jdbcType="TIMESTAMP" property="createAt"/>
+        <result column="update_at" jdbcType="TIMESTAMP" property="updateAt"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        <!--@mbg.generated generated on Sun Feb 07 17:25:06 CST 2021.-->
+        user_id, friend_id, confirm, confirm_at, create_at, update_at
+    </sql>
+</mapper>

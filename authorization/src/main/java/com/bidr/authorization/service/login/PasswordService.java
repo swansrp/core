@@ -33,4 +33,36 @@ public interface PasswordService {
      */
     void changePassword(ChangePasswordReq req);
 
+    /**
+     * 发送更换密码邮件
+     *
+     * @param userId 用户名
+     * @param email  邮箱
+     */
+    void sendChangePasswordEmail(String userId, String email);
+
+    /**
+     * 通过手机号修改密码
+     *
+     * @param phoneNumber
+     * @param password
+     */
+    void changePasswordByMsgCode(String phoneNumber, String password);
+
+    /**
+     * 发起修改密码邮件通知
+     *
+     * @param userId 用户名
+     * @param email  邮箱
+     */
+    void emailChangeReq(String userId, String email);
+
+    /**
+     * 修改用户密码
+     *
+     * @param userId   用户名
+     * @param password 密码
+     */
+    void changePassword(String userId, String password);
+
 }

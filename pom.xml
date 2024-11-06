@@ -21,6 +21,8 @@
         <module>wechat</module>
         <module>ocr</module>
         <module>qichacha</module>
+        <module>mongo</module>
+        <module>socket-io</module>
     </modules>
     <packaging>pom</packaging>
 

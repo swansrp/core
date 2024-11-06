@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.socket.io.dao.mapper.ChatRoomMemberDao">
+    <resultMap id="BaseResultMap" type="com.bidr.socket.io.dao.entity.ChatRoomMember">
+        <!--@mbg.generated generated on Fri Feb 05 17:07:11 CST 2021.-->
+        <!--@Table chat_room_member-->
+        <result column="room_id" jdbcType="VARCHAR" property="roomId"/>
+        <result column="user_id" jdbcType="VARCHAR" property="userId"/>
+        <result column="role" jdbcType="VARCHAR" property="role"/>
+        <result column="create_at" jdbcType="TIMESTAMP" property="createAt"/>
+        <result column="update_at" jdbcType="TIMESTAMP" property="updateAt"/>
+        <result column="valid" jdbcType="VARCHAR" property="valid"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        <!--@mbg.generated generated on Fri Feb 05 17:07:11 CST 2021.-->
+        room_id, user_id, `role`, create_at, update_at, `valid`
+    </sql>
+</mapper>

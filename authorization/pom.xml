@@ -23,6 +23,7 @@
                 <kernel.version>${jarVersion}</kernel.version>
                 <platform.version>${jarVersion}</platform.version>
                 <redis.version>${jarVersion}</redis.version>
+                <email.version>${jarVersion}</email.version>
             </properties>
         </profile>
         <profile>
@@ -37,6 +38,7 @@
                 <kernel.version>20241105150809-49</kernel.version>
                 <platform.version>20240912175113-20</platform.version>
                 <redis.version>20240708182043-25</redis.version>
+                <email.version>20231017110426-3</email.version>
             </properties>
         </profile>
     </profiles>
@@ -51,6 +53,11 @@
             <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>email</artifactId>
+            <version>${email.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
