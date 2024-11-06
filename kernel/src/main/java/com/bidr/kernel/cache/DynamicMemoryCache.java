@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.retry.annotation.Retryable;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,7 +35,9 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     @Retryable(value = DynamicMemoryCacheExpiredException.class, maxAttempts = 2)
     public Map<String, T> getAllCache() {
         ConcurrentMapCache cache = (ConcurrentMapCache) dynamicMemoryCacheManager.getCache(getCacheName());
-        refresh();
+        if (cache != null && FuncUtil.isEmpty(cache.getNativeCache())) {
+            refresh();
+        }
         return JsonUtil.readJson(cache.getNativeCache(), Map.class, String.class, entityClass);
     }
 
@@ -49,6 +52,7 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
      */
     protected abstract Map<String, T> getCacheData();
 
+    @Override
     public T getCache(Object key) {
         if (key != null) {
             cachePrepare(key);

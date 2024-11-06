@@ -184,12 +184,14 @@ public class ReflectionUtil {
         if (index >= params.length || index < 0) {
             return Object.class;
         }
+        if (params[index] instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) params[index]).getRawType();
+        }
         if (!(params[index] instanceof Class<?>)) {
             return Object.class;
         }
         return (Class<?>) params[index];
     }
-
     private static <R, T> R buildTree(Class<R> resultClazz, Field children, T parentData, List<T> dataList, Field field,
                                       Field parentField) {
         R res = ReflectionUtil.copy(parentData, resultClazz);
