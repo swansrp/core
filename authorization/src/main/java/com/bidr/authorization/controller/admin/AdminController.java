@@ -2,6 +2,7 @@ package com.bidr.authorization.controller.admin;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthAdmin;
+import com.bidr.authorization.controller.login.LoginController;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.vo.login.LoginRes;
@@ -27,13 +28,7 @@ import java.util.List;
 @Api(tags = "系统管理 - 超管功能")
 @RestController("AdminController")
 @RequestMapping(value = "/web/admin")
-public class AdminController {
-
-    @Resource
-    protected LoginService loginService;
-
-    @Autowired(required = false)
-    private List<LoginFillTokenInf> fillTokenInfList;
+public class AdminController extends LoginController {
 
     @ApiOperation(value = "幽灵登录", notes = "超管使用指定人员账号幽灵登录")
     @RequestMapping(value = "/ghost/login", method = RequestMethod.POST)
@@ -41,13 +36,5 @@ public class AdminController {
         LoginRes res = loginService.ghostLogin(customerNumber);
         afterLogin(res);
         return res;
-    }
-
-    protected void afterLogin(LoginRes res) {
-        if (FuncUtil.isNotEmpty(fillTokenInfList)) {
-            for (LoginFillTokenInf loginFillTokenInf : fillTokenInfList) {
-                loginFillTokenInf.fillToken(res);
-            }
-        }
     }
 }
