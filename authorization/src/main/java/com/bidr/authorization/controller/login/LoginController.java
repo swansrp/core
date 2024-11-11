@@ -68,8 +68,8 @@ public class LoginController {
             }
         }
         Map<String, Object> tokenValue = tokenService.getTokenValue();
-        log.info("用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
-                JsonUtil.toJson(tokenValue));
+        log.info("[登录信息]用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
+                JsonUtil.toJson(tokenValue, false, false, true));
     }
 
     @Auth(AuthToken.class)
