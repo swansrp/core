@@ -7,13 +7,16 @@ import com.bidr.authorization.annotation.msg.MsgCodeVerify;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.login.PasswordService;
+import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
 import io.swagger.annotations.Api;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: LoginController
@@ -31,6 +35,7 @@ import java.util.List;
  * @author Sharp
  * @since 2023/04/26 16:17
  */
+@Slf4j
 @Api(tags = "系统基础 - 登录操作")
 @RestController("LoginController")
 @RequestMapping(value = "/web/login")
@@ -40,6 +45,8 @@ public class LoginController {
     protected LoginService loginService;
     @Resource
     protected PasswordService passwordService;
+    @Resource
+    private TokenService tokenService;
 
 
     @Autowired(required = false)
@@ -60,6 +67,9 @@ public class LoginController {
                 loginFillTokenInf.fillToken(res);
             }
         }
+        Map<String, Object> tokenValue = tokenService.getTokenValue();
+        log.info("用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
+                JsonUtil.toJson(tokenValue));
     }
 
     @Auth(AuthToken.class)
