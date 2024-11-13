@@ -1,12 +1,14 @@
 package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.mapper.AcUserDao;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.StringUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -78,6 +80,11 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getUserName, userName)
                 .eq(AcUser::getValid, CommonConst.YES);
         super.delete(wrapper);
+    }
+
+    public String getUserNameByUserId(String userId) {
+        AcUser user = getByCustomerNumber(userId);
+        return FuncUtil.isNotEmpty(user) ? user.getName() : StringUtil.EMPTY;
     }
 }
 
