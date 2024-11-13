@@ -22,6 +22,8 @@ import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
 import com.bidr.admin.vo.PortalUploadProgressRes;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.kernel.common.convert.AfterConvert;
+import com.bidr.kernel.common.convert.Convert;
 import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.err.ErrCodeSys;
@@ -226,7 +228,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             }
             return true;
         } else {
-            return false;
+            Convert convert = field.getAnnotation(Convert.class);
+            AfterConvert afterConvert = field.getAnnotation(AfterConvert.class);
+            return FuncUtil.isNotEmpty(convert) || FuncUtil.isNotEmpty(afterConvert);
         }
     }
 
