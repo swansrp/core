@@ -1,17 +1,17 @@
 package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.mapper.AcUserDao;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * Title: AcUserService
@@ -85,6 +85,20 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
     public String getUserNameByUserId(String userId) {
         AcUser user = getByCustomerNumber(userId);
         return FuncUtil.isNotEmpty(user) ? user.getName() : StringUtil.EMPTY;
+    }
+
+    public Map<Object, Object> getNamesByCustomerNumberList(HashSet<Object> customerNumberList) {
+        Map<Object, Object> map = new HashMap<>();
+        if (FuncUtil.isNotEmpty(customerNumberList)) {
+            LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper()
+                    .in(AcUser::getCustomerNumber, customerNumberList).eq(AcUser::getValid, CommonConst.YES);
+            List<AcUser> users = select(wrapper);
+            Map<String, AcUser> acUserMap = ReflectionUtil.reflectToMap(users, AcUser::getCustomerNumber);
+            for (Object customerNumber : customerNumberList) {
+                map.put(customerNumber, acUserMap.get(customerNumber));
+            }
+        }
+        return map;
     }
 }
 
