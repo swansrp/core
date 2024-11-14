@@ -24,4 +24,19 @@ public @interface Convert {
     String field() default "";
 
     boolean ignoreNull() default true;
+
+    /**
+     * 如果使用 batch 对应的处理函数应接受Set<Object>为参数
+     * Map<Object, Object>作为返回值类型
+     *
+     * @return 是否支持列表并行处理
+     */
+    boolean batch() default false;
+
+    /**
+     * DiBoot 模块 bind处理之后进行
+     *
+     * @return 是否在bind之后处理
+     */
+    boolean after() default false;
 }

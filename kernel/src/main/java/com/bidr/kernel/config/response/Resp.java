@@ -2,11 +2,12 @@ package com.bidr.kernel.config.response;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.kernel.common.convert.AfterConvert;
-import com.bidr.kernel.common.convert.Convert;
 import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.exception.NoticeException;
-import com.bidr.kernel.utils.*;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.LambdaUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.diboot.core.binding.Binder;
 import lombok.Data;
 
@@ -44,76 +45,12 @@ public class Resp {
      */
     public static <T, VO> VO convert(T entity, Class<VO> voClass) {
         if (entity != null) {
-            fieldConvert(entity, voClass);
+            RespConvert.fieldConvert(entity, voClass);
             VO vo = Binder.convertAndBindRelations(entity, voClass);
-            fieldAfterConvert(entity, voClass);
+            RespConvert.fieldAfterConvert(vo, voClass);
             return vo;
         } else {
             return ReflectionUtil.newInstance(voClass);
-        }
-    }
-
-    private static <T, VO> void fieldConvert(T entity, Class<VO> voClass) {
-        ReflectionUtil.getFields(voClass).stream().filter((field) -> field.getAnnotation(Convert.class) != null)
-                .forEach(field -> {
-                    Convert convert = field.getAnnotation(Convert.class);
-                    Object value;
-                    if (FuncUtil.isNotEmpty(convert.field())) {
-                        value = ReflectionUtil.getValue(entity, convert.field(), Object.class);
-                    } else {
-                        value = ReflectionUtil.getValue(entity, field);
-                    }
-                    if (FuncUtil.isEmpty(value) && convert.ignoreNull()) {
-                        return;
-                    }
-                    if (FuncUtil.isNotEmpty(convert.bean())) {
-                        value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value);
-                    } else if (!FuncUtil.equals(convert.util(), Object.class)) {
-                        value = ReflectionUtil.invoke(convert.util(), convert.method(), value);
-                    }
-                    ReflectionUtil.setValue(field, entity, value);
-                });
-    }
-
-    private static <T, VO> void fieldAfterConvert(T entity, Class<VO> voClass) {
-        ReflectionUtil.getFields(voClass).stream().filter((field) -> field.getAnnotation(AfterConvert.class) != null)
-                .forEach(field -> {
-                    AfterConvert convert = field.getAnnotation(AfterConvert.class);
-                    Object value;
-                    if (FuncUtil.isNotEmpty(convert.field())) {
-                        value = ReflectionUtil.getValue(entity, convert.field(), Object.class);
-                    } else {
-                        value = ReflectionUtil.getValue(entity, field);
-                    }
-                    if (FuncUtil.isEmpty(value) && convert.ignoreNull()) {
-                        return;
-                    }
-                    if (FuncUtil.isNotEmpty(convert.bean())) {
-                        value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value);
-                    } else if (!FuncUtil.equals(convert.util(), Object.class)) {
-                        value = ReflectionUtil.invoke(convert.util(), convert.method(), value);
-                    }
-                    ReflectionUtil.setValue(field, entity, value);
-                });
-    }
-
-    private static <T, VO> void fieldAfterConvert(List<T> entityList, Class<VO> voClass) {
-        if (FuncUtil.isNotEmpty(entityList)) {
-            entityList.forEach(entity -> {
-                if (FuncUtil.isNotEmpty(entity)) {
-                    fieldAfterConvert(entity, voClass);
-                }
-            });
-        }
-    }
-
-    private static <T, VO> void fieldConvert(List<T> entityList, Class<VO> voClass) {
-        if (FuncUtil.isNotEmpty(entityList)) {
-            entityList.forEach(entity -> {
-                if (FuncUtil.isNotEmpty(entity)) {
-                    fieldConvert(entity, voClass);
-                }
-            });
         }
     }
 
@@ -185,17 +122,17 @@ public class Resp {
      * @return 目标数据列表
      */
     public static <T, VO> List<VO> convert(List<T> entityList, Class<VO> voClass) {
-        fieldConvert(entityList, voClass);
+        RespConvert.fieldConvert(entityList, voClass);
         List<VO> res = Binder.convertAndBindRelations(entityList, voClass);
-        fieldAfterConvert(res, voClass);
+        RespConvert.fieldAfterConvert(res, voClass);
         return res;
     }
 
     public static <T, R> Page<R> convert(IPage<T> page, Class<R> clazz) {
         Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
-        fieldConvert(page.getRecords(), clazz);
+        RespConvert.fieldConvert(page.getRecords(), clazz);
         List<R> targetList = Binder.convertAndBindRelations(page.getRecords(), clazz);
-        fieldAfterConvert(targetList, clazz);
+        RespConvert.fieldAfterConvert(targetList, clazz);
         res.setRecords(targetList);
         return res;
     }
