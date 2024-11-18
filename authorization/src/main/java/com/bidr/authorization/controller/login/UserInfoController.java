@@ -1,6 +1,8 @@
 package com.bidr.authorization.controller.login;
 
+import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.service.user.UserInfoService;
+import com.bidr.authorization.vo.group.UserGroupTreeRes;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.authorization.vo.user.UserInfoRes;
 import com.bidr.authorization.vo.user.UserRes;
@@ -9,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * Title: UserInfoController
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserInfoController {
 
     private final UserInfoService userInfoService;
+    private final UserGroupService userGroupService;
 
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     public UserInfoRes getUserInfo() {
@@ -33,5 +38,10 @@ public class UserInfoController {
     @RequestMapping(value = "/existed", method = RequestMethod.GET)
     public UserRes userExisted(UserExistedReq req) {
         return userInfoService.userExisted(req);
+    }
+
+    @RequestMapping(value = "/group/tree", method = RequestMethod.GET)
+    public List<UserGroupTreeRes> getGroup(String groupName) {
+        return userGroupService.getGroupTreeByUserDataScope(groupName);
     }
 }
