@@ -1,7 +1,9 @@
 package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.core.conditions.ISqlSegment;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.segments.OrderBySegmentList;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
@@ -366,6 +368,11 @@ public interface PortalSelectRepo<T> {
 
     default MPJLambdaWrapper<T> parseSort(QueryConditionReq req, MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(req.getSortList())) {
+            OrderBySegmentList orderCache = new OrderBySegmentList();
+            for (ISqlSegment iSqlSegment : wrapper.getExpression().getOrderBy()) {
+                orderCache.add(iSqlSegment);
+            }
+            wrapper.getExpression().getOrderBy().clear();
             for (SortVO sortVO : req.getSortList()) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
                     switch (PortalSortDict.of(sortVO.getType())) {
@@ -379,6 +386,9 @@ public interface PortalSelectRepo<T> {
                             break;
                     }
                 }
+            }
+            for (ISqlSegment iSqlSegment : orderCache) {
+                wrapper.getExpression().getOrderBy().add(iSqlSegment);
             }
         }
         return wrapper;
@@ -482,6 +492,11 @@ public interface PortalSelectRepo<T> {
     default MPJLambdaWrapper<T> parseSort(List<SortVO> sortList, Map<String, String> aliasMap,
                                           MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(sortList)) {
+            OrderBySegmentList orderCache = new OrderBySegmentList();
+            for (ISqlSegment iSqlSegment : wrapper.getExpression().getOrderBy()) {
+                orderCache.add(iSqlSegment);
+            }
+            wrapper.getExpression().getOrderBy().clear();
             for (SortVO sortVO : sortList) {
                 if (FuncUtil.isNotEmpty(sortVO.getProperty()) && FuncUtil.isNotEmpty(sortVO.getType())) {
                     String columnName = getColumnName(sortVO.getProperty(), aliasMap, wrapper.getEntityClass());
@@ -496,6 +511,9 @@ public interface PortalSelectRepo<T> {
                             break;
                     }
                 }
+            }
+            for (ISqlSegment iSqlSegment : orderCache) {
+                wrapper.getExpression().getOrderBy().add(iSqlSegment);
             }
         }
         return wrapper;
