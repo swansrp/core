@@ -8,10 +8,14 @@ import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: AcAccountService
@@ -81,6 +85,19 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
             }
         });
         return selectJoinList(AcAccount.class, wrapper);
+    }
+
+    public Map<Object, Object> getNamesByCustomerNumberList(HashSet<Object> customerNumberList) {
+        Map<Object, Object> map = new HashMap<>();
+        if (FuncUtil.isNotEmpty(customerNumberList)) {
+            LambdaQueryWrapper<AcAccount> wrapper = super.getQueryWrapper().in(AcAccount::getId, customerNumberList);
+            List<AcAccount> users = select(wrapper);
+            Map<String, AcAccount> acUserMap = ReflectionUtil.reflectToMap(users, AcAccount::getId);
+            for (Object customerNumber : customerNumberList) {
+                map.put(customerNumber, acUserMap.get(customerNumber));
+            }
+        }
+        return map;
     }
 }
 
