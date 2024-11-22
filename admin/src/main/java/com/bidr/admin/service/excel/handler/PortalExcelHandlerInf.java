@@ -5,6 +5,7 @@ import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import com.bidr.admin.dao.entity.SysPortalColumn;
+import com.bidr.admin.service.excel.validation.ExcelValidationHandler;
 import com.bidr.admin.service.excel.validation.PortalExcelValidationHandler;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.utils.FuncUtil;
@@ -42,10 +43,26 @@ public interface PortalExcelHandlerInf {
     }
 
     /**
+     * 导出excel模版
+     *
+     * @param os 文件输出流
+     */
+    default void templateExcel(OutputStream os, Class<?> voClass) {
+        String hiddenSheetName = "数据有效范围";
+        List<List<String>> head = buildExcelHead(voClass);
+        ExcelWriter excelWriter = EasyExcel.write(os).build();
+        WriteSheet data = EasyExcel.writerSheet(0).head(head)
+                .registerWriteHandler(new ExcelValidationHandler(voClass, hiddenSheetName)).build();
+        excelWriter.write(new ArrayList<>(), data);
+        excelWriter.finish();
+    }
+
+    /**
      * 根据配置生成excel表头
      *
-     * @param portal 配置
-     * @return
+     * @param portal  配置
+     * @param voClazz 目标类
+     * @return excel 表头
      */
     default List<List<String>> buildExcelHead(PortalWithColumnsRes portal, Class<?> voClazz) {
         List<List<String>> head = new ArrayList<>();
@@ -56,6 +73,25 @@ public interface PortalExcelHandlerInf {
                     if (field.getAnnotation(ExcelProperty.class) != null) {
                         head.add(Arrays.asList(field.getAnnotation(ExcelProperty.class).value()));
                     }
+                }
+            }
+        }
+        return head;
+    }
+
+    /**
+     * 根据配置生成excel表头
+     *
+     * @param voClazz 目标类
+     * @return excel 表头
+     */
+    default List<List<String>> buildExcelHead(Class<?> voClazz) {
+        List<List<String>> head = new ArrayList<>();
+        List<Field> fields = ReflectionUtil.getFields(voClazz);
+        if (FuncUtil.isNotEmpty(fields)) {
+            for (Field field : fields) {
+                if (field.getAnnotation(ExcelProperty.class) != null) {
+                    head.add(Arrays.asList(field.getAnnotation(ExcelProperty.class).value()));
                 }
             }
         }

@@ -1,6 +1,5 @@
 package com.bidr.admin.service.excel.validation;
 
-import com.alibaba.excel.write.handler.SheetWriteHandler;
 import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
 import com.alibaba.excel.write.metadata.holder.WriteWorkbookHolder;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,14 +11,10 @@ import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.utils.*;
-import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.platform.service.cache.dict.DictCacheService;
-import com.bidr.platform.utils.excel.EasyExcelUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.ss.usermodel.Workbook;
 
 import java.util.List;
 
@@ -31,14 +26,13 @@ import java.util.List;
  * @since 2024/02/19 09:19
  */
 @Slf4j
-public class PortalExcelValidationHandler implements SheetWriteHandler {
+public class PortalExcelValidationHandler extends ExcelValidationHandler {
 
     private final PortalWithColumnsRes portal;
-    private final String hiddenSheetName;
 
     public PortalExcelValidationHandler(PortalWithColumnsRes portal, String hiddenSheetName) {
+        super(Object.class, hiddenSheetName);
         this.portal = portal;
-        this.hiddenSheetName = hiddenSheetName;
     }
 
     @Override
@@ -52,7 +46,12 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
                 List<String> constraint;
                 switch (DictEnumUtil.getEnumByValue(column.getFieldType(), PortalFieldDict.class)) {
                     case ENUM:
-                        constraint = getDictConstraint(column);
+                    case ENUM_MULTI_IN_ONE:
+                        constraint = getDictConstraint(column.getReference());
+                        break;
+                    case TREE:
+                    case TREE_MULTI_IN_ONE:
+                        constraint = getTreeDictConstraint(column.getReference());
                         break;
                     case ENTITY:
                         constraint = getEntityConstraint(column);
@@ -62,7 +61,7 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
                         break;
                 }
                 if (FuncUtil.isNotEmpty(constraint)) {
-                    setDataValidation(writeSheetHolder, columnIndex, column, constraint);
+                    setDataValidation(writeSheetHolder, columnIndex, column.getDisplayName(), constraint);
                 }
                 columnIndex++;
             } catch (Exception e) {
@@ -71,12 +70,7 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
         }
     }
 
-    private List<String> getDictConstraint(SysPortalColumn column) {
-        List<KeyValueResVO> keyValue = BeanUtil.getBean(DictCacheService.class).getKeyValue(column.getReference());
-        return ReflectionUtil.getFieldList(keyValue, KeyValueResVO::getLabel);
-    }
-
-    private List<String> getEntityConstraint(SysPortalColumn column) throws ClassNotFoundException {
+    private List<String> getEntityConstraint(SysPortalColumn column) {
         List<String> constraint;
         SysPortal entityPortal = BeanUtil.getBean(SysPortalService.class)
                 .getByName(column.getReference(), PortalConfigContext.getPortalConfigRoleId());
@@ -95,30 +89,5 @@ public class PortalExcelValidationHandler implements SheetWriteHandler {
             constraint = ReflectionUtil.getFieldList(page.getRecords(), entityPortal.getNameColumn(), String.class);
             return constraint;
         }
-
-    }
-
-    private void setDataValidation(WriteSheetHolder writeSheetHolder, int columnIndex, SysPortalColumn column,
-                                   List<String> constraint) {
-        DataValidationHelper validationHelper = writeSheetHolder.getSheet().getDataValidationHelper();
-        CellRangeAddressList validationRange = new CellRangeAddressList(1, 60000, columnIndex, columnIndex);
-        Sheet hidden = writeSheetHolder.getSheet().getWorkbook().getSheet(hiddenSheetName);
-        int rowIndex = 0;
-        for (String s : constraint) {
-            Row row = hidden.getRow(rowIndex);
-            if (row == null) {
-                row = hidden.createRow(rowIndex);
-            }
-            row.createCell(columnIndex).setCellValue(s);
-            rowIndex++;
-        }
-        String excelLine = EasyExcelUtil.getExcelLine(columnIndex);
-        String refers = "=" + hiddenSheetName + "!$" + excelLine + "$1:$" + excelLine + "$" + (rowIndex);
-        DataValidationConstraint validationConstraint = validationHelper.createFormulaListConstraint(refers);
-        DataValidation dataValidation = validationHelper.createValidation(validationConstraint, validationRange);
-        dataValidation.setShowErrorBox(true);
-        dataValidation.createErrorBox("错误", "请选择正确的" + column.getDisplayName());
-        writeSheetHolder.getSheet().addValidationData(dataValidation);
-
     }
 }

@@ -18,6 +18,7 @@ import com.bidr.authorization.dao.repository.AcRoleService;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.kernel.common.convert.Convert;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
@@ -237,6 +238,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         handlePortalSortField(field, column);
         handlePortalDisplayOnlyField(field, column);
         handlePortalDisplayNoneField(field, column);
+        handleConvertField(field, column);
         handleBindField(field, column);
         handlePortalDictField(field, column);
         handlePortalMoneyField(field, column);
@@ -245,6 +247,16 @@ public class PortalConfigService implements LoginFillTokenInf {
         handlePortalTextAreaField(field, column);
         column.setRoleId(roleId);
         return column;
+    }
+
+    private void handleConvertField(Field field, SysPortalColumn column) {
+        Convert convertAnno = field.getAnnotation(Convert.class);
+        if (FuncUtil.isNotEmpty(convertAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
     }
 
     private void handleDisplayName(Field field, SysPortalColumn column) {
@@ -262,12 +274,22 @@ public class PortalConfigService implements LoginFillTokenInf {
     private void handlePortalEntityField(SysPortal portal, Field field, SysPortalColumn column) {
         PortalEntityField entityField = field.getAnnotation(PortalEntityField.class);
         if (FuncUtil.isNotEmpty(entityField)) {
-            column.setEditShow(CommonConst.NO);
-            column.setAddShow(CommonConst.NO);
+            if (FuncUtil.isNotEmpty(entityField.joinField())) {
+                column.setFieldType(PortalFieldDict.ENTITY.getValue());
+                column.setReference(entityField.entity().getSimpleName());
+                column.setDbField(entityField.joinField());
+                column.setEntityField(entityField.field());
+                column.setEditShow(CommonConst.YES);
+                column.setAddShow(CommonConst.YES);
+            } else {
+                column.setEditShow(CommonConst.NO);
+                column.setAddShow(CommonConst.NO);
+            }
             if (entityField.aggregation() && StringUtil.convertSwitch(portal.getAdvanced())) {
                 portal.setAdvanced(StringUtil.convertSwitch(false));
                 sysPortalService.updateById(portal);
             }
+
         }
     }
 
@@ -355,6 +377,8 @@ public class PortalConfigService implements LoginFillTokenInf {
         if (FuncUtil.isNotEmpty(bindFieldAnno)) {
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
         }
     }
 

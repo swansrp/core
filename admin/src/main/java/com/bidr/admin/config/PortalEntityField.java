@@ -34,6 +34,13 @@ public @interface PortalEntityField {
      */
     String field() default "";
 
+    /**
+     * 本实体对应字段
+     *
+     * @return
+     */
+    String joinField() default "";
+
     boolean group() default false;
 
     boolean aggregation() default false;
