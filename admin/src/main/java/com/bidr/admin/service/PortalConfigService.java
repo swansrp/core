@@ -31,7 +31,10 @@ import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.portal.AdminPortal;
+import com.diboot.core.binding.annotation.BindEntity;
+import com.diboot.core.binding.annotation.BindEntityList;
 import com.diboot.core.binding.annotation.BindField;
+import com.diboot.core.binding.annotation.BindFieldList;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiModel;
@@ -375,6 +378,27 @@ public class PortalConfigService implements LoginFillTokenInf {
     private void handleBindField(Field field, SysPortalColumn column) {
         BindField bindFieldAnno = field.getAnnotation(BindField.class);
         if (FuncUtil.isNotEmpty(bindFieldAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+        BindFieldList bindFieldList = field.getAnnotation(BindFieldList.class);
+        if (FuncUtil.isNotEmpty(bindFieldList)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+        BindEntity bindEntityAnno = field.getAnnotation(BindEntity.class);
+        if (FuncUtil.isNotEmpty(bindEntityAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+        BindEntityList bindFieldListAnno = field.getAnnotation(BindEntityList.class);
+        if (FuncUtil.isNotEmpty(bindFieldListAnno)) {
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
             column.setFilterAble(CommonConst.NO);
