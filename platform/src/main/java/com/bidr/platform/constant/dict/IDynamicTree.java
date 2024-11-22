@@ -4,6 +4,7 @@ import com.bidr.kernel.constant.dict.MetaDictName;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.platform.bo.tree.TreeDict;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,6 +39,7 @@ public interface IDynamicTree extends MetaDictName {
         dict.setOrder(order);
         dict.setTreeType(treeType);
         dict.setTreeTitle(treeTitle);
+        dict.setChildren(new ArrayList<>());
         return dict;
     }
 

@@ -67,4 +67,23 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
         }
         return resList;
     }
+
+    public List<KeyValueResVO> getAll(String dictName) {
+        Map<String, List<TreeDict>> cacheData = super.getAllCache();
+        List<KeyValueResVO> resList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(cacheData)) {
+            List<TreeDict> treeDictList = cacheData.get(dictName);
+            buildKeyValueResVO(resList, treeDictList);
+        }
+        return resList;
+    }
+
+    private void buildKeyValueResVO(List<KeyValueResVO> resList, List<TreeDict> treeDictList) {
+        if (FuncUtil.isNotEmpty(treeDictList)) {
+            for (TreeDict treeDict : treeDictList) {
+                resList.add(new KeyValueResVO(treeDict.getValue().toString(), treeDict.getLabel()));
+                buildKeyValueResVO(resList, treeDict.getChildren());
+            }
+        }
+    }
 }
