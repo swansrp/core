@@ -123,7 +123,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
         if (!strict) {
             ENTITY originalEntity = getRepo().selectById(entity);
-            entity = ReflectionUtil.merge(entity, originalEntity, true);
+            entity = ReflectionUtil.copyAndMerge(entity, originalEntity, true);
         }
         if (isAdmin()) {
             adminBeforeUpdate(entity);

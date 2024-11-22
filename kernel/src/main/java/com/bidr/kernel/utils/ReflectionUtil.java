@@ -192,6 +192,7 @@ public class ReflectionUtil {
         }
         return (Class<?>) params[index];
     }
+
     private static <R, T> R buildTree(Class<R> resultClazz, Field children, T parentData, List<T> dataList, Field field,
                                       Field parentField) {
         R res = ReflectionUtil.copy(parentData, resultClazz);
@@ -518,14 +519,14 @@ public class ReflectionUtil {
         return res;
     }
 
-    public static <T> T getFieldValue(@NotNull Object object, @NotNull String fullName)
-            throws SecurityException, IllegalArgumentException {
+    public static <T> T getFieldValue(@NotNull Object object,
+                                      @NotNull String fullName) throws SecurityException, IllegalArgumentException {
         return getFieldValue(object, fullName, false);
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T getFieldValue(@NotNull Object object, @NotNull String fieldName, boolean traceable)
-            throws SecurityException, IllegalArgumentException {
+    public static <T> T getFieldValue(@NotNull Object object, @NotNull String fieldName,
+                                      boolean traceable) throws SecurityException, IllegalArgumentException {
         Field field;
         String[] fieldNames = fieldName.split("\\.");
         for (String targetField : fieldNames) {
@@ -736,7 +737,7 @@ public class ReflectionUtil {
         List<Class<?>> classList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(paramArray)) {
             for (Object param : paramArray) {
-                if(FuncUtil.isNotEmpty(param)) {
+                if (FuncUtil.isNotEmpty(param)) {
                     classList.add(param.getClass());
                 }
             }
@@ -811,5 +812,10 @@ public class ReflectionUtil {
             }
         }
         return dist;
+    }
+
+    public static <T, K> K copyAndMerge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
+        K copy = (K) copy(dist, dist.getClass());
+        return merge(source, copy, ignoreNull);
     }
 }
