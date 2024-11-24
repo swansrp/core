@@ -737,7 +737,7 @@ public class ReflectionUtil {
         List<Class<?>> classList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(paramArray)) {
             for (Object param : paramArray) {
-                if (FuncUtil.isNotEmpty(param)) {
+                if (param != null) {
                     classList.add(param.getClass());
                 }
             }
