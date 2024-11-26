@@ -44,6 +44,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -68,7 +70,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PortalConfigService implements LoginFillTokenInf {
-
     public static final Long DEFAULT_CONFIG_ROLE_ID = 0L;
     private static final Map<Class<?>, PortalFieldDict> FIELD_MAP = new HashMap<>();
     private static final Map<Long, String> ROLE_BIND_PORTAL_MAP = new HashMap<>();
@@ -85,6 +86,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         ROLE_BIND_PORTAL_MAP.put(DEFAULT_CONFIG_ROLE_ID, "默认配置");
     }
 
+    private final ApplicationContext applicationContext;
     private final SysPortalService sysPortalService;
     private final SysPortalColumnService sysPortalColumnService;
     private final SysPortalAssociateService sysPortalAssociateService;
@@ -106,6 +108,13 @@ public class PortalConfigService implements LoginFillTokenInf {
                     (o1, o2) -> StringUtils.compare(o1.getName(), o2.getName()));
             portalControllerSet.addAll(portalControllerList);
             for (Class<?> portalControllerClass : portalControllerSet) {
+                Profile profileAnno = portalControllerClass.getAnnotation(Profile.class);
+                if (FuncUtil.isNotEmpty(profileAnno)) {
+                    if (!new HashSet<>(Arrays.asList(profileAnno.value()))
+                            .containsAll(Arrays.asList(applicationContext.getEnvironment().getActiveProfiles()))) {
+                        continue;
+                    }
+                }
                 if (AdminControllerInf.class.isAssignableFrom(portalControllerClass)) {
                     Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 0);
                     Class<?> voClass = ReflectionUtil.getSuperClassGenericType(portalControllerClass, 1);
