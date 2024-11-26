@@ -47,8 +47,7 @@ public class DateUtil {
     public static final String TEXT_SECOND_UNIT = "秒";
     public static final String PATTERN_DATE_NORMAL = "^[1-9]\\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$";
     public static final String PATTERN_TIME_NORMAL = "^(20|21|22|23|[0-1]\\d):[0-5]\\d:[0-5]\\d$";
-    public static final String PATTERN_DATE_TIME_NORMAL =
-            "^[1-9]\\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])\\s+(20|21|22|23|[0-1]\\d):[0-5]\\d:[0-5]\\d$";
+    public static final String PATTERN_DATE_TIME_NORMAL = "^[1-9]\\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])\\s+(20|21|22|23|[0-1]\\d):[0-5]\\d:[0-5]\\d$";
     private static final int MILL_SECOND_PER_SECOND = 1000;
 
     /**
@@ -155,6 +154,21 @@ public class DateUtil {
         cal.set(Calendar.SECOND, 59);
         cal.set(Calendar.MILLISECOND, 999);
         return cal.getTime();
+    }
+
+    public static int currentYear() {
+        Calendar cal = Calendar.getInstance();
+        return cal.get(Calendar.YEAR);
+    }
+
+    public static int currentMonth() {
+        Calendar cal = Calendar.getInstance();
+        return cal.get(Calendar.MONTH);
+    }
+
+    public static int currentYearWeek() {
+        Calendar cal = Calendar.getInstance();
+        return cal.get(Calendar.WEEK_OF_YEAR);
     }
 
     public static Date tomorrow(Date date, int defaultType, int defaultValue) {

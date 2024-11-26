@@ -705,6 +705,32 @@ public class ReflectionUtil {
         return map;
     }
 
+    public static <T, K> Map<K, List<T>> reflectToListMap(Collection<T> list, GetFunc<T, K> getFunc) {
+        Map<K, List<T>> map = new HashMap<>(list.size());
+        if (CollectionUtils.isNotEmpty(list)) {
+            for (T t : list) {
+                K key = getFunc.apply(t);
+                List<T> valueList = map.getOrDefault(key, new ArrayList<>());
+                valueList.add(t);
+                map.put(key, valueList);
+            }
+        }
+        return map;
+    }
+
+    public static <T, K> Map<K, List<T>> reflectToListLinkedMap(Collection<T> list, GetFunc<T, K> getFunc) {
+        Map<K, List<T>> map = new LinkedHashMap<>(list.size());
+        if (CollectionUtils.isNotEmpty(list)) {
+            for (T t : list) {
+                K key = getFunc.apply(t);
+                List<T> valueList = map.getOrDefault(key, new ArrayList<>());
+                valueList.add(t);
+                map.put(key, valueList);
+            }
+        }
+        return map;
+    }
+
     public static <T> Map<String, T> reflectToLinkedMap(Collection<T> list, String... fieldArr) {
         Map<String, T> map = new LinkedHashMap<>();
         for (T t : list) {
