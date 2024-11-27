@@ -79,6 +79,7 @@ public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
     public void onException(Exception exception, AnalysisContext context) throws Exception {
         int row = context.readRowHolder().getRowIndex() + 1;
         handler.setProgress(UploadProgressStep.FAILED, maxLine, loaded, "上传数据第" + row + "行数据出错,请检查");
+        handler.setProgress(UploadProgressStep.FAILED, maxLine, loaded, exception.getMessage());
         super.onException(exception, context);
     }
 }

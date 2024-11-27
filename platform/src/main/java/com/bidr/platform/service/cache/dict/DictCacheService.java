@@ -22,6 +22,10 @@ import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +47,7 @@ public class DictCacheService implements CommandLineRunner {
     private final SysDictService sysDictService;
     private final DynamicMemoryCacheManager dynamicMemoryCacheManager;
     private final Map<String, DictCacheProvider> MAP = new ConcurrentHashMap<>();
+    private final PlatformTransactionManager transactionManager;
     @Value("${my.base-package}")
     private String basePackage;
 
@@ -103,7 +108,16 @@ public class DictCacheService implements CommandLineRunner {
     public void refresh() {
         if (FuncUtil.isNotEmpty(MAP)) {
             for (Map.Entry<String, DictCacheProvider> entry : MAP.entrySet()) {
-                entry.getValue().refresh();
+                DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+                def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                TransactionStatus status = transactionManager.getTransaction(def);
+                try {
+                    entry.getValue().refresh();
+                    transactionManager.commit(status);
+                } catch (Exception e) {
+                    transactionManager.rollback(status);
+                    // 处理异常
+                }
             }
         } else {
             run(null);
