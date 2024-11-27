@@ -77,8 +77,7 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
     }
 
     public static String registerBean(ApplicationContext applicationContext, String name, Class<?> beanClass) {
-        DefaultListableBeanFactory registry =
-                (DefaultListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
+        DefaultListableBeanFactory registry = (DefaultListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
         return registerBean(name, beanClass, registry);
     }
 
@@ -161,7 +160,13 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
             log.info("Call BeanUtils too early");
             return null;
         }
-        return ctx.getBean(name);
+        try {
+            return ctx.getBean(name);
+        } catch (BeansException e) {
+            log.error("", e);
+            return null;
+        }
+
     }
 
     public static void validateBeanFunction(Object serviceBean, String methodName, Class<?>... parameterArray) {
