@@ -169,7 +169,15 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
     @Override
     public void doAfterAllAnalysed(AnalysisContext analysisContext) {
         if (FuncUtil.isNotEmpty(dataList)) {
-            saveData();
+            try {
+                saveData();
+            } catch (Exception e) {
+                try {
+                    onException(e, analysisContext);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
         }
         uploadProgress.uploadProgressFinish();
         memoryFree();

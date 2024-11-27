@@ -1,8 +1,8 @@
 package com.bidr.admin.controller.common;
 
 import com.bidr.admin.service.common.BaseUploadParseService;
-import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import com.bidr.kernel.utils.HttpUtil;
+import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -28,10 +28,7 @@ public abstract class BaseUploadParseController {
     @ApiOperation(value = "上传解析文件")
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
     public void parseExcel(MultipartFile file, HttpServletRequest request) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        String[] filename = originalFilename.split("\\.");
-        File tempFile = File.createTempFile(filename[0], "." + filename[1]);
-        file.transferTo(tempFile);
+        File tempFile = HttpUtil.getTempFile(file);
         getUploadParseService().startUploadProgress(getUploadParseService().getTotal());
         getUploadParseService().parseFile(tempFile, HttpUtil.getParamMap(request));
         tempFile.deleteOnExit();
