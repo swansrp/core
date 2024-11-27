@@ -1,5 +1,6 @@
 package com.bidr.platform.controller;
 
+import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.platform.utils.QrCodeUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -12,7 +13,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * @author sharp
@@ -28,10 +28,7 @@ public class QrCodeController {
     @ApiOperation(value = "识别二维码")
     @RequestMapping(value = "/parse", method = RequestMethod.POST)
     public String parseQrCode(@RequestParam("file") @RequestPart MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        String[] filename = originalFilename.split("\\.");
-        File tempFile = File.createTempFile(UUID.randomUUID().toString(), "." + filename[1]);
-        file.transferTo(tempFile);
+        File tempFile = HttpUtil.getTempFile(file);
         String result = QrCodeUtil.parseQrCode(tempFile);
         tempFile.deleteOnExit();
         return result;

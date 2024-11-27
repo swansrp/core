@@ -54,7 +54,15 @@ public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
 
     @Override
     public void doAfterAllAnalysed(AnalysisContext context) {
-        saveData();
+        try {
+            saveData();
+        } catch (Exception e) {
+            try {
+                onException(e, context);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
         log.trace("所有数据解析完成！");
         handleContext.clear();
         cachedDataList.clear();
