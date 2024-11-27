@@ -3,6 +3,7 @@ package com.bidr.kernel.utils;
 import com.bidr.kernel.validate.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -185,7 +186,7 @@ public class HttpUtil {
 
     public static void export(HttpServletRequest request, HttpServletResponse response, String contentType,
                               String charset, String fileName, byte[] buffers) {
-        contentDisposition(fileName, request ,response);
+        contentDisposition(fileName, request, response);
         // response.reset();
         response.setContentType(contentType);
         response.setCharacterEncoding(charset);
@@ -210,6 +211,19 @@ public class HttpUtil {
     public static InputStream getStream(String url, Proxy proxy) throws IOException {
         URLConnection con = new URL(url).openConnection(proxy);
         return con.getInputStream();
+    }
+
+    public static File getTempFile(MultipartFile file) throws IOException {
+        String originalFilename = file.getOriginalFilename();
+        int index = originalFilename.lastIndexOf(".");
+        File tempFile;
+        if (index != -1) {
+            tempFile = File.createTempFile(originalFilename.substring(0, index), originalFilename.substring(index));
+        } else {
+            tempFile = File.createTempFile(originalFilename + RandomUtil.createRandomLetter(5), ".tmp");
+        }
+        file.transferTo(tempFile);
+        return tempFile;
     }
 }
 
