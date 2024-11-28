@@ -42,7 +42,7 @@ public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
             handler.setProgress(UploadProgressStep.VALIDATE, maxLine, null, null);
         }
         T entity = handler.parse(data, handleContext, context);
-        log.trace("解析到一条数据:{}", JsonUtil.toJson(data));
+        log.trace("解析到一条数据:{}", JsonUtil.toJson(entity));
         if (handler.validate(entity, cachedDataList, handleContext)) {
             cachedDataList.add(entity);
         }
