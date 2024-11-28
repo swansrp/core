@@ -111,6 +111,20 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
+    @ApiOperation("删除数据列表")
+    @RequestMapping(value = "/delete/list", method = RequestMethod.POST)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
+    public void deleteList(@RequestBody List<String> idList) {
+        if (FuncUtil.isNotEmpty(idList)) {
+            for (String id : idList) {
+                deleteEntity(new IdReqVO(id));
+            }
+        }
+        Resp.notice("删除列表成功");
+    }
+
+    @Override
+    @ApiIgnore
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)

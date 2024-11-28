@@ -513,7 +513,8 @@ public interface PortalSelectRepo<T> {
                 }
             }
             for (ISqlSegment iSqlSegment : orderCache) {
-                wrapper.getExpression().getOrderBy().add(iSqlSegment);
+                String[] s = iSqlSegment.getSqlSegment().split(" ");
+                wrapper.orderBy(true, s[1].equals("ASC"), s[0]);
             }
         }
         return wrapper;

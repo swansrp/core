@@ -52,6 +52,14 @@ public interface AdminControllerInf<ENTITY, VO> {
     void delete(@RequestBody IdReqVO vo);
 
     /**
+     * 删除数据列表
+     *
+     * @param idList 数据
+     */
+
+    void deleteList(@RequestBody List<String> idList);
+
+    /**
      * 修改数据
      *
      * @param vo     数据
