@@ -10,6 +10,7 @@ import com.bidr.platform.service.excel.ModelDataListener;
 import com.bidr.platform.utils.excel.EasyExcelUtil;
 import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
@@ -19,6 +20,8 @@ import java.util.Map;
 public abstract class BaseExcelParseService<ENTITY, VO> implements PortalExcelUploadProgressInf, PortalExcelHandlerInf {
     @Resource
     protected TokenService tokenService;
+    @Resource
+    protected PlatformTransactionManager transactionManager;
 
     protected Class<VO> getEntityClass() {
         return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
