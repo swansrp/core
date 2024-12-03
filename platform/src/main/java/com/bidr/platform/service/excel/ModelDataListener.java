@@ -8,6 +8,10 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.platform.constant.upload.UploadProgressStep;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.util.List;
 import java.util.Map;
@@ -23,15 +27,27 @@ import java.util.Map;
 public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
     private final EasyExcelHandler<T, VO> handler;
     private final Map<String, Object> handleContext;
+    private final PlatformTransactionManager transactionManager;
+    private final TransactionStatus transactionStatus;
     private Integer maxLine;
     private Integer loaded;
     private List<T> cachedDataList = ListUtils.newArrayList();
 
-    public ModelDataListener(EasyExcelHandler<T, VO> handler, Map<String, Object> handleContext) {
+    public ModelDataListener(EasyExcelHandler<T, VO> handler, Map<String, Object> handleContext,
+                             PlatformTransactionManager transactionManager) {
         this.handler = handler;
         this.handleContext = handleContext;
         this.maxLine = -1;
         this.loaded = 0;
+        this.transactionManager = transactionManager;
+        if (FuncUtil.isNotEmpty(transactionManager)) {
+            DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+            def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            transactionStatus = transactionManager.getTransaction(def);
+        } else {
+            transactionStatus = null;
+        }
+
     }
 
     @Override
@@ -56,6 +72,9 @@ public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
     public void doAfterAllAnalysed(AnalysisContext context) {
         try {
             saveData();
+            if (FuncUtil.isNotEmpty(transactionStatus)) {
+                transactionManager.commit(transactionStatus);
+            }
         } catch (Exception e) {
             try {
                 onException(e, context);
@@ -88,6 +107,9 @@ public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
         int row = context.readRowHolder().getRowIndex() + 1;
         handler.setProgress(UploadProgressStep.FAILED, maxLine, loaded, "上传数据第" + row + "行数据出错,请检查");
         handler.setProgress(UploadProgressStep.FAILED, maxLine, loaded, exception.getMessage());
+        if (FuncUtil.isNotEmpty(transactionStatus)) {
+            transactionManager.rollback(transactionStatus);
+        }
         super.onException(exception, context);
     }
 }
