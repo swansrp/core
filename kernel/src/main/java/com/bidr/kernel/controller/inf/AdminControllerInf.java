@@ -121,8 +121,7 @@ public interface AdminControllerInf<ENTITY, VO> {
             for (String column : summaryColumns) {
                 String columnName = getRepo().getColumnName(column, summaryAliasMap, getEntityClass());
                 wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as %s", columnName, column), wrapper.isHasAlias(),
-                                wrapper.getAlias()));
+                        .add(new SelectString(String.format("sum(%s) as %s", columnName, column), wrapper.getAlias()));
             }
         }
         // 去除group by成分

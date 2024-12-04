@@ -304,7 +304,17 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 联表wrapper
      */
     default MPJLambdaWrapper<ENTITY> getJoinWrapper() {
-        return new MPJLambdaWrapper<>(getEntityClass());
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        getJoinWrapper(wrapper);
+        return wrapper;
+    }
+
+    /**
+     * 提供 wrapper处理函数
+     *
+     * @param wrapper 联表wrapper
+     */
+    default void getJoinWrapper(MPJLambdaWrapper<ENTITY> wrapper) {
     }
 
     default Class<VO> getVoClass() {

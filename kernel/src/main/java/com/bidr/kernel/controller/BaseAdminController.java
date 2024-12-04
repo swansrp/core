@@ -21,6 +21,7 @@ import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.GeneralSummaryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -236,21 +237,25 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        Map<String, String> summaryAliasMap = null;
-        Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            summaryAliasMap = getPortalService().getSummaryAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            havingFields = getPortalService().getHavingFields();
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+            }
         }
-        wrapper.getSelectColumns().clear();
-        buildSummaryWrapper(req.getColumns(), summaryAliasMap, wrapper);
-        if (FuncUtil.isNotEmpty(req.getConditionList())) {
-            getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, havingFields, wrapper);
-        }
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getConditionList())) {
+                    getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
+                            getPortalService().getHavingFields(), from);
+                } else {
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
+                }
+            }
+            return from;
+        });
         return getRepo().selectJoinMap(wrapper);
     }
 
@@ -395,19 +400,24 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        Map<String, String> summaryAliasMap = null;
-        Map<String, String> aliasMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            summaryAliasMap = getPortalService().getSummaryAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+            }
         }
-        wrapper.getSelectColumns().clear();
-        buildSummaryWrapper(req.getColumns(), summaryAliasMap, wrapper);
-        if (FuncUtil.isNotEmpty(req.getCondition())) {
-            getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, wrapper);
-        }
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getCondition())) {
+                    getRepo().parseAdvancedQuery(req.getCondition(), getPortalService().getAliasMap(), from);
+                } else {
+                    getRepo().parseAdvancedQuery(req.getCondition(), null, from);
+                }
+            }
+            return from;
+        });
         return getRepo().selectJoinMap(wrapper);
     }
 
