@@ -7,7 +7,6 @@ import com.bidr.admin.config.PortalEntityField;
 import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.config.PortalSelect;
 import com.bidr.admin.constant.dict.PortalFieldDict;
-import com.bidr.platform.constant.upload.UploadProgressStep;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
@@ -19,7 +18,6 @@ import com.bidr.admin.service.excel.handler.PortalExcelUpdateHandlerInf;
 import com.bidr.admin.service.excel.listener.PortalExcelInsertListener;
 import com.bidr.admin.service.excel.listener.PortalExcelUpdateListener;
 import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
-import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.common.convert.Convert;
@@ -35,8 +33,10 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.platform.bo.excel.ExcelExportBO;
+import com.bidr.platform.constant.upload.UploadProgressStep;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.dict.DictCacheService;
+import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import com.diboot.core.binding.annotation.BindField;
 import com.github.yulichang.toolkit.support.ColumnCache;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -151,6 +151,13 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         return alias + "." + selectSqlName;
     }
 
+    @Override
+    public final MPJLambdaWrapper<ENTITY> getJoinWrapper() {
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        getJoinWrapper(wrapper);
+        return wrapper;
+    }
+
     /**
      * 根据vo
      * 生成生成联表查询wrapper
@@ -159,8 +166,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
      * @return 联表wrapper
      */
     @Override
-    public MPJLambdaWrapper<ENTITY> getJoinWrapper() {
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+    public void getJoinWrapper(MPJLambdaWrapper<ENTITY> wrapper) {
         Map<String, String> selectColumnMap = new LinkedHashMap<>();
         List<String> groupColumns = new ArrayList<>();
         List<String> unSelectFields = new ArrayList<>();
@@ -176,7 +182,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             for (Map.Entry<String, String> entry : selectColumnMap.entrySet()) {
                 wrapper.getSelectColum()
                         .add(new SelectString(StringUtil.joinWith(" as ", entry.getKey(), entry.getValue()),
-                                wrapper.isHasAlias(), wrapper.getAlias()));
+                                wrapper.getAlias()));
             }
         } else {
             if (FuncUtil.isNotEmpty(unSelectFields)) {
@@ -187,7 +193,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                         String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
                         wrapper.getSelectColum()
                                 .add(new SelectString(StringUtil.joinWith(" as ", sqlFieldName, field.getName()),
-                                        wrapper.isHasAlias(), wrapper.getAlias()));
+                                        wrapper.getAlias()));
                     }
                 }
             }
@@ -197,7 +203,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 wrapper.groupBy(groupColumn);
             }
         }
-        return wrapper;
     }
 
 
@@ -263,12 +268,10 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 SelectCache cache = cacheMap.get(portalEntityField.field());
                 sqlFieldName = StringUtil.joinWith(".", alias, cache.getColumn());
                 wrapper.getSelectColum()
-                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.isHasAlias(),
-                                wrapper.getAlias()));
+                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
             } else {
                 wrapper.getSelectColum()
-                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.isHasAlias(),
-                                wrapper.getAlias()));
+                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
             }
             if (portalEntityField.group()) {
                 wrapper.groupBy(field.getName());

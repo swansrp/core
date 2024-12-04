@@ -40,10 +40,9 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
     }
 
     @Override
-    public MPJLambdaWrapper<AcUser> getJoinWrapper() {
-        MPJLambdaWrapper<AcUser> wrapper = super.getJoinWrapper();
+    public void getJoinWrapper(MPJLambdaWrapper<AcUser> wrapper) {
+        super.getJoinWrapper(wrapper);
         wrapper.selectAs(AcDept::getName, UserRes::getDeptName);
         wrapper.leftJoin(AcDept.class, DbUtil.getTableName(AcDept.class), AcDept::getDeptId, AcUser::getDeptId);
-        return wrapper;
     }
 }
