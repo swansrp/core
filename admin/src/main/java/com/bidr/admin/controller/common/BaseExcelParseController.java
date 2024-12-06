@@ -9,6 +9,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -31,7 +32,7 @@ public abstract class BaseExcelParseController<ENTITY, EXCEL> {
 
     @ApiOperation(value = "上传解析文件")
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
-    public void parseExcel(MultipartFile file, HttpServletRequest request) throws IOException {
+    public void parseExcel(@RequestPart("file") MultipartFile file, HttpServletRequest request) throws IOException {
         File tempFile = HttpUtil.getTempFile(file);
         getExcelParseService().parseFile(tempFile, HttpUtil.getParamMap(request));
         tempFile.deleteOnExit();

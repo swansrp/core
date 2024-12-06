@@ -35,6 +35,7 @@ import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.platform.bo.excel.ExcelExportBO;
 import com.bidr.platform.constant.upload.UploadProgressStep;
 import com.bidr.platform.dao.entity.SysDict;
+import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import com.diboot.core.binding.annotation.BindField;
@@ -77,6 +78,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     protected TokenService tokenService;
     @Resource
     protected ApplicationContext applicationContext;
+    @Resource
+    protected SysConfigCacheService sysConfigCacheService;
 
     @Override
     public void run(String... args) {
