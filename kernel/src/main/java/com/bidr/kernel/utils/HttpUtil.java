@@ -14,6 +14,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -184,6 +185,18 @@ public class HttpUtil {
         }
     }
 
+    public static void setExcelExportContent(HttpServletRequest request, HttpServletResponse response,
+                                             String fileName) {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        int suffixIndex = fileName.lastIndexOf(".");
+        if (suffixIndex != -1) {
+            String suffix = fileName.substring(suffixIndex);
+            fileName = fileName.substring(0, suffixIndex) + "-" + DateUtil.formatDate(new Date(), DateUtil.DATE_TIME) +
+                    suffix;
+        }
+        contentDisposition(fileName, request, response);
+    }
+
     public static void export(HttpServletRequest request, HttpServletResponse response, String contentType,
                               String charset, String fileName, byte[] buffers) {
         contentDisposition(fileName, request, response);
@@ -199,8 +212,7 @@ public class HttpUtil {
     }
 
     public static boolean systemRequest(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI()
-                .matches(".*/(actuator|webjars|v3|captcha.*|csrf|swagger.*|error).*");
+        return httpServletRequest.getRequestURI().matches(".*/(actuator|webjars|v3|captcha.*|csrf|swagger.*|error).*");
     }
 
     public static InputStream getStream(String url) throws IOException {
