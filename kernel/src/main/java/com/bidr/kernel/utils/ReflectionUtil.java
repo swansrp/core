@@ -771,7 +771,7 @@ public class ReflectionUtil {
         if (FuncUtil.isNotEmpty(classList)) {
             if (obj instanceof Class) {
                 try {
-                    return getMethod(obj, methodName, classList.toArray(new Class<?>[0])).invoke(null, paramArray);
+                    return getMethod((Class<?>)obj, methodName, classList.toArray(new Class<?>[0])).invoke(null, paramArray);
                 } catch (Exception var4) {
                     ReflectionUtils.handleReflectionException(var4);
                     throw new IllegalStateException("Should never get here");
@@ -784,7 +784,7 @@ public class ReflectionUtil {
         } else {
             if (obj instanceof Class) {
                 try {
-                    return getMethod(obj, methodName, classList.toArray(new Class<?>[0])).invoke(null);
+                    return getMethod((Class<?>)obj, methodName, classList.toArray(new Class<?>[0])).invoke(null);
                 } catch (Exception var4) {
                     ReflectionUtils.handleReflectionException(var4);
                     throw new IllegalStateException("Should never get here");
