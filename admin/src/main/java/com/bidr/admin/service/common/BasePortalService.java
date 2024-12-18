@@ -184,7 +184,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         if (FuncUtil.isNotEmpty(selectColumnMap)) {
             for (Map.Entry<String, String> entry : selectColumnMap.entrySet()) {
                 wrapper.getSelectColum()
-                        .add(new SelectString(StringUtil.joinWith(" as ", entry.getKey(), entry.getValue()),
+                        .add(new SelectString(StringUtil.joinWith(" as ", entry.getKey(), "'" + entry.getValue() + "'"),
                                 wrapper.getAlias()));
             }
         } else {
@@ -194,9 +194,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                     Field field = fieldMap.get(unselectedField);
                     if (FuncUtil.isNotEmpty(field)) {
                         String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
-                        wrapper.getSelectColum()
-                                .add(new SelectString(StringUtil.joinWith(" as ", sqlFieldName, field.getName()),
-                                        wrapper.getAlias()));
+                        wrapper.getSelectColum().add(new SelectString(
+                                StringUtil.joinWith(" as ", sqlFieldName, "'" + field.getName() + "'"),
+                                wrapper.getAlias()));
                     }
                 }
             }

@@ -110,8 +110,8 @@ public class PortalConfigService implements LoginFillTokenInf {
             for (Class<?> portalControllerClass : portalControllerSet) {
                 Profile profileAnno = portalControllerClass.getAnnotation(Profile.class);
                 if (FuncUtil.isNotEmpty(profileAnno)) {
-                    if (!new HashSet<>(Arrays.asList(profileAnno.value()))
-                            .containsAll(Arrays.asList(applicationContext.getEnvironment().getActiveProfiles()))) {
+                    if (!new HashSet<>(Arrays.asList(profileAnno.value())).containsAll(
+                            Arrays.asList(applicationContext.getEnvironment().getActiveProfiles()))) {
                         continue;
                     }
                 }
@@ -129,7 +129,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private List<Field> getFields(Class<?> clazz) {
-        Collection<Field> fields = ReflectionUtil.getFieldMap(clazz).values();
+        Collection<Field> fields = ReflectionUtil.reflectToLinkedMap(ReflectionUtil.getFields(clazz),
+                Field::getName).values();
         return fields.stream().filter(field -> {
             JsonIgnore annotation = field.getAnnotation(JsonIgnore.class);
             return annotation == null;
@@ -256,6 +257,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         handlePortalMoneyField(field, column);
         handlePortalPercentField(field, column);
         handlePortalImageField(field, column);
+        handlePortalAudioField(field, column);
         handlePortalTextAreaField(field, column);
         column.setRoleId(roleId);
         return column;
@@ -346,6 +348,14 @@ public class PortalConfigService implements LoginFillTokenInf {
         PortalImageField portalImageField = field.getAnnotation(PortalImageField.class);
         if (FuncUtil.isNotEmpty(portalImageField)) {
             column.setFieldType(PortalFieldDict.IMAGE.getValue());
+            column.setFilterAble(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalAudioField(Field field, SysPortalColumn column) {
+        PortalAudioField portalAudioField = field.getAnnotation(PortalAudioField.class);
+        if (FuncUtil.isNotEmpty(portalAudioField)) {
+            column.setFieldType(PortalFieldDict.AUDIO.getValue());
             column.setFilterAble(CommonConst.NO);
         }
     }
