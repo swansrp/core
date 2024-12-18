@@ -79,10 +79,10 @@ public class PasswordServiceImpl implements PasswordService {
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
         Validator.assertNotBlank(user.getPassword(), AccountErrCode.AC_PASSWORD_NOT_EXISTED);
-        Validator.assertTrue(Md5Util.verify(user.getPassword(), req.getOldPassword()),
+        Validator.assertTrue(Md5Util.verify(req.getOldPassword(), user.getPassword()),
                 AccountErrCode.AC_PASSWORD_OLD_NOT_RIGHT);
-        Validator.assertNotEquals(req.getPassword(), req.getPasswordConfirm(), AccountErrCode.AC_PASSWORD_CONFIRM_DIFF);
-        Validator.assertFalse(Md5Util.verify(user.getPassword(), req.getPassword()),
+        Validator.assertEquals(req.getPassword(), req.getPasswordConfirm(), AccountErrCode.AC_PASSWORD_CONFIRM_DIFF);
+        Validator.assertFalse(Md5Util.verify(req.getPassword(), user.getPassword()),
                 AccountErrCode.AC_PASSWORD_OLD_NEW_SAME);
         initPassword(user, req.getPassword());
     }
