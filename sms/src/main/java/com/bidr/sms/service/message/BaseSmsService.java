@@ -10,7 +10,10 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.platform.service.cache.SysConfigCacheService;
+import com.bidr.sms.bo.SmsReq;
 import com.bidr.sms.constant.message.SendMessageStatusDict;
+import com.bidr.sms.constant.param.SmsParam;
 import com.bidr.sms.dao.entity.SaSmsSend;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsSendService;
@@ -18,7 +21,6 @@ import com.bidr.sms.dao.repository.SaSmsTemplateService;
 import com.bidr.sms.service.message.cache.SmsTemplateCacheService;
 import com.bidr.sms.vo.SendSmsReq;
 import com.bidr.sms.vo.SendSmsRes;
-import com.bidr.sms.bo.SmsReq;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -54,6 +56,8 @@ public abstract class BaseSmsService implements SmsService {
     private WebApplicationContext webApplicationContext;
     @Resource
     private TokenService tokenService;
+    @Resource
+    private SysConfigCacheService sysConfigCacheService;
 
     @Override
     public SendSmsRes sendSms(SendSmsReq sendSmsReq) {
@@ -97,11 +101,16 @@ public abstract class BaseSmsService implements SmsService {
 
     @Transactional(rollbackFor = Exception.class)
     public SaSmsSend initSendSms(SmsReq sendSmsReq) {
-        SaSmsTemplate saSmsTemplate = smsTemplateCacheService.getCache(sendSmsReq.getSendSmsType());
-        SaSmsSend saSmsSend = buildSaSmsSend(UUID.randomUUID().toString(), sendSmsReq.getPhoneNumbers(),
-                sendSmsReq.getParamMap(), saSmsTemplate);
-        saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
-        saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
+        SaSmsSend saSmsSend;
+        if(sysConfigCacheService.getSysConfigBool(SmsParam.SMS_MOCK_MODE)) {
+            saSmsSend = buildMockSmsSend(sendSmsReq);
+        } else {
+            SaSmsTemplate saSmsTemplate = smsTemplateCacheService.getCache(sendSmsReq.getSendSmsType());
+            saSmsSend = buildSaSmsSend(UUID.randomUUID().toString(), sendSmsReq.getPhoneNumbers(),
+                    sendSmsReq.getParamMap(), saSmsTemplate);
+            saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
+            saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
+        }
         saSmsSendService.insert(saSmsSend);
         return saSmsSend;
     }
@@ -121,15 +130,42 @@ public abstract class BaseSmsService implements SmsService {
 
     @Transactional(rollbackFor = Exception.class)
     public SaSmsSend initSendSms(SendSmsReq sendSmsReq) {
-        SaSmsSend saSmsSend = buildSmsSend(sendSmsReq);
-        saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
-        saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
-        String platform = tokenService.getItem(TokenItem.PLATFORM.name(), String.class);
-        saSmsSend.setPlatform(platform);
+        SaSmsSend saSmsSend;
+        if (StringUtil.convertSwitch(sendSmsReq.getMock())) {
+            saSmsSend = buildMockSmsSend(sendSmsReq);
+        } else {
+            saSmsSend = buildSmsSend(sendSmsReq);
+            saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
+            saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
+            String platform = tokenService.getItem(TokenItem.PLATFORM.name(), String.class);
+            saSmsSend.setPlatform(platform);
+        }
         if (sendSmsSequenceInf != null) {
             saSmsSend.setSendId(sendSmsSequenceInf.getSendSequence());
         }
         saSmsSendService.insert(saSmsSend);
+        return saSmsSend;
+    }
+
+    private SaSmsSend buildMockSmsSend(SmsReq sendSmsReq) {
+        SaSmsSend saSmsSend = new SaSmsSend();
+        saSmsSend.setBizId(UUID.randomUUID().toString());
+        saSmsSend.setMobile(sendSmsReq.getPhoneNumbers());
+        saSmsSend.setSendParam(JsonUtil.toJson(sendSmsReq.getParamMap(), true, false, true));
+        saSmsSend.setSendType(sendSmsReq.getSendSmsType());
+        saSmsSend.setTemplateCode("MOCK_TEMPLATE_CODE");
+        saSmsSend.setSendStatus(SendMessageStatusDict.REQUEST.getValue());
+        saSmsSend.setSendResult(SendMessageStatusDict.REQUEST.getLabel());
+        return saSmsSend;
+    }
+
+    private SaSmsSend buildMockSmsSend(SendSmsReq sendSmsReq) {
+        SaSmsSend saSmsSend = new SaSmsSend();
+        saSmsSend.setMobile(sendSmsReq.getPhoneNumbers());
+        saSmsSend.setSendParam(JsonUtil.toJson(sendSmsReq.getParamMap(), true, false, true));
+        saSmsSend.setTemplateCode(sendSmsReq.getTemplateCode());
+        saSmsSend.setSendType(sendSmsReq.getSendSmsType());
+        saSmsSend.setBizId(sendSmsReq.getBizId());
         return saSmsSend;
     }
 
