@@ -34,7 +34,7 @@ public class BaseVO {
 
     @PortalNoFilterField
     @BindField(entity = AcUser.class, field = "name", condition = "this.createBy = customer_number")
-    @ApiModelProperty(value = "创建人姓名")
+    @ApiModelProperty(value = "创建人")
     private String createName;
 
     @PortalSortField
@@ -50,7 +50,7 @@ public class BaseVO {
 
     @PortalNoFilterField
     @BindField(entity = AcUser.class, field = "name", condition = "this.updateBy = customer_number")
-    @ApiModelProperty(value = "更新人姓名")
+    @ApiModelProperty(value = "更新人")
     private String updateName;
 
     @PortalDisplayNoneField
