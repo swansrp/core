@@ -21,6 +21,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.platform.config.anno.IgnoreAuth;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -46,6 +47,8 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
+
+    private static final String CAPTCHA_SUFFIX = "_CAPTCHA";
 
     private final ApplicationContext applicationContext;
     private final TokenService tokenService;
@@ -97,15 +100,17 @@ public class AuthInterceptor implements HandlerInterceptor {
         } else if (clazz.isAnnotationPresent(Auth.class)) {
             auth = clazz.getDeclaredAnnotation(Auth.class);
         }
-        request.setAttribute(Auth.class.getName(), auth);
-        if (auth != null) {
-            for (Class<? extends AuthRole> authRoleClazz : auth.value()) {
-                ((AuthRole) applicationContext.getBean(
-                        StringUtils.uncapitalize(authRoleClazz.getSimpleName()))).validate(request, auth.perms(),
-                        auth.extraData());
+        if (!method.isAnnotationPresent(IgnoreAuth.class)) {
+            request.setAttribute(Auth.class.getName(), auth);
+            if (auth != null) {
+                for (Class<? extends AuthRole> authRoleClazz : auth.value()) {
+                    ((AuthRole) applicationContext.getBean(
+                            StringUtils.uncapitalize(authRoleClazz.getSimpleName()))).validate(request, auth.perms(),
+                            auth.extraData());
+                }
+            } else {
+                ((AuthRole) applicationContext.getBean(AuthLogin.class)).validate(request);
             }
-        } else {
-            ((AuthRole) applicationContext.getBean(AuthLogin.class)).validate(request);
         }
     }
 
@@ -115,7 +120,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             if (FuncUtil.isEmpty(verify.field())) {
                 captchaVerify(request, verify.value());
             } else {
-                captchaVerify(request, request.getParameter(verify.field()));
+                String captchaVerifyType = request.getParameter(verify.field());
+                if (!verify.field().endsWith(CAPTCHA_SUFFIX)) {
+                    captchaVerifyType += CAPTCHA_SUFFIX;
+                }
+                captchaVerify(request, captchaVerifyType);
             }
         }
     }

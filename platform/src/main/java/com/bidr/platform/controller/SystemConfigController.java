@@ -1,5 +1,6 @@
 package com.bidr.platform.controller;
 
+import com.bidr.platform.config.anno.IgnoreAuth;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -23,7 +24,7 @@ public class SystemConfigController {
     @Resource
     private SysConfigCacheService sysConfigCacheService;
 
-
+    @IgnoreAuth
     @RequestMapping(path = {""}, method = {RequestMethod.GET})
     @ApiOperation(value = "获取系统参数")
     public String getSysConfig(String configKey) {
