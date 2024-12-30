@@ -12,6 +12,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -31,7 +32,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
 
-    private final CustomerNumberHandler customerNumberHandler;
+    @Autowired(required = false)
+    private CustomerNumberHandler customerNumberHandler;
 
     @Override
     public boolean insert(AcUser entity) {

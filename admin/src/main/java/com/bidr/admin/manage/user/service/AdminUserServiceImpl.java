@@ -14,6 +14,7 @@ import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -29,8 +30,8 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
 
     private final CreateUserService createUserService;
     private final SaSequenceService sequenceService;
-    private final CustomerNumberHandler customerNumberHandler;
-
+    @Autowired(required = false)
+    private CustomerNumberHandler customerNumberHandler;
     @Override
     public void beforeAdd(AcUser user) {
         String customerNumber;
