@@ -136,10 +136,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     public void updateEntity(VO vo, Boolean strict) {
         ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
-        if (!strict) {
-            ENTITY originalEntity = getRepo().selectById(entity);
-            entity = ReflectionUtil.copyAndMerge(entity, originalEntity, true);
-        }
+        ENTITY originalEntity = getRepo().selectById(entity);
+        entity = ReflectionUtil.copyAndMerge(entity, originalEntity, strict);
         if (isAdmin()) {
             adminBeforeUpdate(entity);
         } else {
