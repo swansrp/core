@@ -11,6 +11,7 @@ import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.login.MsgLoginReq;
+import com.bidr.authorization.vo.login.MsgRegReq;
 import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;
@@ -87,6 +88,24 @@ public class LoginController {
     @MsgCodeVerify("LOGIN_MSG_CODE")
     public LoginRes login(@Validated MsgLoginReq req) {
         LoginRes res = loginService.loginOrReg(req.getPhoneNumber());
+        afterLogin(res);
+        return res;
+    }
+
+    @Auth(AuthToken.class)
+    @RequestMapping(value = "/register/msg", method = RequestMethod.POST)
+    @MsgCodeVerify("REGISTER_MSG_CODE")
+    public LoginRes regAndLogin(@Validated MsgRegReq req) {
+        LoginRes res = loginService.registerWithPhoneNumber(req.getLoginId(), req.getPassword(), req.getPhoneNumber());
+        afterLogin(res);
+        return res;
+    }
+
+    @Auth(AuthToken.class)
+    @RequestMapping(value = "/register", method = RequestMethod.POST)
+    @CaptchaVerify("REGISTER_CAPTCHA")
+    public LoginRes register(@Validated LoginReq req) {
+        LoginRes res = loginService.register(req.getLoginId(), req.getPassword());
         afterLogin(res);
         return res;
     }

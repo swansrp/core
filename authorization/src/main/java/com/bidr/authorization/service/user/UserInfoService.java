@@ -1,9 +1,6 @@
 package com.bidr.authorization.service.user;
 
-import com.bidr.authorization.vo.user.RealNameReq;
-import com.bidr.authorization.vo.user.UserExistedReq;
-import com.bidr.authorization.vo.user.UserInfoRes;
-import com.bidr.authorization.vo.user.UserRes;
+import com.bidr.authorization.vo.user.*;
 
 /**
  * Title: UserInfoService
@@ -21,12 +18,27 @@ public interface UserInfoService {
     UserInfoRes getUserInfo();
 
     /**
+     * 更新当前登录用户的用户信息
+     *
+     * @param info 用户信息
+     */
+    void updateUserInfo(UserInfoReq info);
+
+    /**
      * 用户是否存在
      *
      * @param req 请求
      * @return 用户信息
      */
     UserRes userExisted(UserExistedReq req);
+
+    /**
+     * 用户是否重复
+     *
+     * @param req 请求
+     * @return 用户信息
+     */
+    void userAlreadyExisted(UserExistedReq req);
 
     /**
      * 实名认证

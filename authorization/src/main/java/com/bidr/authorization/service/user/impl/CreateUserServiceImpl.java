@@ -9,6 +9,7 @@ import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
+import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.login.RoleBindService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.constant.CommonConst;
@@ -39,7 +40,6 @@ public class CreateUserServiceImpl implements CreateUserService {
     private final AcUserService acUserService;
     private final SysConfigCacheService sysConfigCacheService;
     private final RoleBindService roleBindService;
-
     private final AcUserDeptService acUserDeptService;
 
     @Override

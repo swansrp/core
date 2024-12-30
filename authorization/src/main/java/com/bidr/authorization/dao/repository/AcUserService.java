@@ -3,15 +3,21 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.mapper.AcUserDao;
+import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.mybatis.anno.EnableTruncate;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Title: AcUserService
@@ -21,7 +27,19 @@ import java.util.*;
  * @since 2023/03/17 10:02
  */
 @Service
+@EnableTruncate
+@RequiredArgsConstructor
 public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
+
+    private final CustomerNumberHandler customerNumberHandler;
+
+    @Override
+    public boolean insert(AcUser entity) {
+        if (FuncUtil.isNotEmpty(customerNumberHandler) && FuncUtil.isEmpty(entity.getCustomerNumber())) {
+            entity.setCustomerNumber(customerNumberHandler.getCustomerNumber(entity));
+        }
+        return super.insert(entity);
+    }
 
     public List<AcUser> getUserByDeptAndName(List<String> deptIdList, String name) {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper();

@@ -80,7 +80,7 @@ public interface LoginService {
     /**
      * 用户名密码注册.
      *
-     * @param loginId   用户名
+     * @param loginId  用户名
      * @param password 密码
      * @return 登录返回信息
      */
@@ -89,12 +89,22 @@ public interface LoginService {
     /**
      * 用户名密码邮箱注册.
      *
-     * @param loginId   用户名
+     * @param loginId  用户名
      * @param password 密码
      * @param email    邮箱
      * @return 登录返回信息
      */
-    LoginRes register(String loginId, String password, String email);
+    LoginRes registerWithEmail(String loginId, String password, String email);
+
+    /**
+     * 用户名密码手机号注册.
+     *
+     * @param loginId     用户名
+     * @param password    密码
+     * @param phoneNumber 手机号
+     * @return 登录返回信息
+     */
+    LoginRes registerWithPhoneNumber(String loginId, String password, String phoneNumber);
 
     /**
      * 超管账户假借用户登录

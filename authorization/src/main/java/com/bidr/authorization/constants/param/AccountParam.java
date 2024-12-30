@@ -23,7 +23,7 @@ public enum AccountParam implements Param {
     TEST_MODE_VALIDATE_DEFAULT_CODE("测试模式验证码默认值","0000", "默认通过校验code"),
 
     TEST_MODE_SMS_SEND_SWITCH("模拟短信开关","1", "模拟短信开关"),
-
+    PHONE_NUMBER_REGISTER("通过手机号码注册", "0", "注册时是否要求填写手机号码"),
     LOGIN_SINGLETON("渠道单一用户登录控制","1", "渠道单一用户登录控制"),
 
     APP_ACCESS_TOKEN_EXPIRED("APP接入token过期时间","43200", "APP access_token有效期"),

@@ -4,14 +4,13 @@ import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.authorization.service.login.impl.LoginServiceImpl;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.user.UserInfoService;
-import com.bidr.authorization.vo.user.RealNameReq;
-import com.bidr.authorization.vo.user.UserExistedReq;
-import com.bidr.authorization.vo.user.UserInfoRes;
-import com.bidr.authorization.vo.user.UserRes;
+import com.bidr.authorization.vo.user.*;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -33,6 +32,7 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     private final AcUserService acUserService;
     private final TokenService tokenService;
+    private final LoginServiceImpl loginService;
 
     @Override
     public UserInfoRes getUserInfo() {
@@ -42,10 +42,26 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUserInfo(UserInfoReq info) {
+        String customerNumber = tokenService.getItem(TokenItem.OPERATOR.name(), String.class);
+        AcUser user = acUserService.getByCustomerNumber(customerNumber);
+        Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
+        ReflectionUtil.merge(info, user, false);
+        acUserService.updateById(user, false);
+    }
+
+    @Override
     public UserRes userExisted(UserExistedReq req) {
         List<AcUser> user = acUserService.existedUser(req);
         Validator.assertNotEmpty(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
         return Resp.convert(user.get(0), UserRes.class);
+    }
+
+    @Override
+    public void userAlreadyExisted(UserExistedReq req) {
+        List<AcUser> user = acUserService.existedUser(req);
+        Validator.assertEmpty(user, ErrCodeSys.SYS_ERR_MSG, "该信息已注册");
     }
 
     @Override

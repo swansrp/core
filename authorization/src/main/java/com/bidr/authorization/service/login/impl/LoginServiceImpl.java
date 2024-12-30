@@ -154,14 +154,22 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes register(String userName, String password) {
-        return register(userName, password, null);
+        return this.registerWithEmail(userName, password, null);
     }
 
     @Override
-    public LoginRes register(String userName, String password, String email) {
+    public LoginRes registerWithEmail(String userName, String password, String email) {
         AcUser user = acUserService.getUserByUserName(userName);
         Validator.assertNull(user, AccountErrCode.AC_USER_ALREADY_EXISTED);
-        user = creatUserService.createUser(userName, password, null, null, email, null);
+        user = creatUserService.createUser(userName, password, userName, null, email, null);
+        return buildLoginRes(user);
+    }
+
+    @Override
+    public LoginRes registerWithPhoneNumber(String userName, String password, String phoneNumber) {
+        AcUser user = acUserService.getUserByUserName(userName);
+        Validator.assertNull(user, AccountErrCode.AC_USER_ALREADY_EXISTED);
+        user = creatUserService.createUser(userName, password, userName, phoneNumber, null, null);
         return buildLoginRes(user);
     }
 
