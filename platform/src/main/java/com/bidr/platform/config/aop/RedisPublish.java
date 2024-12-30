@@ -1,4 +1,4 @@
-package com.bidr.platform.redis.aop.publish;
+package com.bidr.platform.config.aop;
 
 import java.lang.annotation.*;
 

@@ -10,6 +10,7 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.platform.config.aop.RedisPublish;
 import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.constant.err.DictErrorCode;
 import com.bidr.platform.dao.entity.SysDict;
@@ -173,5 +174,12 @@ public class DictCacheService implements CommandLineRunner {
         DictCacheProvider dictCacheProvider = MAP.get(dictName);
         Validator.assertNotNull(dictCacheProvider, ErrCodeSys.SYS_CONFIG_NOT_EXIST, "字典: " + dictName);
         dictCacheProvider.cachePrepare(dictName);
+    }
+
+    @RedisPublish
+    public void refresh(String dictName) {
+        DictCacheProvider dictCacheProvider = MAP.get(dictName);
+        Validator.assertNotNull(dictCacheProvider, ErrCodeSys.SYS_CONFIG_NOT_EXIST, "字典: " + dictName);
+        dictCacheProvider.refresh();
     }
 }

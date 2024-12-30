@@ -2,11 +2,15 @@ package com.bidr.platform.service.cache;
 
 import com.bidr.kernel.cache.DynamicMemoryCache;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.bo.tree.TreeDict;
+import com.bidr.platform.config.aop.RedisPublish;
 import com.bidr.platform.constant.dict.IDynamicTree;
+import com.bidr.platform.service.cache.dict.DictCacheProvider;
 import org.apache.commons.collections4.CollectionUtils;
 import org.reflections.Reflections;
 import org.springframework.beans.BeansException;
@@ -37,21 +41,25 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
         Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaTreeDict.class);
         for (Class<?> clazz : metaDictClass) {
-            if (IDynamicTree.class.isAssignableFrom(clazz) && clazz.isAnnotationPresent(MetaTreeDict.class)) {
-                String treeType = clazz.getAnnotation(MetaTreeDict.class).value();
-                String treeTitle = clazz.getAnnotation(MetaTreeDict.class).remark();
-                try {
-                    IDynamicTree dynamicTreeDictService = (IDynamicTree) webApplicationContext.getBean(clazz);
-                    List<TreeDict> dynamicTreeDictList = dynamicTreeDictService.generate(treeType, treeTitle);
-                    if (CollectionUtils.isNotEmpty(dynamicTreeDictList)) {
-                        map.put(treeType, dynamicTreeDictList);
-                    }
-                } catch (BeansException e) {
-                    e.printStackTrace();
-                }
-            }
+            buildCacheData(map, clazz);
         }
         return map;
+    }
+
+    private void buildCacheData(Map<String, List<TreeDict>> cacheData, Class<?> clazz) {
+        if (IDynamicTree.class.isAssignableFrom(clazz) && clazz.isAnnotationPresent(MetaTreeDict.class)) {
+            String treeType = clazz.getAnnotation(MetaTreeDict.class).value();
+            String treeTitle = clazz.getAnnotation(MetaTreeDict.class).remark();
+            try {
+                IDynamicTree dynamicTreeDictService = (IDynamicTree) webApplicationContext.getBean(clazz);
+                List<TreeDict> dynamicTreeDictList = dynamicTreeDictService.generate(treeType, treeTitle);
+                if (CollectionUtils.isNotEmpty(dynamicTreeDictList)) {
+                    cacheData.put(treeType, dynamicTreeDictList);
+                }
+            } catch (BeansException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public List<KeyValueResVO> getAll() {
@@ -85,5 +93,10 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
                 buildKeyValueResVO(resList, treeDict.getChildren());
             }
         }
+    }
+
+    @RedisPublish
+    public void refresh(Class<? extends IDynamicTree> clazz) {
+        buildCacheData(getAllCache(), clazz);
     }
 }
