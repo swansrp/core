@@ -87,6 +87,7 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
     @RequestMapping(value = "/advanced/tree/data", method = RequestMethod.POST)
     public List<TreeDataResVO> getTreeData(@RequestBody AdvancedQueryReq req) {
         List<TreeDataItemVO> list = new ArrayList<>();
+        req.setCurrentPage(1L);
         req.setPageSize(60000L);
         Page<VO> entityList = queryByAdvancedReq(req);
         if (FuncUtil.isNotEmpty(entityList.getRecords())) {
