@@ -1,6 +1,7 @@
 package com.bidr.platform.redis.aop.publish;
 
 import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.platform.config.aop.RedisPublish;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
@@ -36,7 +37,7 @@ public class RedisPublishAspect {
     @Value("${my.project.name}")
     private String projectName;
 
-    @Pointcut("@annotation(com.bidr.platform.redis.aop.publish.RedisPublish)")
+    @Pointcut("@annotation(com.bidr.platform.config.aop.RedisPublish)")
     public void redisPublish() {
     }
 
