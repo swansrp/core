@@ -13,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.List;
@@ -59,6 +60,14 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     }
 
     @ApiIgnore
+    @ApiOperation(value = "修改绑定信息")
+    @RequestMapping(value = "/bind/info", method = RequestMethod.POST)
+    public void bindInfo(@RequestBody @Validated BindInfoReq req, @RequestParam(required = false) boolean strict) {
+        bindRepo().bindInfo(req.getAttachId(), req.getEntityId(), req.getData(), strict);
+        Resp.notice("修改信息成功");
+    }
+
+    @ApiIgnore
     @ApiOperation(value = "绑定")
     @RequestMapping(value = "/bind", method = RequestMethod.POST)
     public void bind(@RequestBody @Validated BindReq req) {
@@ -81,6 +90,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         if (!isAdmin()) {
             beforeQuery(req);
         }
+        req.setCurrentPage(1L);
         req.setPageSize(60000L);
         bindRepo().bindAll(req);
         Resp.notice("绑定成功");
@@ -162,6 +172,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         if (!isAdmin()) {
             beforeQuery(req);
         }
+        req.setCurrentPage(1L);
         req.setPageSize(60000L);
         bindRepo().advancedReplace(req);
         Resp.notice("替换成功");

@@ -13,6 +13,6 @@ import javax.validation.constraints.NotNull;
  */
 @Data
 public class BindBaseReq {
-    @NotNull(message = "未提供实体id")
+    @NotNull(message = "未提供实体")
     private Object entityId;
 }

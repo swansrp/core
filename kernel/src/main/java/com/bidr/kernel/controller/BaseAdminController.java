@@ -291,6 +291,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @RequestMapping(value = "/advanced/query/export", method = RequestMethod.POST)
     public void advancedQueryExport(@RequestBody AdvancedQueryReq req, @RequestParam(required = false) String name,
                                     HttpServletRequest request, HttpServletResponse response) {
+        req.setCurrentPage(1L);
         req.setPageSize(60000L);
         Page<VO> result = advancedQuery(req);
 

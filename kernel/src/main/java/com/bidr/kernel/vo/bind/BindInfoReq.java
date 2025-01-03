@@ -3,8 +3,6 @@ package com.bidr.kernel.vo.bind;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import javax.validation.constraints.NotNull;
-
 /**
  * Title: BindReq
  * Description: Copyright: Copyright (c) 2023 Company: Sharp Ltd.
@@ -14,7 +12,6 @@ import javax.validation.constraints.NotNull;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class BindReq extends BindBaseReq {
-    @NotNull(message = "未提供绑定实体")
-    private Object attachId;
+public class BindInfoReq extends BindReq {
+    private Object data;
 }

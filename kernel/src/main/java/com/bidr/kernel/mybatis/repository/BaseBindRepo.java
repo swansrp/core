@@ -44,6 +44,12 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         return attachRepo().selectJoinList(getAttachVOClass(), wrapper);
     }
 
+    protected void bindBefore(BIND bind) {
+    }
+
+    protected void unBindBefore(BIND bind) {
+    }
+
     protected Class<ATTACH> getAttachClass() {
         return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
     }
@@ -98,6 +104,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     @Transactional(rollbackFor = Exception.class)
     public void bind(Object attachId, Object entityId) {
         BIND bindEntity = buildBindEntity(attachId, entityId);
+        bindBefore(bindEntity);
         getBindRepo().insertOrUpdate(bindEntity);
     }
 
@@ -115,17 +122,25 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     @Transactional(rollbackFor = Exception.class)
     public void unbind(Object attachId, Object entityId) {
         BIND bindEntity = buildBindEntity(attachId, entityId);
+        unBindBefore(bindEntity);
         getBindRepo().deleteById(bindEntity);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void replace(List<Object> attachIdList, Object entityId) {
+        if (FuncUtil.isNotEmpty(attachIdList)) {
+            for (Object attachId : attachIdList) {
+                BIND bindEntity = buildBindEntity(attachId, entityId);
+                unBindBefore(bindEntity);
+            }
+        }
         Wrapper<BIND> wrapper = (Wrapper<BIND>) getBindRepo().getQueryWrapper().eq(bindEntityId(), entityId);
         getBindRepo().delete(wrapper);
         List<BIND> bindList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindBefore(bindEntity);
                 bindList.add(bindEntity);
             }
         }
@@ -137,6 +152,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
+                unBindBefore(bindEntity);
                 getBindRepo().deleteById(bindEntity);
             }
         }
@@ -171,6 +187,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         if (FuncUtil.isNotEmpty(attachIdList)) {
             for (Object attachId : attachIdList) {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
+                bindBefore(bindEntity);
                 getBindRepo().insertOrUpdate(bindEntity);
             }
         }
@@ -216,5 +233,11 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
             }
         }
         replace(attachIdList, req.getEntityId());
+    }
+
+    public void bindInfo(Object attachId, Object entityId, Object data, boolean strict) {
+        BIND bindEntity = (BIND) getBindRepo().selectById(buildBindEntity(attachId, entityId));
+        ReflectionUtil.merge(data, bindEntity, !strict);
+        getBindRepo().updateById(bindEntity);
     }
 }
