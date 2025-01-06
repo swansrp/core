@@ -29,6 +29,7 @@ import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.portal.AdminPortal;
 import com.diboot.core.binding.annotation.BindEntity;
@@ -92,6 +93,7 @@ public class PortalConfigService implements LoginFillTokenInf {
     private final SysPortalAssociateService sysPortalAssociateService;
     private final TokenService tokenService;
     private final AcRoleService acRoleService;
+    private final PortalService portalService;
 
     @Value("${my.base-package}")
     private String basePackage;
@@ -129,8 +131,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private List<Field> getFields(Class<?> clazz) {
-        Collection<Field> fields = ReflectionUtil.reflectToLinkedMap(ReflectionUtil.getFields(clazz),
-                Field::getName).values();
+        Collection<Field> fields = ReflectionUtil.reflectToLinkedMap(ReflectionUtil.getFields(clazz), Field::getName)
+                .values();
         return fields.stream().filter(field -> {
             JsonIgnore annotation = field.getAnnotation(JsonIgnore.class);
             return annotation == null;
@@ -138,12 +140,15 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void refreshPortalConfig(Map<Class<?>, Collection<Field>> map) {
+        Set<String> controllerNameSet = new HashSet<>();
+        map.keySet().forEach((key) -> controllerNameSet.add(StringUtil.firstLowerCamelCase(key.getSimpleName())));
         Map<Long, AcRole> roleCachedMap = new HashMap<>();
         for (Map.Entry<Class<?>, Collection<Field>> entry : map.entrySet()) {
             Class<?> entityClass = ReflectionUtil.getSuperClassGenericType(entry.getKey(), 0);
             List<SysPortal> portalList = sysPortalService.getByBeanName(entry.getKey().getSimpleName());
             if (FuncUtil.isEmpty(portalList)) {
                 SysPortal portal = buildSysPortal(entry.getKey(), entityClass, entry.getValue());
+                cleanInValidPortalConfig(controllerNameSet, portal.getName());
                 sysPortalService.insert(portal);
                 portalList.add(portal);
             }
@@ -161,6 +166,15 @@ public class PortalConfigService implements LoginFillTokenInf {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private void cleanInValidPortalConfig(Set<String> controllerNameSet, String name) {
+        SysPortal portal = sysPortalService.getByName(name, DEFAULT_CONFIG_ROLE_ID);
+        if (FuncUtil.isNotEmpty(portal)) {
+            if (!controllerNameSet.contains(portal.getBean())) {
+                portalService.deletePortalConfig(new IdReqVO(portal.getName()));
             }
         }
     }

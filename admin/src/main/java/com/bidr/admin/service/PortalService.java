@@ -18,9 +18,11 @@ import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,7 +40,9 @@ import java.util.List;
 public class PortalService {
     private final SysPortalService sysPortalService;
     private final SysPortalColumnService sysPortalColumnService;
-    private final PortalConfigService portalConfigService;
+    @Lazy
+    @Resource
+    private PortalConfigService portalConfigService;
 
     public PortalWithColumnsRes getPortalWithColumnsConfig(PortalReq req) {
         if (FuncUtil.isEmpty(req.getRoleId())) {

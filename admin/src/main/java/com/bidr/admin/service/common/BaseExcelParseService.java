@@ -11,6 +11,9 @@ import com.bidr.platform.utils.excel.EasyExcelUtil;
 import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
@@ -75,5 +78,11 @@ public abstract class BaseExcelParseService<ENTITY, VO> implements PortalExcelUp
             item.getComments().add(comment);
         }
         setUploadProgress(item);
+    }
+
+    protected TransactionStatus getTransactionStatus() {
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return transactionManager.getTransaction(def);
     }
 }

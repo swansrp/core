@@ -1,6 +1,7 @@
 package com.bidr.admin.vo;
 
 import com.bidr.admin.config.PortalDisplayNoneField;
+import com.bidr.admin.config.PortalDisplayOnlyField;
 import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.config.PortalSortField;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -21,6 +22,7 @@ import java.util.Date;
  */
 @Data
 public class BaseVO {
+    @PortalDisplayOnlyField
     @PortalSortField
     @PortalNoFilterField
     @DateTimeFormat(pattern = "yyyy-MM-dd")
@@ -37,6 +39,7 @@ public class BaseVO {
     @ApiModelProperty(value = "创建人")
     private String createName;
 
+    @PortalDisplayOnlyField
     @PortalSortField
     @PortalNoFilterField
     @DateTimeFormat(pattern = "yyyy-MM-dd")
