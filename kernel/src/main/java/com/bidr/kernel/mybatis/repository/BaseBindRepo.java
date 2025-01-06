@@ -5,14 +5,17 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.service.PortalCommonService;
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.bind.AdvancedQueryBindReq;
+import com.bidr.kernel.vo.bind.BindInfoReq;
 import com.bidr.kernel.vo.bind.QueryBindReq;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -22,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Title: BaseBindRepo
@@ -39,9 +44,22 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     public List<ATTACH_VO> getBindList(Object entityId) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
+        Map<String, String> aliasMap = null;
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            aliasMap = getAttachPortalService().getAliasMap();
+            wrapper = getAttachPortalService().getJoinWrapper();
+        } else {
+            wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        }
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
                 .eq(bindEntityId(), entityId);
-        return attachRepo().selectJoinList(getAttachVOClass(), wrapper);
+        return attachRepo().select(new AdvancedQuery(), new ArrayList<>(), aliasMap, wrapper, getAttachVOClass());
+    }
+
+    public int getBindCount(Object entityId) {
+        MPJLambdaWrapper<BIND> wrapper = new MPJLambdaWrapper<>(getBindClass());
+        wrapper.eq(bindEntityId(), entityId);
+        return new Long(getBindRepo().count(wrapper)).intValue();
     }
 
     protected void bindBefore(BIND bind) {
@@ -69,36 +87,62 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
                 StrUtil.lowerFirst(getAttachClass().getSimpleName()) + "Service");
     }
 
+    protected PortalCommonService<ATTACH, ATTACH_VO> getAttachPortalService() {
+        return null;
+    }
+
+    public PortalCommonService<ATTACH, ATTACH_VO> getPortalService() {
+        return getAttachPortalService();
+    }
+
     protected Class<ATTACH_VO> getAttachVOClass() {
         return (Class<ATTACH_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
     }
 
-    public IPage<ATTACH_VO> queryBindList(QueryBindReq req) {
+    public IPage<ATTACH_VO> queryAttachList(QueryBindReq req, boolean bind) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.selectAll(getAttachClass()).select(bindEntityId()).leftJoin(getBindClass(), bindAttachId(), attachId())
-                .eq(bindEntityId(), req.getEntityId());
-        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
-                getAttachVOClass(), wrapper);
+        Map<String, String> aliasMap = null;
+        Set<String> havingFields = null;
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            aliasMap = getAttachPortalService().getAliasMap();
+            wrapper = getAttachPortalService().getJoinWrapper();
+            havingFields = getAttachPortalService().getHavingFields();
+        } else {
+            wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        }
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
+                .eq(bind, bindEntityId(), req.getEntityId());
+        return attachRepo().select(req, aliasMap, havingFields, wrapper, getAttachVOClass());
     }
 
-    public IPage<ATTACH_VO> advancedQueryBindList(AdvancedQueryBindReq req) {
+    public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req, boolean bind) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        wrapper.selectAll(getAttachClass()).select(bindEntityId());
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
-        attachRepo().parseAdvancedQuery(req, null, wrapper);
-        wrapper.eq(bindEntityId(), req.getEntityId());
-        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), true),
-                getAttachVOClass(), wrapper);
+        Map<String, String> aliasMap = null;
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            aliasMap = getAttachPortalService().getAliasMap();
+            wrapper = getAttachPortalService().getJoinWrapper();
+        } else {
+            wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        }
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
+                .eq(bind, bindEntityId(), req.getEntityId());
+        return attachRepo().select(req, aliasMap, wrapper, getAttachVOClass());
     }
 
     public IPage<ATTACH> getUnbindList(QueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
-        attachRepo().parseQueryCondition(req, wrapper);
+        Map<String, String> aliasMap = null;
+        Set<String> havingFields = null;
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            aliasMap = getAttachPortalService().getAliasMap();
+            wrapper = getAttachPortalService().getJoinWrapper();
+            havingFields = getAttachPortalService().getHavingFields();
+        } else {
+            wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        }
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId());
         wrapper.and(w -> w.isNull(bindEntityId()));
-        attachRepo().parseSort(req, wrapper);
-        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), false),
-                getAttachClass(), wrapper);
+        return attachRepo().select(req, aliasMap, havingFields, wrapper, getAttachVOClass());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -174,12 +218,16 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     public IPage<ATTACH> advancedQueryUnbindList(AdvancedQueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId());
-        attachRepo().parseAdvancedQuery(req, null, wrapper);
+        Map<String, String> aliasMap = null;
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            aliasMap = getAttachPortalService().getAliasMap();
+            wrapper = getAttachPortalService().getJoinWrapper();
+        } else {
+            wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        }
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId());
         wrapper.and(w -> w.isNull(bindEntityId()));
-        attachRepo().parseSort(req, null, wrapper);
-        return attachRepo().selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize(), true),
-                getAttachClass(), wrapper);
+        return attachRepo().select(req, aliasMap, wrapper, getAttachVOClass());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -204,8 +252,9 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     public List<ENTITY> getBindEntityList(Object attachId) {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        wrapper.leftJoin(getBindClass(), bindAttachId(), attachId())
-                .leftJoin(getEntityClass(), entityId(), bindEntityId()).eq(bindAttachId(), attachId);
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
+                .leftJoin(getEntityClass(), DbUtil.getTableName(getEntityClass()), entityId(), bindEntityId())
+                .eq(bindAttachId(), attachId);
         return entityRepo().selectJoinList(getEntityClass(), wrapper);
     }
 
@@ -235,9 +284,21 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         replace(attachIdList, req.getEntityId());
     }
 
-    public void bindInfo(Object attachId, Object entityId, Object data, boolean strict) {
+    public void bindInfo(Object entityId, Object attachId, Object data, boolean strict) {
         BIND bindEntity = (BIND) getBindRepo().selectById(buildBindEntity(attachId, entityId));
         ReflectionUtil.merge(data, bindEntity, !strict);
         getBindRepo().updateById(bindEntity);
+    }
+
+    public void bindInfoList(Object entityId, List<BindInfoReq> bindInfoList, boolean strict) {
+        List<BIND> bindEntityList = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(bindInfoList)) {
+            for (BindInfoReq bindInfo : bindInfoList) {
+                BIND bindEntity = (BIND) getBindRepo().selectById(buildBindEntity(bindInfo.getAttachId(), entityId));
+                ReflectionUtil.merge(bindInfo.getData(), bindEntity, !strict);
+                bindEntityList.add(bindEntity);
+            }
+        }
+        getBindRepo().updateById(bindEntityList);
     }
 }

@@ -1,6 +1,8 @@
 package com.bidr.kernel.vo.portal;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Title: SortVO
@@ -10,6 +12,8 @@ import lombok.Data;
  * @since 2023/05/05 15:42
  */
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class SortVO {
     private String property;
     private Integer type;

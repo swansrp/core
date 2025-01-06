@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.diboot.core.service.BaseService;
 import com.diboot.core.service.impl.BaseServiceImpl;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
@@ -30,6 +31,7 @@ import java.util.*;
 public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl<K, T> implements IMppService<T>,
         MPJBaseService<T>, BaseService<T> {
 
+    @Override
     public boolean saveOrUpdateByMultiId(T entity) {
         if (null == entity) {
             return false;
@@ -72,7 +74,12 @@ public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl
             MppMultiId mppMultiId = field.getAnnotation(MppMultiId.class);
             if (mppMultiId != null) {
                 String attrName = field.getName();
-                String colName = field.getAnnotation(TableField.class).value();
+                String colName;
+                if (field.isAnnotationPresent(TableField.class)) {
+                    colName = field.getAnnotation(TableField.class).value();
+                } else {
+                    colName = StringUtil.camelToUnderline(field.getName());
+                }
                 idMap.put(attrName, colName);
             }
         }
@@ -80,6 +87,7 @@ public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl
         return idMap;
     }
 
+    @Override
     public boolean saveOrUpdateBatchByMultiId(Collection<T> entityList, int batchSize) {
         TableInfo tableInfo = TableInfoHelper.getTableInfo(this.entityClass);
         Assert.notNull(tableInfo, "error: can not execute. because can not find cache of TableInfo for entity!");
