@@ -21,13 +21,13 @@ public enum MySqlFuncEnum implements BaseFuncEnum {
     /**
      * MYSQL 基础函数
      */
-    SUM("SUM(%s) as %s"),
-    COUNT("COUNT(%s) as %s"),
-    MAX("MAX(%s) as %s"),
-    MIN("MIN(%s) as %s"),
-    AVG("AVG(%s) as %s"),
-    LEN("LEN(%s) as %s"),
-    GROUP_CONCAT("GROUP_CONCAT(%s) as %s");
+    SUM("SUM(%s)"),
+    COUNT("COUNT(%s)"),
+    MAX("MAX(%s)"),
+    MIN("MIN(%s)"),
+    AVG("AVG(%s)"),
+    LEN("LEN(%s)"),
+    GROUP_CONCAT("GROUP_CONCAT(%s)");
 
     private final String sql;
 
@@ -41,7 +41,7 @@ public enum MySqlFuncEnum implements BaseFuncEnum {
     }
 
     public String getSql(String column, String alias) {
-        return String.format(this.sql, column, alias);
+        return String.format(this.sql, column) + String.format(" as (%s)", alias);
     }
 
     public <T extends SFunction> String getSql(T column, String aliasField) {

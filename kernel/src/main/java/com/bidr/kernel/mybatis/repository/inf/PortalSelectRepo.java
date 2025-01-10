@@ -15,10 +15,7 @@ import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: PortalSelectRepo
@@ -248,14 +245,11 @@ public interface PortalSelectRepo<T> {
                     break;
                 case NOT_BETWEEN:
                     wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), columnName,
-                            condition.getValue().get(0),
-                            condition.getValue().get(1));
+                            condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case CONTAIN:
-                    wrapper.nested(
-                            w -> w.apply(
-                                    String.format("FIND_IN_SET('%s', %s) > 0", condition.getValue().get(0),
-                                            columnName)));
+                    wrapper.nested(w -> w.apply(
+                            String.format("FIND_IN_SET('%s', %s) > 0", condition.getValue().get(0), columnName)));
                     break;
                 case CONTAIN_IN:
                     wrapper.nested(w -> {
@@ -283,10 +277,8 @@ public interface PortalSelectRepo<T> {
                         for (int i = 0; i < condition.getValue().size(); i++) {
                             sql.append("{").append(i).append("}, ");
                         }
-                        wrapper.having(sql.substring(0, sql.length() - 2) + ")",
-                                condition.getValue().toArray());
+                        wrapper.having(sql.substring(0, sql.length() - 2) + ")", condition.getValue().toArray());
                     }
-
                     break;
                 case NOT_IN:
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
@@ -294,17 +286,16 @@ public interface PortalSelectRepo<T> {
                         for (int i = 0; i < condition.getValue().size(); i++) {
                             sql.append("{").append(i).append("}, ");
                         }
-                        wrapper.having(sql.substring(0, sql.length() - 2) + ")",
-                                condition.getValue().toArray());
+                        wrapper.having(sql.substring(0, sql.length() - 2) + ")", condition.getValue().toArray());
                     }
                     break;
                 case LIKE:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " like %{0}%",
-                            condition.getValue().get(0));
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " like {0} ",
+                            "%" + condition.getValue().get(0) + "%");
                     break;
                 case NOT_LIKE:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " not like %{0}%",
-                            condition.getValue().get(0));
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " not like {0} ",
+                            "%" + condition.getValue().get(0) + "%");
                     break;
                 case GREATER:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " > {0}",
@@ -330,26 +321,25 @@ public interface PortalSelectRepo<T> {
                     break;
                 case BETWEEN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " between {0} and {1}",
-                            condition.getValue().get(0),
-                            condition.getValue().get(1));
+                            condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case NOT_BETWEEN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " not between {0} and {1}",
-                            condition.getValue().get(0),
-                            condition.getValue().get(1));
+                            condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case CONTAIN:
-                    wrapper.nested(
-                            w -> w.having(FuncUtil.isNotEmpty(condition.getValue()),
-                                    "FIND_IN_SET('{0}', " + columnName + "%s) > 0", condition.getValue().get(0)));
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()),
+                            "FIND_IN_SET({0}, " + columnName + ") > 0", condition.getValue().get(0));
                     break;
                 case CONTAIN_IN:
-                    wrapper.nested(w -> {
-                        for (Object value : condition.getValue()) {
-                            w.or().having(FuncUtil.isNotEmpty(condition.getValue()),
-                                    "FIND_IN_SET('{0}', " + columnName + "%s) > 0", value);
+                    String havingSqlFormat = "FIND_IN_SET({%d}, %s) > 0";
+                    List<String> havingSqlList = new ArrayList<>();
+                    if (FuncUtil.isNotEmpty(condition.getValue())) {
+                        for (int i = 0; i < condition.getValue().size(); i++) {
+                            havingSqlList.add(String.format(String.format(havingSqlFormat, i, columnName)));
                         }
-                    });
+                    }
+                    wrapper.having(StringUtil.joinWith(" or ", havingSqlList), condition.getValue().toArray());
                     break;
                 default:
                     break;
