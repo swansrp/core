@@ -1,5 +1,6 @@
 package com.bidr.kernel.constant.dict.common;
 
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;
 import lombok.AllArgsConstructor;
@@ -19,13 +20,14 @@ public enum ActiveStatusDict implements Dict {
     /**
      * 激活状态字典
      */
-    SYSTEM(-1, "系统内置"),
-    ACTIVATE(1, "已启用"),
-    PENDING(2, "待启用"),
-    DEACTIVATE(0, "已停用"),
-    LOCKING(3, "已锁定");
+    SYSTEM(-1, "系统内置", CommonConst.NO),
+    ACTIVATE(1, "已启用", CommonConst.YES),
+    PENDING(2, "待启用", CommonConst.YES),
+    DEACTIVATE(0, "已停用", CommonConst.YES),
+    LOCKING(3, "已锁定", CommonConst.YES);
 
 
     private final Integer value;
     private final String label;
+    private final String show;
 }
