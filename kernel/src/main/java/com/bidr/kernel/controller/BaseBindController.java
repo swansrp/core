@@ -3,9 +3,11 @@ package com.bidr.kernel.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.bind.*;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.validation.annotation.Validated;
@@ -25,6 +27,10 @@ import java.util.List;
  * @since 2023/05/09 17:02
  */
 public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> extends BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
+
+    protected BaseAdminController<ATTACH, ?> attachAdminController() {
+        return null;
+    }
 
     @ApiIgnore
     @ApiOperation(value = "获取已绑定(列表)")
@@ -46,7 +52,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "获取已绑定(分页)")
     @RequestMapping(value = "/bind/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getBind(@RequestBody @Validated QueryBindReq req) {
-        IPage<ATTACH_VO> res = bindRepo().queryAttachList(req, true);
+        IPage<ATTACH_VO> res = bindRepo().queryAttachList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
@@ -55,25 +61,24 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @RequestMapping(value = "/bind/advanced/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getBind(@RequestBody @Validated AdvancedQueryBindReq req) {
         beforeQuery(req);
-        IPage<ATTACH_VO> res = bindRepo().advancedQueryAttachList(req, true);
+        IPage<ATTACH_VO> res = bindRepo().advancedQueryAttachList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
     @ApiIgnore
     @ApiOperation(value = "查询绑定实体(分页)")
     @RequestMapping(value = "/bind/attach/query", method = RequestMethod.POST)
-    public Page<ATTACH_VO> getAttach(@RequestBody @Validated QueryBindReq req) {
-        IPage<ATTACH_VO> res = bindRepo().queryAttachList(req, false);
-        return Resp.convert(res, getAttachVoClass());
+    public Page<?> getAttach(@RequestBody @Validated QueryBindReq req) {
+        Validator.assertNotNull(attachAdminController(), ErrCodeSys.PA_DATA_NOT_SUPPORT, "实体列表");
+        return attachAdminController().generalQuery(req);
     }
 
     @ApiIgnore
     @ApiOperation(value = "查询绑定实体(分页)")
     @RequestMapping(value = "/attach/advanced/query", method = RequestMethod.POST)
-    public Page<ATTACH_VO> getAttach(@RequestBody @Validated AdvancedQueryBindReq req) {
-        beforeQuery(req);
-        IPage<ATTACH_VO> res = bindRepo().advancedQueryAttachList(req, false);
-        return Resp.convert(res, getAttachVoClass());
+    public Page<?> getAttach(@RequestBody @Validated AdvancedQueryBindReq req) {
+        Validator.assertNotNull(attachAdminController(), ErrCodeSys.PA_DATA_NOT_SUPPORT, "实体列表");
+        return attachAdminController().advancedQuery(req);
     }
 
     @ApiIgnore

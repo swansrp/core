@@ -99,7 +99,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         return (Class<ATTACH_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 4);
     }
 
-    public IPage<ATTACH_VO> queryAttachList(QueryBindReq req, boolean bind) {
+    public IPage<ATTACH_VO> queryAttachList(QueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         Map<String, String> aliasMap = null;
         Set<String> havingFields = null;
@@ -111,11 +111,11 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
-                .eq(bind, bindEntityId(), req.getEntityId());
+                .eq(bindEntityId(), req.getEntityId());
         return attachRepo().select(req, aliasMap, havingFields, wrapper, getAttachVOClass());
     }
 
-    public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req, boolean bind) {
+    public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         Map<String, String> aliasMap = null;
         if (FuncUtil.isNotEmpty(getAttachPortalService())) {
@@ -125,7 +125,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
-                .eq(bind, bindEntityId(), req.getEntityId());
+                .eq(bindEntityId(), req.getEntityId());
         return attachRepo().select(req, aliasMap, wrapper, getAttachVOClass());
     }
 
