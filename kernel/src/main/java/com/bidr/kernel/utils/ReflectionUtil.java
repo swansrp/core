@@ -754,7 +754,9 @@ public class ReflectionUtil {
         Map<K, T> map = new LinkedHashMap<>(list.size());
         for (T t : list) {
             K key = getFunc.apply(t);
-            map.put(key, t);
+            if (!map.containsKey(key)) {
+                map.put(key, t);
+            }
         }
         return map;
     }
