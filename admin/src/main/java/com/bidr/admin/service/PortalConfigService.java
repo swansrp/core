@@ -221,6 +221,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
         portal.setRoleId(DEFAULT_CONFIG_ROLE_ID);
         portal.setAdvanced(CommonConst.YES);
+        portal.setIdColumn("auto_uuid_row_key");
         return portal;
     }
 
@@ -235,12 +236,13 @@ public class PortalConfigService implements LoginFillTokenInf {
         Set<String> propertyListSaved = new HashSet<>();
         for (Field field : fields) {
             if (!columnMap.containsKey(field.getName())) {
-                SysPortalColumn column = buildSysPortalColumn(portal, order++, field, roleId);
+                SysPortalColumn column = buildSysPortalColumn(portal, order, field, roleId);
                 sysPortalColumnService.insert(column);
                 sysPortalService.updateById(portal);
             } else {
                 propertyListSaved.add(field.getName());
             }
+            order++;
         }
         if (FuncUtil.isNotEmpty(propertyListSaved)) {
             for (String field : propertyListSaved) {
