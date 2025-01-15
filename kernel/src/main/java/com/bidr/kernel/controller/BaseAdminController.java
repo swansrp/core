@@ -21,7 +21,6 @@ import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.GeneralSummaryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.github.yulichang.wrapper.segments.SelectString;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -231,30 +230,12 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         return summaryByGeneralReq(req);
     }
 
-    protected Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(req.getColumns())) {
-            for (String column : req.getColumns()) {
-                wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
-            }
-        }
-        wrapper.from(from -> {
-            if (FuncUtil.isNotEmpty(getPortalService())) {
-                getPortalService().getJoinWrapper(from);
-                if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                    getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
-                            getPortalService().getHavingFields(), from);
-                } else {
-                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
-                }
-            }
-            return from;
-        });
-        return getRepo().selectJoinMap(wrapper);
+    @Override
+    @ApiIgnore
+    @ApiOperation("个数统计")
+    @RequestMapping(value = "/general/count", method = RequestMethod.POST)
+    public Long generalCount(@RequestBody QueryConditionReq req) {
+        return countByGeneralReq(req);
     }
 
     @Override
@@ -283,6 +264,13 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         return summaryByAdvancedReq(req);
     }
 
+    @Override
+    @ApiIgnore
+    @ApiOperation("统计个数")
+    @RequestMapping(value = "/advanced/count", method = RequestMethod.POST)
+    public Long advancedCount(@RequestBody AdvancedQueryReq req) {
+        return countByAdvancedReq(req);
+    }
 
     @Override
     @ApiIgnore
@@ -393,31 +381,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
                 StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
-    }
-
-    protected Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(req.getColumns())) {
-            for (String column : req.getColumns()) {
-                wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
-            }
-        }
-        wrapper.from(from -> {
-            if (FuncUtil.isNotEmpty(getPortalService())) {
-                getPortalService().getJoinWrapper(from);
-                if (FuncUtil.isNotEmpty(req.getCondition())) {
-                    getRepo().parseAdvancedQuery(req.getCondition(), getPortalService().getAliasMap(), from);
-                } else {
-                    getRepo().parseAdvancedQuery(req.getCondition(), null, from);
-                }
-            }
-            return from;
-        });
-        return getRepo().selectJoinMap(wrapper);
     }
 
     protected List<VO> selectByAdvancedReq(AdvancedQueryReq req) {

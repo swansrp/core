@@ -104,9 +104,41 @@ public interface AdminControllerInf<ENTITY, VO> {
      * 汇总
      *
      * @param req 高级查询条件
-     * @return 数据
+     * @return 汇总数据
      */
     Map<String, Object> generalSummary(@RequestBody GeneralSummaryReq req);
+
+    /**
+     * 汇总
+     *
+     * @param req 查询条件
+     * @return 汇总数据
+     */
+    default Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+            }
+        }
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getConditionList())) {
+                    getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
+                            getPortalService().getHavingFields(), from);
+                } else {
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
+                }
+            }
+            return from;
+        });
+        return getRepo().selectJoinMap(wrapper);
+    }
 
     /**
      * 构造汇总sql select
@@ -128,6 +160,42 @@ public interface AdminControllerInf<ENTITY, VO> {
         wrapper.getExpression().getGroupBy().clear();
         // 去除order by成分
         wrapper.getExpression().getOrderBy().clear();
+    }
+
+    /**
+     * 统计个数
+     *
+     * @param req 查询条件
+     * @return 统计个数数据
+     */
+
+    Long generalCount(@RequestBody QueryConditionReq req);
+
+    /**
+     * 统计个数
+     *
+     * @param req 查询条件
+     * @return 统计个数数据
+     */
+    default Long countByGeneralReq(QueryConditionReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        wrapper.getSelectColum().add(new SelectString("1", wrapper.getAlias()));
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getConditionList())) {
+                    getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
+                            getPortalService().getHavingFields(), from);
+                } else {
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
+                }
+            }
+            return from;
+        });
+        return getRepo().selectJoinCount(wrapper);
     }
 
     /**
@@ -153,6 +221,71 @@ public interface AdminControllerInf<ENTITY, VO> {
      * @return 数据
      */
     Map<String, Object> advancedSummary(@RequestBody AdvancedSummaryReq req);
+
+    /**
+     * 汇总
+     *
+     * @param req 高级查询条件
+     * @return 汇总数据
+     */
+    default Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+            }
+        }
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getCondition())) {
+                    getRepo().parseAdvancedQuery(req.getCondition(), getPortalService().getAliasMap(), from);
+                } else {
+                    getRepo().parseAdvancedQuery(req.getCondition(), null, from);
+                }
+            }
+            return from;
+        });
+        return getRepo().selectJoinMap(wrapper);
+    }
+
+    /**
+     * 统计个数
+     *
+     * @param req 高级查询条件
+     * @return 统计个数数据
+     */
+    Long advancedCount(@RequestBody AdvancedQueryReq req);
+
+    /**
+     * 统计个数
+     *
+     * @param req 高级查询条件
+     * @return 统计个数数据
+     */
+    default Long countByAdvancedReq(AdvancedQueryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        wrapper.getSelectColum().add(new SelectString("1", wrapper.getAlias()));
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getCondition())) {
+                    getRepo().parseAdvancedQuery(req.getCondition(), getPortalService().getAliasMap(), from);
+                } else {
+                    getRepo().parseAdvancedQuery(req.getCondition(), null, from);
+                }
+            }
+            return from;
+        });
+        return getRepo().selectJoinCount(wrapper);
+    }
 
     /**
      * 导出
