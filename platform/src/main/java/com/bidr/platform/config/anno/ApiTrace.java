@@ -16,7 +16,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ApiTrace {
-    boolean request() default true;
-
     boolean response() default true;
 }
