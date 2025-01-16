@@ -83,19 +83,6 @@ public class LogFilter extends OncePerRequestFilter {
                 return;
             }
 
-            HandlerMethod handlerMethod = (HandlerMethod) temRequest.getAttribute(
-                    HandlerMapping.INTROSPECT_TYPE_LEVEL_MAPPING);
-            boolean traceRequest = true;
-            boolean traceResponse = true;
-            if (handlerMethod.getBeanType().isAnnotationPresent(ApiTrace.class)) {
-                traceRequest = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).request();
-                traceResponse = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).response();
-            }
-            if (handlerMethod.getMethod().isAnnotationPresent(ApiTrace.class)) {
-                traceRequest = handlerMethod.getMethod().getAnnotation(ApiTrace.class).request();
-                traceResponse = handlerMethod.getMethod().getAnnotation(ApiTrace.class).response();
-            }
-
             TokenInfo tokenInfo = AuthTokenUtil.extractToken(request);
 
             // 记录请求的消息体
@@ -117,12 +104,21 @@ public class LogFilter extends OncePerRequestFilter {
             }
 
             if (HttpMethod.GET.matches(request.getMethod())) {
-                log.info(formatGetMsg(request, request.getParameterMap(), tokenInfo, traceRequest));
+                log.info(formatGetMsg(request, request.getParameterMap(), tokenInfo));
             } else {
-                log.info(formatPostMsg(request, request.getParameterMap(), tokenInfo, requestBodyStr, traceRequest));
+                log.info(formatPostMsg(request, request.getParameterMap(), tokenInfo, requestBodyStr));
             }
 
             filterChain.doFilter(temRequest, temResponse);
+            HandlerMethod handlerMethod = (HandlerMethod) temRequest.getAttribute(
+                    HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
+            boolean traceResponse = true;
+            if (handlerMethod.getBeanType().isAnnotationPresent(ApiTrace.class)) {
+                traceResponse = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).response();
+            }
+            if (handlerMethod.getMethod().isAnnotationPresent(ApiTrace.class)) {
+                traceResponse = handlerMethod.getMethod().getAnnotation(ApiTrace.class).response();
+            }
 
             stopWatch.stop();
             MDC.put("totalTime", String.valueOf(stopWatch.getTotalTimeMillis()));
@@ -155,15 +151,14 @@ public class LogFilter extends OncePerRequestFilter {
         return httpServletRequest.getRequestURI().matches(".*/(export|captcha).*");
     }
 
-    private String formatGetMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo,
-                                boolean detail) {
-        return buildRequestMsg(request, parameterMap, tokenInfo, detail).toString();
+    private String formatGetMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo) {
+        return buildRequestMsg(request, parameterMap, tokenInfo).toString();
     }
 
     private String formatPostMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo,
-                                 String requestJson, boolean detail) {
-        StringBuffer sb = buildRequestMsg(request, parameterMap, tokenInfo, detail);
-        if (detail && !StringUtils.isEmpty(requestJson)) {
+                                 String requestJson) {
+        StringBuffer sb = buildRequestMsg(request, parameterMap, tokenInfo);
+        if (!StringUtils.isEmpty(requestJson)) {
             sb.append("\n");
             sb.append("[");
             sb.append(requestJson);
@@ -181,10 +176,10 @@ public class LogFilter extends OncePerRequestFilter {
     }
 
     private StringBuffer buildRequestMsg(HttpServletRequest request, Map<String, String[]> parameterMap,
-                                         TokenInfo tokenInfo, boolean detail) {
+                                         TokenInfo tokenInfo) {
         StringBuffer sb = new StringBuffer();
         sb.append("=======>").append("[").append(request.getMethod()).append("]").append(request.getRequestURI());
-        if (detail && MapUtils.isNotEmpty(parameterMap)) {
+        if (MapUtils.isNotEmpty(parameterMap)) {
             sb.append("?").append(request.getQueryString());
         }
         sb.append(" {");
