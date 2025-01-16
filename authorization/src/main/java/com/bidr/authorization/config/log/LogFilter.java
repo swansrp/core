@@ -9,6 +9,7 @@ import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.RandomUtil;
 import com.bidr.kernel.utils.StringUtil;
+import com.bidr.platform.config.anno.ApiTrace;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +20,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerMapping;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -27,7 +30,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * description 请求日志
@@ -40,9 +42,26 @@ import java.util.UUID;
 @Component
 public class LogFilter extends OncePerRequestFilter {
 
+    public static boolean isJsonResponse(HttpServletResponse response) {
+        return response.getContentType().contains("json");
+    }
+
+    public static String extractResultPayload(MultiReadHttpServletResponse response) {
+        byte[] buf = response.getBody();
+        String payload = "";
+        if (buf.length > 0) {
+            try {
+                payload = new String(buf, 0, buf.length, response.getCharacterEncoding());
+            } catch (UnsupportedEncodingException ex) {
+                payload = "[unknown]";
+            }
+        }
+        return payload;
+    }
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
         String requestId = request.getHeader("X-Request-Id");
         if (!org.springframework.util.StringUtils.hasText(requestId)) {
             requestId = RandomUtil.getUUID();
@@ -62,6 +81,19 @@ public class LogFilter extends OncePerRequestFilter {
             if (recordIgnore(request) || HttpMethod.OPTIONS.matches(request.getMethod())) {
                 filterChain.doFilter(temRequest, temResponse);
                 return;
+            }
+
+            HandlerMethod handlerMethod = (HandlerMethod) temRequest.getAttribute(
+                    HandlerMapping.INTROSPECT_TYPE_LEVEL_MAPPING);
+            boolean traceRequest = true;
+            boolean traceResponse = true;
+            if (handlerMethod.getBeanType().isAnnotationPresent(ApiTrace.class)) {
+                traceRequest = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).request();
+                traceResponse = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).response();
+            }
+            if (handlerMethod.getMethod().isAnnotationPresent(ApiTrace.class)) {
+                traceRequest = handlerMethod.getMethod().getAnnotation(ApiTrace.class).request();
+                traceResponse = handlerMethod.getMethod().getAnnotation(ApiTrace.class).response();
             }
 
             TokenInfo tokenInfo = AuthTokenUtil.extractToken(request);
@@ -85,9 +117,9 @@ public class LogFilter extends OncePerRequestFilter {
             }
 
             if (HttpMethod.GET.matches(request.getMethod())) {
-                log.info(formatGetMsg(request, request.getParameterMap(), tokenInfo));
+                log.info(formatGetMsg(request, request.getParameterMap(), tokenInfo, traceRequest));
             } else {
-                log.info(formatPostMsg(request, request.getParameterMap(), tokenInfo, requestBodyStr));
+                log.info(formatPostMsg(request, request.getParameterMap(), tokenInfo, requestBodyStr, traceRequest));
             }
 
             filterChain.doFilter(temRequest, temResponse);
@@ -101,9 +133,11 @@ public class LogFilter extends OncePerRequestFilter {
             if (isJsonResponse(temResponse) && temResponse instanceof MultiReadHttpServletResponse) {
                 resultBodyStr = extractResultPayload((MultiReadHttpServletResponse) temResponse);
                 if (HttpMethod.GET.matches(request.getMethod())) {
-                    log.info(formatGetRspMsg(String.valueOf(stopWatch.getTotalTimeMillis()), resultBodyStr));
+                    log.info(formatGetRspMsg(String.valueOf(stopWatch.getTotalTimeMillis()), resultBodyStr,
+                            traceResponse));
                 } else {
-                    log.info(formatPostRspMsg(String.valueOf(stopWatch.getTotalTimeMillis()), resultBodyStr));
+                    log.info(formatPostRspMsg(String.valueOf(stopWatch.getTotalTimeMillis()), resultBodyStr,
+                            traceResponse));
                 }
             }
 
@@ -121,14 +155,15 @@ public class LogFilter extends OncePerRequestFilter {
         return httpServletRequest.getRequestURI().matches(".*/(export|captcha).*");
     }
 
-    private String formatGetMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo) {
-        return buildRequestMsg(request, parameterMap, tokenInfo).toString();
+    private String formatGetMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo,
+                                boolean detail) {
+        return buildRequestMsg(request, parameterMap, tokenInfo, detail).toString();
     }
 
     private String formatPostMsg(HttpServletRequest request, Map<String, String[]> parameterMap, TokenInfo tokenInfo,
-                                 String requestJson) {
-        StringBuffer sb = buildRequestMsg(request, parameterMap, tokenInfo);
-        if (!StringUtils.isEmpty(requestJson)) {
+                                 String requestJson, boolean detail) {
+        StringBuffer sb = buildRequestMsg(request, parameterMap, tokenInfo, detail);
+        if (detail && !StringUtils.isEmpty(requestJson)) {
             sb.append("\n");
             sb.append("[");
             sb.append(requestJson);
@@ -137,36 +172,19 @@ public class LogFilter extends OncePerRequestFilter {
         return sb.toString();
     }
 
-    public static boolean isJsonResponse(HttpServletResponse response) {
-        return response.getContentType().contains("json");
+    private String formatGetRspMsg(String totalTime, String resultJson, boolean detail) {
+        return "<=======" + "[" + totalTime + "]" + (detail ? resultJson : "");
     }
 
-    public static String extractResultPayload(MultiReadHttpServletResponse response) {
-        byte[] buf = response.getBody();
-        String payload = "";
-        if (buf.length > 0) {
-            try {
-                payload = new String(buf, 0, buf.length, response.getCharacterEncoding());
-            } catch (UnsupportedEncodingException ex) {
-                payload = "[unknown]";
-            }
-        }
-        return payload;
-    }
-
-    private String formatGetRspMsg(String totalTime, String resultJson) {
-        return "<=======" + "[" + totalTime + "]" + resultJson;
-    }
-
-    private String formatPostRspMsg(String totalTime, String resultJson) {
-        return "<=======" + "[" + totalTime + "]" + resultJson;
+    private String formatPostRspMsg(String totalTime, String resultJson, boolean detail) {
+        return "<=======" + "[" + totalTime + "]" + (detail ? resultJson : "");
     }
 
     private StringBuffer buildRequestMsg(HttpServletRequest request, Map<String, String[]> parameterMap,
-                                         TokenInfo tokenInfo) {
+                                         TokenInfo tokenInfo, boolean detail) {
         StringBuffer sb = new StringBuffer();
         sb.append("=======>").append("[").append(request.getMethod()).append("]").append(request.getRequestURI());
-        if (MapUtils.isNotEmpty(parameterMap)) {
+        if (detail && MapUtils.isNotEmpty(parameterMap)) {
             sb.append("?").append(request.getQueryString());
         }
         sb.append(" {");
