@@ -6,6 +6,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.service.PortalCommonService;
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -23,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -458,6 +460,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         ENTITY entity = getRepo().getById(vo.getId());
         Validator.assertNotNull(entity, ErrCodeSys.PA_DATA_NOT_EXIST, "节点");
         LambdaUtil.setValue(entity, bizFunc, bizValue);
+        DbUtil.setUpdateAtTimeStamp(entity, new Date());
         return getRepo().updateById(entity, false);
     }
 
@@ -484,6 +487,7 @@ public interface AdminControllerInf<ENTITY, VO> {
                 LambdaUtil.setValue(entity, entry.getKey(), entry.getValue());
             }
         }
+        DbUtil.setUpdateAtTimeStamp(entity, new Date());
         return getRepo().updateById(entity, false);
     }
 

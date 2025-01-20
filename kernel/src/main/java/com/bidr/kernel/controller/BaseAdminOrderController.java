@@ -3,6 +3,7 @@ package com.bidr.kernel.controller;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -34,6 +36,7 @@ public abstract class BaseAdminOrderController<ENTITY, VO> extends BaseAdminCont
         if (CollectionUtils.isNotEmpty(idOrderReqVOList)) {
             for (IdOrderReqVO req : idOrderReqVOList) {
                 ENTITY entity = buildIdOrderEntity(req.getId(), req.getShowOrder());
+                DbUtil.setUpdateAtTimeStamp(entity, new Date());
                 entityList.add(entity);
             }
             getRepo().updateBatchById(entityList);

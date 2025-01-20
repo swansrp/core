@@ -10,10 +10,7 @@ import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import com.bidr.kernel.utils.CsvUtil;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.HttpUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -38,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,6 +73,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         } else {
             beforeAdd(entity);
         }
+        DbUtil.setCreateAtTimeStamp(entity, new Date());
+        DbUtil.setUpdateAtTimeStamp(entity, new Date());
         Boolean result = getRepo().insert(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");
         afterAdd(entity);
@@ -142,6 +142,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         } else {
             beforeUpdate(entity);
         }
+        DbUtil.setUpdateAtTimeStamp(entity, new Date());
         Boolean result = getRepo().updateById(entity, !strict);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
         afterUpdate(entity);

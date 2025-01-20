@@ -128,11 +128,27 @@ public class DbUtil {
     }
 
     public static void setCreateAtTimeStamp(Object entity) {
-        ReflectionUtil.setFieldValue(entity, SqlConstant.CREATE_FIELD, new Date());
+        if (ReflectionUtil.existedField(entity.getClass(), SqlConstant.CREATE_FIELD)) {
+            ReflectionUtil.setFieldValue(entity, SqlConstant.CREATE_FIELD, new Date());
+        }
     }
 
     public static void setUpdateAtTimeStamp(Object entity) {
-        ReflectionUtil.setFieldValue(entity, SqlConstant.UPDATE_FIELD, new Date());
+        if (ReflectionUtil.existedField(entity.getClass(), SqlConstant.UPDATE_FIELD)) {
+            ReflectionUtil.setFieldValue(entity, SqlConstant.UPDATE_FIELD, new Date());
+        }
+    }
+
+    public static void setCreateAtTimeStamp(Object entity, Date date) {
+        if (ReflectionUtil.existedField(entity.getClass(), SqlConstant.CREATE_FIELD)) {
+            ReflectionUtil.setFieldValue(entity, SqlConstant.CREATE_FIELD, date);
+        }
+    }
+
+    public static void setUpdateAtTimeStamp(Object entity, Date date) {
+        if (ReflectionUtil.existedField(entity.getClass(), SqlConstant.UPDATE_FIELD)) {
+            ReflectionUtil.setFieldValue(entity, SqlConstant.UPDATE_FIELD, date);
+        }
     }
 
     public static <T> T buildEntity(Map<String, Object> entityMap, Class<T> clazz) {

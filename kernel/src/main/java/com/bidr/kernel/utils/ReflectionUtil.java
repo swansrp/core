@@ -545,9 +545,11 @@ public class ReflectionUtil {
         }
         List<R> res = new ArrayList<>();
         list.forEach(item -> {
-            R obj = getFunc.apply(item);
-            if (obj != null) {
-                res.add(obj);
+            if (item != null) {
+                R obj = getFunc.apply(item);
+                if (obj != null) {
+                    res.add(obj);
+                }
             }
         });
         return res;
@@ -698,8 +700,10 @@ public class ReflectionUtil {
         Map<K, T> map = new HashMap<>(list.size());
         if (CollectionUtils.isNotEmpty(list)) {
             for (T t : list) {
-                K key = getFunc.apply(t);
-                map.put(key, t);
+                if (t != null) {
+                    K key = getFunc.apply(t);
+                    map.put(key, t);
+                }
             }
         }
         return map;
@@ -709,10 +713,12 @@ public class ReflectionUtil {
         Map<K, List<T>> map = new HashMap<>(list.size());
         if (CollectionUtils.isNotEmpty(list)) {
             for (T t : list) {
-                K key = getFunc.apply(t);
-                List<T> valueList = map.getOrDefault(key, new ArrayList<>());
-                valueList.add(t);
-                map.put(key, valueList);
+                if (t != null) {
+                    K key = getFunc.apply(t);
+                    List<T> valueList = map.getOrDefault(key, new ArrayList<>());
+                    valueList.add(t);
+                    map.put(key, valueList);
+                }
             }
         }
         return map;
@@ -722,10 +728,12 @@ public class ReflectionUtil {
         Map<K, List<T>> map = new LinkedHashMap<>(list.size());
         if (CollectionUtils.isNotEmpty(list)) {
             for (T t : list) {
-                K key = getFunc.apply(t);
-                List<T> valueList = map.getOrDefault(key, new ArrayList<>());
-                valueList.add(t);
-                map.put(key, valueList);
+                if (t != null) {
+                    K key = getFunc.apply(t);
+                    List<T> valueList = map.getOrDefault(key, new ArrayList<>());
+                    valueList.add(t);
+                    map.put(key, valueList);
+                }
             }
         }
         return map;
@@ -734,9 +742,11 @@ public class ReflectionUtil {
     public static <T> Map<String, T> reflectToLinkedMap(Collection<T> list, String... fieldArr) {
         Map<String, T> map = new LinkedHashMap<>();
         for (T t : list) {
-            String fieldValueArr = getFieldKey(fieldArr, t);
-            String key = StringUtil.join(fieldValueArr);
-            map.put(key, t);
+            if (t != null) {
+                String fieldValueArr = getFieldKey(fieldArr, t);
+                String key = StringUtil.join(fieldValueArr);
+                map.put(key, t);
+            }
         }
         return map;
     }
@@ -744,8 +754,10 @@ public class ReflectionUtil {
     public static <T, K> Map<K, T> reflectToLinkedMap(Collection<T> list, String fieldName, Class<K> clazz) {
         Map<K, T> map = new LinkedHashMap<>(list.size());
         for (T t : list) {
-            K key = getFieldValue(t, fieldName);
-            map.put(key, t);
+            if (t != null) {
+                K key = getFieldValue(t, fieldName);
+                map.put(key, t);
+            }
         }
         return map;
     }
@@ -753,9 +765,11 @@ public class ReflectionUtil {
     public static <T, K> Map<K, T> reflectToLinkedMap(Collection<T> list, GetFunc<T, K> getFunc) {
         Map<K, T> map = new LinkedHashMap<>(list.size());
         for (T t : list) {
-            K key = getFunc.apply(t);
-            if (!map.containsKey(key)) {
-                map.put(key, t);
+            if (t != null) {
+                K key = getFunc.apply(t);
+                if (!map.containsKey(key)) {
+                    map.put(key, t);
+                }
             }
         }
         return map;
