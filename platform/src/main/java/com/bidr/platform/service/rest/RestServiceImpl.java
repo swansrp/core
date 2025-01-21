@@ -30,6 +30,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -175,9 +176,14 @@ public class RestServiceImpl implements RestService {
         for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
             try {
                 if (entry.getValue() != null) {
-                    paramUrl =
-                            paramUrl + entry.getKey() + "=" + URLEncoder.encode(entry.getValue().toString(), "UTF-8") +
-                                    "&";
+                    if (entry.getValue() instanceof Collection) {
+                        for (Object o : ((Collection<?>) entry.getValue())) {
+                            paramUrl = paramUrl + entry.getKey() + "=" + URLEncoder.encode(o.toString(), "UTF-8") + "&";
+                        }
+                    } else {
+                        paramUrl = paramUrl + entry.getKey() + "=" +
+                                URLEncoder.encode(entry.getValue().toString(), "UTF-8") + "&";
+                    }
                 }
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
