@@ -120,6 +120,12 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         }
         return map;
     }
+
+    public AcUser getUserByIdCardNumber(String idNumber) {
+        LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getIdNumber, idNumber)
+                .eq(AcUser::getValid, CommonConst.YES);
+        return selectOne(wrapper);
+    }
 }
 
 
