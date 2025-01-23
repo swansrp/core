@@ -4,7 +4,6 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.exception.NoticeException;
@@ -34,7 +33,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -98,10 +96,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         }
         boolean result;
         if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
-            Field validField = ReflectionUtil.getField(getEntityClass(), VALID_FIELD);
             ENTITY entity = getRepo().selectById(vo.getId());
-            ReflectionUtil.setValue(validField, entity, CommonConst.NO);
-            result = getRepo().updateById(entity);
+            result = getRepo().disable(entity);
         } else {
             result = getRepo().deleteById(vo.getId());
         }

@@ -27,5 +27,15 @@ public interface SqlDeleteRepo<T> {
 
     boolean deleteById(T entity);
 
+    boolean disable(T entity);
+
+    boolean disable(Wrapper<T> wrapper);
+
+    boolean disable(Map<String, Object> propertyMap);
+
+    boolean disableById(Serializable id);
+
+    boolean disableById(T entity);
+
 
 }

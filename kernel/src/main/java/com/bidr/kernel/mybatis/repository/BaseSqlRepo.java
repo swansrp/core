@@ -323,6 +323,62 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
+    public boolean disable(T entity) {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            ReflectionUtil.setValue(entity, VALID_FIELD, CommonConst.NO);
+            return updateById(entity);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean disable(Wrapper<T> wrapper) {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            T entity = ReflectionUtil.newInstance(getEntityClass());
+            ReflectionUtil.setValue(entity, VALID_FIELD, CommonConst.NO);
+            return update(entity, wrapper);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean disable(Map<String, Object> propertyMap) {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            T entity = ReflectionUtil.newInstance(getEntityClass());
+            ReflectionUtil.setValue(entity, VALID_FIELD, CommonConst.NO);
+            UpdateWrapper<T> wrapper = super.getUpdateWrapperByMap(propertyMap);
+            return update(entity, wrapper);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean disableById(Serializable id) {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            T entity = selectById(id);
+            ReflectionUtil.setValue(entity, VALID_FIELD, CommonConst.NO);
+            return updateById(entity);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean disableById(T entity) {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            if (multiIdExisted()) {
+                T newEntity = selectByMultiId(entity);
+                ReflectionUtil.setValue(newEntity, VALID_FIELD, CommonConst.NO);
+                return updateByMultiId(newEntity);
+            } else {
+                T newEntity = selectById(entity);
+                ReflectionUtil.setValue(newEntity, VALID_FIELD, CommonConst.NO);
+                return updateById(newEntity);
+            }
+        }
+        return false;
+    }
+
+    @Override
     public boolean updateById(T entity) {
         return updateById(entity, true);
     }
