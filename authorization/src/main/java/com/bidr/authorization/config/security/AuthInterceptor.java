@@ -25,6 +25,7 @@ import com.bidr.platform.config.anno.IgnoreAuth;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -54,6 +55,8 @@ public class AuthInterceptor implements HandlerInterceptor {
     private final TokenService tokenService;
     private final CaptchaService captchaService;
     private final MsgVerificationService msgVerificationService;
+    @Value("${my.cors.enable:false}")
+    private boolean corsEnable;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -77,7 +80,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     private void enableCrossDomain(HttpServletRequest request, HttpServletResponse response) {
         Map<String, String> headersInfoMap = HttpUtil.getHeadersInfoMap(request);
         if (FuncUtil.equals(BeanUtil.getActiveProfile(), "dev") ||
-                FuncUtil.equals(BeanUtil.getActiveProfile(), "local")) {
+                FuncUtil.equals(BeanUtil.getActiveProfile(), "local") || corsEnable) {
             response.setHeader("Access-Control-Allow-Origin", headersInfoMap.get("origin"));
         }
         response.setHeader("Access-Control-Allow-Headers", RequestConst.getAllHeader());

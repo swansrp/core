@@ -154,6 +154,8 @@ xss: # 过滤开关
 
 my:
   base-package: com.bidr
+  cors:
+    enable: true
   cache:
     expired: 10
   rest:
