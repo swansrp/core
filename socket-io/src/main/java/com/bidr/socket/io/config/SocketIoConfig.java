@@ -3,10 +3,12 @@ package com.bidr.socket.io.config;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.NetUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.platform.redis.aop.publish.RedisPublishConfig;
-import com.bidr.socket.io.controller.SocketIoEndpoint;
+import com.bidr.socket.io.bo.message.ChatMessage;
+import com.bidr.socket.io.constant.ChatMessageConstant;
 import com.bidr.socket.io.dao.po.key.SocketIoRedisKey;
 import com.bidr.socket.io.dao.po.msg.TopicChatMessage;
 import com.bidr.socket.io.service.socket.ReceiveMessageService;
@@ -18,6 +20,7 @@ import com.corundumstudio.socketio.annotation.SpringAnnotationScanner;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -41,21 +44,22 @@ import java.lang.reflect.Method;
 @Configuration
 public class SocketIoConfig implements ApplicationContextAware, CommandLineRunner {
 
-    public static final String TOKEN = "token";
-    public static final String OPERATOR = "operator";
     public static final String RECEIVE_MSG_HANDLER = "receiveSubscribeMessage";
-    private static final String PROJECT_NAME_PROPERTY = "my.project.name";
+    private static final String PROJECT_NAME_PROPERTY = "app.projectId";
     private static ApplicationContext applicationContextInstance;
     @Value("${my.chat.server.port:}")
     private Integer port;
+    @Value("${my.project.name}")
+    private String projectName;
     @Resource
     private RedisPublishConfig redisPublishConfig;
     @Resource
     private TokenService tokenService;
+    @Resource
+    private ReceiveMessageService receiveMessageService;
 
     public static String buildChatMessageTopic() {
-        return applicationContextInstance.getEnvironment().getProperty(PROJECT_NAME_PROPERTY) + "-" +
-                SocketIoRedisKey.SOCKET_IO_MSG_TOPIC_KEY;
+        return applicationContextInstance.getEnvironment().getProperty(PROJECT_NAME_PROPERTY) + "-" + SocketIoRedisKey.SOCKET_IO_MSG_TOPIC_KEY;
     }
 
     @Bean
@@ -64,17 +68,18 @@ public class SocketIoConfig implements ApplicationContextAware, CommandLineRunne
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
         applicationContextInstance = applicationContext;
     }
 
     @Bean
-    public SocketIOServer socketIOServer() {
+    public SocketIOServer socketIoServer() {
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
         String localIp = NetUtil.getLocalIp();
         log.info("socket io 服务启动 {}:{}", localIp, port);
+//        config.setContext(projectName);
         config.setHostname(localIp);
         config.setPort(port == null ? 0 : port);
         config.setSocketConfig(socketConfig);
@@ -83,18 +88,21 @@ public class SocketIoConfig implements ApplicationContextAware, CommandLineRunne
 
         //该处可以用来进行身份验证
         config.setAuthorizationListener(data -> {
-            String token = data.getSingleUrlParam(TOKEN);
+            String token = data.getSingleUrlParam("token");
             TokenInfo tokenInfo = AuthTokenUtil.resolveToken(token);
-            String operator = data.getSingleUrlParam(OPERATOR);
-            log.info("token:{}, operator:{}", token, operator);
-            tokenService.verifyToken(tokenInfo);
-            return new AuthorizationResult(true, tokenService.getTokenValue(tokenInfo));
+            if (tokenService.verifyToken(tokenInfo)) {
+                log.info("socketio鉴权通过 {}", JsonUtil.toJson(tokenInfo, false, false, true));
+                return new AuthorizationResult(true, tokenService.getTokenValue(tokenInfo));
+            } else {
+                log.info("socketio鉴权失败 {}", JsonUtil.toJson(tokenInfo, false, false, true));
+                return new AuthorizationResult(false, null);
+            }
         });
-
-        SocketIOServer socketIOServer = new SocketIOServer(config);
-        socketIOServer.addConnectListener(onConnect());
-        socketIOServer.addDisconnectListener(onDisconnected());
-        return socketIOServer;
+        SocketIOServer socketIoServer = new SocketIOServer(config);
+        socketIoServer.addConnectListener(onConnect());
+        socketIoServer.addDisconnectListener(onDisconnected());
+        socketIoServer.addEventListener(ChatMessageConstant.CHAT, ChatMessage.class, receiveMessageService.onViewMsgReceived());
+        return socketIoServer;
     }
 
     private ConnectListener onConnect() {
@@ -117,10 +125,9 @@ public class SocketIoConfig implements ApplicationContextAware, CommandLineRunne
     public void run(String... args) throws Exception {
         if (port != null) {
             Object delegate = applicationContextInstance.getBean(ReceiveMessageService.class);
-            Method method = ReflectionUtil.getMethod(ReceiveMessageService.class, RECEIVE_MSG_HANDLER,
-                    TopicChatMessage.class);
+            Method method = ReflectionUtil.getMethod(ReceiveMessageService.class, RECEIVE_MSG_HANDLER, TopicChatMessage.class);
             redisPublishConfig.registerPublish(buildChatMessageTopic(), delegate, method, TopicChatMessage.class);
-            socketIOServer().start();
+            socketIoServer().start();
         }
     }
 }

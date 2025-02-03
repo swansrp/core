@@ -1,10 +1,7 @@
 package com.bidr.socket.io.service.socket;
 
 
-import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.token.TokenItem;
-import com.bidr.authorization.service.token.TokenService;
-import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -19,12 +16,14 @@ import com.bidr.socket.io.dao.entity.ChatRoomMember;
 import com.bidr.socket.io.dao.po.msg.TopicChatMessage;
 import com.bidr.socket.io.dao.repository.mysql.ChatRoomMemberService;
 import com.bidr.socket.io.service.chat.ChatMessageHistoryService;
+import com.bidr.socket.io.utils.ClientUtil;
+import com.corundumstudio.socketio.BroadcastOperations;
 import com.corundumstudio.socketio.SocketIOClient;
-import com.corundumstudio.socketio.SocketIONamespace;
-import com.corundumstudio.socketio.listener.DataListener;
+import com.corundumstudio.socketio.SocketIOServer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -36,9 +35,7 @@ import java.util.UUID;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @date 2020/9/22 17:26
- * @description Project Name: customer-robot
- * @Package: com.bhfae.customer.robot.service.chat
+ * @since 2020/9/22 17:26
  */
 @Slf4j
 @Service
@@ -49,8 +46,6 @@ public class SendMessageService {
     @Resource
     private ChatRoomMemberService chatRoomMemberService;
     @Resource
-    private TokenService tokenService;
-    @Resource
     private RedisPublishConfig redisPublishConfig;
     @Resource
     private ChatMessageHistoryService chatMessageHistoryService;
@@ -58,37 +53,11 @@ public class SendMessageService {
     private SaSequenceService saSequenceService;
     @Resource
     private SysConfigCacheService sysConfigCacheService;
+    @Lazy
+    @Resource
+    private SocketIOServer socketioServer;
 
-    public DataListener<ChatMessage> onViewMsgReceived(SocketIONamespace namespace) {
-        return (client, msg, ackSender) -> {
-            log.debug("From: 客户端[{}-{}] - 收到消息 '{}'", namespace.getName(), client.getSessionId().toString(),
-                    msg);
-            fillChatMessage(client, msg);
-            String target = geTargetFromNamespace(namespace);
-            TopicChatMessage topicChatMessage = buildTopicChatMessage(ChatMessageConstant.CHAT, target, msg);
-            publish(topicChatMessage);
-        };
-    }
-
-    private void fillChatMessage(SocketIOClient client, ChatMessage msg) {
-        String token = client.getHandshakeData().getSingleUrlParam(SocketIoConfig.TOKEN);
-        TokenInfo tokenInfo = AuthTokenUtil.resolveToken(token);
-        String userFace = tokenService.getItem(tokenInfo, TokenItem.AVATAR.name(), String.class);
-        String userName = tokenService.getItem(tokenInfo, TokenItem.NICK_NAME.name(), String.class);
-        if (StringUtils.isNotBlank(userName)) {
-            msg.setUserId(userName);
-        }
-        if (StringUtils.isNotBlank(userFace)) {
-            msg.setAvatar(userFace);
-        }
-        msg.setSessionId(client.getSessionId().toString());
-    }
-
-    private String geTargetFromNamespace(SocketIONamespace namespace) {
-        return namespace.getName().replaceFirst("/", "");
-    }
-
-    private TopicChatMessage buildTopicChatMessage(String msgType, String target, ChatMessage msg) {
+    public TopicChatMessage buildTopicChatMessage(String msgType, String target, ChatMessage msg) {
         TopicChatMessage topicChatMessage = ReflectionUtil.copy(msg, TopicChatMessage.class);
         if (StringUtils.isBlank(topicChatMessage.getMsgId())) {
             topicChatMessage.setMsgId(UUID.randomUUID().toString());
@@ -145,18 +114,18 @@ public class SendMessageService {
         publishMsg(ChatMessageConstant.CHAT, target, msg);
     }
 
-    public void show(SocketIONamespace namespace, TopicChatMessage topicChatMessage) {
-        log.info("广播client数量:{}", namespace.getBroadcastOperations().getClients().size());
-        if (CollectionUtils.isNotEmpty(namespace.getBroadcastOperations().getClients())) {
-            for (SocketIOClient client : namespace.getBroadcastOperations().getClients()) {
+    public void show(TopicChatMessage topicChatMessage) {
+        BroadcastOperations roomOperations = socketioServer.getRoomOperations(topicChatMessage.getTargetId());
+        log.info("广播client数量:{}", roomOperations.getClients().size());
+        if (CollectionUtils.isNotEmpty(roomOperations.getClients())) {
+            for (SocketIOClient client : roomOperations.getClients()) {
                 log.info("{}-{}", client.getNamespace().getName(), client.getSessionId().toString());
                 if (!client.getSessionId().toString().equals(topicChatMessage.getSessionId())) {
-                    show(namespace, client, topicChatMessage);
+                    show(client, topicChatMessage);
                 } else {
-                    show(namespace, client, topicChatMessage);
+                    show(client, topicChatMessage);
                 }
-                boolean manualDeliveredAck = sysConfigCacheService.getParamSwitch(
-                        ChatParam.CHAT_MESSAGE_MANUAL_DELIVERED_ACK);
+                boolean manualDeliveredAck = sysConfigCacheService.getParamSwitch(ChatParam.CHAT_MESSAGE_MANUAL_DELIVERED_ACK);
                 if (!manualDeliveredAck) {
                     messageDelivered(topicChatMessage);
                 }
@@ -164,8 +133,9 @@ public class SendMessageService {
         }
     }
 
-    public void show(SocketIONamespace namespace, SocketIOClient client, TopicChatMessage message) {
-        log.debug("To: 客户端[{}-{}] - 发送消息 {}", namespace.getName(), client.getSessionId().toString(), message);
+    public void show(SocketIOClient client, TopicChatMessage message) {
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+        log.debug("To: 客户端[{}-{}] - 发送消息 {}", operator, client.getSessionId().toString(), message);
         client.sendEvent(message.getTopic(), message);
     }
 
@@ -174,11 +144,9 @@ public class SendMessageService {
         saveMessageHistory(topicChatMessage);
     }
 
-    public void showSysMsg(SocketIONamespace namespace, String msg) {
-        String target = geTargetFromNamespace(namespace);
-        TopicChatMessage topicChatMessage = buildTopicChatMessage(ChatMessageConstant.SYS, target,
-                buildSysChatMessage(msg));
-        namespace.getBroadcastOperations().sendEvent(topicChatMessage.getTopic(), topicChatMessage);
+    public void showSysMsg(String target, String msg) {
+        TopicChatMessage topicChatMessage = buildTopicChatMessage(ChatMessageConstant.SYS, target, buildSysChatMessage(msg));
+        socketioServer.getRoomOperations(target).sendEvent(topicChatMessage.getTopic(), topicChatMessage);
     }
 
     private ChatMessage buildSysChatMessage(String msg) {

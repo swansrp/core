@@ -34,8 +34,6 @@ public class RedisPublishAspect {
     private RedisPublishConfig redisPublishConfig;
     @Resource
     private RedisPublishManager redisPublishManager;
-    @Value("${my.project.name}")
-    private String projectName;
 
     @Pointcut("@annotation(com.bidr.platform.config.aop.RedisPublish)")
     public void redisPublish() {

@@ -14,7 +14,7 @@ import org.springframework.core.env.Environment;
 @Slf4j
 public class MyRedisCacheKeyUtil {
 
-    private static final String PROJECT_NAME = "my.project.name";
+    private static final String PROJECT_NAME = "app.projectId";
     private static final String DEFAULT_PROJECT_NAME = "Sharp";
     private static final String SEP = ":";
 

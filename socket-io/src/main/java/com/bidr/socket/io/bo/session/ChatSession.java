@@ -17,7 +17,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ChatSession {
-    private String namespace;
     private String userId;
     private UUID sessionId;
 }

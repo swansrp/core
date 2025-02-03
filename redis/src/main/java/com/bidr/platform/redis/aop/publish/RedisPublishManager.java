@@ -26,7 +26,7 @@ import java.util.Set;
 @Configuration
 public class RedisPublishManager implements ApplicationContextAware {
 
-    @Value("${my.project.name}")
+    @Value("${app.projectId}")
     private String projectName;
     @Resource
     private ApplicationContext applicationContext;

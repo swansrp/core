@@ -47,8 +47,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public String fetchToken() {
-        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, GUEST_OPERATOR,
-                TOKEN_DEFAULT_TIMEOUT);
+        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, GUEST_OPERATOR, TOKEN_DEFAULT_TIMEOUT);
         saveToken(token, GUEST_OPERATOR, TOKEN_DEFAULT_TIMEOUT);
         return AuthTokenUtil.getToken(token);
     }
@@ -72,11 +71,15 @@ public class TokenServiceImpl implements TokenService {
         Validator.assertNotNull(token, ErrCodeSys.SYS_SESSION_TIME_OUT);
         boolean result = redisService.hasKey(getKey(token));
         if (result) {
-            String operator = getItem(token, TokenItem.OPERATOR.name(), String.class);
-            if (FuncUtil.equals(operator, GUEST_OPERATOR)) {
+            try {
+                String operator = getItem(token, TokenItem.OPERATOR.name(), String.class);
+                if (FuncUtil.equals(operator, GUEST_OPERATOR)) {
+                    return false;
+                }
+                result = StringUtils.equals(token.getCustomerNumber(), operator);
+            } catch (Exception e) {
                 return false;
             }
-            result = StringUtils.equals(token.getCustomerNumber(), operator);
         }
         return result;
     }
@@ -87,8 +90,7 @@ public class TokenServiceImpl implements TokenService {
         Map<String, Object> tokenMap = redisService.hashGet(tokenKey);
         Validator.assertNotNull(tokenMap, ErrCodeSys.SYS_SESSION_TIME_OUT);
         tokenMap.put(key, obj);
-        int expired = Integer.parseInt(
-                tokenMap.getOrDefault(TokenItem.EXPIRED.name(), TOKEN_DEFAULT_TIMEOUT).toString());
+        int expired = Integer.parseInt(tokenMap.getOrDefault(TokenItem.EXPIRED.name(), TOKEN_DEFAULT_TIMEOUT).toString());
         tokenMap.put(TokenItem.TIMESTAMP.name(), DateUtil.formatDate(new Date(), DateUtil.DATE_TIME_NORMAL));
         redisService.hashSet(tokenKey, tokenMap);
         redisService.expire(tokenKey, expired);
@@ -109,8 +111,7 @@ public class TokenServiceImpl implements TokenService {
         redisService.zSetRemoveByScore(LOGIN_STATUS, 0, now.getTime());
         long count = redisService.zSetSize(LOGIN_STATUS);
         Set<String> loginTokens = redisService.zSetRange(LOGIN_STATUS, 0, count, String.class);
-        List<String> tokenList = loginTokens.stream().filter(token -> token.startsWith(prefixKeys))
-                .collect(Collectors.toList());
+        List<String> tokenList = loginTokens.stream().filter(token -> token.startsWith(prefixKeys)).collect(Collectors.toList());
         log.info("用户:{}, 类型:{}, 已登录数: {} ", customerNumber, tokenType.name(), tokenList.size());
         if (CollectionUtils.isNotEmpty(tokenList)) {
             redisService.delete(tokenList);

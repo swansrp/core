@@ -3,18 +3,17 @@ package com.bidr.socket.io.service.session;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.service.token.TokenService;
-import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.utils.DateUtil;
 import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.bidr.socket.io.bo.session.ChatSession;
 import com.bidr.socket.io.constant.param.ChatParam;
 import com.bidr.socket.io.dao.po.chat.ChatHistory;
 import com.bidr.socket.io.dao.repository.mongo.ChatHistoryRepository;
 import com.bidr.socket.io.dao.repository.redis.ChatSessionRepository;
+import com.bidr.socket.io.utils.ClientUtil;
 import com.corundumstudio.socketio.SocketIOClient;
-import com.corundumstudio.socketio.SocketIONamespace;
 import com.corundumstudio.socketio.SocketIOServer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
@@ -40,9 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ChatSessionService {
 
-    private static final ConcurrentHashMap<String, ConcurrentHashMap<String, ChatSession>> map = new ConcurrentHashMap<>();
-    @Resource
-    private SocketIOServer socketIOServer;
+    private static final ConcurrentHashMap<String, ConcurrentHashMap<String, ChatSession>> MAP = new ConcurrentHashMap<>();
     @Resource
     private ChatSessionRepository chatSessionRepository;
     @Resource
@@ -51,50 +48,47 @@ public class ChatSessionService {
     private TokenService tokenService;
     @Resource
     private SysConfigCacheService sysConfigCacheService;
+    @Resource
+    private SocketIOServer socketioServer;
 
     public boolean existed(String operator) {
-        if (map.get(operator) != null) {
-            return MapUtils.isNotEmpty(map.get(operator));
+        if (MAP.get(operator) != null) {
+            return MapUtils.isNotEmpty(MAP.get(operator));
         }
         return false;
     }
 
-    public boolean login(String operator, TokenInfo token, UUID sessionId) {
+    public boolean login(SocketIOClient client) {
         boolean needConnectAgent = false;
-        if (!hasLogin(operator, sessionId.toString())) {
-            chatSessionRepository.add(operator, sessionId.toString());
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+        UUID sessionId = client.getSessionId();
+        String token = ClientUtil.get(client, TokenItem.TOKEN, String.class);
+        if (!hasLogin(operator, sessionId)) {
+            chatSessionRepository.add(operator, sessionId);
             Long clientNum = chatSessionRepository.size(operator);
             log.info("[用户登录]当前用户[{}]登录数: {}", operator, clientNum);
-            tokenService.putItem(token, TokenItem.SESSION_ID.name(), sessionId.toString());
-            String namespace = buildSocketIoNamespace(operator);
-            ChatSession chatSession = new ChatSession(namespace, operator, sessionId);
+            tokenService.putItem(AuthTokenUtil.resolveToken(token), TokenItem.SESSION_ID.name(), sessionId);
+            ChatSession chatSession = new ChatSession(operator, sessionId);
             add(operator, chatSession);
             needConnectAgent = true;
         } else {
             log.info("[用户登录]当前用户[{}-{}]已经登录", operator, sessionId);
-            tokenService.putItem(token, TokenItem.SESSION_ID.name(), sessionId);
+            tokenService.putItem(AuthTokenUtil.resolveToken(token), TokenItem.SESSION_ID.name(), sessionId);
         }
         return needConnectAgent;
     }
 
-    public boolean hasLogin(String operator, String sessionId) {
-        if (MapUtils.isNotEmpty(map.get(operator))) {
-            return map.get(operator).get(sessionId) != null;
+    public boolean hasLogin(String operator, UUID sessionId) {
+        if (MapUtils.isNotEmpty(MAP.get(operator))) {
+            return MAP.get(operator).get(sessionId.toString()) != null;
         }
         return false;
-    }
-
-    public String buildSocketIoNamespace(String operator) {
-        return "/" + operator;
     }
 
     private synchronized void add(String operator, ChatSession session) {
         ChatHistory chatHistory = buildChatHistory(operator, session);
         chatHistory.setLoginAt(new Date());
         chatHistoryRepository.insertOrUpdateById(chatHistory);
-        ConcurrentHashMap<String, ChatSession> sessionMap = map.getOrDefault(operator, new ConcurrentHashMap<>(16));
-        sessionMap.put(session.getSessionId().toString(), session);
-        map.put(operator, sessionMap);
     }
 
     private ChatHistory buildChatHistory(String operator, ChatSession session) {
@@ -115,15 +109,18 @@ public class ChatSessionService {
     /**
      * 登出 多端用户 登出时session个数-1
      *
-     * @param operator 用户id
-     * @param token    token
+     * @param client 客户端
      * @return 返回剩余客户端个数与0的关系
      */
-    public boolean logoff(String operator, TokenInfo token, String sessionId) {
-        remove(operator, sessionId);
+    public boolean logoff(SocketIOClient client) {
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+        UUID sessionId = client.getSessionId();
+        String token = ClientUtil.get(client, TokenItem.TOKEN, String.class);
+        TokenInfo tokenInfo = AuthTokenUtil.resolveToken(token);
+        remove(operator, sessionId.toString());
         chatSessionRepository.remove(operator, sessionId);
-        if (tokenService.isTokenExist(token)) {
-            tokenService.removeItemByToken(token, TokenItem.SESSION_ID.name());
+        if (tokenService.isTokenExist(tokenInfo)) {
+            tokenService.removeItemByToken(tokenInfo, TokenItem.SESSION_ID.name());
         }
         Long clientNum = chatSessionRepository.size(operator);
         log.info("[用户登出]当前用户[{}]连接数: {}", operator, clientNum);
@@ -149,14 +146,14 @@ public class ChatSessionService {
     }
 
     public Map<String, ChatSession> getSession(String operator) {
-        return map.get(operator);
+        return MAP.get(operator);
     }
 
     @PreDestroy
     public void destroy() {
-        log.info(JsonUtil.toJson(map));
-        if (MapUtils.isNotEmpty(map)) {
-            for (Map.Entry<String, ConcurrentHashMap<String, ChatSession>> entry : map.entrySet()) {
+        log.info(JsonUtil.toJson(MAP));
+        if (MapUtils.isNotEmpty(MAP)) {
+            for (Map.Entry<String, ConcurrentHashMap<String, ChatSession>> entry : MAP.entrySet()) {
                 if (MapUtils.isNotEmpty(entry.getValue())) {
                     String operator = entry.getKey();
                     kickoff(operator);
@@ -170,26 +167,20 @@ public class ChatSessionService {
         if (MapUtils.isEmpty(chatSessionMap)) {
             log.info("用户[{}]已经退出", operator);
         } else {
-            String namespace = buildSocketIoNamespace(operator);
-            for (Map.Entry<String, ChatSession> entry : chatSessionMap.entrySet()) {
-                SocketIOClient client = socketIOServer.getNamespace(namespace)
-                        .getClient(entry.getValue().getSessionId());
-                if (client != null) {
-                    chatSessionRepository.remove(operator, entry.getValue().getSessionId().toString());
-                    client.disconnect();
+            for (SocketIOClient client : socketioServer.getRoomOperations(operator).getClients()) {
+                ChatSession chatSession = chatSessionMap.get(client.getSessionId().toString());
+                if (chatSession != null) {
+                    chatSessionRepository.remove(operator, chatSession.getSessionId().toString());
+                } else {
+                    log.error("sessionMap中没有找到 {}", client.getSessionId().toString());
                 }
+                client.disconnect();
             }
         }
 
     }
 
     public Map<String, ChatSession> get(String operator) {
-        return map.get(operator);
-    }
-
-    public SocketIONamespace getSocketIONamespace(String operator) {
-        Validator.assertNotNull(map.get(operator), ErrCodeSys.PA_DATA_NOT_EXIST, "用户连接");
-        String namespace = buildSocketIoNamespace(operator);
-        return socketIOServer.getNamespace(namespace);
+        return MAP.get(operator);
     }
 }

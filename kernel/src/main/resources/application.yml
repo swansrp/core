@@ -173,7 +173,7 @@ my:
   project:
     name: sharp
 app:
-  projectId:
+  projectId: sharp
   moduleId: ${spring.application.name}
   log:
     path: /data/log

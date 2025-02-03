@@ -5,7 +5,7 @@ import com.corundumstudio.socketio.listener.ExceptionListenerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.bidr.socket.io.config.SocketIoConfig.TOKEN;
+import java.util.List;
 
 /**
  * Title: SockIoExceptionListener
@@ -19,18 +19,40 @@ import static com.bidr.socket.io.config.SocketIoConfig.TOKEN;
 public class SockIoExceptionListener extends ExceptionListenerAdapter {
 
     @Override
+    public void onEventException(Exception e, List<Object> data, SocketIOClient client) {
+        log.error("onEventException", e);
+    }
+
+    @Override
+    public void onDisconnectException(Exception e, SocketIOClient client) {
+        log.error("onDisconnectException", e);
+    }
+
+    @Override
+    public void onConnectException(Exception e, SocketIOClient client) {
+        log.error("onConnectException", e);
+    }
+
+
+    @Override
+    public void onPongException(Exception e, SocketIOClient client) {
+        log.error("onPongException", e);
+    }
+
+
+    @Override
     public boolean exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
         log.error("发生错误 :{}", e.getMessage());
         return true;
     }
 
     @Override
-    public void onAuthException(Throwable throwable, SocketIOClient socketIOClient) {
-        log.info("token:{} 验证不通过", socketIOClient.getHandshakeData().getSingleUrlParam(TOKEN));
+    public void onAuthException(Throwable throwable, SocketIOClient socketioClient) {
+        log.error("onAuthException", throwable);
     }
 
     @Override
     public void onPingException(Exception e, SocketIOClient client) {
-        log.error("客户端 {}====轮询异常 {}", client.getNamespace(), e.getMessage());
+        log.error("onPingException", e);
     }
 }
