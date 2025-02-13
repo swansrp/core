@@ -22,6 +22,7 @@ import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.common.convert.Convert;
 import com.bidr.kernel.common.func.GetFunc;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
@@ -55,6 +56,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.*;
+
+import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
 
 /**
  * Title: BasePortalService
@@ -173,6 +176,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         Map<String, String> selectColumnMap = new LinkedHashMap<>();
         List<String> groupColumns = new ArrayList<>();
         List<String> unSelectFields = new ArrayList<>();
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            wrapper.eq(VALID_FIELD, CommonConst.YES);
+        }
         for (Field field : ReflectionUtil.getFieldMap(getVoClass()).values()) {
             boolean selected = false;
             selected |= parsePortalEntityField(wrapper, field);
