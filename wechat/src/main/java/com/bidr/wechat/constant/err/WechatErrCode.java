@@ -19,11 +19,11 @@ public enum WechatErrCode implements ErrCode {
     /**
      *
      */
-    WECHAT_SERVER_ERROR(9001, "微信服务返回异常%s,%s", ErrCodeLevel.DEBUG.getValue());
+    WECHAT_SERVER_ERROR(9001, "微信服务返回异常%s,%s", ErrCodeLevel.DEBUG);
 
     private final Integer errCode;
     private final String errMsg;
-    private final String errLevel;
+    private final ErrCodeLevel errLevel;
 
 
 }

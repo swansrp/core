@@ -4,6 +4,7 @@ import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.msg.MsgCodeVerify;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.msg.MsgVerificationReq;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.config.response.Response;
 import com.bidr.kernel.config.response.ResponseHandler;
 import com.bidr.kernel.vo.common.CommonResVO;
@@ -53,8 +54,8 @@ public class WechatRegisterController {
             @ApiImplicitParam(paramType = "query", dataType = "string", name = "idCardImgUrl", value = "身份证正面照片", required =
                     true)})
     @RequestMapping(value = "/realName", method = RequestMethod.POST)
-    public ResponseEntity<Response<CommonResVO>> realName(AuthRealNameReq req) {
+    public void realName(AuthRealNameReq req) {
         syncAccountService.realName(req);
-        return ResponseHandler.commonResponse("实名认证");
+        Resp.notice("实名认证成功");
     }
 }
