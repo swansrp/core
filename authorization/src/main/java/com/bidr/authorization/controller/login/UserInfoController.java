@@ -2,9 +2,11 @@ package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthToken;
+import com.bidr.authorization.annotation.msg.MsgCodeVerify;
 import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.service.user.UserInfoService;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
+import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.authorization.vo.user.UserInfoReq;
 import com.bidr.authorization.vo.user.UserInfoRes;
@@ -12,6 +14,7 @@ import com.bidr.authorization.vo.user.UserRes;
 import com.bidr.kernel.config.response.Resp;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -34,6 +37,13 @@ public class UserInfoController {
 
     private final UserInfoService userInfoService;
     private final UserGroupService userGroupService;
+
+    @RequestMapping(value = "/bind/phoneNumber", method = RequestMethod.POST)
+    @MsgCodeVerify("BIND_MSG_CODE")
+    public void bindPhoneNumber(@Validated MsgLoginReq req) {
+        userInfoService.bindPhoneNumber(req.getPhoneNumber());
+        Resp.notice("绑定手机号码成功");
+    }
 
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     public UserInfoRes getUserInfo() {

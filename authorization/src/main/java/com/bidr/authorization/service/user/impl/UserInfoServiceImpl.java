@@ -4,7 +4,6 @@ import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.holder.AccountContext;
-import com.bidr.authorization.service.login.impl.LoginServiceImpl;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.user.UserInfoService;
 import com.bidr.authorization.vo.user.*;
@@ -32,7 +31,6 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     private final AcUserService acUserService;
     private final TokenService tokenService;
-    private final LoginServiceImpl loginService;
 
     @Override
     public UserInfoRes getUserInfo() {
@@ -47,8 +45,10 @@ public class UserInfoServiceImpl implements UserInfoService {
         String customerNumber = tokenService.getItem(TokenItem.OPERATOR.name(), String.class);
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
         Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
-        ReflectionUtil.merge(info, user, false);
+        ReflectionUtil.merge(info, user, true);
         acUserService.updateById(user, false);
+        tokenService.putItem(TokenItem.OPERATOR.name(), user.getCustomerNumber());
+        AccountContext.get().setCustomerNumber(user.getCustomerNumber());
     }
 
     @Override
@@ -89,6 +89,15 @@ public class UserInfoServiceImpl implements UserInfoService {
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
         Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
         user.setAvatar(avatar);
+        acUserService.updateById(user);
+    }
+
+    @Override
+    public void bindPhoneNumber(String phoneNumber) {
+        String customerNumber = AccountContext.getOperator();
+        AcUser user = acUserService.getByCustomerNumber(customerNumber);
+        Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
+        user.setPhoneNumber(phoneNumber);
         acUserService.updateById(user);
     }
 }

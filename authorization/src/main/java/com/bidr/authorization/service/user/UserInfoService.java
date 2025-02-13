@@ -61,4 +61,11 @@ public interface UserInfoService {
      * @param avatar
      */
     void setAvatar(String customerNumber, String avatar);
+
+    /**
+     * 绑定手机号
+     *
+     * @param phoneNumber
+     */
+    void bindPhoneNumber(String phoneNumber);
 }
