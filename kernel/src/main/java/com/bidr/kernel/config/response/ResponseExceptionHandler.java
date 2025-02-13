@@ -1,5 +1,7 @@
 package com.bidr.kernel.config.response;
 
+import com.bidr.kernel.constant.err.ErrCode;
+import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.err.ErrCodeType;
 import com.bidr.kernel.exception.NoticeException;
@@ -76,7 +78,7 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @ResponseBody
     @ExceptionHandler(value = ServiceException.class)
     public static ResponseEntity<Response<String>> errorHandler(ServiceException ex) {
-        log.warn("", ex);
+        ErrCodeLevel.log(log, ex.getErrCode().getErrLevel(), ex);
         Response<String> res = new Response<>(ex);
         HttpStatus status = STATUS_MAP.getOrDefault(ex.getErrCode().getErrType(), HttpStatus.INTERNAL_SERVER_ERROR);
         return new ResponseEntity<>(res, status);

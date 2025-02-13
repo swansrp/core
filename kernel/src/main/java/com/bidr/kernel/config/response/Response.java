@@ -26,7 +26,7 @@ public class Response<T> {
     public Response(ServiceException exception) {
         ErrCode errCode = exception.getErrCode();
         this.status = new ApiResultStatus(errCode.getErrCode(), errCode.name(), exception.getMessage());
-        this.payload = (T) new ExceptionResponse(errCode.getErrLevel(), errCode.getErrType(), exception.getMessage());
+        this.payload = (T) new ExceptionResponse(errCode.getErrLevel().getValue(), errCode.getErrType(), exception.getMessage());
     }
 
     public Response(T data) {

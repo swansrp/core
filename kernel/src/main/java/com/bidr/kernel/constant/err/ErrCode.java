@@ -27,8 +27,8 @@ public interface ErrCode {
      *
      * @return 报错等级
      */
-    default String getErrLevel() {
-        return ErrCodeLevel.INFO.getValue();
+    default ErrCodeLevel getErrLevel() {
+        return ErrCodeLevel.INFO;
     }
 
     /**
