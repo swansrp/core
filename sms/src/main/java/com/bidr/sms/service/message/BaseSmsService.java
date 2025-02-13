@@ -102,7 +102,7 @@ public abstract class BaseSmsService implements SmsService {
     @Transactional(rollbackFor = Exception.class)
     public SaSmsSend initSendSms(SmsReq sendSmsReq) {
         SaSmsSend saSmsSend;
-        if(sysConfigCacheService.getSysConfigBool(SmsParam.SMS_MOCK_MODE)) {
+        if (sysConfigCacheService.getSysConfigBool(SmsParam.SMS_MOCK_MODE)) {
             saSmsSend = buildMockSmsSend(sendSmsReq);
         } else {
             SaSmsTemplate saSmsTemplate = smsTemplateCacheService.getCache(sendSmsReq.getSendSmsType());
@@ -172,6 +172,7 @@ public abstract class BaseSmsService implements SmsService {
     protected void saveMockSendSms(SaSmsSend smsSend, SendSmsRes res) {
         smsSend.setSendStatus(SendMessageStatusDict.MOCK.getValue());
         smsSend.setSendResult(SendMessageStatusDict.MOCK.getLabel());
+        smsSend.setSendAt(new Date());
         saSmsSendService.updateById(smsSend);
         buildSendSmsRes(smsSend, res);
     }

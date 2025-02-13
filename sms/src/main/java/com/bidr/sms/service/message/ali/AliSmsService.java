@@ -84,6 +84,7 @@ public class AliSmsService extends BaseSmsService {
         String result = SendMessageStatusDict.MOCK.getLabel();
         smsSend.setSendStatus(code);
         smsSend.setSendResult(result);
+        smsSend.setSendAt(new Date());
         res.setMessage(result);
         res.setStatus(code);
     }
