@@ -177,7 +177,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         List<String> groupColumns = new ArrayList<>();
         List<String> unSelectFields = new ArrayList<>();
         if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
-            wrapper.eq(VALID_FIELD, CommonConst.YES);
+            wrapper.eq(wrapper.getAlias() + "." + VALID_FIELD, CommonConst.YES);
         }
         for (Field field : ReflectionUtil.getFieldMap(getVoClass()).values()) {
             boolean selected = false;

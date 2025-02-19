@@ -14,6 +14,7 @@ import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -65,7 +66,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void realName(RealNameReq req) {
         String customerNumber = tokenService.getItem(TokenItem.OPERATOR.name(), String.class);
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
