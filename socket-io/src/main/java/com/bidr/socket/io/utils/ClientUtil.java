@@ -14,6 +14,14 @@ import com.corundumstudio.socketio.SocketIOClient;
 
 public class ClientUtil {
 
+    public static String get(SocketIOClient client, String itemKey) {
+        return client.get(itemKey);
+    }
+
+    public static String get(SocketIOClient client, TokenItem item) {
+        return client.get(item.name());
+    }
+
     public static  <T> T get(SocketIOClient client, String itemKey, Class<?> collectionClass, Class<?>... elementClasses) {
         return JsonUtil.readJson(client.get(itemKey), collectionClass, elementClasses);
     }

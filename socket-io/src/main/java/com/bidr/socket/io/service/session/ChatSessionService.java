@@ -58,11 +58,10 @@ public class ChatSessionService {
         return false;
     }
 
-    public boolean login(SocketIOClient client) {
-        boolean needConnectAgent = false;
-        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+    public void login(SocketIOClient client) {
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR);
         UUID sessionId = client.getSessionId();
-        String token = ClientUtil.get(client, TokenItem.TOKEN, String.class);
+        String token = ClientUtil.get(client, TokenItem.TOKEN);
         if (!hasLogin(operator, sessionId)) {
             chatSessionRepository.add(operator, sessionId);
             Long clientNum = chatSessionRepository.size(operator);
@@ -70,12 +69,11 @@ public class ChatSessionService {
             tokenService.putItem(AuthTokenUtil.resolveToken(token), TokenItem.SESSION_ID.name(), sessionId);
             ChatSession chatSession = new ChatSession(operator, sessionId);
             add(operator, chatSession);
-            needConnectAgent = true;
         } else {
             log.info("[用户登录]当前用户[{}-{}]已经登录", operator, sessionId);
             tokenService.putItem(AuthTokenUtil.resolveToken(token), TokenItem.SESSION_ID.name(), sessionId);
         }
-        return needConnectAgent;
+        client.joinRoom(operator);
     }
 
     public boolean hasLogin(String operator, UUID sessionId) {
@@ -113,9 +111,9 @@ public class ChatSessionService {
      * @return 返回剩余客户端个数与0的关系
      */
     public boolean logoff(SocketIOClient client) {
-        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR);
         UUID sessionId = client.getSessionId();
-        String token = ClientUtil.get(client, TokenItem.TOKEN, String.class);
+        String token = ClientUtil.get(client, TokenItem.TOKEN);
         TokenInfo tokenInfo = AuthTokenUtil.resolveToken(token);
         remove(operator, sessionId.toString());
         chatSessionRepository.remove(operator, sessionId);

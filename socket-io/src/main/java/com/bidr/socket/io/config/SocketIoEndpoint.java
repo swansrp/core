@@ -57,7 +57,7 @@ public class SocketIoEndpoint {
     }
 
     private void showUndeliveredMessage(SocketIOClient client) {
-        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR);
         List<ChatRoomMember> chatRoomMemberList = chatRoomMemberService.getRoomListByUserId(operator);
         if (CollectionUtils.isNotEmpty(chatRoomMemberList)) {
             for (ChatRoomMember chatRoomMember : chatRoomMemberList) {

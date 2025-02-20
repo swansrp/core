@@ -36,7 +36,7 @@ public class ReceiveMessageService {
 
     public DataListener<ChatMessage> onViewMsgReceived() {
         return (client, msg, ackSender) -> {
-            String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+            String operator = ClientUtil.get(client, TokenItem.OPERATOR);
             log.debug("From: 客户端[{}-{}] - 收到消息 '{}'", operator, client.getSessionId().toString(), msg);
             fillChatMessage(client, msg);
             TopicChatMessage topicChatMessage = sendMessageService.buildTopicChatMessage(ChatMessageConstant.CHAT, operator, msg);
@@ -45,8 +45,8 @@ public class ReceiveMessageService {
     }
 
     private void fillChatMessage(SocketIOClient client, ChatMessage msg) {
-        String userFace = ClientUtil.get(client, TokenItem.AVATAR, String.class);
-        String userName = ClientUtil.get(client, TokenItem.NICK_NAME, String.class);
+        String userFace = ClientUtil.get(client, TokenItem.AVATAR);
+        String userName = ClientUtil.get(client, TokenItem.NICK_NAME);
         if (StringUtils.isNotBlank(userName)) {
             msg.setUserId(userName);
         }

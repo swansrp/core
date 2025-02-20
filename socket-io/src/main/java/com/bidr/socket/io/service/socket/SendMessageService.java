@@ -119,7 +119,7 @@ public class SendMessageService {
         log.info("广播client数量:{}", roomOperations.getClients().size());
         if (CollectionUtils.isNotEmpty(roomOperations.getClients())) {
             for (SocketIOClient client : roomOperations.getClients()) {
-                log.info("{}-{}", client.getNamespace().getName(), client.getSessionId().toString());
+                log.info("{}-{}", topicChatMessage.getTargetId(), client.getSessionId().toString());
                 if (!client.getSessionId().toString().equals(topicChatMessage.getSessionId())) {
                     show(client, topicChatMessage);
                 } else {
@@ -134,7 +134,7 @@ public class SendMessageService {
     }
 
     public void show(SocketIOClient client, TopicChatMessage message) {
-        String operator = ClientUtil.get(client, TokenItem.OPERATOR, String.class);
+        String operator = ClientUtil.get(client, TokenItem.OPERATOR);
         log.debug("To: 客户端[{}-{}] - 发送消息 {}", operator, client.getSessionId().toString(), message);
         client.sendEvent(message.getTopic(), message);
     }
