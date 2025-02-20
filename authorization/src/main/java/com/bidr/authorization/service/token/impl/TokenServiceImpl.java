@@ -55,7 +55,7 @@ public class TokenServiceImpl implements TokenService {
     private void saveToken(TokenInfo token, String customerNumber, int expired) {
         Date now = new Date();
         Map<String, Object> tokenMap = new HashMap<>(16);
-        tokenMap.put(token.getType().name(), AuthTokenUtil.getToken(token));
+        tokenMap.put(TokenItem.TOKEN.name(), AuthTokenUtil.getToken(token));
         tokenMap.put(TokenItem.OPERATOR.name(), customerNumber);
         tokenMap.put(TokenItem.TIMESTAMP.name(), DateUtil.formatDate(now, DateUtil.DATE_TIME_NORMAL));
         tokenMap.put(TokenItem.EXPIRED.name(), expired);
