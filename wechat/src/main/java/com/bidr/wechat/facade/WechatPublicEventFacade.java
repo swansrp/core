@@ -1,5 +1,7 @@
 package com.bidr.wechat.facade;
 
+import com.bidr.platform.service.cache.SysConfigCacheService;
+import com.bidr.wechat.constant.WechatParamConst;
 import com.bidr.wechat.po.platform.msg.ReceiveUserMsg;
 import org.springframework.stereotype.Service;
 
@@ -17,13 +19,16 @@ public class WechatPublicEventFacade {
 
     @Resource
     private WechatPublicTextFacade wechatPublicTextFacade;
+    @Resource
+    private SysConfigCacheService sysConfigCacheService;
 
     public String unsubscribe(ReceiveUserMsg receiveUserMsg) {
         return wechatPublicTextFacade.buildReplyTextMsg(receiveUserMsg, "欢迎您再来");
     }
 
     public String subscribe(ReceiveUserMsg receiveUserMsg) {
-        return wechatPublicTextFacade.buildReplyTextMsg(receiveUserMsg, "欢迎来到SHARP系统");
+        String systemName = sysConfigCacheService.getSysConfigValue(WechatParamConst.WECHAT_SYSTEM_NAME);
+        return wechatPublicTextFacade.buildReplyTextMsg(receiveUserMsg, "欢迎来到" + systemName);
     }
 
     public String click(ReceiveUserMsg receiveUserMsg) {

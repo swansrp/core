@@ -33,7 +33,9 @@ public enum WechatParamConst implements Param {
 
     WECHAT_PUBLIC_AES_KEY("微信公众号接入加密密码", "", "微信公众号接入加密密码"),
 
-    WECHAT_OPENID_ACCOUNT("是否独立账户", "", "是否独立账户");
+    WECHAT_OPENID_ACCOUNT("是否独立账户", "", "是否独立账户"),
+
+    WECHAT_SYSTEM_NAME("系统名称","SHARP系统", "公众号关注自动回复等使用");
 
     private final String title;
     private final String defaultValue;
