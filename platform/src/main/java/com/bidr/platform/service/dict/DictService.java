@@ -3,6 +3,7 @@ package com.bidr.platform.service.dict;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.platform.config.aop.RedisPublish;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.dao.repository.SysDictService;
@@ -118,6 +119,7 @@ public class DictService {
         return resList;
     }
 
+    @RedisPublish
     public void refresh() {
         dictCacheService.refresh();
     }

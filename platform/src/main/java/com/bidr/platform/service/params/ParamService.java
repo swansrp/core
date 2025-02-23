@@ -2,6 +2,7 @@ package com.bidr.platform.service.params;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.platform.config.aop.RedisPublish;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.repository.SysConfigService;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -28,6 +29,7 @@ public class ParamService {
         return Resp.convert(res, SysConfigRes.class);
     }
 
+    @RedisPublish
     public void refresh() {
         sysConfigCacheService.refresh();
     }
