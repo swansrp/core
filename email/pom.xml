@@ -33,7 +33,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
 
-                <kernel.version>20250114093543-62</kernel.version>
+                <kernel.version>20250224135225-63</kernel.version>
             </properties>
         </profile>
     </profiles>
