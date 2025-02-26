@@ -31,10 +31,11 @@ public interface ObjectStorageService {
     /**
      * 获取上传文件类型
      *
+     * @param fileName 文件名
      * @param type 文件类型
      * @return 文件类型
      */
-    OssTypeDict getFileType(String type);
+    OssTypeDict getFileType(String fileName, String type);
 
     /**
      * 生成文件名

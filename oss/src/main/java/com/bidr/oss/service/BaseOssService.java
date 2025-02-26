@@ -40,16 +40,12 @@ public abstract class BaseOssService implements ObjectStorageService {
     @Override
     public String buildObjectName(HttpServletRequest request, MultipartFile file, String folder, String type,
                                   String fileName) {
-
         if (FuncUtil.isEmpty(fileName)) {
             fileName = buildFileName(file.getOriginalFilename(), HttpUtil.getRemoteIp(request));
         } else {
             fileName = formatFileName(fileName);
         }
-        OssTypeDict ossType = OssTypeDict.getByFileName(fileName);
-        if (ossType.equals(OssTypeDict.OTHER)) {
-            ossType = getFileType(type);
-        }
+        OssTypeDict ossType = getFileType(fileName, type);
         String fileType = ossType.name().toLowerCase();
         String folderName = BeanUtil.getProperty("my.project.name");
         if (FuncUtil.isNotEmpty(folder)) {
@@ -61,8 +57,12 @@ public abstract class BaseOssService implements ObjectStorageService {
     }
 
     @Override
-    public OssTypeDict getFileType(String type) {
-        return DictEnumUtil.getEnumByValue(type, OssTypeDict.class, OssTypeDict.OTHER);
+    public OssTypeDict getFileType(String fileName, String type) {
+        OssTypeDict ossType = OssTypeDict.getByFileName(fileName);
+        if (ossType.equals(OssTypeDict.OTHER)) {
+            ossType = DictEnumUtil.getEnumByValue(type, OssTypeDict.class, OssTypeDict.OTHER);
+        }
+        return ossType;
     }
 
     @Override
@@ -98,10 +98,10 @@ public abstract class BaseOssService implements ObjectStorageService {
 
     @Override
     public SaObjectStorage record(String name, String type, String uri, Long fileSize) {
-        String fileType = getFileType(type).getValue();
         SaObjectStorage os = new SaObjectStorage();
         String[] split = name.split("/");
         os.setName(split[split.length - 1]);
+        String fileType = getFileType(os.getName(), type).getValue();
         os.setKey(name);
         os.setUri(uri + "?t=" + System.currentTimeMillis());
         os.setType(fileType);
