@@ -34,7 +34,7 @@ public class OssRes {
     @ApiModelProperty(value = "文件大小")
     private Long size;
 
-    @BindDict(type = "OSS_TYPE_DICT")
+    //@BindDict(type = "OSS_TYPE_DICT")
     @ApiModelProperty(value = "文件存储类型OSS_TYPE_DICT")
     private String type;
 

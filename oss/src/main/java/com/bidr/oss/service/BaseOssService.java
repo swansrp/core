@@ -40,18 +40,23 @@ public abstract class BaseOssService implements ObjectStorageService {
     @Override
     public String buildObjectName(HttpServletRequest request, MultipartFile file, String folder, String type,
                                   String fileName) {
-        String fileType = getFileType(type).name().toLowerCase();
+
+        if (FuncUtil.isEmpty(fileName)) {
+            fileName = buildFileName(file.getOriginalFilename(), HttpUtil.getRemoteIp(request));
+        } else {
+            fileName = formatFileName(fileName);
+        }
+        OssTypeDict ossType = OssTypeDict.getByFileName(fileName);
+        if (ossType.equals(OssTypeDict.OTHER)) {
+            ossType = getFileType(type);
+        }
+        String fileType = ossType.name().toLowerCase();
         String folderName = BeanUtil.getProperty("my.project.name");
         if (FuncUtil.isNotEmpty(folder)) {
             folderName = folderName + OssConst.SEP + folder;
         }
         folderName =
                 folderName + OssConst.SEP + fileType + OssConst.SEP + DateUtil.formatDate(new Date(), DateUtil.DATE);
-        if (FuncUtil.isEmpty(fileName)) {
-            fileName = buildFileName(file.getOriginalFilename(), HttpUtil.getRemoteIp(request));
-        } else {
-            fileName = formatFileName(fileName);
-        }
         return folderName + OssConst.SEP + fileName;
     }
 
@@ -104,6 +109,11 @@ public abstract class BaseOssService implements ObjectStorageService {
         os.setValid(SqlConstant.VALID);
         saObjectStorageService.insertOrUpdate(os, SaObjectStorage::getUri);
         return os;
+    }
+
+    public String getKey(String url) {
+        String[] s = url.split(bucketName);
+        return url.substring(s[0].length() + bucketName.length() + 1).split("\\?")[0];
     }
 
 }

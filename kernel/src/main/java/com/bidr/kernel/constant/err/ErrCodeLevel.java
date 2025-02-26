@@ -31,6 +31,7 @@ public enum ErrCodeLevel {
     public static void log(Logger log, ErrCodeLevel errCodeLevel, Throwable throwable) {
         switch (errCodeLevel) {
             case HIDE:
+                log.info(throwable.getMessage());
                 break;
             case TRACE:
                 log.trace("", throwable);
