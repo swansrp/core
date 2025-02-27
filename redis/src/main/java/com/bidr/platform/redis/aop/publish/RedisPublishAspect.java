@@ -1,5 +1,6 @@
 package com.bidr.platform.redis.aop.publish;
 
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.platform.config.aop.RedisPublish;
 import lombok.extern.slf4j.Slf4j;
@@ -121,7 +122,7 @@ public class RedisPublishAspect {
     private Object getArg(ProceedingJoinPoint pjp) {
         Object arg = null;
         Object[] args = pjp.getArgs();
-        if (args != null) {
+        if (FuncUtil.isNotEmpty(args)) {
             arg = args[0];
         }
         return arg;
