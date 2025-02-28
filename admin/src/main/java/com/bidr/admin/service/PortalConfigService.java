@@ -391,6 +391,7 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setReference(StringUtil.joinWith(",", Integer.valueOf(portalMoneyField.fix()).toString(),
                     Integer.valueOf(portalMoneyField.unit()).toString()));
             column.setSortAble(CommonConst.YES);
+            column.setSummaryAble(CommonConst.YES);
         }
     }
 
