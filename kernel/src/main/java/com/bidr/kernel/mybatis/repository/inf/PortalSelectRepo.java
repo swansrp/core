@@ -262,18 +262,19 @@ public interface PortalSelectRepo<T> {
                     break;
             }
         } else {
+            String havingColumnName = condition.getProperty();
             switch (PortalConditionDict.of(condition.getRelation())) {
                 case EQUAL:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " = {0}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " = {0}",
                             condition.getValue().get(0));
                     break;
                 case NOT_EQUAL:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " != {0}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " != {0}",
                             condition.getValue().get(0));
                     break;
                 case IN:
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
-                        StringBuffer sql = new StringBuffer(columnName + " in ( ");
+                        StringBuffer sql = new StringBuffer(havingColumnName + " in ( ");
                         for (int i = 0; i < condition.getValue().size(); i++) {
                             sql.append("{").append(i).append("}, ");
                         }
@@ -282,7 +283,7 @@ public interface PortalSelectRepo<T> {
                     break;
                 case NOT_IN:
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
-                        StringBuffer sql = new StringBuffer(columnName + " not in ( ");
+                        StringBuffer sql = new StringBuffer(havingColumnName + " not in ( ");
                         for (int i = 0; i < condition.getValue().size(); i++) {
                             sql.append("{").append(i).append("}, ");
                         }
@@ -290,53 +291,54 @@ public interface PortalSelectRepo<T> {
                     }
                     break;
                 case LIKE:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " like {0} ",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " like {0} ",
                             "%" + condition.getValue().get(0) + "%");
                     break;
                 case NOT_LIKE:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " not like {0} ",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " not like {0} ",
                             "%" + condition.getValue().get(0) + "%");
                     break;
                 case GREATER:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " > {0}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " > {0}",
                             condition.getValue().get(0));
                     break;
                 case GREATER_EQUAL:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " >= {0}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " >= {0}",
                             condition.getValue().get(0));
                     break;
                 case LESS:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " < {0}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " < {0}",
                             condition.getValue().get(0));
                     break;
                 case LESS_EQUAL:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " <= {0}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " <= {0}",
                             condition.getValue().get(0));
                     break;
                 case NULL:
-                    wrapper.having(columnName + " is null");
+                    wrapper.having(havingColumnName + " is null");
                     break;
                 case NOT_NULL:
-                    wrapper.having(columnName + " is not null");
+                    wrapper.having(havingColumnName + " is not null");
                     break;
                 case BETWEEN:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " between {0} and {1}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " between {0} and {1}",
                             condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case NOT_BETWEEN:
-                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), columnName + " not between {0} and {1}",
+                    wrapper.having(FuncUtil.isNotEmpty(condition.getValue()),
+                            havingColumnName + " not between {0} and {1}",
                             condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case CONTAIN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()),
-                            "FIND_IN_SET({0}, " + columnName + ") > 0", condition.getValue().get(0));
+                            "FIND_IN_SET({0}, " + havingColumnName + ") > 0", condition.getValue().get(0));
                     break;
                 case CONTAIN_IN:
                     String havingSqlFormat = "FIND_IN_SET({%d}, %s) > 0";
                     List<String> havingSqlList = new ArrayList<>();
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
                         for (int i = 0; i < condition.getValue().size(); i++) {
-                            havingSqlList.add(String.format(String.format(havingSqlFormat, i, columnName)));
+                            havingSqlList.add(String.format(String.format(havingSqlFormat, i, havingColumnName)));
                         }
                     }
                     wrapper.having(StringUtil.joinWith(" or ", havingSqlList), condition.getValue().toArray());
