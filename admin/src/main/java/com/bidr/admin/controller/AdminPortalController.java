@@ -9,6 +9,7 @@ import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.platform.config.anno.ApiTrace;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class AdminPortalController {
         return portalService.getPortalList(req);
     }
 
+    @ApiTrace(response = false)
     @RequestMapping(path = {"/config"}, method = {RequestMethod.GET})
     @ApiOperation(value = "获取后台管理配置")
     public PortalWithColumnsRes getPortal(PortalReq req) {

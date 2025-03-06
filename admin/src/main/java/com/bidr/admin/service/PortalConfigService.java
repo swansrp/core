@@ -267,6 +267,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         handlePortalSortField(field, column);
         handlePortalDisplayOnlyField(field, column);
         handlePortalDisplayNoneField(field, column);
+        handleGroupDisplayField(field, column);
         handleConvertField(field, column);
         handleBindField(field, column);
         handlePortalDictField(field, column);
@@ -449,6 +450,14 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setDetailShow(CommonConst.NO);
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
+        }
+    }
+
+
+    private void handleGroupDisplayField(Field field, SysPortalColumn column) {
+        PortalGroupDisplayField portalGroupDisplayField = field.getAnnotation(PortalGroupDisplayField.class);
+        if (FuncUtil.isNotEmpty(portalGroupDisplayField)) {
+            column.setDisplayGroupName(portalGroupDisplayField.value());
         }
     }
 
