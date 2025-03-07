@@ -73,6 +73,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     protected Map<String, String> aliasMap = new HashMap<>(32);
     protected Map<String, String> summaryAliasMap = new HashMap<>(32);
     protected Set<String> havingFields = new HashSet<>();
+    protected Map<String, String> selectApplyMap = new HashMap<>(32);
     @Resource
     protected SysPortalService sysPortalService;
     @Resource
@@ -90,6 +91,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             setAlias(field, aliasMap);
             setSummaryAlias(field, summaryAliasMap);
             setHavingField(field, havingFields);
+            setApplyField(field, selectApplyMap);
         }
     }
 
@@ -152,6 +154,15 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
     }
 
+    private void setApplyField(Field field, Map<String, String> map) {
+        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        if (FuncUtil.isNotEmpty(portalEntityField)) {
+            if (portalEntityField.selectApply()) {
+                map.put(field.getName(), portalEntityField.field());
+            }
+        }
+    }
+
     private String getAlias(Class<?> clazz, String fieldName, String alias) {
         String selectSqlName = DbUtil.getSelectSqlName(clazz, fieldName);
         return alias + "." + selectSqlName;
@@ -198,7 +209,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 Map<String, Field> fieldMap = ReflectionUtil.getFieldMap(getEntityClass());
                 for (String unselectedField : unSelectFields) {
                     Field field = fieldMap.get(unselectedField);
-                    if (FuncUtil.isNotEmpty(field)) {
+                    if (FuncUtil.isNotEmpty(field) && !getSelectApplyMap().containsKey(field.getName())) {
                         String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
                         wrapper.getSelectColum().add(new SelectString(
                                 StringUtil.joinWith(" as ", sqlFieldName, "'" + field.getName() + "'"),
@@ -266,7 +277,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
     private boolean parsePortalEntityField(MPJLambdaWrapper<ENTITY> wrapper, Field field) {
         PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
-        if (FuncUtil.isNotEmpty(portalEntityField)) {
+        if (FuncUtil.isNotEmpty(portalEntityField) && !getSelectApplyMap().containsKey(field.getName())) {
             String alias = portalEntityField.alias();
             String sqlFieldName = portalEntityField.field();
             if (!FuncUtil.equals(portalEntityField.entity(), Object.class)) {
@@ -348,6 +359,11 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public Set<String> getHavingFields() {
         return havingFields;
+    }
+
+    @Override
+    public Map<String, String> getSelectApplyMap() {
+        return selectApplyMap;
     }
 
 
