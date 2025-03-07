@@ -111,22 +111,23 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
-                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+                                Map<String, String> selectApplyMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        parseGeneralQuery(req.getConditionList(), aliasMap, havingFields, wrapper);
+        parseGeneralQuery(req.getConditionList(), aliasMap, havingFields, selectApplyMap, wrapper);
         parseSort(req.getSortList(), aliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
     }
 
     @Override
     public <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList, Map<String, String> aliasMap,
-                                Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+                                Collection<String> havingFields, Map<String, String> selectApplyMap,
+                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        parseGeneralQuery(conditionList, aliasMap, havingFields, wrapper);
+        parseGeneralQuery(conditionList, aliasMap, havingFields, selectApplyMap, wrapper);
         parseSort(sortList, aliasMap, wrapper);
         return selectJoinList(vo, wrapper);
     }

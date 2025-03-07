@@ -210,11 +210,20 @@ public interface PortalCommonService<ENTITY, VO> {
     }
 
     /**
-     * 生成需要HAVING查询的字段map
+     * 生成需要HAVING查询的字段
      *
-     * @return 别名map
+     * @return having字段
      */
     default Set<String> getHavingFields() {
+        return null;
+    }
+
+    /**
+     * 生成需要select条件的字段map
+     *
+     * @return select apply 字段
+     */
+    default Map<String, String> getSelectApplyMap() {
         return null;
     }
 

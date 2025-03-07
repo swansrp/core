@@ -31,10 +31,11 @@ public interface SqlSelectRepo<T> {
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
 
     <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
-                         MPJLambdaWrapper<T> wrapper, Class<VO> vo);
+                         Map<String, String> selectApplyMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
     <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList, Map<String, String> aliasMap,
-                         Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
+                         Collection<String> havingFields, Map<String, String> selectApplyMap,
+                         MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
     <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo);
 

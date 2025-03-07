@@ -7,15 +7,15 @@ import com.baomidou.mybatisplus.core.conditions.segments.OrderBySegmentList;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 
 import java.lang.reflect.Field;
 import java.util.*;
+
+import static com.bidr.kernel.constant.dict.portal.PortalConditionDict.SELECT_APPLY;
 
 /**
  * Title: PortalSelectRepo
@@ -326,8 +326,8 @@ public interface PortalSelectRepo<T> {
                     break;
                 case NOT_BETWEEN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()),
-                            havingColumnName + " not between {0} and {1}",
-                            condition.getValue().get(0), condition.getValue().get(1));
+                            havingColumnName + " not between {0} and {1}", condition.getValue().get(0),
+                            condition.getValue().get(1));
                     break;
                 case CONTAIN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()),
@@ -414,11 +414,37 @@ public interface PortalSelectRepo<T> {
     }
 
     default void parseGeneralQuery(List<ConditionVO> conditionList, Map<String, String> aliasMap,
-                                   Collection<String> havingFields, MPJLambdaWrapper<T> wrapper) {
+                                   Collection<String> havingFields, Map<String, String> selectApplyMap,
+                                   MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isNotEmpty(conditionList)) {
+            Map<String, String> deepCloneAliasMap = JsonUtil.readJson(JsonUtil.toJson(aliasMap), Map.class,
+                    String.class, String.class);
+            if (FuncUtil.isNotEmpty(selectApplyMap)) {
+                for (ConditionVO condition : conditionList) {
+                    if (FuncUtil.isNotEmpty(condition.getRelation())) {
+                        buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, condition);
+                    }
+                }
+            }
             for (ConditionVO condition : conditionList) {
                 if (FuncUtil.isNotEmpty(condition.getRelation())) {
-                    buildQueryWrapper(wrapper, aliasMap, havingFields, condition);
+                    buildQueryWrapper(wrapper, deepCloneAliasMap, havingFields, condition);
+                }
+            }
+        }
+    }
+
+    default void buildSelectWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap,
+                                    Map<String, String> selectApplyMap, ConditionVO condition) {
+        if (SELECT_APPLY.getValue().equals(condition.getRelation())) {
+            if (FuncUtil.isNotEmpty(selectApplyMap)) {
+                String selectStr = selectApplyMap.get(condition.getProperty());
+                if (FuncUtil.isNotEmpty(selectStr)) {
+                    String select = DbUtil.apply(selectStr, JsonUtil.toJson(condition.getValue().get(0)));
+                    aliasMap.put(condition.getProperty(), select);
+                    wrapper.getSelectColum().add(new SelectString(
+                            StringUtil.joinWith(" as ", select, "'" + condition.getProperty() + "'"),
+                            wrapper.getAlias()));
                 }
             }
         }

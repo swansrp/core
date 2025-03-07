@@ -132,9 +132,9 @@ public interface AdminControllerInf<ENTITY, VO> {
                 getPortalService().getJoinWrapper(from);
                 if (FuncUtil.isNotEmpty(req.getConditionList())) {
                     getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
-                            getPortalService().getHavingFields(), from);
+                            getPortalService().getHavingFields(), getPortalService().getSelectApplyMap(), from);
                 } else {
-                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, null, from);
                 }
             }
             return from;
@@ -190,9 +190,9 @@ public interface AdminControllerInf<ENTITY, VO> {
                 getPortalService().getJoinWrapper(from);
                 if (FuncUtil.isNotEmpty(req.getConditionList())) {
                     getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
-                            getPortalService().getHavingFields(), from);
+                            getPortalService().getHavingFields(), getPortalService().getSelectApplyMap(), from);
                 } else {
-                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, null, from);
                 }
             }
             return from;

@@ -19,7 +19,6 @@ public enum PortalConditionDict implements Dict {
     /**
      * 管理界面条件关系字典
      */
-
     EQUAL(1, "等于"),
     NOT_EQUAL(2, "不等于"),
     GREATER(3, "大于"),
@@ -34,10 +33,9 @@ public enum PortalConditionDict implements Dict {
     NOT_IN(12, "不介于"),
     BETWEEN(13, "之间"),
     NOT_BETWEEN(14, "之外"),
-
     CONTAIN(15, "其中之一"),
-
-    CONTAIN_IN(16, "多个其中之一");
+    CONTAIN_IN(16, "多个其中之一"),
+    SELECT_APPLY(99, "选项参数");
 
     @Getter
     private final Integer value;

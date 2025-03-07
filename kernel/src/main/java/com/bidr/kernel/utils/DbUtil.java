@@ -195,6 +195,16 @@ public class DbUtil {
         }
     }
 
+    public static String apply(String sql, String applyJsonStr) {
+        Map<String, String> applyMap = JsonUtil.readJson(applyJsonStr, Map.class, String.class, String.class);
+        if (FuncUtil.isNotEmpty(applyMap)) {
+            for (Map.Entry<String, String> entry : applyMap.entrySet()) {
+                sql = sql.replace("${" + entry.getKey() + "}", entry.getValue());
+            }
+        }
+        return sql;
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ElementType.FIELD})
     public @interface MyResultMap {

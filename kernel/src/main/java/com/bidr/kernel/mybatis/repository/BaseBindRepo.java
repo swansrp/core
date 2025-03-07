@@ -103,16 +103,18 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         Map<String, String> aliasMap = null;
         Set<String> havingFields = null;
+        Map<String, String> selectApplyMap = null;
         if (FuncUtil.isNotEmpty(getAttachPortalService())) {
             aliasMap = getAttachPortalService().getAliasMap();
             wrapper = getAttachPortalService().getJoinWrapper();
             havingFields = getAttachPortalService().getHavingFields();
+            selectApplyMap = getAttachPortalService().getSelectApplyMap();
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
                 .eq(bindEntityId(), req.getEntityId());
-        return attachRepo().select(req, aliasMap, havingFields, wrapper, getAttachVOClass());
+        return attachRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getAttachVOClass());
     }
 
     public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req) {
@@ -133,16 +135,18 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
         Map<String, String> aliasMap = null;
         Set<String> havingFields = null;
+        Map<String, String> selectApplyMap = null;
         if (FuncUtil.isNotEmpty(getAttachPortalService())) {
             aliasMap = getAttachPortalService().getAliasMap();
             wrapper = getAttachPortalService().getJoinWrapper();
             havingFields = getAttachPortalService().getHavingFields();
+            selectApplyMap = getAttachPortalService().getSelectApplyMap();
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId());
         wrapper.and(w -> w.isNull(bindEntityId()));
-        return attachRepo().select(req, aliasMap, havingFields, wrapper, getAttachVOClass());
+        return attachRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getAttachVOClass());
     }
 
     @Transactional(rollbackFor = Exception.class)
