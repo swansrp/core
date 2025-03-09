@@ -143,7 +143,6 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
             }
         } catch (Exception e) {
             log.error("处理excel数据失败", e);
-            uploadProgress.uploadProgressException(e.getMessage());
             throw e;
         }
     }
