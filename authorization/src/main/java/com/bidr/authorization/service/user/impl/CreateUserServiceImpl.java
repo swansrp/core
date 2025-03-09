@@ -9,7 +9,6 @@ import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
-import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.login.RoleBindService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.constant.CommonConst;
@@ -56,11 +55,13 @@ public class CreateUserServiceImpl implements CreateUserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AcUser createUser(String loginId, String password, String name, String phoneNumber, String email, String avatar) {
+    public AcUser createUser(String loginId, String password, String name, String phoneNumber, String email,
+                             String avatar) {
         AcUser user = buildBaseUser();
         user.setUserName(loginId);
         user.setPhoneNumber(phoneNumber);
         user.setPassword(Md5Util.generate(password));
+        user.setName(name);
         user.setNickName(name);
         user.setEmail(email);
         user.setAvatar(avatar);
