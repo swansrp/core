@@ -144,6 +144,7 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
         } catch (Exception e) {
             log.error("处理excel数据失败", e);
             uploadProgress.uploadProgressException(e.getMessage());
+            throw e;
         }
     }
 
@@ -171,12 +172,17 @@ public abstract class BasePortalExcelListener<T> extends AnalysisEventListener<T
         if (FuncUtil.isNotEmpty(dataList)) {
             try {
                 saveData();
+                uploadProgress.uploadProgressFinish();
             } catch (Exception e) {
                 try {
                     onException(e, analysisContext);
                 } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
+            }
+            finally {
+                memoryFree();
+                currentPage = 0;
             }
         }
         uploadProgress.uploadProgressFinish();
