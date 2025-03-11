@@ -39,7 +39,7 @@
 
                 <bidr.core.authorization.version>20250311092959-49</bidr.core.authorization.version>
                 <bidr.core.kernel.version>20250311092721-66</bidr.core.kernel.version>
-                <bidr.core.admin.version>20250311092852-55</bidr.core.admin.version>
+                <bidr.core.admin.version>20250311093037-56</bidr.core.admin.version>
             </properties>
         </profile>
     </profiles>
