@@ -33,7 +33,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <authorization.version>20250224135722-47</authorization.version>
+                <authorization.version>20250311092822-48</authorization.version>
             </properties>
         </profile>
     </profiles>
