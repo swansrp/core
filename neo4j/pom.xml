@@ -37,7 +37,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
 
-                <bidr.core.authorization.version>20250311092822-48</bidr.core.authorization.version>
+                <bidr.core.authorization.version>20250311092959-49</bidr.core.authorization.version>
                 <bidr.core.kernel.version>20250311092721-66</bidr.core.kernel.version>
                 <bidr.core.admin.version>20250311092852-55</bidr.core.admin.version>
             </properties>
