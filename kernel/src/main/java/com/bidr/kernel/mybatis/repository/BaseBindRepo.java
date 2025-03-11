@@ -45,15 +45,18 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     public List<ATTACH_VO> getBindList(Object entityId) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         Map<String, String> aliasMap = null;
+        Map<String, String> selectApplyMap = null;
         if (FuncUtil.isNotEmpty(getAttachPortalService())) {
             aliasMap = getAttachPortalService().getAliasMap();
             wrapper = getAttachPortalService().getJoinWrapper();
+            selectApplyMap = getAttachPortalService().getSelectApplyMap();
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
                 .eq(bindEntityId(), entityId);
-        return attachRepo().select(new AdvancedQuery(), new ArrayList<>(), aliasMap, wrapper, getAttachVOClass());
+        return attachRepo().select(new AdvancedQuery(), new ArrayList<>(), new ArrayList<>(), aliasMap, selectApplyMap,
+                wrapper, getAttachVOClass());
     }
 
     public int getBindCount(Object entityId) {
@@ -120,15 +123,17 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
         Map<String, String> aliasMap = null;
+        Map<String, String> selectApplyMap = null;
         if (FuncUtil.isNotEmpty(getAttachPortalService())) {
             aliasMap = getAttachPortalService().getAliasMap();
+            selectApplyMap = getAttachPortalService().getSelectApplyMap();
             wrapper = getAttachPortalService().getJoinWrapper();
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
                 .eq(bindEntityId(), req.getEntityId());
-        return attachRepo().select(req, aliasMap, wrapper, getAttachVOClass());
+        return attachRepo().select(req, aliasMap, selectApplyMap, wrapper, getAttachVOClass());
     }
 
     public IPage<ATTACH> getUnbindList(QueryBindReq req) {
@@ -223,15 +228,17 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     public IPage<ATTACH> advancedQueryUnbindList(AdvancedQueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
         Map<String, String> aliasMap = null;
+        Map<String, String> selectApplyMap = null;
         if (FuncUtil.isNotEmpty(getAttachPortalService())) {
             aliasMap = getAttachPortalService().getAliasMap();
+            selectApplyMap = getAttachPortalService().getSelectApplyMap();
             wrapper = getAttachPortalService().getJoinWrapper();
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId());
         wrapper.and(w -> w.isNull(bindEntityId()));
-        return attachRepo().select(req, aliasMap, wrapper, getAttachVOClass());
+        return attachRepo().select(req, aliasMap, selectApplyMap, wrapper, getAttachVOClass());
     }
 
     @Transactional(rollbackFor = Exception.class)

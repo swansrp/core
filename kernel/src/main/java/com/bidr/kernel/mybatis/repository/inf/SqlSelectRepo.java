@@ -39,10 +39,12 @@ public interface SqlSelectRepo<T> {
 
     <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo);
 
-    <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
-
-    <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, Map<String, String> aliasMap,
+    <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, String> selectApplyMap,
                          MPJLambdaWrapper<T> wrapper, Class<VO> vo);
+
+    <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, List<ConditionVO> selectApplyList,
+                         Map<String, String> aliasMap, Map<String, String> selectApplyMap, MPJLambdaWrapper<T> wrapper,
+                         Class<VO> vo);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

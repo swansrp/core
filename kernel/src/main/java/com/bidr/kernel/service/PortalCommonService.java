@@ -7,10 +7,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.SortVO;
+import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
@@ -304,7 +301,7 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 数据
      */
     default Page<VO> query(AdvancedQueryReq req) {
-        return getRepo().select(req, getAliasMap(), getJoinWrapper(), getVoClass());
+        return getRepo().select(req, getAliasMap(), getSelectApplyMap(), getJoinWrapper(), getVoClass());
     }
 
     /**
@@ -356,7 +353,8 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 数据
      */
     default List<VO> select(AdvancedQuery condition) {
-        return getRepo().select(condition, null, getAliasMap(), getJoinWrapper(), getVoClass());
+        return getRepo().select(condition, null, null, getAliasMap(), getSelectApplyMap(), getJoinWrapper(),
+                getVoClass());
     }
 
     /**
@@ -367,7 +365,21 @@ public interface PortalCommonService<ENTITY, VO> {
      * @return 数据
      */
     default List<VO> query(AdvancedQuery condition, List<SortVO> sortList) {
-        return getRepo().select(condition, sortList, getAliasMap(), getJoinWrapper(), getVoClass());
+        return getRepo().select(condition, sortList, null, getAliasMap(), getSelectApplyMap(), getJoinWrapper(),
+                getVoClass());
+    }
+
+    /**
+     * 获取指定数据
+     *
+     * @param condition       条件
+     * @param sortList        排序
+     * @param selectApplyList 动态字段
+     * @return 数据
+     */
+    default List<VO> query(AdvancedQuery condition, List<SortVO> sortList, List<ConditionVO> selectApplyList) {
+        return getRepo().select(condition, sortList, selectApplyList, getAliasMap(), getSelectApplyMap(),
+                getJoinWrapper(), getVoClass());
     }
 
 }

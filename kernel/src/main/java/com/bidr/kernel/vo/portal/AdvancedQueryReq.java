@@ -17,6 +17,8 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class AdvancedQueryReq extends QueryReqVO {
+    @ApiModelProperty("动态字段逻辑")
+    private List<ConditionVO> selectApplyList;
     @ApiModelProperty("查询条件")
     private AdvancedQuery condition;
     @ApiModelProperty("排序")

@@ -413,22 +413,26 @@ public interface PortalSelectRepo<T> {
         return null;
     }
 
-    default void parseGeneralQuery(List<ConditionVO> conditionList, Map<String, String> aliasMap,
-                                   Collection<String> havingFields, Map<String, String> selectApplyMap,
-                                   MPJLambdaWrapper<T> wrapper) {
-        if (FuncUtil.isNotEmpty(conditionList)) {
-            Map<String, String> deepCloneAliasMap = JsonUtil.readJson(JsonUtil.toJson(aliasMap), Map.class,
-                    String.class, String.class);
-            if (FuncUtil.isNotEmpty(selectApplyMap)) {
-                for (ConditionVO condition : conditionList) {
-                    if (FuncUtil.isNotEmpty(condition.getRelation())) {
-                        buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, condition);
-                    }
-                }
-            }
+    default Map<String, String> parseSelectApply(List<ConditionVO> conditionList, Map<String, String> aliasMap,
+                                                 Map<String, String> selectApplyMap, MPJLambdaWrapper<T> wrapper) {
+        Map<String, String> deepCloneAliasMap = aliasMap;
+        if (FuncUtil.isNotEmpty(selectApplyMap) && FuncUtil.isNotEmpty(conditionList)) {
+            deepCloneAliasMap = JsonUtil.readJson(JsonUtil.toJson(aliasMap), Map.class, String.class, String.class);
             for (ConditionVO condition : conditionList) {
                 if (FuncUtil.isNotEmpty(condition.getRelation())) {
-                    buildQueryWrapper(wrapper, deepCloneAliasMap, havingFields, condition);
+                    buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, condition);
+                }
+            }
+        }
+        return deepCloneAliasMap;
+    }
+
+    default void parseGeneralQuery(List<ConditionVO> conditionList, Map<String, String> aliasMap,
+                                   Collection<String> havingFields, MPJLambdaWrapper<T> wrapper) {
+        if (FuncUtil.isNotEmpty(conditionList)) {
+            for (ConditionVO condition : conditionList) {
+                if (FuncUtil.isNotEmpty(condition.getRelation())) {
+                    buildQueryWrapper(wrapper, aliasMap, havingFields, condition);
                 }
             }
         }

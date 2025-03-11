@@ -130,11 +130,13 @@ public interface AdminControllerInf<ENTITY, VO> {
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(),
+                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                    getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
-                            getPortalService().getHavingFields(), getPortalService().getSelectApplyMap(), from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
+                            from);
                 } else {
-                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, null, from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
                 }
             }
             return from;
@@ -189,10 +191,12 @@ public interface AdminControllerInf<ENTITY, VO> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
                 if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                    getRepo().parseGeneralQuery(req.getConditionList(), getPortalService().getAliasMap(),
-                            getPortalService().getHavingFields(), getPortalService().getSelectApplyMap(), from);
+                    Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(),
+                            getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
+                            from);
                 } else {
-                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, null, from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
                 }
             }
             return from;
@@ -244,8 +248,10 @@ public interface AdminControllerInf<ENTITY, VO> {
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(),
+                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 if (FuncUtil.isNotEmpty(req.getCondition())) {
-                    getRepo().parseAdvancedQuery(req.getCondition(), getPortalService().getAliasMap(), from);
+                    getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
                 } else {
                     getRepo().parseAdvancedQuery(req.getCondition(), null, from);
                 }
@@ -278,8 +284,10 @@ public interface AdminControllerInf<ENTITY, VO> {
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(),
+                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 if (FuncUtil.isNotEmpty(req.getCondition())) {
-                    getRepo().parseAdvancedQuery(req.getCondition(), getPortalService().getAliasMap(), from);
+                    getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
                 } else {
                     getRepo().parseAdvancedQuery(req.getCondition(), null, from);
                 }

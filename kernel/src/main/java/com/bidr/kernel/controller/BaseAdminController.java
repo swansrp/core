@@ -302,12 +302,14 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             beforeQuery(req);
         }
         Map<String, String> aliasMap = null;
+        Map<String, String> selectApplyMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            selectApplyMap = getPortalService().getSelectApplyMap();
         }
-        return getRepo().select(req, aliasMap, wrapper, getVoClass());
+        return getRepo().select(req, aliasMap, selectApplyMap, wrapper, getVoClass());
     }
 
     @Override
@@ -389,11 +391,14 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             beforeQuery(req);
         }
         Map<String, String> aliasMap = null;
+        Map<String, String> selectApplyMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            selectApplyMap = getPortalService().getSelectApplyMap();
         }
-        return getRepo().select(req.getCondition(), req.getSortList(), aliasMap, wrapper, getVoClass());
+        return getRepo().select(req.getCondition(), req.getSortList(), req.getSelectApplyList(), aliasMap,
+                selectApplyMap, wrapper, getVoClass());
     }
 }

@@ -115,8 +115,10 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        parseGeneralQuery(req.getConditionList(), aliasMap, havingFields, selectApplyMap, wrapper);
-        parseSort(req.getSortList(), aliasMap, wrapper);
+        Map<String, String> selectAliasMap = parseSelectApply(req.getConditionList(), aliasMap, selectApplyMap,
+                wrapper);
+        parseGeneralQuery(req.getConditionList(), selectAliasMap, havingFields, wrapper);
+        parseSort(req.getSortList(), selectAliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
     }
 
@@ -127,34 +129,39 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        parseGeneralQuery(conditionList, aliasMap, havingFields, selectApplyMap, wrapper);
-        parseSort(sortList, aliasMap, wrapper);
+        Map<String, String> selectAliasMap = parseSelectApply(conditionList, aliasMap, selectApplyMap, wrapper);
+        parseGeneralQuery(conditionList, selectAliasMap, havingFields, wrapper);
+        parseSort(sortList, selectAliasMap, wrapper);
         return selectJoinList(vo, wrapper);
     }
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo) {
-        return select(req, aliasMap, null, vo);
+        return select(req, aliasMap, null, null, vo);
     }
 
     @Override
-    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, MPJLambdaWrapper<T> wrapper,
-                                Class<VO> vo) {
-        if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<T>(entityClass);
-        }
-        parseAdvancedQuery(req, aliasMap, wrapper);
-        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
-    }
-
-    @Override
-    public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, Map<String, String> aliasMap,
+    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, String> selectApplyMap,
                                 MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
+        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectApplyList(), aliasMap, selectApplyMap,
+                wrapper);
+        parseAdvancedQuery(req, selectAliasMap, wrapper);
+        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
+    }
+
+    @Override
+    public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, List<ConditionVO> selectApplyList,
+                                Map<String, String> aliasMap, Map<String, String> selectApplyMap,
+                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<T>(entityClass);
+        }
+        Map<String, String> selectAliasMap = parseSelectApply(selectApplyList, aliasMap, selectApplyMap, wrapper);
         if (FuncUtil.isNotEmpty(condition)) {
-            parseAdvancedQuery(condition, aliasMap, wrapper);
+            parseAdvancedQuery(condition, selectAliasMap, wrapper);
         }
         parseSort(sortList, aliasMap, wrapper);
         return selectJoinList(vo, wrapper);
