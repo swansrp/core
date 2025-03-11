@@ -196,10 +196,22 @@ public class DbUtil {
     }
 
     public static String apply(String sql, String applyJsonStr) {
-        Map<String, String> applyMap = JsonUtil.readJson(applyJsonStr, Map.class, String.class, String.class);
+        Map<String, Object> applyMap = JsonUtil.readJson(applyJsonStr, Map.class, String.class, Object.class);
         if (FuncUtil.isNotEmpty(applyMap)) {
-            for (Map.Entry<String, String> entry : applyMap.entrySet()) {
-                sql = sql.replace("${" + entry.getKey() + "}", entry.getValue());
+            for (Map.Entry<String, Object> entry : applyMap.entrySet()) {
+                if (FuncUtil.isNotEmpty(entry.getValue())) {
+                    if (entry.getValue() instanceof Collection) {
+                        List<String> array = new ArrayList<>();
+                        if (FuncUtil.isNotEmpty(entry.getValue())) {
+                            for (Object o : (Collection<?>) entry.getValue()) {
+                                array.add(StringUtil.parse(o));
+                            }
+                            sql = sql.replace("${" + entry.getKey() + "}", "'" + StringUtil.joinWith(",", array) + "'");
+                        }
+                    } else {
+                        sql = sql.replace("${" + entry.getKey() + "}", entry.getValue().toString());
+                    }
+                }
             }
         }
         return sql;

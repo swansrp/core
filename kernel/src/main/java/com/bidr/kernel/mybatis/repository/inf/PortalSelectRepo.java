@@ -440,8 +440,9 @@ public interface PortalSelectRepo<T> {
             if (FuncUtil.isNotEmpty(selectApplyMap)) {
                 String selectStr = selectApplyMap.get(condition.getProperty());
                 if (FuncUtil.isNotEmpty(selectStr)) {
-                    String select = DbUtil.apply(selectStr, JsonUtil.toJson(condition.getValue().get(0)));
-                    aliasMap.put(condition.getProperty(), select);
+                    String select = DbUtil.apply(selectStr,
+                            JsonUtil.toJson(condition.getValue().get(0), false, false, true));
+                    aliasMap.put(condition.getProperty(), "(" + select + ")");
                     wrapper.getSelectColum().add(new SelectString(
                             StringUtil.joinWith(" as ", select, "'" + condition.getProperty() + "'"),
                             wrapper.getAlias()));
