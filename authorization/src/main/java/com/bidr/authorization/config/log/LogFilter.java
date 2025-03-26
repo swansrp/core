@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
+import static com.bidr.platform.config.log.LogMdcConstant.*;
+
 /**
  * description 请求日志
  * 1. 导出接口api必须含有export
@@ -79,6 +81,7 @@ public class LogFilter extends OncePerRequestFilter {
             boolean isMultipartContent = FileUploadBase.isMultipartContent(new ServletRequestContext(request));
 
             if (recordIgnore(request) || HttpMethod.OPTIONS.matches(request.getMethod())) {
+                MDC.put(LOG_SILENT, "1");
                 filterChain.doFilter(temRequest, temResponse);
                 return;
             }
@@ -86,12 +89,12 @@ public class LogFilter extends OncePerRequestFilter {
             TokenInfo tokenInfo = AuthTokenUtil.extractToken(request);
 
             // 记录请求的消息体
-            MDC.put("logToken", tokenInfo == null ? "" : tokenInfo.getToken());
-            MDC.put("REQUEST_ID", requestId);
-            MDC.put("URI", request.getRequestURI());
-            MDC.put("method", request.getMethod());
-            MDC.put("status", String.valueOf(response.getStatus()));
-            MDC.put("IP", HttpUtil.getRemoteIp(request));
+            MDC.put(LOG_TOKEN, tokenInfo == null ? "" : tokenInfo.getToken());
+            MDC.put(REQUEST_ID, requestId);
+            MDC.put(URI, request.getRequestURI());
+            MDC.put(METHOD, request.getMethod());
+            MDC.put(STATUS, String.valueOf(response.getStatus()));
+            MDC.put(IP, HttpUtil.getRemoteIp(request));
 
             if (!isMultipartContent) {
                 wrappedRequest = new MultiReadHttpServletRequest(request);
@@ -125,8 +128,8 @@ public class LogFilter extends OncePerRequestFilter {
             }
 
             stopWatch.stop();
-            MDC.put("totalTime", String.valueOf(stopWatch.getTotalTimeMillis()));
-            MDC.put("REQUEST_ID", requestId);
+            MDC.put(TOTAL_TIME, String.valueOf(stopWatch.getTotalTimeMillis()));
+            MDC.put(REQUEST_ID, requestId);
             // 记录响应的消息体
             String resultBodyStr;
 

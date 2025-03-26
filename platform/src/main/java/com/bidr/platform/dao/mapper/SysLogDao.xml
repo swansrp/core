@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.platform.dao.mapper.SysLogDao">
+  <resultMap id="BaseResultMap" type="com.bidr.platform.dao.entity.SysLog">
+    <!--@mbg.generated-->
+    <!--@Table sys_log-->
+    <id column="log_id" jdbcType="BIGINT" property="logId" />
+    <result column="project_id" jdbcType="VARCHAR" property="projectId" />
+    <result column="module_id" jdbcType="VARCHAR" property="moduleId" />
+    <result column="env_type" jdbcType="VARCHAR" property="envType" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="log_seq" jdbcType="BIGINT" property="logSeq" />
+    <result column="log_level" jdbcType="VARCHAR" property="logLevel" />
+    <result column="request_id" jdbcType="VARCHAR" property="requestId" />
+    <result column="trace_id" jdbcType="VARCHAR" property="traceId" />
+    <result column="request_ip" jdbcType="VARCHAR" property="requestIp" />
+    <result column="user_ip" jdbcType="VARCHAR" property="userIp" />
+    <result column="server_ip" jdbcType="VARCHAR" property="serverIp" />
+    <result column="thread_name" jdbcType="VARCHAR" property="threadName" />
+    <result column="class_name" jdbcType="VARCHAR" property="className" />
+    <result column="method_name" jdbcType="VARCHAR" property="methodName" />
+    <result column="content" jdbcType="LONGVARCHAR" property="content" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    log_id, project_id, module_id, env_type, create_time, log_seq, log_level, request_id, 
+    trace_id, request_ip, user_ip, server_ip, thread_name, class_name, method_name, content
+  </sql>
+</mapper>

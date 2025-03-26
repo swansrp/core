@@ -16,8 +16,12 @@ import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.yulichang.toolkit.LambdaUtils;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -331,5 +335,32 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         });
         Validator.assertNotEmpty(fieldSql, ErrCodeSys.PA_PARAM_NULL, "id字段");
         return fieldSql.get(0);
+    }
+
+    public void buildSelectWrapper(MPJLambdaWrapper<?> wrapper, Class<?> entityClass, Class<?> resClass) {
+        List<Field> fields = ReflectionUtil.getFields(resClass);
+        if (FuncUtil.isNotEmpty(fields)) {
+            for (Field field : fields) {
+                if (!field.isAnnotationPresent(JsonIgnore.class)) {
+                    String fieldName = field.getName();
+                    if (field.isAnnotationPresent(JsonProperty.class)) {
+                        fieldName = field.getAnnotation(JsonProperty.class).value();
+                    }
+                    Field entityField = ReflectionUtil.getField(entityClass, fieldName);
+                    if (FuncUtil.isNotEmpty(entityField)) {
+                        String entityFieldSql;
+                        if (entityField.isAnnotationPresent(TableField.class)) {
+                            entityFieldSql = entityField.getAnnotation(TableField.class).value();
+                        } else {
+                            entityFieldSql = StringUtil.camelToUnderline(entityField.getName());
+                        }
+                        wrapper.getSelectColum()
+                                .add(new SelectString(
+                                        StringUtil.joinWith(" as ", entityFieldSql, "'" + fieldName + "'"),
+                                        wrapper.getAlias()));
+                    }
+                }
+            }
+        }
     }
 }

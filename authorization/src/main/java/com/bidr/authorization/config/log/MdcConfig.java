@@ -4,6 +4,8 @@ import org.slf4j.MDC;
 
 import java.util.Map;
 
+import static com.bidr.platform.config.log.LogMdcConstant.*;
+
 /**
  * Title: MdcConfig
  * Description: Copyright: Copyright (c) 2023
@@ -18,12 +20,13 @@ public class MdcConfig {
     }
 
     public static void forkLogInfo(Map<String, String> map) {
-        forkMdc("logToken", map);
-        forkMdc("REQUEST_ID", map);
-        forkMdc("URI", map);
-        forkMdc("method", map);
-        forkMdc("status", map);
-        forkMdc("IP", map);
+        forkMdc(LOG_TOKEN, map);
+        forkMdc(REQUEST_ID, map);
+        forkMdc(URI, map);
+        forkMdc(METHOD, map);
+        forkMdc(STATUS, map);
+        forkMdc(IP, map);
+        forkMdc(TOTAL_TIME, map);
     }
 
     public static void forkMdc(String key, Map<String, String> map) {
@@ -31,12 +34,12 @@ public class MdcConfig {
     }
 
     public static void destroyMdc() {
-        MDC.remove("logToken");
-        MDC.remove("reqToken");
-        MDC.remove("URI");
-        MDC.remove("IP");
-        MDC.remove("totalTime");
-        MDC.remove("method");
-        MDC.remove("status");
+        MDC.remove(LOG_TOKEN);
+        MDC.remove(REQUEST_ID);
+        MDC.remove(URI);
+        MDC.remove(IP);
+        MDC.remove(TOTAL_TIME);
+        MDC.remove(METHOD);
+        MDC.remove(STATUS);
     }
 }

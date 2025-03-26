@@ -43,7 +43,7 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
     private static final ScopeMetadataResolver scopeMetadataResolver = new AnnotationScopeMetadataResolver();
 
     private static final BeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
-    private static final String[] BLOCK_DISPLAY_REQUEST_URL = {"/actuator/prometheus"};
+    private static final String[] BLOCK_DISPLAY_REQUEST_URL = {"/actuator/prometheus", "/web/log"};
     private static WebApplicationContext ctx = null;
 
     /**
@@ -179,7 +179,7 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ServletRequestHandledEvent) {
             for (String url : BLOCK_DISPLAY_REQUEST_URL) {
-                if (((ServletRequestHandledEvent) event).getRequestUrl().startsWith(url)) {
+                if (((ServletRequestHandledEvent) event).getRequestUrl().contains(url)) {
                     return;
                 }
             }

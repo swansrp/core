@@ -3,9 +3,17 @@
 
 
 	<!-- 动态属性，读取自application.yml -->
-	<springProperty scop="context" name="projectName" source="my.project.name" defaultValue="unknown-projectId"/>
+	<springProperty scop="context" name="projectName" source="app.projectId" defaultValue="unknown-projectId"/>
+	<springProperty scop="context" name="moduleId" source="app.moduleId" defaultValue="unknown-moduleId"/>
+	<springProperty scop="context" name="envType" source="spring.profiles.active" defaultValue="dev"/>
 	<springProperty scop="context" name="appLogPath" source="app.log.path" defaultValue="/data/log"/>
-
+	<springProperty scop="context" name="dbDriver" source="my.master-db.config.driver" defaultValue="com.mysql.cj.jdbc.Driver"/>
+	<springProperty scop="context" name="dbUrl" source="my.master-db.config.url" defaultValue="localhost"/>
+	<springProperty scop="context" name="dbPort" source="my.master-db.config.port" defaultValue="3306"/>
+	<springProperty scop="context" name="dbProperty" source="my.master-db.config.property" defaultValue=""/>
+	<springProperty scop="context" name="dbName" source="my.master-db.config.db" defaultValue="logback"/>
+	<springProperty scop="context" name="dbUserName" source="my.master-db.config.username" defaultValue="root"/>
+	<springProperty scop="context" name="dbPassword" source="my.master-db.config.password" defaultValue=""/>
 	<!--
         日志输出格式：
             %d表示日期时间，
@@ -53,6 +61,20 @@
 		<appender-ref ref="FILE"/>
 	</appender>
 
+	<appender name="mysql" class="com.bidr.platform.config.log.DbLogbackAppender">
+		<projectId>${projectName}</projectId>
+		<moduleId>${moduleId}</moduleId>
+		<envType>${envType}</envType>
+		<connectionSource class="ch.qos.logback.core.db.DataSourceConnectionSource">
+			<dataSource class="com.zaxxer.hikari.HikariDataSource">
+				<driverClassName>${dbDriver}</driverClassName>
+				<jdbcUrl>jdbc:mysql://${dbUrl}:${dbPort}/${dbName}?${dbProperty}</jdbcUrl>
+				<username>${dbUserName}</username>
+				<password>${dbPassword}</password>
+			</dataSource>
+		</connectionSource>
+	</appender>
+
 
 	<!-- ============================= ↓↓↓↓ 按环境进行配置 ↓↓↓↓ ================================= -->
 
@@ -71,7 +93,13 @@
 		<root level="INFO">
 			<appender-ref ref="STDOUT"/>
 			<appender-ref ref="ASYNC-FILE"/>
+			<appender-ref ref="mysql"/>
 		</root>
+		<logger name="com.bidr" level="TRACE" additivity="false">
+			<appender-ref ref="STDOUT"/>
+			<appender-ref ref="ASYNC-FILE"/>
+			<appender-ref ref="mysql"/>
+		</logger>
 	</springProfile>
 
 </configuration>
