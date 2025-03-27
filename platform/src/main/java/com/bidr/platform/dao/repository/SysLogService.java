@@ -1,5 +1,6 @@
 package com.bidr.platform.dao.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.constant.dict.log.ProjectModule;
@@ -10,6 +11,7 @@ import com.bidr.platform.vo.log.LogRes;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -47,5 +49,11 @@ public class SysLogService extends BaseSqlRepo<SysLogDao, SysLog> {
         wrapper.groupBy(SysLog::getProjectId, SysLog::getModuleId);
         wrapper.orderByAsc(SysLog::getProjectId, SysLog::getModuleId);
         return selectJoinList(ProjectModule.class, wrapper);
+    }
+
+    public void cleanLog(Date expired) {
+        LambdaQueryWrapper<SysLog> wrapper = super.getQueryWrapper();
+        wrapper.le(SysLog::getCreateTime, expired);
+        super.delete(wrapper);
     }
 }

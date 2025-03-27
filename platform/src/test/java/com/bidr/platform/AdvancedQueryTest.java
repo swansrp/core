@@ -2,11 +2,9 @@ package com.bidr.platform;
 
 import com.bidr.kernel.test.BaseTest;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
+import com.bidr.platform.config.log.DbLogbackCron;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.repository.SysDictService;
-import com.bidr.platform.service.log.LogService;
-import com.bidr.platform.vo.log.LogReq;
-import com.bidr.platform.vo.log.LogRes;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,7 +13,6 @@ import org.testng.annotations.Test;
 import javax.annotation.Resource;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 /**
  * Title: AdvancedQueryTest
@@ -30,7 +27,7 @@ public class AdvancedQueryTest extends BaseTest {
     @Resource
     private SysDictService sysDictService;
     @Resource
-    private LogService logService;
+    private DbLogbackCron dbLogbackCron;
 
     @NotNull
     private static AdvancedQuery getAdvancedQueryReq(Integer relation, String property, String value) {
@@ -67,11 +64,6 @@ public class AdvancedQueryTest extends BaseTest {
     }
 
     public void logServiceTest() {
-        LogReq req = new LogReq();
-        req.setRequestId("mtuYZskJRraNXaF4T1V7qQ");
-        List<LogRes> res = logService.getLog(req);
-        log(res);
+        dbLogbackCron.logInDbExpired();
     }
-
-
 }

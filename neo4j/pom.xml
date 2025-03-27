@@ -38,7 +38,7 @@
                 <java.version>1.8</java.version>
 
                 <bidr.core.authorization.version>20250311092959-49</bidr.core.authorization.version>
-                <bidr.core.kernel.version>20250311140010-67</bidr.core.kernel.version>
+                <bidr.core.kernel.version>20250327101508-70</bidr.core.kernel.version>
                 <bidr.core.admin.version>20250311093037-56</bidr.core.admin.version>
             </properties>
         </profile>
