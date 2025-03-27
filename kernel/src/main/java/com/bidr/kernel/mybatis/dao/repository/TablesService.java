@@ -23,4 +23,15 @@ public class TablesService extends BaseSqlRepo<TablesMapper, Tables> {
         return super.select(wrapper);
     }
 
+    public boolean existed(String tableName) {
+        LambdaQueryWrapper<Tables> wrapper = super.getQueryWrapper().eq(Tables::getTableName, tableName);
+        return super.existed(wrapper);
+    }
+
+    public boolean existed(String sqlDbName, String tableName) {
+        LambdaQueryWrapper<Tables> wrapper = super.getQueryWrapper().eq(Tables::getTableSchema, sqlDbName)
+                .eq(Tables::getTableName, tableName);
+        return super.existed(wrapper);
+    }
+
 }
