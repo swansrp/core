@@ -90,7 +90,7 @@
 	</springProfile>
 
 	<springProfile name="pre,prod">
-		<root level="INFO">
+		<root level="INFO" additivity="false">
 			<appender-ref ref="STDOUT"/>
 			<appender-ref ref="ASYNC-FILE"/>
 			<appender-ref ref="mysql"/>
