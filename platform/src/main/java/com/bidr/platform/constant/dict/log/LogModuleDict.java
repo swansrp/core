@@ -1,11 +1,13 @@
 package com.bidr.platform.constant.dict.log;
 
 import com.bidr.kernel.constant.dict.MetaTreeDict;
+import com.bidr.kernel.mybatis.dao.repository.TablesService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.platform.bo.tree.TreeDict;
 import com.bidr.platform.constant.dict.IDynamicTree;
 import com.bidr.platform.dao.repository.SysLogService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -23,14 +25,22 @@ import java.util.Map;
 @Component
 @MetaTreeDict(value = "LOG_MODULE_TREE_DICT", remark = "日志模块树")
 public class LogModuleDict implements IDynamicTree {
-
+    private static final String LOG_DB_NAME = "sys_log";
     @Resource
     private SysLogService sysLogService;
+    @Resource
+    private TablesService tablesService;
+    @Value("${my.master-db.config.db}")
+    private String dbName;
 
     @Override
     public List<TreeDict> generate(String treeType, String treeTitle) {
-        List<TreeDict> list = buildTree(treeType, treeTitle);
-        return buildTree(list);
+        if (tablesService.existed(dbName, LOG_DB_NAME)) {
+            List<TreeDict> list = buildTree(treeType, treeTitle);
+            return buildTree(list);
+        } else {
+            return null;
+        }
     }
 
     private List<TreeDict> buildTree(String treeType, String treeTitle) {
