@@ -6,9 +6,9 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.platform.bo.tree.TreeDict;
 import com.bidr.platform.constant.dict.IDynamicTree;
 import com.bidr.platform.dao.repository.SysLogService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,11 +22,10 @@ import java.util.Map;
  */
 @Component
 @MetaTreeDict(value = "LOG_MODULE_TREE_DICT", remark = "日志模块树")
-@RequiredArgsConstructor
 public class LogModuleDict implements IDynamicTree {
 
-
-    private final SysLogService sysLogService;
+    @Resource
+    private SysLogService sysLogService;
 
     @Override
     public List<TreeDict> generate(String treeType, String treeTitle) {
