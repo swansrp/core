@@ -136,6 +136,38 @@ public class DateUtil {
         return cal.getTime();
     }
 
+    public static Date yearBeginTime(Integer year) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, 0);
+        cal.set(Calendar.DATE, 1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
+    }
+
+    public static Date yearEndTime(Integer year) {
+        return DateUtil.addMilliSeconds(yearBeginTime(year + 1), -1);
+    }
+
+    public static Date monthBeginTime(Integer year, Integer month) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, month);
+        cal.set(Calendar.DATE, 1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
+    }
+
+    public static Date monthEndTime(Integer year, Integer month) {
+        return DateUtil.addMilliSeconds(monthBeginTime(year, month + 1), -1);
+    }
+
     public static Date beginTime(Date date) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
