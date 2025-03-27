@@ -57,7 +57,7 @@ public class RedisPublishConfig {
     public void registerPublish(String topic, Object delegate, Method method) {
         log.info("创建订阅频道: {}", topic);
         Integer listenerId = redissonClient.getTopic(topic).addListener(String.class, (channel, msg) -> {
-            RedisPublishDto<?> obj = JsonUtil.readJson(msg, RedisPublishDto.class);
+            RedisPublishDto<?> obj = JsonUtil.readJson(msg, RedisPublishDto.class, Object.class);
             if (needExec(obj)) {
                 ReflectionUtil.invoke(delegate, method, obj);
             }
