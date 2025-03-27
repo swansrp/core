@@ -101,7 +101,6 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
     private void bindCallerDataWithPreparedStatement(PreparedStatement stmt,
                                                      StackTraceElement[] callerDataArray) throws SQLException {
         StackTraceElement caller = extractFirstCaller(callerDataArray);
-        stmt.setString(CLASS_NAME_INDEX, caller.getClassName());
         stmt.setString(METHOD_NAME_INDEX,
                 caller.getMethodName() + "(" + caller.getFileName() + ":" + caller.getLineNumber() + ")");
     }
