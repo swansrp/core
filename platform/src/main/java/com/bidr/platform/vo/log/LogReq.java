@@ -18,12 +18,9 @@ import java.util.List;
  */
 @Data
 public class LogReq {
-    @NotBlank(message = "项目id不能为空")
-    @ApiModelProperty("项目id")
-    private String projectId;
     @NotBlank(message = "模块id不能为空")
     @ApiModelProperty("模块id")
-    private String moduleId;
+    private List<String> moduleId;
     @NotBlank(message = "环境类型不能为空")
     @ApiModelProperty("环境类型")
     private String envType;
@@ -53,4 +50,7 @@ public class LogReq {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS", timezone = "GMT+8")
     private Date endAt;
+
+    @ApiModelProperty("排除日志")
+    private List<String> blockMessage;
 }

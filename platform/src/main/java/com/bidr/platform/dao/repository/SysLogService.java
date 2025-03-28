@@ -22,7 +22,7 @@ public class SysLogService extends BaseSqlRepo<SysLogDao, SysLog> {
     public List<LogRes> getLog(LogReq req) {
         MPJLambdaWrapper<SysLog> wrapper = new MPJLambdaWrapper<>();
         buildSelectWrapper(wrapper, SysLog.class, LogRes.class);
-        wrapper.eq(SysLog::getModuleId, req.getModuleId());
+        wrapper.in(FuncUtil.isNotEmpty(req.getModuleId()), SysLog::getModuleId, req.getModuleId());
         wrapper.eq(SysLog::getEnvType, req.getEnvType());
         wrapper.in(FuncUtil.isNotEmpty(req.getLogLevel()), SysLog::getLogLevel, req.getLogLevel());
         wrapper.eq(FuncUtil.isNotEmpty(req.getRequestId()), SysLog::getRequestId, req.getRequestId());
@@ -38,6 +38,11 @@ public class SysLogService extends BaseSqlRepo<SysLogDao, SysLog> {
         } else {
             wrapper.gt(SysLog::getCreateTime, req.getStartAt());
             wrapper.le(SysLog::getCreateTime, req.getEndAt());
+        }
+        if (FuncUtil.isNotEmpty(req.getBlockMessage())) {
+            for (String block : req.getBlockMessage()) {
+                wrapper.notLike(SysLog::getContent, block);
+            }
         }
         return selectJoinList(LogRes.class, wrapper);
     }

@@ -43,9 +43,13 @@ public class LogModuleDict implements IDynamicTree {
         }
     }
 
-    private List<TreeDict> buildTree(String treeType, String treeTitle) {
+    protected List<ProjectModule> getModuleList() {
+        return sysLogService.getProjectModule();
+    }
+
+    protected List<TreeDict> buildTree(String treeType, String treeTitle) {
         List<TreeDict> entityList = new ArrayList<>();
-        List<ProjectModule> moduleList = sysLogService.getProjectModule();
+        List<ProjectModule> moduleList = getModuleList();
         if (FuncUtil.isNotEmpty(moduleList)) {
             Map<String, List<ProjectModule>> projectMap = ReflectionUtil.reflectToListLinkedMap(moduleList,
                     ProjectModule::getProjectId);
