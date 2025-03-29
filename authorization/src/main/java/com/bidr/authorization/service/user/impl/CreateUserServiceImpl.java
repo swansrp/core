@@ -84,6 +84,7 @@ public class CreateUserServiceImpl implements CreateUserService {
     public AcUser createUserFromWechat(String unionId, String nickName, String phoneNumber, String avatar) {
         AcUser user = buildBaseUser();
         user.setUserName(unionId);
+        user.setWechatId(unionId);
         if (FuncUtil.isNotEmpty(phoneNumber)) {
             user.setPhoneNumber(phoneNumber);
         }
