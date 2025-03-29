@@ -2,6 +2,8 @@ package com.bidr.wechat.service.account;
 
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.token.TokenItem;
+import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
@@ -10,6 +12,7 @@ import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.user.RealNameReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -38,6 +41,8 @@ import javax.annotation.Resource;
 @Slf4j
 @Service
 public class SyncAccountService {
+    @Resource
+    private AcUserService acUserService;
     @Resource
     private LoginService loginService;
     @Resource
@@ -87,6 +92,10 @@ public class SyncAccountService {
             map.setUnionId(openId);
         }
         map.setNickName(nickName);
+        AcUser wechatUser = acUserService.getUserByWechatId(map.getUnionId());
+        if (FuncUtil.isEmpty(wechatUser) && FuncUtil.isEmpty(wechatUser.getPhoneNumber())) {
+            map.setPhone(wechatUser.getPhoneNumber());
+        }
         return map;
     }
 
