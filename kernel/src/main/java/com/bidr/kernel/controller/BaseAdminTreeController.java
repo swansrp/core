@@ -9,6 +9,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdPidReqVO;
+import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.TreeDataItemVO;
 import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -29,6 +30,42 @@ import java.util.List;
  * @since 2023/05/09 22:37
  */
 public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrderController<ENTITY, VO> {
+
+    @ApiIgnore
+    @RequestMapping(value = "/tree/parent", method = RequestMethod.GET)
+    public TreeDataItemVO getParent(IdReqVO req) {
+        ENTITY self = getSelf(req);
+        ENTITY parent = getParent(self);
+        if (FuncUtil.isNotEmpty(parent)) {
+            return new TreeDataItemVO(id().apply(parent), pid().apply(parent), name().apply(parent));
+        } else {
+            return null;
+        }
+    }
+
+    @ApiIgnore
+    @RequestMapping(value = "/tree/children", method = RequestMethod.GET)
+    public List<TreeDataItemVO> getChildren(IdReqVO req) {
+        List<TreeDataItemVO> res = new ArrayList<>();
+        List<ENTITY> children = getChild(req);
+        if (FuncUtil.isNotEmpty(children)) {
+            for (ENTITY child : children) {
+                res.add(new TreeDataItemVO(id().apply(child), pid().apply(child), name().apply(child)));
+            }
+        }
+        return res;
+    }
+
+    @ApiIgnore
+    @RequestMapping(value = "/tree/brothers", method = RequestMethod.GET)
+    public List<TreeDataItemVO> getBrothers(IdReqVO req) {
+        List<TreeDataItemVO> res = new ArrayList<>();
+        TreeDataItemVO parent = getParent(req);
+        if (FuncUtil.isNotEmpty(parent)) {
+            res = getChildren(new IdReqVO(parent.getId().toString()));
+        }
+        return res;
+    }
 
 
     @ApiIgnore
@@ -73,7 +110,25 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
             wrapper.orderByAsc(order());
             return getRepo().select(wrapper);
         }
+    }
 
+    protected ENTITY getParent(ENTITY self) {
+        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+        wrapper.eq(id(), pid().apply(self));
+        return getRepo().selectOne(wrapper);
+    }
+
+    protected ENTITY getSelf(IdReqVO req) {
+        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+        wrapper.eq(id(), req.getId());
+        return getRepo().selectOne(wrapper);
+    }
+
+    protected List<ENTITY> getChild(IdReqVO req) {
+        LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+        wrapper.eq(pid(), req.getId());
+        wrapper.orderByAsc(order());
+        return getRepo().select(wrapper);
     }
 
     /**

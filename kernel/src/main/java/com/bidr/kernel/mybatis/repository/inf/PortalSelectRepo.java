@@ -498,7 +498,10 @@ public interface PortalSelectRepo<T> {
                                     String andOr) {
         if (FuncUtil.isNotEmpty(req.getConditionList())) {
             if (req.getConditionList().size() == 1) {
-                wrapper.and(w -> parseAdvancedQuery(req.getConditionList().get(0), aliasMap, w, SqlConstant.AND));
+                wrapper.and(w -> {
+                    w.apply(" 1 = 1 ");
+                    parseAdvancedQuery(req.getConditionList().get(0), aliasMap, w, SqlConstant.AND);
+                });
             } else if (req.getConditionList().size() > 1) {
                 for (AdvancedQuery advancedQuery : req.getConditionList()) {
                     if (StringUtil.convertSwitch(req.getAndOr())) {
