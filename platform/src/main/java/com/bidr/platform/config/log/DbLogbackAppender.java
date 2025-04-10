@@ -2,9 +2,12 @@ package com.bidr.platform.config.log;
 
 import ch.qos.logback.classic.spi.CallerData;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.core.db.DBAppenderBase;
 import com.bidr.kernel.utils.DateUtil;
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -87,7 +90,7 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
         stmt.setLong(LOG_SEQ_INDEX, LOG_SEQ_BUILDER.getAndIncrement());
         stmt.setString(CREATE_TIME_INDEX,
                 DateUtil.formatDate(new Date(event.getTimeStamp()), "yyyy-MM-dd HH:mm:ss.SSS"));
-        stmt.setString(CONTENT_INDEX, event.getFormattedMessage());
+        stmt.setString(CONTENT_INDEX, buildLogContent(event));
         stmt.setString(LOG_LEVEL_INDEX, event.getLevel().toString());
         stmt.setString(CLASS_NAME_INDEX, event.getLoggerName());
         stmt.setString(THREAD_NAME_INDEX, event.getThreadName());
@@ -96,6 +99,25 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
         stmt.setString(REQUEST_IP_INDEX, event.getMDCPropertyMap().getOrDefault("IP", ""));
         stmt.setString(USER_IP_INDEX, event.getMDCPropertyMap().getOrDefault("USER_IP", ""));
         stmt.setString(SERVER_IP_INDEX, event.getMDCPropertyMap().getOrDefault("SERVER_IP", ""));
+    }
+
+    private String buildLogContent(ILoggingEvent event) {
+        StringBuilder content = new StringBuilder(event.getFormattedMessage());
+        if (StringUtils.isNotBlank(event.getFormattedMessage())) {
+            content.append("\n");
+        }
+        IThrowableProxy throwableProxy = event.getThrowableProxy();
+        if (FuncUtil.isNotEmpty(throwableProxy)) {
+            content.append(throwableProxy.getClassName());
+            if (FuncUtil.isNotEmpty(throwableProxy.getStackTraceElementProxyArray())) {
+                int stackSize = throwableProxy.getStackTraceElementProxyArray().length;
+                int stackLine = Math.min(stackSize, 15);
+                for (int i = 0; i < stackLine; i++) {
+                    content.append("\n").append(throwableProxy.getStackTraceElementProxyArray()[i].getSTEAsString());
+                }
+            }
+        }
+        return content.toString();
     }
 
     private void bindCallerDataWithPreparedStatement(PreparedStatement stmt,
