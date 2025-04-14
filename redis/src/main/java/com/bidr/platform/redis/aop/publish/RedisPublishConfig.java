@@ -1,5 +1,6 @@
 package com.bidr.platform.redis.aop.publish;
 
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.NetUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -58,8 +59,14 @@ public class RedisPublishConfig {
         log.info("创建订阅频道: {}", topic);
         Integer listenerId = redissonClient.getTopic(topic).addListener(String.class, (channel, msg) -> {
             RedisPublishDto<?> obj = JsonUtil.readJson(msg, RedisPublishDto.class, Object.class);
-            if (needExec(obj)) {
-                ReflectionUtil.invoke(delegate, method, obj);
+            boolean needExec = needExec(obj);
+            log.debug("接受到广播: {}-{}, 是否执行: {}", topic, JsonUtil.toJson(obj), needExec);
+            if (needExec) {
+                if (FuncUtil.isNotEmpty(obj.getData())) {
+                    ReflectionUtil.invoke(delegate, method, obj.getData());
+                } else {
+                    ReflectionUtil.invoke(delegate, method);
+                }
             }
         });
         MAP.getOrDefault(topic, new ArrayList<>()).add(listenerId);
