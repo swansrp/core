@@ -131,8 +131,8 @@ public class AdminPortalController {
 
     @RequestMapping(path = {"/config/import"}, method = {RequestMethod.POST})
     @ApiOperation(value = "导入指定配置")
-    public void importConfig(MultipartFile file) throws IOException {
-        portalConfigService.importConfig(file.getInputStream());
+    public void importConfig(MultipartFile file, PortalReq req) throws IOException {
+        portalConfigService.importConfig(file.getInputStream(), req);
         Resp.notice("导入配置成功");
     }
 

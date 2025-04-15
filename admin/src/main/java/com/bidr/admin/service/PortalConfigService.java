@@ -10,6 +10,7 @@ import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalAssociateService;
 import com.bidr.admin.dao.repository.SysPortalColumnService;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.admin.vo.PortalReq;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.authorization.bo.role.RoleInfo;
 import com.bidr.authorization.constants.token.TokenItem;
@@ -316,11 +317,12 @@ public class PortalConfigService implements LoginFillTokenInf {
                 column.setEditShow(CommonConst.NO);
                 column.setAddShow(CommonConst.NO);
             }
-            if (entityField.aggregation() && StringUtil.convertSwitch(portal.getAdvanced())) {
-                portal.setAdvanced(StringUtil.convertSwitch(false));
-                sysPortalService.updateById(portal);
+            if (entityField.selectApply() || entityField.aggregation()) {
+                if (StringUtil.convertSwitch(portal.getAdvanced())) {
+                    portal.setAdvanced(StringUtil.convertSwitch(false));
+                    sysPortalService.updateById(portal);
+                }
             }
-
         }
     }
 
@@ -553,32 +555,54 @@ public class PortalConfigService implements LoginFillTokenInf {
         ROLE_BIND_PORTAL_MAP.remove(roleId);
     }
 
-    public void importConfig(InputStream inputStream) {
+    @Transactional(rollbackFor = Exception.class)
+    public void importConfig(InputStream inputStream, PortalReq req) {
         PortalWithColumnsRes portalWithColumns = JsonUtil.readStreamJson(inputStream, PortalWithColumnsRes.class);
         Validator.assertNotNull(portalWithColumns, ErrCodeSys.SYS_ERR_MSG, "配置解析失败");
         Validator.assertNotEmpty(portalWithColumns.getColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "字段配置信息");
-        SysPortal portal = sysPortalService.getByName(portalWithColumns.getName(), portalWithColumns.getRoleId());
+        SysPortal portal;
+        if (FuncUtil.isEmpty(req.getName())) {
+            portal = sysPortalService.getByName(portalWithColumns.getName(), portalWithColumns.getRoleId());
+        } else {
+            portal = sysPortalService.getByName(req.getName(), req.getRoleId());
+        }
         if (FuncUtil.isNotEmpty(portal)) {
-            portalWithColumns.setId(portal.getId());
+            updatePortal(portalWithColumns, portal);
             updateColumnConfig(portalWithColumns, portal);
             updateAssociateConfig(portalWithColumns, portal);
-            sysPortalService.updateById(portalWithColumns);
         }
+    }
+
+    private void updatePortal(PortalWithColumnsRes portalWithColumns, SysPortal portal) {
+        portalWithColumns.setId(portal.getId());
+        portalWithColumns.setRoleId(portal.getRoleId());
+        portalWithColumns.setName(portal.getName());
+        portalWithColumns.setDisplayName(portal.getDisplayName());
+        portalWithColumns.setUrl(portal.getUrl());
+        portalWithColumns.setBean(portal.getBean());
+        sysPortalService.updateById(portalWithColumns);
     }
 
     private void updateColumnConfig(PortalWithColumnsRes portalWithColumns, SysPortal portal) {
         List<SysPortalColumn> columns = sysPortalColumnService.getPropertyListByPortalId(portal.getId(),
                 portal.getRoleId());
         Map<String, SysPortalColumn> map = ReflectionUtil.reflectToMap(columns, "portalId", "roleId", "property");
+        List<SysPortalColumn> newColumns = new ArrayList<>();
         if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
             for (SysPortalColumn column : portalWithColumns.getColumns()) {
                 SysPortalColumn sysPortalColumn = map.get(
                         StringUtil.join(portal.getId().toString(), column.getRoleId().toString(),
                                 column.getProperty()));
-                column.setPortalId(portal.getId());
-                column.setId(sysPortalColumn.getId());
+                if (FuncUtil.isNotEmpty(sysPortalColumn)) {
+                    column.setRoleId(portal.getRoleId());
+                    column.setPortalId(portal.getId());
+                    column.setId(sysPortalColumn.getId());
+                    newColumns.add(column);
+                }
             }
-            sysPortalColumnService.updateById(portalWithColumns.getColumns());
+            if (FuncUtil.isNotEmpty(newColumns)) {
+                sysPortalColumnService.updateById(newColumns);
+            }
         }
     }
 
@@ -588,15 +612,22 @@ public class PortalConfigService implements LoginFillTokenInf {
         Map<String, SysPortalAssociate> map = ReflectionUtil.reflectToMap(associates, "portalId", "roleId", "title");
         List<SysPortalAssociate> resList = ReflectionUtil.copyList(portalWithColumns.getAssociates(),
                 SysPortalAssociate.class);
+        List<SysPortalAssociate> newAssociate = new ArrayList<>();
         if (FuncUtil.isNotEmpty(portalWithColumns.getColumns())) {
             for (SysPortalAssociate associate : resList) {
                 SysPortalAssociate sysPortalAssociate = map.get(
                         StringUtil.join(portal.getId().toString(), associate.getRoleId().toString(),
                                 associate.getTitle()));
-                sysPortalAssociate.setPortalId(portal.getId());
-                sysPortalAssociate.setId(sysPortalAssociate.getId());
+                if (FuncUtil.isNotEmpty(sysPortalAssociate)) {
+                    sysPortalAssociate.setRoleId(portal.getRoleId());
+                    sysPortalAssociate.setPortalId(portal.getId());
+                    sysPortalAssociate.setId(sysPortalAssociate.getId());
+                    newAssociate.add(sysPortalAssociate);
+                }
             }
-            sysPortalAssociateService.updateById(resList);
+            if (FuncUtil.isNotEmpty(newAssociate)) {
+                sysPortalAssociateService.updateById(newAssociate);
+            }
         }
     }
 }
