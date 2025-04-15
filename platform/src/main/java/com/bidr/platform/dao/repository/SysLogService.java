@@ -31,7 +31,29 @@ public class SysLogService extends BaseSqlRepo<SysLogDao, SysLog> {
         wrapper.eq(FuncUtil.isNotEmpty(req.getUserIP()), SysLog::getUserIp, req.getUserIP());
         wrapper.eq(FuncUtil.isNotEmpty(req.getServerIP()), SysLog::getServerIp, req.getServerIP());
         wrapper.eq(FuncUtil.isNotEmpty(req.getThreadName()), SysLog::getThreadName, req.getThreadName());
-        wrapper.like(FuncUtil.isNotEmpty(req.getContent()), SysLog::getContent, req.getContent());
+
+        if (FuncUtil.isNotEmpty(req.getContent())) {
+            final String[] andArray = req.getContent().split(" ");
+            final String[] orArray = req.getContent().split("\\|");
+            if (andArray.length > 1) {
+                wrapper.nested(wr -> {
+                    for (String s : andArray) {
+                        wr.like(FuncUtil.isNotEmpty(s), SysLog::getContent, s);
+                    }
+                });
+            } else if (orArray.length > 1) {
+                wrapper.nested(wr -> {
+                    for (String s : orArray) {
+                        wr.like(FuncUtil.isNotEmpty(s), SysLog::getContent, s).or();
+                    }
+                });
+            } else {
+                wrapper.like(FuncUtil.isNotEmpty(req.getContent()), SysLog::getContent, req.getContent());
+            }
+        } else {
+            wrapper.like(FuncUtil.isNotEmpty(req.getContent()), SysLog::getContent, req.getContent());
+        }
+
         wrapper.orderByDesc(SysLog::getCreateTime, SysLog::getLogSeq);
         if (FuncUtil.isEmpty(req.getStartAt()) || FuncUtil.isEmpty(req.getEndAt())) {
             wrapper.last(" limit 500");
