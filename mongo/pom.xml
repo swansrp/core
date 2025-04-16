@@ -33,7 +33,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <kernel.version>20250327101508-70</kernel.version>
+                <kernel.version>20250416170246-73</kernel.version>
             </properties>
         </profile>
     </profiles>
