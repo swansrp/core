@@ -103,11 +103,11 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
 
     private String buildLogContent(ILoggingEvent event) {
         StringBuilder content = new StringBuilder(event.getFormattedMessage());
-        if (StringUtils.isNotBlank(event.getFormattedMessage())) {
-            content.append("\n");
-        }
         IThrowableProxy throwableProxy = event.getThrowableProxy();
         if (FuncUtil.isNotEmpty(throwableProxy)) {
+            if (StringUtils.isNotBlank(event.getFormattedMessage())) {
+                content.append("\n");
+            }
             content.append(throwableProxy.getClassName());
             if (FuncUtil.isNotEmpty(throwableProxy.getStackTraceElementProxyArray())) {
                 int stackSize = throwableProxy.getStackTraceElementProxyArray().length;
