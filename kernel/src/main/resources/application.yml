@@ -18,6 +18,7 @@ logging:
   level:
     com.bidr: trace
     org.springframework: warn
+    com.bidr.platform.dao.mapper.SysLogDao: info
 bidr:
   result:
     class-white-list:
