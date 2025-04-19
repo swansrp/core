@@ -75,6 +75,12 @@
 		</connectionSource>
 	</appender>
 
+	<appender name="ASYNC-MYSQL" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="mysql"/>
+	</appender>
+
 
 	<!-- ============================= ↓↓↓↓ 按环境进行配置 ↓↓↓↓ ================================= -->
 
@@ -90,15 +96,15 @@
 	</springProfile>
 
 	<springProfile name="pre,prod">
-		<root level="INFO" additivity="false">
+		<root level="INFO">
 			<appender-ref ref="STDOUT"/>
 			<appender-ref ref="ASYNC-FILE"/>
-			<appender-ref ref="mysql"/>
+			<appender-ref ref="ASYNC-MYSQL"/>
 		</root>
 		<logger name="com.bidr" level="TRACE" additivity="false">
 			<appender-ref ref="STDOUT"/>
 			<appender-ref ref="ASYNC-FILE"/>
-			<appender-ref ref="mysql"/>
+			<appender-ref ref="ASYNC-MYSQL"/>
 		</logger>
 	</springProfile>
 

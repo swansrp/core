@@ -16,8 +16,11 @@ server: # 服务器的HTTP端口，默认为8080
 logging:
   config: classpath:logback-boot.xml
   level:
-    com.bidr: trace
     org.springframework: warn
+    com.bidr: trace
+    com.bidr.kernel.config.db: error
+    com.baomidou.mybatisplus.core.metadata: error
+    com.github.jeffreyning.mybatisplus: error
     com.bidr.platform.dao.mapper.SysLogDao: info
 bidr:
   result:
