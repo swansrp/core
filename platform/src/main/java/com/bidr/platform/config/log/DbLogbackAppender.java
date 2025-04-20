@@ -109,6 +109,7 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
                 content.append("\n");
             }
             content.append(throwableProxy.getClassName());
+            content.append(throwableProxy.getMessage());
             if (FuncUtil.isNotEmpty(throwableProxy.getStackTraceElementProxyArray())) {
                 int stackSize = throwableProxy.getStackTraceElementProxyArray().length;
                 int stackLine = Math.min(stackSize, 15);
