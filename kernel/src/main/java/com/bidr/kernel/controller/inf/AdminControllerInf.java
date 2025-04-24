@@ -2,11 +2,15 @@ package com.bidr.kernel.controller.inf;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.service.PortalCommonService;
-import com.bidr.kernel.utils.*;
+import com.bidr.kernel.utils.DbUtil;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.LambdaUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.*;
@@ -205,7 +209,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         return getRepo().selectJoinCount(wrapper);
     }
 
-    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(String order, List<String> groupByColumn,
+    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(Integer sort, List<String> groupByColumn,
                                                            String statisticColumn) {
         String concatJoinStr = ", ',', ";
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
@@ -234,18 +238,20 @@ public interface AdminControllerInf<ENTITY, VO> {
                 wrapper.groupBy(column);
             }
         }
-        if (FuncUtil.isEmpty(order)) {
-            for (String column : groupByColumn) {
-                if (FuncUtil.isNotEmpty(column)) {
-                    wrapper.orderByAsc(column);
-                }
-            }
-        } else {
-            if (StringUtil.convertSwitch(order)) {
+        switch (PortalSortDict.of(sort)) {
+            case ASC:
                 wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-            } else {
+                break;
+            case DESC:
                 wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-            }
+                break;
+            default:
+                for (String column : groupByColumn) {
+                    if (FuncUtil.isNotEmpty(column)) {
+                        wrapper.orderByAsc(column);
+                    }
+                }
+                break;
         }
         return wrapper;
     }
@@ -260,7 +266,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getOrder(), req.getGroupByColumn(),
+        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getSort(), req.getGroupByColumn(),
                 req.getStatisticColumn());
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
@@ -390,7 +396,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getOrder(), req.getGroupByColumn(),
+        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getSort(), req.getGroupByColumn(),
                 req.getStatisticColumn());
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {

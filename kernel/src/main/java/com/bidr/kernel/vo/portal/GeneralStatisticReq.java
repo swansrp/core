@@ -15,7 +15,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class GeneralStatisticReq extends QueryConditionReq {
-    private String order;
+    private Integer sort;
     private List<String> groupByColumn;
     private String statisticColumn;
 }
