@@ -209,8 +209,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         return getRepo().selectJoinCount(wrapper);
     }
 
-    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(Integer sort, List<String> groupByColumn,
-                                                           String statisticColumn) {
+    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<String> metricColumn, String statisticColumn, Integer sort) {
         String concatJoinStr = ", ',', ";
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(statisticColumn)) {
@@ -221,10 +220,10 @@ public interface AdminControllerInf<ENTITY, VO> {
                     String.format("count(1) as %s", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)),
                     wrapper.getAlias()));
         }
-        Validator.assertNotEmpty(groupByColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
+        Validator.assertNotEmpty(metricColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
         StringBuilder sql = new StringBuilder("CONCAT(");
 
-        for (String column : groupByColumn) {
+        for (String column : metricColumn) {
             if (FuncUtil.isNotEmpty(column)) {
                 sql.append("IFNULL(").append(column).append(", 'NULL')").append(concatJoinStr);
             }
@@ -233,25 +232,28 @@ public interface AdminControllerInf<ENTITY, VO> {
         wrapper.getSelectColum().add(new SelectString(
                 String.format("%s as %s", s, LambdaUtil.getFieldNameByGetFunc(StatisticRes::getMetric)),
                 wrapper.getAlias()));
-        for (String column : groupByColumn) {
+        for (String column : metricColumn) {
             if (FuncUtil.isNotEmpty(column)) {
                 wrapper.groupBy(column);
             }
         }
-        switch (PortalSortDict.of(sort)) {
-            case ASC:
-                wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-                break;
-            case DESC:
-                wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-                break;
-            default:
-                for (String column : groupByColumn) {
-                    if (FuncUtil.isNotEmpty(column)) {
-                        wrapper.orderByAsc(column);
-                    }
+        if (FuncUtil.isNotEmpty(sort)) {
+            switch (PortalSortDict.of(sort)) {
+                case ASC:
+                    wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
+                    break;
+                case DESC:
+                    wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            for (String column : metricColumn) {
+                if (FuncUtil.isNotEmpty(column)) {
+                    wrapper.orderByAsc(column);
                 }
-                break;
+            }
         }
         return wrapper;
     }
@@ -266,8 +268,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getSort(), req.getGroupByColumn(),
-                req.getStatisticColumn());
+        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(), req.getSort());
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
@@ -396,8 +397,7 @@ public interface AdminControllerInf<ENTITY, VO> {
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getSort(), req.getGroupByColumn(),
-                req.getStatisticColumn());
+        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(), req.getSort());
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
