@@ -12,10 +12,7 @@ import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.GeneralSummaryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
@@ -241,6 +238,14 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
+    @ApiOperation("指标统计")
+    @RequestMapping(value = "/general/statistic", method = RequestMethod.POST)
+    public List<StatisticRes> generalStatistic(@RequestBody GeneralStatisticReq req) {
+        return statisticByGeneralReq(req);
+    }
+
+    @Override
+    @ApiIgnore
     @ApiOperation("高级查询数据")
     @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
     public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
@@ -271,6 +276,14 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @RequestMapping(value = "/advanced/count", method = RequestMethod.POST)
     public Long advancedCount(@RequestBody AdvancedQueryReq req) {
         return countByAdvancedReq(req);
+    }
+
+    @Override
+    @ApiIgnore
+    @ApiOperation("指标统计")
+    @RequestMapping(value = "/advanced/statistic", method = RequestMethod.POST)
+    public List<StatisticRes> advancedStatistic(@RequestBody AdvancedStatisticReq req) {
+        return statisticByAdvancedReq(req);
     }
 
     @Override

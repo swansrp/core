@@ -6,16 +6,10 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.service.PortalCommonService;
-import com.bidr.kernel.utils.DbUtil;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.LambdaUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.GeneralSummaryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,7 +31,6 @@ import java.util.Map;
  */
 @SuppressWarnings("rawtypes, unchecked")
 public interface AdminControllerInf<ENTITY, VO> {
-
     /**
      * 添加数据
      *
@@ -176,6 +169,14 @@ public interface AdminControllerInf<ENTITY, VO> {
     Long generalCount(@RequestBody QueryConditionReq req);
 
     /**
+     * 指标统计
+     *
+     * @param req 查询条件
+     * @return 指标统计数据
+     */
+    List<StatisticRes> generalStatistic(@RequestBody GeneralStatisticReq req);
+
+    /**
      * 统计个数
      *
      * @param req 查询条件
@@ -186,7 +187,7 @@ public interface AdminControllerInf<ENTITY, VO> {
             beforeQuery(req);
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        wrapper.getSelectColum().add(new SelectString("1", wrapper.getAlias()));
+        wrapper.getSelectColum().add(new SelectString("count(1)", wrapper.getAlias()));
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
@@ -202,6 +203,80 @@ public interface AdminControllerInf<ENTITY, VO> {
             return from;
         });
         return getRepo().selectJoinCount(wrapper);
+    }
+
+    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(String order, List<String> groupByColumn,
+                                                           String statisticColumn) {
+        String concatJoinStr = ", ',', ";
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(statisticColumn)) {
+            wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as %s", statisticColumn,
+                    LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)), wrapper.getAlias()));
+        } else {
+            wrapper.getSelectColum().add(new SelectString(
+                    String.format("count(1) as %s", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)),
+                    wrapper.getAlias()));
+        }
+        Validator.assertNotEmpty(groupByColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
+        StringBuilder sql = new StringBuilder("CONCAT(");
+
+        for (String column : groupByColumn) {
+            if (FuncUtil.isNotEmpty(column)) {
+                sql.append("IFNULL(").append(column).append(", 'NULL')").append(concatJoinStr);
+            }
+        }
+        String s = sql.substring(0, sql.length() - concatJoinStr.length()) + ")";
+        wrapper.getSelectColum().add(new SelectString(
+                String.format("%s as %s", s, LambdaUtil.getFieldNameByGetFunc(StatisticRes::getMetric)),
+                wrapper.getAlias()));
+        for (String column : groupByColumn) {
+            if (FuncUtil.isNotEmpty(column)) {
+                wrapper.groupBy(column);
+            }
+        }
+        if (FuncUtil.isEmpty(order)) {
+            for (String column : groupByColumn) {
+                if (FuncUtil.isNotEmpty(column)) {
+                    wrapper.orderByAsc(column);
+                }
+            }
+        } else {
+            if (StringUtil.convertSwitch(order)) {
+                wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
+            } else {
+                wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
+            }
+        }
+        return wrapper;
+    }
+
+    /**
+     * 指标统计分布
+     *
+     * @param req 指标统计分布
+     * @return 统计个数数据
+     */
+    default List<StatisticRes> statisticByGeneralReq(GeneralStatisticReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getOrder(), req.getGroupByColumn(),
+                req.getStatisticColumn());
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                if (FuncUtil.isNotEmpty(req.getConditionList())) {
+                    Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(),
+                            getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
+                    getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
+                            from);
+                } else {
+                    getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
+                }
+            }
+            return from;
+        });
+        return getRepo().selectJoinList(StatisticRes.class, wrapper);
     }
 
     /**
@@ -270,6 +345,14 @@ public interface AdminControllerInf<ENTITY, VO> {
     Long advancedCount(@RequestBody AdvancedQueryReq req);
 
     /**
+     * 指标统计
+     *
+     * @param req 高级查询条件
+     * @return 指标统计数据
+     */
+    List<StatisticRes> advancedStatistic(@RequestBody AdvancedStatisticReq req);
+
+    /**
      * 统计个数
      *
      * @param req 高级查询条件
@@ -280,7 +363,7 @@ public interface AdminControllerInf<ENTITY, VO> {
             beforeQuery(req);
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        wrapper.getSelectColum().add(new SelectString("1", wrapper.getAlias()));
+        wrapper.getSelectColum().add(new SelectString("count(1)", wrapper.getAlias()));
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
@@ -295,6 +378,34 @@ public interface AdminControllerInf<ENTITY, VO> {
             return from;
         });
         return getRepo().selectJoinCount(wrapper);
+    }
+
+    /**
+     * 指标统计分布
+     *
+     * @param req 指标统计分布
+     * @return 统计个数数据
+     */
+    default List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getOrder(), req.getGroupByColumn(),
+                req.getStatisticColumn());
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(),
+                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
+                if (FuncUtil.isNotEmpty(req.getCondition())) {
+                    getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
+                } else {
+                    getRepo().parseAdvancedQuery(req.getCondition(), null, from);
+                }
+            }
+            return from;
+        });
+        return getRepo().selectJoinList(StatisticRes.class, wrapper);
     }
 
     /**
