@@ -576,8 +576,10 @@ public class PortalConfigService implements LoginFillTokenInf {
     private void updatePortal(PortalWithColumnsRes portalWithColumns, SysPortal portal) {
         portalWithColumns.setId(portal.getId());
         portalWithColumns.setRoleId(portal.getRoleId());
-        portalWithColumns.setName(portal.getName());
-        portalWithColumns.setDisplayName(portal.getDisplayName());
+        if (!FuncUtil.equals(portal.getName(), portalWithColumns.getName())) {
+            portalWithColumns.setName(portal.getName());
+            portalWithColumns.setDisplayName(portal.getDisplayName());
+        }
         portalWithColumns.setUrl(portal.getUrl());
         portalWithColumns.setBean(portal.getBean());
         sysPortalService.updateById(portalWithColumns);

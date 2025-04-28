@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: AdvancedQuery
@@ -16,6 +17,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class AdvancedStatisticReq extends AdvancedQueryReq {
     private List<String> metricColumn;
+    private Map<String, AdvancedQuery> metricCondition;
     private String statisticColumn;
     private Integer sort;
 }
