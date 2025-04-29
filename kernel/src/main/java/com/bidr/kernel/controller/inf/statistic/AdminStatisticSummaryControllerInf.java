@@ -1,0 +1,61 @@
+package com.bidr.kernel.controller.inf.statistic;
+
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
+import com.bidr.kernel.vo.portal.GeneralSummaryReq;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
+
+import java.util.Map;
+
+/**
+ * Title: AdminStatisticCountControllerInf
+ * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
+ *
+ * @author Sharp
+ * @since 2025/4/29 8:43
+ */
+
+public interface AdminStatisticSummaryControllerInf<ENTITY, VO> extends AdminStatisticBaseControllerInf<ENTITY, VO> {
+    /**
+     * 汇总
+     *
+     * @param req 查询条件
+     * @return 汇总数据
+     */
+    default Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+            }
+        }
+        wrapper.from(from -> buildGeneralFromWapper(req, from));
+        return getRepo().selectJoinMap(wrapper);
+    }
+
+    /**
+     * 汇总
+     *
+     * @param req 高级查询条件
+     * @return 汇总数据
+     */
+    default Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(req.getColumns())) {
+            for (String column : req.getColumns()) {
+                wrapper.getSelectColum()
+                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+            }
+        }
+        wrapper.from(from -> buildAdvancedFromWapper(req, from));
+        return getRepo().selectJoinMap(wrapper);
+    }
+}

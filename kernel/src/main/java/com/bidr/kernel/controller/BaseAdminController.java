@@ -9,11 +9,12 @@ import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import com.bidr.kernel.utils.*;
+import com.bidr.kernel.utils.CsvUtil;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.*;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -30,12 +31,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
 
 /**
  * Title: BaseAdminController
@@ -61,20 +58,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         Resp.notice("新增成功");
     }
 
-    public void insertEntity(VO vo) {
-        ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
-        if (isAdmin()) {
-            adminBeforeAdd(entity);
-        } else {
-            beforeAdd(entity);
-        }
-        DbUtil.setCreateAtTimeStamp(entity, new Date());
-        DbUtil.setUpdateAtTimeStamp(entity, new Date());
-        Boolean result = getRepo().insert(entity);
-        Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");
-        afterAdd(entity);
-    }
-
     @Override
     @ApiIgnore
     @ApiOperation("删除数据")
@@ -83,23 +66,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public void delete(@RequestBody IdReqVO vo) {
         deleteEntity(vo);
         Resp.notice("删除成功");
-    }
-
-    public void deleteEntity(IdReqVO vo) {
-        if (isAdmin()) {
-            adminBeforeDelete(vo);
-        } else {
-            beforeDelete(vo);
-        }
-        boolean result;
-        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
-            ENTITY entity = getRepo().selectById(vo.getId());
-            result = getRepo().disable(entity);
-        } else {
-            result = getRepo().deleteById(vo.getId());
-        }
-        Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "删除失败");
-        afterDelete(vo);
     }
 
     @Override
@@ -124,21 +90,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public void update(@RequestBody VO vo, @RequestParam(required = false) boolean strict) {
         updateEntity(vo, strict);
         Resp.notice("更新成功");
-    }
-
-    public void updateEntity(VO vo, Boolean strict) {
-        ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
-        ENTITY originalEntity = getRepo().selectById(entity);
-        entity = ReflectionUtil.copyAndMerge(entity, originalEntity, strict);
-        if (isAdmin()) {
-            adminBeforeUpdate(entity);
-        } else {
-            beforeUpdate(entity);
-        }
-        DbUtil.setUpdateAtTimeStamp(entity, new Date());
-        Boolean result = getRepo().updateById(entity, !strict);
-        Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
-        afterUpdate(entity);
     }
 
     @Override
@@ -176,23 +127,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         return Resp.convert(result, getVoClass());
     }
 
-    protected Page<VO> queryByGeneralReq(QueryConditionReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, String> selectApplyMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            havingFields = getPortalService().getHavingFields();
-            selectApplyMap = getPortalService().getSelectApplyMap();
-        }
-        return getRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getVoClass());
-    }
-
     @Override
     @ApiIgnore
     @ApiOperation("通用查询数据(不分页)")
@@ -200,24 +134,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public List<VO> generalSelect(@RequestBody QueryConditionReq req) {
         List<VO> result = selectByGeneralReq(req);
         return Resp.convert(result, getVoClass());
-    }
-
-    protected List<VO> selectByGeneralReq(QueryConditionReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, String> selectApplyMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            havingFields = getPortalService().getHavingFields();
-            selectApplyMap = getPortalService().getSelectApplyMap();
-        }
-        return getRepo().select(req.getConditionList(), req.getSortList(), aliasMap, havingFields, selectApplyMap,
-                wrapper, getVoClass());
     }
 
     @Override
@@ -310,21 +226,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
         HttpUtil.export(request, response, contentType, "UTF-8", fileName, exportBytes);
     }
 
-    protected Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        Map<String, String> selectApplyMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            selectApplyMap = getPortalService().getSelectApplyMap();
-        }
-        return getRepo().select(req, aliasMap, selectApplyMap, wrapper, getVoClass());
-    }
-
     @Override
     @ApiIgnore
     @SneakyThrows
@@ -394,24 +295,9 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiIgnore
     public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
                 StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
-    }
-
-    protected List<VO> selectByAdvancedReq(AdvancedQueryReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        Map<String, String> selectApplyMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            selectApplyMap = getPortalService().getSelectApplyMap();
-        }
-        return getRepo().select(req.getCondition(), req.getSortList(), req.getSelectApplyList(), aliasMap,
-                selectApplyMap, wrapper, getVoClass());
     }
 }

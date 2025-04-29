@@ -1,12 +1,10 @@
-package com.bidr.kernel.controller.inf;
+package com.bidr.kernel.controller.inf.base;
 
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
 
 /**
  * Title: AdminBaseControllerInf
@@ -63,26 +61,4 @@ public interface AdminBaseControllerInf<ENTITY, VO> {
      * @return repo
      */
     BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
-
-    /**
-     * 查询前操作
-     *
-     * @param req 查询条件
-     */
-    default void beforeQuery(QueryConditionReq req) {
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            getPortalService().beforeQuery(req);
-        }
-    }
-
-    /**
-     * 高级查询前操作
-     *
-     * @param req 高级查询
-     */
-    default void beforeQuery(AdvancedQueryReq req) {
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            getPortalService().beforeQuery(req);
-        }
-    }
 }
