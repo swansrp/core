@@ -13,10 +13,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: AdminStatisticCountControllerInf
@@ -94,12 +91,15 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
                                 entry.getKey()), wrapper.getAlias()));
             }
         }
+        if (FuncUtil.isNotEmpty(metricColumn)) {
+            buildMetircWrapperByMetricColumn(metricColumn, wrapper);
+        }
         return wrapper;
     }
 
     default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<String> metricColumn, String statisticColumn,
                                                            Integer sort) {
-        String concatJoinStr = ", ',', ";
+
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(statisticColumn)) {
             wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as %s", statisticColumn,
@@ -110,6 +110,24 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
                     wrapper.getAlias()));
         }
         Validator.assertNotEmpty(metricColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
+        if (FuncUtil.isNotEmpty(sort)) {
+            switch (PortalSortDict.of(sort)) {
+                case ASC:
+                    wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
+                    break;
+                case DESC:
+                    wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
+                    break;
+                default:
+                    break;
+            }
+        }
+        buildMetircWrapperByMetricColumn(metricColumn, wrapper);
+        return wrapper;
+    }
+
+    default void buildMetircWrapperByMetricColumn(List<String> metricColumn, MPJLambdaWrapper<ENTITY> wrapper) {
+        String concatJoinStr = ", ',', ";
         StringBuilder sql = new StringBuilder("CONCAT(");
 
         for (String column : metricColumn) {
@@ -124,41 +142,36 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
         for (String column : metricColumn) {
             if (FuncUtil.isNotEmpty(column)) {
                 wrapper.groupBy(column);
+                wrapper.orderByAsc(column);
             }
         }
-        if (FuncUtil.isNotEmpty(sort)) {
-            switch (PortalSortDict.of(sort)) {
-                case ASC:
-                    wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-                    break;
-                case DESC:
-                    wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            for (String column : metricColumn) {
-                if (FuncUtil.isNotEmpty(column)) {
-                    wrapper.orderByAsc(column);
-                }
-            }
-        }
-        return wrapper;
     }
 
     default List<StatisticRes> getStatisticRes(MPJLambdaWrapper<ENTITY> wrapper, Integer sort) {
-        Map<String, Object> map = getRepo().selectJoinMap(wrapper);
-        List<StatisticRes> resList = new ArrayList<>();
-        if (FuncUtil.isNotEmpty(map)) {
-            for (Map.Entry<String, Object> entry : map.entrySet()) {
-                if (FuncUtil.isNotEmpty(entry.getValue())) {
-                    resList.add(new StatisticRes(entry.getKey(), new BigDecimal(entry.getValue().toString())));
-                } else {
-                    resList.add(new StatisticRes(entry.getKey(), BigDecimal.ZERO));
+        List<Map<String, Object>> maps = getRepo().selectJoinMaps(wrapper);
+        Map<String, StatisticRes> resMap = new LinkedHashMap<>();
+        if (FuncUtil.isNotEmpty(maps)) {
+            if (FuncUtil.isNotEmpty(maps.get(0))) {
+                for (Map.Entry<String, Object> entry : maps.get(0).entrySet()) {
+                    if (!entry.getKey().equals(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getMetric))) {
+                        resMap.put(entry.getKey(), new StatisticRes(entry.getKey()));
+                    }
+                }
+            }
+            for (Map<String, Object> map : maps) {
+                Object metric = map.get(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getMetric));
+                for (Map.Entry<String, Object> entry : map.entrySet()) {
+                    StatisticRes res = resMap.get(entry.getKey());
+                    if (FuncUtil.isNotEmpty(res)) {
+                        BigDecimal statistic = FuncUtil.isNotEmpty(entry.getValue()) ? new BigDecimal(
+                                entry.getValue().toString()) : BigDecimal.ZERO;
+                        res.getChildren().add(new StatisticRes(metric.toString(), statistic));
+                        res.setStatistic(res.getStatistic().add(statistic));
+                    }
                 }
             }
         }
+        List<StatisticRes> resList = new ArrayList<>(resMap.values());
         if (FuncUtil.isNotEmpty(sort)) {
             switch (PortalSortDict.of(sort)) {
                 case ASC:
