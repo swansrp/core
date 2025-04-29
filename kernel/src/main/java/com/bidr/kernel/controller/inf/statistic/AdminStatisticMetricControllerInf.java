@@ -5,10 +5,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
-import com.bidr.kernel.vo.portal.AdvancedStatisticReq;
-import com.bidr.kernel.vo.portal.GeneralStatisticReq;
-import com.bidr.kernel.vo.portal.StatisticRes;
+import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
@@ -76,19 +73,19 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
     }
 
     default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<String> metricColumn,
-                                                           Map<String, AdvancedQuery> conditionMap,
+                                                           List<MetricCondition> metricConditionList,
                                                            String statisticColumn) {
-        Validator.assertNotEmpty(conditionMap, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
+        Validator.assertNotEmpty(metricConditionList, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        for (Map.Entry<String, AdvancedQuery> entry : conditionMap.entrySet()) {
+        for (MetricCondition metricCondition : metricConditionList) {
             if (FuncUtil.isNotEmpty(statisticColumn)) {
                 wrapper.getSelectColum().add(new SelectString(
-                        String.format("sum(%s) as %s", parseStatisticSelect(entry.getValue(), statisticColumn),
-                                entry.getKey()), wrapper.getAlias()));
+                        String.format("sum(%s) as %s", parseStatisticSelect(metricCondition.getCondition(), statisticColumn),
+                                metricCondition.getLabel()), wrapper.getAlias()));
             } else {
                 wrapper.getSelectColum().add(new SelectString(
-                        String.format("count(%s) as %s", parseStatisticSelect(entry.getValue(), statisticColumn),
-                                entry.getKey()), wrapper.getAlias()));
+                        String.format("count(%s) as %s", parseStatisticSelect(metricCondition.getCondition(), statisticColumn),
+                                metricCondition.getLabel()), wrapper.getAlias()));
             }
         }
         if (FuncUtil.isNotEmpty(metricColumn)) {

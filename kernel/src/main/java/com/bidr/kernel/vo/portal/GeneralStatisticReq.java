@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Title: GeneralStatisticReq
@@ -17,7 +16,7 @@ import java.util.Map;
 @EqualsAndHashCode(callSuper = true)
 public class GeneralStatisticReq extends QueryConditionReq {
     private List<String> metricColumn;
-    private Map<String, AdvancedQuery> metricCondition;
+    private List<MetricCondition> metricCondition;
     private String statisticColumn;
     private Integer sort;
 }
