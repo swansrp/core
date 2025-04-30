@@ -57,13 +57,13 @@ public interface AdminStatisticParseInf {
         if (FuncUtil.isEmpty(valuesList)) {
             return "1=1";
         }
-        Object firstValue = "'" + valuesList.get(0) + "'";
+        String firstValue = "'" + valuesList.get(0) + "'";
         Object secondValue ="";
         if(valuesList.size() > 1) {
             secondValue = "'" + valuesList.get(1) + "'";
         }
         String values = query.getValue().stream()
-                .map(v -> v instanceof String ? "'" + v + "'" : String.valueOf(v))
+                .map(v -> "'" + v + "'")
                 .collect(Collectors.joining(","));
         switch (PortalConditionDict.of(query.getRelation())) {
             case EQUAL:
@@ -108,6 +108,16 @@ public interface AdminStatisticParseInf {
                 return columnName + " between " + firstValue + " and " + secondValue;
             case NOT_BETWEEN:
                 return columnName + " not between " + firstValue + " and " + secondValue;
+            case CONTAIN:
+                return "FIND_IN_SET(" + firstValue + "," + columnName + ") > 0";
+            case CONTAIN_IN_OR:
+                return valuesList.stream()
+                        .map(v -> "(FIND_IN_SET(" + v + "," + columnName + ") > 0)")
+                        .collect(Collectors.joining(" or "));
+            case CONTAIN_IN_AND:
+                return valuesList.stream()
+                        .map(v -> "(FIND_IN_SET(" + v + "," + columnName + ") > 0)")
+                        .collect(Collectors.joining(" and "));
             default:
                 return "1=1";
         }
