@@ -5,7 +5,10 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.vo.portal.*;
+import com.bidr.kernel.vo.portal.AdvancedStatisticReq;
+import com.bidr.kernel.vo.portal.GeneralStatisticReq;
+import com.bidr.kernel.vo.portal.MetricCondition;
+import com.bidr.kernel.vo.portal.StatisticRes;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
@@ -20,7 +23,7 @@ import java.util.*;
  * @since 2025/4/29 8:43
  */
 
-public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStatisticBaseControllerInf<ENTITY, VO> {
+public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStatisticBaseControllerInf<ENTITY, VO>, AdminStatisticParseInf {
     /**
      * 指标统计分布
      *
@@ -67,10 +70,6 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
         }
     }
 
-    default String parseStatisticSelect(AdvancedQuery query, String statisticColumn) {
-        // todo 解析 case when
-        return null;
-    }
 
     default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<String> metricColumn,
                                                            List<MetricCondition> metricConditionList,
@@ -164,7 +163,9 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
                     if (FuncUtil.isNotEmpty(res)) {
                         BigDecimal statistic = FuncUtil.isNotEmpty(entry.getValue()) ? new BigDecimal(
                                 entry.getValue().toString()) : BigDecimal.ZERO;
-                        res.getChildren().add(new StatisticRes(metric.toString(), statistic));
+                        if (FuncUtil.isNotEmpty(metric)) {
+                            res.getChildren().add(new StatisticRes(metric.toString(), statistic));
+                        }
                         res.setStatistic(res.getStatistic().add(statistic));
                     }
                 }
