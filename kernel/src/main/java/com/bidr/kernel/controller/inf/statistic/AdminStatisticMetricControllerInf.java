@@ -80,11 +80,13 @@ public interface AdminStatisticMetricControllerInf<ENTITY, VO> extends AdminStat
         for (MetricCondition metricCondition : metricConditionList) {
             if (FuncUtil.isNotEmpty(statisticColumn)) {
                 wrapper.getSelectColum().add(new SelectString(
-                        String.format("sum(%s) as %s", parseStatisticSelect(metricCondition.getCondition(), statisticColumn),
+                        String.format("sum(%s) as '%s'",
+                                parseStatisticSelect(metricCondition.getCondition(), statisticColumn),
                                 metricCondition.getLabel()), wrapper.getAlias()));
             } else {
                 wrapper.getSelectColum().add(new SelectString(
-                        String.format("count(%s) as %s", parseStatisticSelect(metricCondition.getCondition(), statisticColumn),
+                        String.format("count(%s) as '%s'",
+                                parseStatisticSelect(metricCondition.getCondition(), statisticColumn),
                                 metricCondition.getLabel()), wrapper.getAlias()));
             }
         }
