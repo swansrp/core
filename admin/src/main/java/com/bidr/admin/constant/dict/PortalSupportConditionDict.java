@@ -38,10 +38,10 @@ public class PortalSupportConditionDict implements IDynamicDict {
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.NOT_EQUAL,
                                           PortalConditionDict.IN});
         MAP.put(PortalFieldDict.ENUM_MULTI_IN_ONE,
-                new PortalConditionDict[]{PortalConditionDict.CONTAIN, PortalConditionDict.CONTAIN_IN});
+                new PortalConditionDict[]{PortalConditionDict.CONTAIN, PortalConditionDict.CONTAIN_IN_OR});
         MAP.put(PortalFieldDict.TREE, new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.IN});
         MAP.put(PortalFieldDict.TREE_MULTI_IN_ONE,
-                new PortalConditionDict[]{PortalConditionDict.CONTAIN, PortalConditionDict.CONTAIN_IN});
+                new PortalConditionDict[]{PortalConditionDict.CONTAIN, PortalConditionDict.CONTAIN_IN_OR});
         MAP.put(PortalFieldDict.DATE,
                 new PortalConditionDict[]{PortalConditionDict.EQUAL, PortalConditionDict.BETWEEN,
                                           PortalConditionDict.GREATER, PortalConditionDict.GREATER_EQUAL,

@@ -305,7 +305,7 @@ public interface PortalSelectRepo<T> {
                 case CONTAIN:
                     wrapper.nested(w -> w.apply(String.format("FIND_IN_SET('%s', %s) > 0", condition.getValue().get(0), columnName)));
                     break;
-                case CONTAIN_IN:
+                case CONTAIN_IN_OR:
                     wrapper.nested(w -> {
                         for (Object value : condition.getValue()) {
                             w.or().apply(String.format("FIND_IN_SET('%s', %s) > 0", value, columnName));
@@ -386,7 +386,7 @@ public interface PortalSelectRepo<T> {
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
                             "FIND_IN_SET({0}, " + havingColumnName + ") > 0", condition.getValue().get(0));
                     break;
-                case CONTAIN_IN:
+                case CONTAIN_IN_OR:
                     String havingSqlFormat = "FIND_IN_SET({%d}, %s) > 0";
                     List<String> havingSqlList = new ArrayList<>();
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
