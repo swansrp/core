@@ -1,6 +1,8 @@
 package com.bidr.kernel.controller.inf.statistic;
 
-import com.bidr.kernel.vo.portal.*;
+import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.statistic.*;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
@@ -13,7 +15,8 @@ import java.util.Map;
  * @author Sharp
  * @since 2025/4/28 14:53
  */
-public interface AdminStatisticControllerInf<ENTITY, VO> extends AdminStatisticCountControllerInf<ENTITY, VO>, AdminStatisticSummaryControllerInf<ENTITY, VO>, AdminStatisticMetricControllerInf<ENTITY, VO> {
+public interface AdminStatisticControllerInf<ENTITY, VO> extends AdminStatisticCountInf<ENTITY, VO>, AdminStatisticSummaryInf<ENTITY, VO>
+        , AdminStatisticMetricInf<ENTITY, VO> {
 
     /**
      * 统计个数

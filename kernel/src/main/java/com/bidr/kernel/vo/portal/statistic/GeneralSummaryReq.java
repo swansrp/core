@@ -1,5 +1,6 @@
-package com.bidr.kernel.vo.portal;
+package com.bidr.kernel.vo.portal.statistic;
 
+import com.bidr.kernel.vo.portal.QueryConditionReq;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;

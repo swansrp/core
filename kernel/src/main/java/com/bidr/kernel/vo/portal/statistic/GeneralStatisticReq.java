@@ -1,5 +1,6 @@
-package com.bidr.kernel.vo.portal;
+package com.bidr.kernel.vo.portal.statistic;
 
+import com.bidr.kernel.vo.portal.QueryConditionReq;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -15,8 +16,9 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class GeneralStatisticReq extends QueryConditionReq {
-    private List<String> metricColumn;
+    private List<Metric> metricColumn;
     private List<MetricCondition> metricCondition;
+    private String majorCondition;
     private String statisticColumn;
     private Integer sort;
 }

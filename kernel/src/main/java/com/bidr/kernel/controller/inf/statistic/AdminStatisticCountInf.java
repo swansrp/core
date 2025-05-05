@@ -6,14 +6,14 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
 /**
- * Title: AdminStatisticCountControllerInf
+ * Title: AdminStatisticCountInf
  * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
  *
  * @author Sharp
  * @since 2025/4/29 8:43
  */
 
-public interface AdminStatisticCountControllerInf<ENTITY, VO> extends AdminStatisticBaseControllerInf<ENTITY, VO> {
+public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseInf<ENTITY, VO> {
     /**
      * 统计个数
      *
@@ -26,7 +26,7 @@ public interface AdminStatisticCountControllerInf<ENTITY, VO> extends AdminStati
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         wrapper.getSelectColum().add(new SelectString("count(1)", wrapper.getAlias()));
-        wrapper.from(from -> buildGeneralFromWapper(req, from));
+        wrapper.from(from -> buildGeneralFromWrapper(req, from));
         return getRepo().selectJoinCount(wrapper);
     }
 
@@ -42,7 +42,7 @@ public interface AdminStatisticCountControllerInf<ENTITY, VO> extends AdminStati
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         wrapper.getSelectColum().add(new SelectString("count(1)", wrapper.getAlias()));
-        wrapper.from(from -> buildAdvancedFromWapper(req, from));
+        wrapper.from(from -> buildAdvancedFromWrapper(req, from));
         return getRepo().selectJoinCount(wrapper);
     }
 }

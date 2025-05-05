@@ -1,22 +1,22 @@
 package com.bidr.kernel.controller.inf.statistic;
 
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.vo.portal.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.GeneralSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
 import java.util.Map;
 
 /**
- * Title: AdminStatisticCountControllerInf
+ * Title: AdminStatisticCountInf
  * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
  *
  * @author Sharp
  * @since 2025/4/29 8:43
  */
 
-public interface AdminStatisticSummaryControllerInf<ENTITY, VO> extends AdminStatisticBaseControllerInf<ENTITY, VO> {
+public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBaseInf<ENTITY, VO> {
     /**
      * 汇总
      *
@@ -34,7 +34,7 @@ public interface AdminStatisticSummaryControllerInf<ENTITY, VO> extends AdminSta
                         .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
             }
         }
-        wrapper.from(from -> buildGeneralFromWapper(req, from));
+        wrapper.from(from -> buildGeneralFromWrapper(req, from));
         return getRepo().selectJoinMap(wrapper);
     }
 
@@ -55,7 +55,7 @@ public interface AdminStatisticSummaryControllerInf<ENTITY, VO> extends AdminSta
                         .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
             }
         }
-        wrapper.from(from -> buildAdvancedFromWapper(req, from));
+        wrapper.from(from -> buildAdvancedFromWrapper(req, from));
         return getRepo().selectJoinMap(wrapper);
     }
 }

@@ -1,5 +1,6 @@
-package com.bidr.kernel.vo.portal;
+package com.bidr.kernel.vo.portal.statistic;
 
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import lombok.Data;
 
 /**

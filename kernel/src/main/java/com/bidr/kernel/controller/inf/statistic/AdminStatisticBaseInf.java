@@ -10,38 +10,48 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import java.util.Map;
 
 /**
- * Title: AdminStatisticBaseControllerInf
+ * Title: AdminStatisticBaseInf
  * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
  *
  * @author Sharp
  * @since 2025/4/29 8:42
  */
 
-public interface AdminStatisticBaseControllerInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
-    default MPJLambdaWrapper<ENTITY> buildGeneralFromWapper(QueryConditionReq req, MPJLambdaWrapper<ENTITY> from) {
+public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
+    /**
+     * 查询子表构建方法
+     *
+     * @param req  请求
+     * @param from 查询wrapper
+     * @return 带有查询子表的wrapper
+     */
+    default MPJLambdaWrapper<ENTITY> buildGeneralFromWrapper(QueryConditionReq req, MPJLambdaWrapper<ENTITY> from) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
-            Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(),
-                    getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
             if (FuncUtil.isNotEmpty(req.getConditionList())) {
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(), getPortalService().getAliasMap(),
+                        getPortalService().getSelectApplyMap(), from);
                 getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
                         from);
-            } else {
-                getRepo().parseGeneralQuery(req.getConditionList(), null, null, from);
             }
         }
         return from;
     }
 
-    default MPJLambdaWrapper<ENTITY> buildAdvancedFromWapper(AdvancedQueryReq req, MPJLambdaWrapper<ENTITY> from) {
+    /**
+     * 查询子表构建方法
+     *
+     * @param req  请求
+     * @param from 查询wrapper
+     * @return 带有查询子表的wrapper
+     */
+    default MPJLambdaWrapper<ENTITY> buildAdvancedFromWrapper(AdvancedQueryReq req, MPJLambdaWrapper<ENTITY> from) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
-            Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(),
-                    getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
             if (FuncUtil.isNotEmpty(req.getCondition())) {
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(), getPortalService().getAliasMap(),
+                        getPortalService().getSelectApplyMap(), from);
                 getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
-            } else {
-                getRepo().parseAdvancedQuery(req.getCondition(), null, from);
             }
         }
         return from;
