@@ -16,7 +16,7 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class AdvancedStatisticReq extends AdvancedQueryReq {
+public class AdvancedStatisticReq extends AdvancedQueryReq implements StatisticReqInf {
     private List<Metric> metricColumn;
     private List<MetricCondition> metricCondition;
     private String majorCondition;

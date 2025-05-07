@@ -1,10 +1,16 @@
 package com.bidr.kernel.vo.portal;
 
+import com.bidr.kernel.common.func.GetFunc;
+import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,4 +26,25 @@ import java.util.List;
 public class QueryConditionReq extends QueryReqVO {
     private List<ConditionVO> conditionList;
     private List<SortVO> sortList;
+
+    public <T, R> void addCondition(GetFunc<T, R> field, Object obj) {
+        if (FuncUtil.isEmpty(conditionList)) {
+            conditionList = new ArrayList<>();
+        }
+        conditionList.add(new ConditionVO(LambdaUtil.getFieldNameByGetFunc(field), PortalConditionDict.EQUAL.getValue(), Collections.singletonList(obj)));
+    }
+
+    public <T, R> void addCondition(String field, Object obj) {
+        if (FuncUtil.isEmpty(conditionList)) {
+            conditionList = new ArrayList<>();
+        }
+        conditionList.add(new ConditionVO(field, PortalConditionDict.EQUAL.getValue(), Collections.singletonList(obj)));
+    }
+
+    public void addCondition(ConditionVO condition) {
+        if (FuncUtil.isEmpty(conditionList)) {
+            conditionList = new ArrayList<>();
+        }
+        conditionList.add(condition);
+    }
 }

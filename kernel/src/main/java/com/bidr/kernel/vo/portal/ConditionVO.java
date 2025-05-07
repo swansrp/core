@@ -33,14 +33,20 @@ public class ConditionVO {
     }
 
     public <T, R> ConditionVO(GetFunc<T, R> field, Object obj) {
-        property = LambdaUtil.getFieldNameByGetFunc(field);
-        relation = PortalConditionDict.EQUAL.getValue();
-        value = Collections.singletonList(obj);
+        this.property = LambdaUtil.getFieldNameByGetFunc(field);
+        this.relation = PortalConditionDict.EQUAL.getValue();
+        this.value = Collections.singletonList(obj);
     }
 
     public ConditionVO(String field, Object obj) {
-        property = field;
-        relation = PortalConditionDict.EQUAL.getValue();
-        value = Collections.singletonList(obj);
+        this.property = field;
+        this.relation = PortalConditionDict.EQUAL.getValue();
+        this.value = Collections.singletonList(obj);
+    }
+
+    public ConditionVO(String property, Integer relation, List<?> value) {
+        this.property = property;
+        this.relation = relation;
+        this.value = value;
     }
 }
