@@ -32,7 +32,7 @@ public class ConditionVO {
         value = new ArrayList<>();
     }
 
-    public ConditionVO(GetFunc field, Object obj) {
+    public <T, R> ConditionVO(GetFunc<T, R> field, Object obj) {
         property = LambdaUtil.getFieldNameByGetFunc(field);
         relation = PortalConditionDict.EQUAL.getValue();
         value = Collections.singletonList(obj);

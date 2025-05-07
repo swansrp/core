@@ -18,7 +18,7 @@ import java.util.Set;
  * @since 2025/4/28 14:55
  */
 
-public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO> {
+public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
     /**
      * 查询前操作
      *

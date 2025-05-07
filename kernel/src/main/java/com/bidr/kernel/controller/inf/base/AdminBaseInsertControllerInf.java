@@ -16,7 +16,7 @@ import java.util.Date;
  * @since 2025/4/28 14:55
  */
 
-public interface AdminBaseInsertControllerInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO> {
+public interface AdminBaseInsertControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
 
     /**
      * 添加前操作-管理员

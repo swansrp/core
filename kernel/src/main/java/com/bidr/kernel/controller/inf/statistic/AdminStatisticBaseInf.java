@@ -1,6 +1,6 @@
 package com.bidr.kernel.controller.inf.statistic;
 
-import com.bidr.kernel.controller.inf.base.AdminBaseControllerInf;
+import com.bidr.kernel.controller.inf.base.AdminBaseInf;
 import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -17,7 +17,7 @@ import java.util.Map;
  * @since 2025/4/29 8:42
  */
 
-public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
+public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
     /**
      * 查询子表构建方法
      *
@@ -29,7 +29,8 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseControllerIn
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
             if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(), getPortalService().getAliasMap(),
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(),
+                        getPortalService().getAliasMap(),
                         getPortalService().getSelectApplyMap(), from);
                 getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
                         from);
@@ -49,7 +50,8 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseControllerIn
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
             if (FuncUtil.isNotEmpty(req.getCondition())) {
-                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(), getPortalService().getAliasMap(),
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(),
+                        getPortalService().getAliasMap(),
                         getPortalService().getSelectApplyMap(), from);
                 getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
             }

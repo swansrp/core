@@ -20,7 +20,7 @@ import java.util.Map;
  * @since 2025/4/28 14:55
  */
 
-public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO> {
+public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
     /**
      * 更新前操作-管理员
      *

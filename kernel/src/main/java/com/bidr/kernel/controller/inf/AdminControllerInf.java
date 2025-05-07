@@ -1,7 +1,10 @@
 package com.bidr.kernel.controller.inf;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.kernel.controller.inf.base.*;
+import com.bidr.kernel.controller.inf.base.AdminBaseDeleteControllerInf;
+import com.bidr.kernel.controller.inf.base.AdminBaseInsertControllerInf;
+import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
+import com.bidr.kernel.controller.inf.base.AdminBaseUpdateControllerInf;
 import com.bidr.kernel.controller.inf.statistic.AdminStatisticControllerInf;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -19,8 +22,7 @@ import java.util.List;
  * @since 2023/03/31 11:42
  */
 @SuppressWarnings("rawtypes, unchecked")
-public interface AdminControllerInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO>,
-        AdminBaseInsertControllerInf<ENTITY, VO>,
+public interface AdminControllerInf<ENTITY, VO> extends AdminBaseInsertControllerInf<ENTITY, VO>,
         AdminBaseQueryControllerInf<ENTITY, VO>,
         AdminBaseUpdateControllerInf<ENTITY, VO>,
         AdminBaseDeleteControllerInf<ENTITY, VO>,

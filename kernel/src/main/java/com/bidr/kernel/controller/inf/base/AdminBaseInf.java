@@ -7,14 +7,14 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 
 /**
- * Title: AdminBaseControllerInf
+ * Title: AdminBaseInf
  * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
  *
  * @author Sharp
  * @since 2025/4/28 14:55
  */
 
-public interface AdminBaseControllerInf<ENTITY, VO> {
+public interface AdminBaseInf<ENTITY, VO> {
     /**
      * 数据库字段类
      *

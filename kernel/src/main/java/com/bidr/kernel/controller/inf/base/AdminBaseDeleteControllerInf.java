@@ -16,7 +16,7 @@ import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
  * @since 2025/4/28 14:55
  */
 
-public interface AdminBaseDeleteControllerInf<ENTITY, VO> extends AdminBaseControllerInf<ENTITY, VO> {
+public interface AdminBaseDeleteControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
 
     default void deleteEntity(IdReqVO vo) {
         if (isAdmin()) {

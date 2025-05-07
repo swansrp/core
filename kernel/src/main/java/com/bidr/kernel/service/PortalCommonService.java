@@ -1,6 +1,8 @@
 package com.bidr.kernel.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.controller.inf.base.AdminBaseInf;
+import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
@@ -25,13 +27,14 @@ import java.util.Set;
  * @since 2024/01/15 16:17
  */
 @SuppressWarnings("unchecked")
-public interface PortalCommonService<ENTITY, VO> {
+public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
 
     /**
      * 是否查看全局数据
      *
      * @return 判断是否能够查看全局数据
      */
+    @Override
     default boolean isAdmin() {
         try {
             return (Boolean) ReflectionUtil.invoke(BeanUtil.getBean("permitService"), "isAdmin");
@@ -126,6 +129,7 @@ public interface PortalCommonService<ENTITY, VO> {
      *
      * @param req 查询条件
      */
+    @Override
     default void beforeQuery(QueryConditionReq req) {
 
     }
@@ -135,6 +139,7 @@ public interface PortalCommonService<ENTITY, VO> {
      *
      * @param req 查询条件
      */
+    @Override
     default void beforeQuery(AdvancedQueryReq req) {
 
     }
@@ -195,6 +200,7 @@ public interface PortalCommonService<ENTITY, VO> {
      *
      * @return repo
      */
+    @Override
     BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
 
     /**
@@ -323,6 +329,7 @@ public interface PortalCommonService<ENTITY, VO> {
     default void getJoinWrapper(MPJLambdaWrapper<ENTITY> wrapper) {
     }
 
+    @Override
     default Class<VO> getVoClass() {
         return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     }
@@ -332,6 +339,7 @@ public interface PortalCommonService<ENTITY, VO> {
      *
      * @return entity类型
      */
+    @Override
     default Class<ENTITY> getEntityClass() {
         return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
     }
