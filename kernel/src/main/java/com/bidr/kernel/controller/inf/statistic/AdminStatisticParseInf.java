@@ -45,6 +45,9 @@ public interface AdminStatisticParseInf {
                     // 值为空时的补充逻辑
                     sql.append(FuncUtil.equals(andOr, SqlConstant.AND) ? "1=1" : "1=0");
                 }
+            } else {
+                // 值为空时的补充逻辑
+                sql.append(FuncUtil.equals(andOr, SqlConstant.AND) ? "1=1" : "1=0");
             }
         }
         return sql.toString();
@@ -58,8 +61,8 @@ public interface AdminStatisticParseInf {
             return "1=1";
         }
         String firstValue = "'" + valuesList.get(0) + "'";
-        Object secondValue ="";
-        if(valuesList.size() > 1) {
+        Object secondValue = "";
+        if (valuesList.size() > 1) {
             secondValue = "'" + valuesList.get(1) + "'";
         }
         String values = query.getValue().stream()

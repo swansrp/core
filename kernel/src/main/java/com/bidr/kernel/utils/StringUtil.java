@@ -28,6 +28,7 @@ public class StringUtil {
     public static final String SPLITTER = "###";
     public static final String COMMA = ",";
     public static final String DOT = ".";
+    public static final String HYPHEN = "-";
     public static final String NULL = "null";
 
     public static final String REGEX_SCRIPT = "<script[^>]*?>[\\s\\S]*?<\\/script>";
@@ -185,8 +186,8 @@ public class StringUtil {
         Pattern compile = Pattern.compile("[A-Z]");
         Matcher matcher = compile.matcher(str);
         StringBuffer sb = new StringBuffer();
-        while(matcher.find()) {
-            matcher.appendReplacement(sb,  "_" + matcher.group(0).toLowerCase());
+        while (matcher.find()) {
+            matcher.appendReplacement(sb, "_" + matcher.group(0).toLowerCase());
         }
         matcher.appendTail(sb);
         return sb.toString();
@@ -200,8 +201,8 @@ public class StringUtil {
         Pattern compile = Pattern.compile("_[a-z]");
         Matcher matcher = compile.matcher(str);
         StringBuffer sb = new StringBuffer();
-        while(matcher.find()) {
-            matcher.appendReplacement(sb,  matcher.group(0).toUpperCase().replace("_",""));
+        while (matcher.find()) {
+            matcher.appendReplacement(sb, matcher.group(0).toUpperCase().replace("_", ""));
         }
         matcher.appendTail(sb);
         return sb.toString();

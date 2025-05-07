@@ -1,5 +1,6 @@
 package com.bidr.kernel.vo.portal.statistic;
 
+import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,7 +20,7 @@ public class AdvancedStatisticReq extends AdvancedQueryReq {
     private List<Metric> metricColumn;
     private List<MetricCondition> metricCondition;
     private String majorCondition;
-    private String statisticColumn;
+    private List<KeyValueResVO> statisticColumn;
     private Integer sort;
 }
 
