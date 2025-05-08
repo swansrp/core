@@ -19,14 +19,44 @@ import java.util.List;
 
 public interface StatisticReqInf {
 
+    /**
+     * 获取统计列
+     *
+     * @return 统计列
+     */
     List<KeyValueResVO> getStatisticColumn();
 
+    /**
+     * 设置统计列
+     *
+     * @param statisticColumn 统计列
+     */
     void setStatisticColumn(List<KeyValueResVO> statisticColumn);
 
+    /**
+     * 获取统计自定义指标
+     *
+     * @return 自定义指标
+     */
     List<MetricCondition> getMetricCondition();
 
+    /**
+     * 设置统计自定义指标
+     *
+     * @param statisticColumn 自定义指标
+     */
     void setMetricCondition(List<MetricCondition> statisticColumn);
 
+    /**
+     * 添加自定义指标列
+     *
+     * @param keyField   自定义指标列
+     * @param valueField 自定义指标名
+     * @param <M>        类型
+     * @param <N>        类型
+     * @param <T>        类型
+     * @param <R>        类型
+     */
     default <M, N, T, R> void addStatisticColumn(GetFunc<T, R> keyField, GetFunc<M, N> valueField) {
         if (FuncUtil.isEmpty(getStatisticColumn())) {
             setStatisticColumn(new ArrayList<>());
@@ -36,6 +66,13 @@ public interface StatisticReqInf {
         getStatisticColumn().add(new KeyValueResVO(key, label));
     }
 
+    /**
+     * 添加自定义指标列
+     *
+     * @param field 自定义指标列
+     * @param <T>   类型
+     * @param <R>   类型
+     */
     default <T, R> void addStatisticColumn(GetFunc<T, R> field) {
         if (FuncUtil.isEmpty(getStatisticColumn())) {
             setStatisticColumn(new ArrayList<>());
@@ -44,6 +81,14 @@ public interface StatisticReqInf {
         getStatisticColumn().add(new KeyValueResVO(key, key));
     }
 
+    /**
+     * 添加自定义指标条件
+     *
+     * @param query 条件
+     * @param field 自定义指标名
+     * @param <T>   类型
+     * @param <R>   类型
+     */
     default <T, R> void addMetricCondition(AdvancedQuery query, GetFunc<T, R> field) {
         if (FuncUtil.isEmpty(getMetricCondition())) {
             setMetricCondition(new ArrayList<>());
