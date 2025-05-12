@@ -82,6 +82,22 @@ public interface StatisticReqInf {
     }
 
     /**
+     * 添加自定义指标列
+     *
+     * @param column 指标字段
+     * @param field  自定义指标列
+     * @param <T>    类型
+     * @param <R>    类型
+     */
+    default <T, R> void addStatisticColumn(String column, GetFunc<T, R> field) {
+        if (FuncUtil.isEmpty(getStatisticColumn())) {
+            setStatisticColumn(new ArrayList<>());
+        }
+        String key = LambdaUtil.getFieldNameByGetFunc(field);
+        getStatisticColumn().add(new KeyValueResVO(column, key));
+    }
+
+    /**
      * 添加自定义指标条件
      *
      * @param query 条件

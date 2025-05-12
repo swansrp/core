@@ -17,6 +17,6 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-public class GeneralSummaryReq extends QueryConditionReq {
+public class GeneralSummaryReq extends QueryConditionReq implements SummaryReqInf {
     private List<String> columns;
 }

@@ -31,7 +31,8 @@ public class QueryConditionReq extends QueryReqVO {
         if (FuncUtil.isEmpty(conditionList)) {
             conditionList = new ArrayList<>();
         }
-        conditionList.add(new ConditionVO(LambdaUtil.getFieldNameByGetFunc(field), PortalConditionDict.EQUAL.getValue(), Collections.singletonList(obj)));
+        conditionList.add(new ConditionVO(LambdaUtil.getFieldNameByGetFunc(field), PortalConditionDict.EQUAL.getValue(),
+                Collections.singletonList(obj)));
     }
 
     public <T, R> void addCondition(String field, Object obj) {
@@ -46,5 +47,19 @@ public class QueryConditionReq extends QueryReqVO {
             conditionList = new ArrayList<>();
         }
         conditionList.add(condition);
+    }
+
+    public <T, R> void addCondition(GetFunc<T, R> field, PortalConditionDict relation, List<?> data) {
+        addCondition(LambdaUtil.getFieldNameByGetFunc(field), relation, data);
+    }
+
+    public void addCondition(String property, PortalConditionDict relation, List<?> data) {
+        if (FuncUtil.isNotEmpty(data) && FuncUtil.isNotEmpty(data.get(0))) {
+            AdvancedQuery condition = new AdvancedQuery();
+            condition.setProperty(property);
+            condition.setRelation(relation.getValue());
+            condition.setValue(data);
+            this.conditionList.add(condition);
+        }
     }
 }

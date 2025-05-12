@@ -15,6 +15,6 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class AdvancedSummaryReq extends AdvancedQueryReq {
+public class AdvancedSummaryReq extends AdvancedQueryReq implements SummaryReqInf {
     private List<String> columns;
 }

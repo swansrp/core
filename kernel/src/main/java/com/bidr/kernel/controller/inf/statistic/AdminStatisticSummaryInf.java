@@ -31,7 +31,7 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
         if (FuncUtil.isNotEmpty(req.getColumns())) {
             for (String column : req.getColumns()) {
                 wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+                        .add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
             }
         }
         wrapper.from(from -> buildGeneralFromWrapper(req, from));
@@ -52,7 +52,7 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
         if (FuncUtil.isNotEmpty(req.getColumns())) {
             for (String column : req.getColumns()) {
                 wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as %s", column, column), wrapper.getAlias()));
+                        .add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
             }
         }
         wrapper.from(from -> buildAdvancedFromWrapper(req, from));
