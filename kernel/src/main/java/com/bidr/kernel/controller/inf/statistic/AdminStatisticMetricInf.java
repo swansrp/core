@@ -231,9 +231,17 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     }
                 } else {
                     // 无分类指标
+                    for (MetricCondition condition : metricCondition) {
+                        for (KeyValueResVO statistic : statisticColumn) {
+                            String value = StringUtil.joinWith(StringUtil.HYPHEN, condition.getLabel(),
+                                    statistic.getLabel());
+                            resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
+                        }
+                    }
                     for (Map.Entry<String, Object> entry : maps.get(0).entrySet()) {
-                        resMap.put(entry.getKey(),
-                                new StatisticRes(null, entry.getKey(), entry.getKey(), entry.getValue()));
+                        StatisticRes statisticRes = resMap.get(entry.getKey());
+                        statisticRes.setStatistic(FuncUtil.isNotEmpty(entry.getValue()) ? new BigDecimal(
+                                entry.getValue().toString()) : BigDecimal.ZERO);
                     }
                 }
             }
@@ -298,9 +306,17 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                         }
                     }
                 } else {
+                    for (MetricCondition condition : metricCondition) {
+                        for (KeyValueResVO statistic : statisticColumn) {
+                            String value = StringUtil.joinWith(StringUtil.HYPHEN, condition.getLabel(),
+                                    statistic.getLabel());
+                            resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
+                        }
+                    }
                     for (Map.Entry<String, Object> entry : maps.get(0).entrySet()) {
-                        resMap.put(entry.getKey(),
-                                new StatisticRes(null, entry.getKey(), entry.getKey(), entry.getValue()));
+                        StatisticRes statisticRes = resMap.get(entry.getKey());
+                        statisticRes.setStatistic(FuncUtil.isNotEmpty(entry.getValue()) ? new BigDecimal(
+                                entry.getValue().toString()) : BigDecimal.ZERO);
                     }
                 }
 
