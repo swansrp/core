@@ -36,15 +36,8 @@ public interface AdminStatisticParseInf {
         } else {
             // 构建单个查询条件
             if (FuncUtil.isNotEmpty(query.getProperty()) && FuncUtil.isNotEmpty(query.getRelation())) {
-                if ((query.getRelation().equals(PortalConditionDict.NULL.getValue())
-                        || query.getRelation().equals(PortalConditionDict.NOT_NULL.getValue()))
-                        || FuncUtil.isNotEmpty(query.getValue())) {
-                    String conditionStr = buildQueryStr(query);
-                    sql.append(conditionStr);
-                } else {
-                    // 值为空时的补充逻辑
-                    sql.append(FuncUtil.equals(andOr, SqlConstant.AND) ? "1=1" : "1=0");
-                }
+                String conditionStr = buildQueryStr(query);
+                sql.append(conditionStr);
             } else {
                 // 值为空时的补充逻辑
                 sql.append(FuncUtil.equals(andOr, SqlConstant.AND) ? "1=1" : "1=0");
@@ -58,16 +51,20 @@ public interface AdminStatisticParseInf {
         String columnName = query.getProperty();
         List<?> valuesList = query.getValue();
         if (FuncUtil.isEmpty(valuesList)) {
-            return "1=1";
+            if (PortalConditionDict.NULL.equals(PortalConditionDict.of(query.getRelation()))) {
+                return columnName + " is null";
+            } else if (PortalConditionDict.NOT_NULL.equals(PortalConditionDict.of(query.getRelation()))) {
+                return columnName + " is not null";
+            } else {
+                return FuncUtil.equals(query.getAndOr(), SqlConstant.AND) ? "1=1" : "1=0";
+            }
         }
         String firstValue = "'" + valuesList.get(0) + "'";
         Object secondValue = "";
         if (valuesList.size() > 1) {
             secondValue = "'" + valuesList.get(1) + "'";
         }
-        String values = query.getValue().stream()
-                .map(v -> "'" + v + "'")
-                .collect(Collectors.joining(","));
+        String values = query.getValue().stream().map(v -> "'" + v + "'").collect(Collectors.joining(","));
         switch (PortalConditionDict.of(query.getRelation())) {
             case EQUAL:
                 return columnName + " = " + values;
@@ -81,12 +78,10 @@ public interface AdminStatisticParseInf {
                 if (valuesList.get(0) instanceof String) {
                     String str = valuesList.get(0).toString();
                     if (str.contains(" ")) {
-                        return Arrays.stream(str.split(" "))
-                                .map(v -> columnName + " like '%" + v + "%'")
+                        return Arrays.stream(str.split(" ")).map(v -> columnName + " like '%" + v + "%'")
                                 .collect(Collectors.joining(" and "));
                     } else if (str.contains("|")) {
-                        return Arrays.stream(str.split("\\|"))
-                                .map(v -> columnName + " like '%" + v + "%'")
+                        return Arrays.stream(str.split("\\|")).map(v -> columnName + " like '%" + v + "%'")
                                 .collect(Collectors.joining(" or "));
                     } else {
                         return columnName + " like '%" + str + "%'";
@@ -103,10 +98,6 @@ public interface AdminStatisticParseInf {
                 return columnName + " < " + firstValue;
             case LESS_EQUAL:
                 return columnName + " <= " + firstValue;
-            case NULL:
-                return columnName + " is null";
-            case NOT_NULL:
-                return columnName + " is not null";
             case BETWEEN:
                 return columnName + " between " + firstValue + " and " + secondValue;
             case NOT_BETWEEN:
@@ -114,15 +105,13 @@ public interface AdminStatisticParseInf {
             case CONTAIN:
                 return "FIND_IN_SET(" + firstValue + "," + columnName + ") > 0";
             case CONTAIN_IN_OR:
-                return valuesList.stream()
-                        .map(v -> "(FIND_IN_SET(" + v + "," + columnName + ") > 0)")
+                return valuesList.stream().map(v -> "(FIND_IN_SET(" + v + "," + columnName + ") > 0)")
                         .collect(Collectors.joining(" or "));
             case CONTAIN_IN_AND:
-                return valuesList.stream()
-                        .map(v -> "(FIND_IN_SET(" + v + "," + columnName + ") > 0)")
+                return valuesList.stream().map(v -> "(FIND_IN_SET(" + v + "," + columnName + ") > 0)")
                         .collect(Collectors.joining(" and "));
             default:
-                return "1=1";
+                return FuncUtil.equals(query.getAndOr(), SqlConstant.AND) ? "1=1" : "1=0";
         }
     }
 
