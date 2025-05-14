@@ -560,19 +560,16 @@ public interface PortalSelectRepo<T> {
         if (FuncUtil.isNotEmpty(req.getConditionList())) {
             if (req.getConditionList().size() == 1) {
                 wrapper.and(w -> {
-                    w.apply(" 1 = 1 ");
                     parseAdvancedQuery(req.getConditionList().get(0), aliasMap, w, SqlConstant.AND);
                 });
             } else if (req.getConditionList().size() > 1) {
                 for (AdvancedQuery advancedQuery : req.getConditionList()) {
                     if (StringUtil.convertSwitch(req.getAndOr())) {
                         wrapper.or(w -> {
-                            w.apply(" 1 = 0 ");
                             parseAdvancedQuery(advancedQuery, aliasMap, w, SqlConstant.OR);
                         });
                     } else {
                         wrapper.and(w -> {
-                            w.apply(" 1 = 1 ");
                             parseAdvancedQuery(advancedQuery, aliasMap, w, SqlConstant.AND);
                         });
                     }
@@ -586,7 +583,15 @@ public interface PortalSelectRepo<T> {
                     return;
                 } else {
                     if (FuncUtil.isNotEmpty(req.getValue())) {
-                        buildQueryWrapper(wrapper, aliasMap, null, req);
+                        if (FuncUtil.isNotEmpty(req.getValue().get(0))) {
+                            buildQueryWrapper(wrapper, aliasMap, null, req);
+                        } else {
+                            if (FuncUtil.equals(andOr, SqlConstant.AND)) {
+                                wrapper.apply("1 = 1");
+                            } else {
+                                wrapper.apply("1 = 0");
+                            }
+                        }
                         return;
                     }
                 }
