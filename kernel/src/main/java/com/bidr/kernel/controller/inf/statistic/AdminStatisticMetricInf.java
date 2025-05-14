@@ -249,7 +249,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         // 排序
         List<StatisticRes> res = getConditionStatisticRes(resMap, sort);
         // 多统计指标按照自定义指标条件分组
-        if (FuncUtil.isNotEmpty(statisticColumn) && statisticColumn.size() > 1) {
+        if (FuncUtil.isNotEmpty(statisticColumn)) {
             return groupByCondition(metricCondition, res);
         } else {
             return res;
@@ -325,7 +325,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         // 排序
         List<StatisticRes> res = getConditionStatisticRes(resMap, sort);
         // 多统计指标按照自定义指标条件分组
-        if (FuncUtil.isNotEmpty(statisticColumn) && statisticColumn.size() > 1) {
+        if (FuncUtil.isNotEmpty(statisticColumn)) {
             if (FuncUtil.isNotEmpty(metric)) {
                 return groupChildrenByCondition(metricCondition, res);
             } else {
