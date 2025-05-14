@@ -106,8 +106,8 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                             wrapper.getAlias()));
                 } else {
                     wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
-                            parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
-                            metricCondition.getLabel()), wrapper.getAlias()));
+                            parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY), StringUtil.joinWith(StringUtil.HYPHEN,
+                                    metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                 }
             }
         }
@@ -319,7 +319,6 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                                 entry.getValue().toString()) : BigDecimal.ZERO);
                     }
                 }
-
             }
         }
         // 排序
@@ -327,7 +326,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         // 多统计指标按照自定义指标条件分组
         if (FuncUtil.isNotEmpty(statisticColumn)) {
             if (FuncUtil.isNotEmpty(metric)) {
-                return groupChildrenByCondition(metricCondition, res);
+                return groupChildrenByCondition(statisticColumn, res);
             } else {
                 return groupByCondition(metricCondition, res);
             }
@@ -361,31 +360,26 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
     /**
      * 根据自定义指标 对多指标统计子项进行分组
      *
-     * @param metricCondition 自定义指标
+     * @param statisticColumn 指标列
      * @param res             排序后结果
      * @return 分组后数据
      */
-    default List<StatisticRes> groupChildrenByCondition(List<MetricCondition> metricCondition, List<StatisticRes> res) {
-        Map<String, StatisticRes> resultMap = new LinkedHashMap<>();
-        for (MetricCondition condition : metricCondition) {
-            resultMap.put(condition.getLabel(),
-                    new StatisticRes(null, condition.getValue(), condition.getLabel(), null));
-            for (StatisticRes re : res) {
-                StatisticRes children = new StatisticRes(re.getMetricColumn(), re.getMetric(), re.getMetricLabel(),
-                        null);
-                resultMap.get(condition.getLabel()).getChildren().add(children);
-                for (StatisticRes child : re.getChildren()) {
-                    String[] metricArray = child.getMetric().split(StringUtil.HYPHEN);
-                    if (metricArray[0].equals(condition.getLabel())) {
-                        children.getChildren().add(child);
-                        child.setMetricLabel(child.getMetric());
-                        child.setMetric(metricArray[1]);
-                        children.setStatistic(children.getStatistic().add(child.getStatistic()));
-                    }
-                }
+    default List<StatisticRes> groupChildrenByCondition(List<KeyValueResVO> statisticColumn, List<StatisticRes> res) {
+        List<StatisticRes> resultList = new ArrayList<>();
+        for (StatisticRes re : res) {
+            resultList.add(re);
+            Map<String, StatisticRes> resultMap = new LinkedHashMap<>();
+            for (KeyValueResVO column : statisticColumn) {
+                resultMap.put(column.getLabel(), new StatisticRes(re.getMetric(), column.getValue(), column.getLabel(), re.getStatistic()));
             }
+            for (StatisticRes child : re.getChildren()) {
+                String[] metricArray = child.getMetric().split(StringUtil.HYPHEN);
+                resultMap.get(metricArray[1]).getChildren().add(child);
+            }
+            re.setStatistic(BigDecimal.ZERO);
+            re.setChildren(new ArrayList<>(resultMap.values()));
         }
-        return new ArrayList<>(resultMap.values());
+        return resultList;
     }
 
     /**
