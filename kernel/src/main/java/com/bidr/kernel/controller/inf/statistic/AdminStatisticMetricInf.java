@@ -352,7 +352,8 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         for (StatisticRes re : res) {
             String[] metricArray = re.getMetric().split(StringUtil.HYPHEN);
             resultMap.get(metricArray[0]).getChildren().add(re);
-            re.setMetricLabel(metricArray[1]);
+            re.setMetricLabel(re.getMetric());
+            re.setMetric(metricArray[1]);
         }
         return new ArrayList<>(resultMap.values());
     }
@@ -377,7 +378,8 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     String[] metricArray = child.getMetric().split(StringUtil.HYPHEN);
                     if (metricArray[0].equals(condition.getLabel())) {
                         children.getChildren().add(child);
-                        child.setMetricLabel(metricArray[1]);
+                        child.setMetricLabel(child.getMetric());
+                        child.setMetric(metricArray[1]);
                         children.setStatistic(children.getStatistic().add(child.getStatistic()));
                     }
                 }
