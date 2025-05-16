@@ -35,8 +35,7 @@ public enum PortalConditionDict implements Dict {
     NOT_BETWEEN(14, "之外"),
     CONTAIN(15, "其中之一"),
     CONTAIN_IN_OR(16, "多个其中之一(or)"),
-    CONTAIN_IN_AND(17, "多个其中之一(and)"),
-    SELECT_APPLY(99, "选项参数");
+    CONTAIN_IN_AND(17, "多个其中之一(and)");
 
     @Getter
     private final Integer value;

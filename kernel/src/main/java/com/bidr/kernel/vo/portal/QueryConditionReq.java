@@ -5,6 +5,7 @@ import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.vo.query.QueryReqVO;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -12,6 +13,7 @@ import lombok.ToString;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: QueryConditionReq
@@ -24,6 +26,8 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 public class QueryConditionReq extends QueryReqVO {
+    @ApiModelProperty("动态字段逻辑")
+    private Map<String, Object> selectColumnCondition;
     private List<ConditionVO> conditionList;
     private List<SortVO> sortList;
 

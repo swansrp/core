@@ -1,6 +1,7 @@
 package com.bidr.kernel.controller.inf.base;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
@@ -19,6 +20,23 @@ import java.util.Set;
  */
 
 public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
+    default Page<VO> queryByGeneralReq(QueryConditionReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        Map<String, String> aliasMap = null;
+        Set<String> havingFields = null;
+        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getPortalService().getAliasMap();
+            wrapper = getPortalService().getJoinWrapper();
+            havingFields = getPortalService().getHavingFields();
+            selectApplyMap = getPortalService().getSelectApplyMap();
+        }
+        return getRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getVoClass());
+    }
+
     /**
      * 查询前操作
      *
@@ -28,6 +46,21 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().beforeQuery(req);
         }
+    }
+
+    default Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        Map<String, String> aliasMap = null;
+        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getPortalService().getAliasMap();
+            wrapper = getPortalService().getJoinWrapper();
+            selectApplyMap = getPortalService().getSelectApplyMap();
+        }
+        return getRepo().select(req, aliasMap, selectApplyMap, wrapper, getVoClass());
     }
 
     /**
@@ -41,45 +74,13 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         }
     }
 
-    default Page<VO> queryByGeneralReq(QueryConditionReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, String> selectApplyMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            havingFields = getPortalService().getHavingFields();
-            selectApplyMap = getPortalService().getSelectApplyMap();
-        }
-        return getRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getVoClass());
-    }
-
-    default Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Map<String, String> aliasMap = null;
-        Map<String, String> selectApplyMap = null;
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            aliasMap = getPortalService().getAliasMap();
-            wrapper = getPortalService().getJoinWrapper();
-            selectApplyMap = getPortalService().getSelectApplyMap();
-        }
-        return getRepo().select(req, aliasMap, selectApplyMap, wrapper, getVoClass());
-    }
-
     default List<VO> selectByGeneralReq(QueryConditionReq req) {
         if (!isAdmin()) {
             beforeQuery(req);
         }
         Map<String, String> aliasMap = null;
         Set<String> havingFields = null;
-        Map<String, String> selectApplyMap = null;
+        Map<String, List<DynamicColumn>> selectApplyMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
@@ -87,7 +88,8 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
         }
-        return getRepo().select(req.getConditionList(), req.getSortList(), aliasMap, havingFields, selectApplyMap,
+        return getRepo().select(req.getConditionList(), req.getSortList(), req.getSelectColumnCondition(), aliasMap,
+                havingFields, selectApplyMap,
                 wrapper, getVoClass());
     }
 
@@ -96,14 +98,14 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             beforeQuery(req);
         }
         Map<String, String> aliasMap = null;
-        Map<String, String> selectApplyMap = null;
+        Map<String, List<DynamicColumn>> selectApplyMap = null;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
             selectApplyMap = getPortalService().getSelectApplyMap();
         }
-        return getRepo().select(req.getCondition(), req.getSortList(), req.getSelectApplyList(), aliasMap,
+        return getRepo().select(req.getCondition(), req.getSortList(), req.getSelectColumnCondition(), aliasMap,
                 selectApplyMap, wrapper, getVoClass());
     }
 }

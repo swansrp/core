@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
 import com.bidr.kernel.utils.FuncUtil;
@@ -111,11 +112,12 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
-                                Map<String, String> selectApplyMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+                                Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
+                                Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(req.getConditionList(), aliasMap, selectApplyMap,
+        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
                 wrapper);
         parseGeneralQuery(req.getConditionList(), selectAliasMap, havingFields, wrapper);
         parseSort(req.getSortList(), selectAliasMap, wrapper);
@@ -123,13 +125,14 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList, Map<String, String> aliasMap,
-                                Collection<String> havingFields, Map<String, String> selectApplyMap,
+    public <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList,
+                                Map<String, Object> selectColumnCondition, Map<String, String> aliasMap,
+                                Collection<String> havingFields, Map<String, List<DynamicColumn>> selectApplyMap,
                                 MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(conditionList, aliasMap, selectApplyMap, wrapper);
+        Map<String, String> selectAliasMap = parseSelectApply(selectColumnCondition, aliasMap, selectApplyMap, wrapper);
         parseGeneralQuery(conditionList, selectAliasMap, havingFields, wrapper);
         parseSort(sortList, selectAliasMap, wrapper);
         return selectJoinList(vo, wrapper);
@@ -141,25 +144,27 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, String> selectApplyMap,
+    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                Map<String, List<DynamicColumn>> selectApplyMap,
                                 MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectApplyList(), aliasMap, selectApplyMap,
+        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
                 wrapper);
         parseAdvancedQuery(req, selectAliasMap, wrapper);
         return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
     }
 
     @Override
-    public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, List<ConditionVO> selectApplyList,
-                                Map<String, String> aliasMap, Map<String, String> selectApplyMap,
-                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+    public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList,
+                                Map<String, Object> selectColumnCondition, Map<String, String> aliasMap,
+                                Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
+                                Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(selectApplyList, aliasMap, selectApplyMap, wrapper);
+        Map<String, String> selectAliasMap = parseSelectApply(selectColumnCondition, aliasMap, selectApplyMap, wrapper);
         if (FuncUtil.isNotEmpty(condition)) {
             parseAdvancedQuery(condition, selectAliasMap, wrapper);
         }
@@ -275,11 +280,6 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public T selectByMultiId(T entity) {
-        return super.selectByMultiId(entity);
-    }
-
-    @Override
     public boolean delete(T entity) {
         QueryWrapper<T> wrapper = super.getQueryWrapper(entity);
         return super.remove(wrapper);
@@ -384,6 +384,11 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
             }
         }
         return false;
+    }
+
+    @Override
+    public T selectByMultiId(T entity) {
+        return super.selectByMultiId(entity);
     }
 
     @Override

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Title: AdvancedQueryReq
@@ -18,7 +19,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class AdvancedQueryReq extends QueryReqVO {
     @ApiModelProperty("动态字段逻辑")
-    private List<ConditionVO> selectApplyList;
+    private Map<String, Object> selectColumnCondition;
     @ApiModelProperty("查询条件")
     private AdvancedQuery condition;
     @ApiModelProperty("排序")

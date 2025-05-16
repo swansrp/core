@@ -171,15 +171,6 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
-    private void cleanInValidPortalConfig(Set<String> controllerNameSet, String name) {
-        SysPortal portal = sysPortalService.getByName(name, DEFAULT_CONFIG_ROLE_ID);
-        if (FuncUtil.isNotEmpty(portal)) {
-            if (!controllerNameSet.contains(portal.getBean())) {
-                portalService.deletePortalConfig(new IdReqVO(portal.getName()));
-            }
-        }
-    }
-
     private SysPortal buildSysPortal(Class<?> controllerClass, Class<?> entityClass, Collection<Field> fields) {
         AdminPortal adminPortal = controllerClass.getAnnotation(AdminPortal.class);
         Api api = controllerClass.getAnnotation(Api.class);
@@ -226,8 +217,13 @@ public class PortalConfigService implements LoginFillTokenInf {
         return portal;
     }
 
-    private String parseUrl(String url) {
-        return url.replace("/web/", "");
+    private void cleanInValidPortalConfig(Set<String> controllerNameSet, String name) {
+        SysPortal portal = sysPortalService.getByName(name, DEFAULT_CONFIG_ROLE_ID);
+        if (FuncUtil.isNotEmpty(portal)) {
+            if (!controllerNameSet.contains(portal.getBean())) {
+                portalService.deletePortalConfig(new IdReqVO(portal.getName()));
+            }
+        }
     }
 
     private void refreshPortalColumn(Collection<Field> fields, SysPortal portal, Long roleId) {
@@ -254,6 +250,10 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
+    private String parseUrl(String url) {
+        return url.replace("/web/", "");
+    }
+
     public SysPortalColumn buildSysPortalColumn(SysPortal portal, int order, Field field, Long roleId) {
         SysPortalColumn column = new SysPortalColumn();
         column.setPortalId(portal.getId());
@@ -264,6 +264,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         column.setFieldType(portalFieldDict.getValue());
         handlePortalField(portal, field, column);
         handlePortalEntityField(portal, field, column);
+        // handlePortalDynamicColumnField(portal, field, column);
         handlePortalNoFilterField(field, column);
         handlePortalSortField(field, column);
         handlePortalDisplayOnlyField(field, column);
@@ -281,16 +282,6 @@ public class PortalConfigService implements LoginFillTokenInf {
         return column;
     }
 
-    private void handleConvertField(Field field, SysPortalColumn column) {
-        Convert convertAnno = field.getAnnotation(Convert.class);
-        if (FuncUtil.isNotEmpty(convertAnno)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-    }
-
     private void handleDisplayName(Field field, SysPortalColumn column) {
         column.setDisplayName(field.getName());
         ApiModelProperty apiModelProperty = field.getAnnotation(ApiModelProperty.class);
@@ -300,29 +291,6 @@ public class PortalConfigService implements LoginFillTokenInf {
         ExcelProperty excelProperty = field.getAnnotation(ExcelProperty.class);
         if (FuncUtil.isNotEmpty(excelProperty)) {
             column.setDisplayName(excelProperty.value()[0]);
-        }
-    }
-
-    private void handlePortalEntityField(SysPortal portal, Field field, SysPortalColumn column) {
-        PortalEntityField entityField = field.getAnnotation(PortalEntityField.class);
-        if (FuncUtil.isNotEmpty(entityField)) {
-            if (FuncUtil.isNotEmpty(entityField.joinField())) {
-                column.setFieldType(PortalFieldDict.ENTITY.getValue());
-                column.setReference(entityField.entity().getSimpleName());
-                column.setDbField(entityField.joinField());
-                column.setEntityField(entityField.field());
-                column.setEditShow(CommonConst.YES);
-                column.setAddShow(CommonConst.YES);
-            } else {
-                column.setEditShow(CommonConst.NO);
-                column.setAddShow(CommonConst.NO);
-            }
-            if (entityField.selectApply() || entityField.aggregation()) {
-                if (StringUtil.convertSwitch(portal.getAdvanced())) {
-                    portal.setAdvanced(StringUtil.convertSwitch(false));
-                    sysPortalService.updateById(portal);
-                }
-            }
         }
     }
 
@@ -350,6 +318,142 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setDetailShow(CommonConst.NO);
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalEntityField(SysPortal portal, Field field, SysPortalColumn column) {
+        PortalEntityField entityField = field.getAnnotation(PortalEntityField.class);
+        if (FuncUtil.isNotEmpty(entityField)) {
+            if (FuncUtil.isNotEmpty(entityField.joinField())) {
+                column.setFieldType(PortalFieldDict.ENTITY.getValue());
+                column.setReference(entityField.entity().getSimpleName());
+                column.setDbField(entityField.joinField());
+                column.setEntityField(entityField.field());
+                column.setEditShow(CommonConst.YES);
+                column.setAddShow(CommonConst.YES);
+            } else {
+                column.setEditShow(CommonConst.NO);
+                column.setAddShow(CommonConst.NO);
+            }
+            if (entityField.aggregation()) {
+                if (StringUtil.convertSwitch(portal.getAdvanced())) {
+                    portal.setAdvanced(StringUtil.convertSwitch(false));
+                    sysPortalService.updateById(portal);
+                }
+            }
+        }
+    }
+
+    private void handlePortalNoFilterField(Field field, SysPortalColumn column) {
+        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+        if (FuncUtil.isNotEmpty(portalNoFilterField)) {
+            column.setFilterAble(CommonConst.NO);
+        } else {
+            column.setFilterAble(CommonConst.YES);
+        }
+    }
+
+    private void handlePortalSortField(Field field, SysPortalColumn column) {
+        PortalSortField portalSortField = field.getAnnotation(PortalSortField.class);
+        if (FuncUtil.isNotEmpty(portalSortField)) {
+            column.setSortAble(CommonConst.YES);
+        } else {
+            column.setSortAble(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalDisplayOnlyField(Field field, SysPortalColumn column) {
+        PortalDisplayOnlyField portalDisplayOnlyField = field.getAnnotation(PortalDisplayOnlyField.class);
+        if (FuncUtil.isNotEmpty(portalDisplayOnlyField)) {
+            column.setShow(portalDisplayOnlyField.table());
+            column.setDetailShow(portalDisplayOnlyField.detail());
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalDisplayNoneField(Field field, SysPortalColumn column) {
+        PortalDisplayNoneField portalDisplayNoneField = field.getAnnotation(PortalDisplayNoneField.class);
+        if (FuncUtil.isNotEmpty(portalDisplayNoneField)) {
+            column.setShow(CommonConst.NO);
+            column.setDetailShow(CommonConst.NO);
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+        }
+    }
+
+    private void handleGroupDisplayField(Field field, SysPortalColumn column) {
+        PortalGroupDisplayField portalGroupDisplayField = field.getAnnotation(PortalGroupDisplayField.class);
+        if (FuncUtil.isNotEmpty(portalGroupDisplayField)) {
+            column.setDisplayGroupName(portalGroupDisplayField.value());
+        }
+    }
+
+    private void handleConvertField(Field field, SysPortalColumn column) {
+        Convert convertAnno = field.getAnnotation(Convert.class);
+        if (FuncUtil.isNotEmpty(convertAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+    }
+
+    private void handleBindField(Field field, SysPortalColumn column) {
+        BindField bindFieldAnno = field.getAnnotation(BindField.class);
+        if (FuncUtil.isNotEmpty(bindFieldAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+        BindFieldList bindFieldList = field.getAnnotation(BindFieldList.class);
+        if (FuncUtil.isNotEmpty(bindFieldList)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+        BindEntity bindEntityAnno = field.getAnnotation(BindEntity.class);
+        if (FuncUtil.isNotEmpty(bindEntityAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+        BindEntityList bindFieldListAnno = field.getAnnotation(BindEntityList.class);
+        if (FuncUtil.isNotEmpty(bindFieldListAnno)) {
+            column.setAddShow(CommonConst.NO);
+            column.setEditShow(CommonConst.NO);
+            column.setFilterAble(CommonConst.NO);
+            column.setSortAble(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalDictField(Field field, SysPortalColumn column) {
+        PortalDictField portalDictField = field.getAnnotation(PortalDictField.class);
+        if (FuncUtil.isNotEmpty(portalDictField)) {
+            MetaDict metaDict = portalDictField.value().getAnnotation(MetaDict.class);
+            if (FuncUtil.isNotEmpty(metaDict)) {
+                column.setFieldType(PortalFieldDict.ENUM.getValue());
+                column.setReference(metaDict.value());
+            }
+            MetaTreeDict metaTreeDict = portalDictField.value().getAnnotation(MetaTreeDict.class);
+            if (FuncUtil.isNotEmpty(metaTreeDict)) {
+                column.setFieldType(PortalFieldDict.TREE.getValue());
+                column.setReference(metaTreeDict.value());
+            }
+        }
+    }
+
+    private void handlePortalMoneyField(Field field, SysPortalColumn column) {
+        PortalMoneyField portalMoneyField = field.getAnnotation(PortalMoneyField.class);
+        if (FuncUtil.isNotEmpty(portalMoneyField)) {
+            column.setFieldType(PortalFieldDict.MONEY.getValue());
+            column.setReference(StringUtil.joinWith(",", Integer.valueOf(portalMoneyField.fix()).toString(),
+                    Integer.valueOf(portalMoneyField.unit()).toString()));
+            column.setSortAble(CommonConst.YES);
+            column.setSummaryAble(CommonConst.YES);
         }
     }
 
@@ -386,111 +490,6 @@ public class PortalConfigService implements LoginFillTokenInf {
             column.setFilterAble(CommonConst.NO);
         }
     }
-
-    private void handlePortalMoneyField(Field field, SysPortalColumn column) {
-        PortalMoneyField portalMoneyField = field.getAnnotation(PortalMoneyField.class);
-        if (FuncUtil.isNotEmpty(portalMoneyField)) {
-            column.setFieldType(PortalFieldDict.MONEY.getValue());
-            column.setReference(StringUtil.joinWith(",", Integer.valueOf(portalMoneyField.fix()).toString(),
-                    Integer.valueOf(portalMoneyField.unit()).toString()));
-            column.setSortAble(CommonConst.YES);
-            column.setSummaryAble(CommonConst.YES);
-        }
-    }
-
-    private void handlePortalDictField(Field field, SysPortalColumn column) {
-        PortalDictField portalDictField = field.getAnnotation(PortalDictField.class);
-        if (FuncUtil.isNotEmpty(portalDictField)) {
-            MetaDict metaDict = portalDictField.value().getAnnotation(MetaDict.class);
-            if (FuncUtil.isNotEmpty(metaDict)) {
-                column.setFieldType(PortalFieldDict.ENUM.getValue());
-                column.setReference(metaDict.value());
-            }
-            MetaTreeDict metaTreeDict = portalDictField.value().getAnnotation(MetaTreeDict.class);
-            if (FuncUtil.isNotEmpty(metaTreeDict)) {
-                column.setFieldType(PortalFieldDict.TREE.getValue());
-                column.setReference(metaTreeDict.value());
-            }
-        }
-    }
-
-    private void handleBindField(Field field, SysPortalColumn column) {
-        BindField bindFieldAnno = field.getAnnotation(BindField.class);
-        if (FuncUtil.isNotEmpty(bindFieldAnno)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-        BindFieldList bindFieldList = field.getAnnotation(BindFieldList.class);
-        if (FuncUtil.isNotEmpty(bindFieldList)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-        BindEntity bindEntityAnno = field.getAnnotation(BindEntity.class);
-        if (FuncUtil.isNotEmpty(bindEntityAnno)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-        BindEntityList bindFieldListAnno = field.getAnnotation(BindEntityList.class);
-        if (FuncUtil.isNotEmpty(bindFieldListAnno)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-    }
-
-    private void handlePortalDisplayNoneField(Field field, SysPortalColumn column) {
-        PortalDisplayNoneField portalDisplayNoneField = field.getAnnotation(PortalDisplayNoneField.class);
-        if (FuncUtil.isNotEmpty(portalDisplayNoneField)) {
-            column.setShow(CommonConst.NO);
-            column.setDetailShow(CommonConst.NO);
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-        }
-    }
-
-
-    private void handleGroupDisplayField(Field field, SysPortalColumn column) {
-        PortalGroupDisplayField portalGroupDisplayField = field.getAnnotation(PortalGroupDisplayField.class);
-        if (FuncUtil.isNotEmpty(portalGroupDisplayField)) {
-            column.setDisplayGroupName(portalGroupDisplayField.value());
-        }
-    }
-
-    private void handlePortalDisplayOnlyField(Field field, SysPortalColumn column) {
-        PortalDisplayOnlyField portalDisplayOnlyField = field.getAnnotation(PortalDisplayOnlyField.class);
-        if (FuncUtil.isNotEmpty(portalDisplayOnlyField)) {
-            column.setShow(portalDisplayOnlyField.table());
-            column.setDetailShow(portalDisplayOnlyField.detail());
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-        }
-    }
-
-    private void handlePortalNoFilterField(Field field, SysPortalColumn column) {
-        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
-        if (FuncUtil.isNotEmpty(portalNoFilterField)) {
-            column.setFilterAble(CommonConst.NO);
-        } else {
-            column.setFilterAble(CommonConst.YES);
-        }
-    }
-
-    private void handlePortalSortField(Field field, SysPortalColumn column) {
-        PortalSortField portalSortField = field.getAnnotation(PortalSortField.class);
-        if (FuncUtil.isNotEmpty(portalSortField)) {
-            column.setSortAble(CommonConst.YES);
-        } else {
-            column.setSortAble(CommonConst.NO);
-        }
-    }
-
 
     @Override
     public void fillToken(LoginRes token) {

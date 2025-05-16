@@ -3,13 +3,17 @@ package com.bidr.kernel.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.controller.inf.base.AdminBaseInf;
 import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
+import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.kernel.vo.portal.*;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
+import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.SortVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
@@ -28,20 +32,6 @@ import java.util.Set;
  */
 @SuppressWarnings("unchecked")
 public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
-
-    /**
-     * 是否查看全局数据
-     *
-     * @return 判断是否能够查看全局数据
-     */
-    @Override
-    default boolean isAdmin() {
-        try {
-            return (Boolean) ReflectionUtil.invoke(BeanUtil.getBean("permitService"), "isAdmin");
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     /**
      * 管理员-添加前处理
@@ -196,14 +186,6 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
-     * 数据库repo
-     *
-     * @return repo
-     */
-    @Override
-    BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
-
-    /**
      * 生成汇总别名表
      *
      * @return 别名map
@@ -218,15 +200,6 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return having字段
      */
     default Set<String> getHavingFields() {
-        return null;
-    }
-
-    /**
-     * 生成需要select条件的字段map
-     *
-     * @return select apply 字段
-     */
-    default Map<String, String> getSelectApplyMap() {
         return null;
     }
 
@@ -311,6 +284,15 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
+     * 生成需要select条件的字段map
+     *
+     * @return select apply 字段
+     */
+    default Map<String, List<DynamicColumn>> getSelectApplyMap() {
+        return null;
+    }
+
+    /**
      * 生成联表查询wrapper
      *
      * @return 联表wrapper
@@ -319,6 +301,16 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         getJoinWrapper(wrapper);
         return wrapper;
+    }
+
+    /**
+     * 获取entity类型
+     *
+     * @return entity类型
+     */
+    @Override
+    default Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
     }
 
     /**
@@ -335,14 +327,26 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
-     * 获取entity类型
+     * 是否查看全局数据
      *
-     * @return entity类型
+     * @return 判断是否能够查看全局数据
      */
     @Override
-    default Class<ENTITY> getEntityClass() {
-        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    default boolean isAdmin() {
+        try {
+            return (Boolean) ReflectionUtil.invoke(BeanUtil.getBean("permitService"), "isAdmin");
+        } catch (Exception e) {
+            return false;
+        }
     }
+
+    /**
+     * 数据库repo
+     *
+     * @return repo
+     */
+    @Override
+    BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
 
     /**
      * 根据id获取数据
@@ -380,13 +384,13 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     /**
      * 获取指定数据
      *
-     * @param condition       条件
-     * @param sortList        排序
-     * @param selectApplyList 动态字段
+     * @param condition             条件
+     * @param sortList              排序
+     * @param selectColumnCondition 动态字段
      * @return 数据
      */
-    default List<VO> query(AdvancedQuery condition, List<SortVO> sortList, List<ConditionVO> selectApplyList) {
-        return getRepo().select(condition, sortList, selectApplyList, getAliasMap(), getSelectApplyMap(),
+    default List<VO> query(AdvancedQuery condition, List<SortVO> sortList, Map<String, Object> selectColumnCondition) {
+        return getRepo().select(condition, sortList, selectColumnCondition, getAliasMap(), getSelectApplyMap(),
                 getJoinWrapper(), getVoClass());
     }
 

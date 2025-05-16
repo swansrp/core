@@ -29,9 +29,8 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
             if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getConditionList(),
-                        getPortalService().getAliasMap(),
-                        getPortalService().getSelectApplyMap(), from);
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(),
+                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
                         from);
             }
@@ -50,9 +49,8 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
             if (FuncUtil.isNotEmpty(req.getCondition())) {
-                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectApplyList(),
-                        getPortalService().getAliasMap(),
-                        getPortalService().getSelectApplyMap(), from);
+                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(),
+                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
             }
         }

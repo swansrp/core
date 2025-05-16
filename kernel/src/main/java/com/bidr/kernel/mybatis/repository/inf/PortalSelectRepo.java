@@ -7,15 +7,19 @@ import com.baomidou.mybatisplus.core.conditions.segments.OrderBySegmentList;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
-import com.bidr.kernel.utils.*;
+import com.bidr.kernel.mybatis.bo.DynamicColumn;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 import java.lang.reflect.Field;
 import java.util.*;
-
-import static com.bidr.kernel.constant.dict.portal.PortalConditionDict.SELECT_APPLY;
 
 /**
  * Title: PortalSelectRepo
@@ -51,14 +55,12 @@ public interface PortalSelectRepo<T> {
             case EQUAL:
                 wrapper.eq(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case NOT_EQUAL:
                 wrapper.ne(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case IN:
                 wrapper.in(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
@@ -94,32 +96,27 @@ public interface PortalSelectRepo<T> {
             case NOT_LIKE:
                 wrapper.notLike(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case GREATER:
                 wrapper.gt(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case GREATER_EQUAL:
                 wrapper.ge(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case LESS:
                 wrapper.lt(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case LESS_EQUAL:
                 wrapper.le(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0));
+                        columnName, condition.getValue().get(0));
                 break;
             case NULL:
                 wrapper.isNull(columnName);
@@ -130,14 +127,12 @@ public interface PortalSelectRepo<T> {
             case BETWEEN:
                 wrapper.between(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0), condition.getValue().get(1));
+                        columnName, condition.getValue().get(0), condition.getValue().get(1));
                 break;
             case NOT_BETWEEN:
                 wrapper.notBetween(
                         FuncUtil.isNotEmpty(condition.getValue()) && FuncUtil.isNotEmpty(condition.getValue().get(0)),
-                        columnName,
-                        condition.getValue().get(0), condition.getValue().get(1));
+                        columnName, condition.getValue().get(0), condition.getValue().get(1));
                 break;
             default:
                 break;
@@ -252,13 +247,11 @@ public interface PortalSelectRepo<T> {
             switch (PortalConditionDict.of(condition.getRelation())) {
                 case EQUAL:
                     wrapper.eq(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case NOT_EQUAL:
                     wrapper.ne(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case IN:
                     wrapper.in(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue());
@@ -295,28 +288,23 @@ public interface PortalSelectRepo<T> {
                     break;
                 case NOT_LIKE:
                     wrapper.notLike(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case GREATER:
                     wrapper.gt(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case GREATER_EQUAL:
                     wrapper.ge(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case LESS:
                     wrapper.lt(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case LESS_EQUAL:
                     wrapper.le(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName,
-                            condition.getValue().get(0));
+                            FuncUtil.isNotEmpty(condition.getValue().get(0)), columnName, condition.getValue().get(0));
                     break;
                 case NULL:
                     wrapper.isNull(columnName);
@@ -351,13 +339,13 @@ public interface PortalSelectRepo<T> {
             switch (PortalConditionDict.of(condition.getRelation())) {
                 case EQUAL:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " = {0}"
-                            , condition.getValue().get(0));
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " = {0}",
+                            condition.getValue().get(0));
                     break;
                 case NOT_EQUAL:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                            FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " != " +
-                            "{0}", condition.getValue().get(0));
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " != " + "{0}",
+                            condition.getValue().get(0));
                     break;
                 case IN:
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
@@ -379,33 +367,33 @@ public interface PortalSelectRepo<T> {
                     break;
                 case LIKE:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                            FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " like " +
-                            "{0} ", "%" + condition.getValue().get(0) + "%");
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " like " + "{0} ",
+                            "%" + condition.getValue().get(0) + "%");
                     break;
                 case NOT_LIKE:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                            FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " not " +
-                            "like {0} ", "%" + condition.getValue().get(0) + "%");
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " not " + "like {0} ",
+                            "%" + condition.getValue().get(0) + "%");
                     break;
                 case GREATER:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " > {0}"
-                            , condition.getValue().get(0));
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " > {0}",
+                            condition.getValue().get(0));
                     break;
                 case GREATER_EQUAL:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                            FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " >= " +
-                            "{0}", condition.getValue().get(0));
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " >= " + "{0}",
+                            condition.getValue().get(0));
                     break;
                 case LESS:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " < {0}"
-                            , condition.getValue().get(0));
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " < {0}",
+                            condition.getValue().get(0));
                     break;
                 case LESS_EQUAL:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()) &&
-                            FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " <= " +
-                            "{0}", condition.getValue().get(0));
+                                    FuncUtil.isNotEmpty(condition.getValue().get(0)), havingColumnName + " <= " + "{0}",
+                            condition.getValue().get(0));
                     break;
                 case NULL:
                     wrapper.having(havingColumnName + " is null");
@@ -415,8 +403,7 @@ public interface PortalSelectRepo<T> {
                     break;
                 case BETWEEN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()), havingColumnName + " between {0} and {1}",
-                            condition.getValue().get(0),
-                            condition.getValue().get(1));
+                            condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case NOT_BETWEEN:
                     wrapper.having(FuncUtil.isNotEmpty(condition.getValue()),
@@ -507,45 +494,63 @@ public interface PortalSelectRepo<T> {
         return null;
     }
 
-    default Map<String, String> parseSelectApply(List<ConditionVO> conditionList, Map<String, String> aliasMap,
-                                                 Map<String, String> selectApplyMap,
+    default Map<String, String> parseSelectApply(Map<String, Object> selectColumnCondition,
+                                                 Map<String, String> aliasMap,
+                                                 Map<String, List<DynamicColumn>> selectApplyMap,
                                                  MPJLambdaWrapper<T> wrapper) {
         Map<String, String> deepCloneAliasMap = aliasMap;
-        if (FuncUtil.isNotEmpty(selectApplyMap) && FuncUtil.isNotEmpty(conditionList)) {
+        if (FuncUtil.isNotEmpty(selectApplyMap) && FuncUtil.isNotEmpty(selectColumnCondition)) {
             deepCloneAliasMap = JsonUtil.readJson(JsonUtil.toJson(aliasMap), Map.class, String.class, String.class);
-            for (ConditionVO condition : conditionList) {
-                if (FuncUtil.isNotEmpty(condition.getRelation())) {
-                    buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, condition);
-                }
+            ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+            for (Map.Entry<String, Object> entry : selectColumnCondition.entrySet()) {
+                engine.put(entry.getKey(), entry.getValue());
             }
+            buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, engine);
         }
         return deepCloneAliasMap;
     }
 
-    default void parseGeneralQuery(List<ConditionVO> conditionList, Map<String, String> aliasMap,
-                                   Collection<String> havingFields,
-                                   MPJLambdaWrapper<T> wrapper) {
-        if (FuncUtil.isNotEmpty(conditionList)) {
-            for (ConditionVO condition : conditionList) {
-                if (FuncUtil.isNotEmpty(condition.getRelation())) {
-                    buildQueryWrapper(wrapper, aliasMap, havingFields, condition);
+    default void buildSelectWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap,
+                                    Map<String, List<DynamicColumn>> selectApplyMap, ScriptEngine engine) {
+        if (FuncUtil.isNotEmpty(selectApplyMap)) {
+            String script = "function func() {%s} func();";
+            for (Map.Entry<String, List<DynamicColumn>> entry : selectApplyMap.entrySet()) {
+                if (FuncUtil.isNotEmpty(entry.getValue())) {
+                    String select = "";
+                    for (DynamicColumn dynamicColumn : entry.getValue()) {
+                        try {
+                            if (Boolean.parseBoolean(engine.eval(dynamicColumn.getCondition()).toString())) {
+                                String s = engine.eval(String.format(script, dynamicColumn.getScript())).toString();
+                                if (FuncUtil.isNotEmpty(s)) {
+                                    s = dynamicColumn.getPrefix() + s + dynamicColumn.getSuffix();
+                                }
+                                select += s;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } catch (AssertionError e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (FuncUtil.isEmpty(select)) {
+                        select = " null ";
+                    }
+                    aliasMap.put(entry.getKey(), "(" + select + ")");
+                    wrapper.getSelectColum()
+                            .add(new SelectString(StringUtil.joinWith(" as ", select, "'" + entry.getKey() + "'"),
+                                    wrapper.getAlias()));
                 }
+
             }
         }
     }
 
-    default void buildSelectWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap,
-                                    Map<String, String> selectApplyMap, ConditionVO condition) {
-        if (SELECT_APPLY.getValue().equals(condition.getRelation())) {
-            if (FuncUtil.isNotEmpty(selectApplyMap)) {
-                String selectStr = selectApplyMap.get(condition.getProperty());
-                if (FuncUtil.isNotEmpty(selectStr)) {
-                    String select = DbUtil.apply(selectStr,
-                            JsonUtil.toJson(condition.getValue().get(0), false, false, true));
-                    aliasMap.put(condition.getProperty(), "(" + select + ")");
-                    wrapper.getSelectColum().add(new SelectString(
-                            StringUtil.joinWith(" as ", select, "'" + condition.getProperty() + "'"),
-                            wrapper.getAlias()));
+    default void parseGeneralQuery(List<ConditionVO> conditionList, Map<String, String> aliasMap,
+                                   Collection<String> havingFields, MPJLambdaWrapper<T> wrapper) {
+        if (FuncUtil.isNotEmpty(conditionList)) {
+            for (ConditionVO condition : conditionList) {
+                if (FuncUtil.isNotEmpty(condition.getRelation())) {
+                    buildQueryWrapper(wrapper, aliasMap, havingFields, condition);
                 }
             }
         }
