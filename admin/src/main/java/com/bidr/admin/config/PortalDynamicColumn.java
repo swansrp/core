@@ -15,7 +15,7 @@ import java.lang.annotation.*;
 @Documented
 @Repeatable(PortalDynamicColumns.class)
 public @interface PortalDynamicColumn {
-    String condition() default "true";
+    String condition() default "1==1";
 
     String script();
 

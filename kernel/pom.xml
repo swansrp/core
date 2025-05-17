@@ -167,6 +167,13 @@
             <artifactId>bcprov-jdk15on</artifactId>
             <version>1.63</version>
         </dependency>
+
+        <!-- 添加 Rhino 引擎依赖 -->
+        <dependency>
+            <groupId>org.mozilla</groupId>
+            <artifactId>rhino</artifactId>
+            <version>1.7.14</version>
+        </dependency>
     </dependencies>
 
     <build>

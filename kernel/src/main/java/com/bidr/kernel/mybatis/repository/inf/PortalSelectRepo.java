@@ -15,9 +15,11 @@ import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.slf4j.LoggerFactory;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -501,43 +503,48 @@ public interface PortalSelectRepo<T> {
         Map<String, String> deepCloneAliasMap = aliasMap;
         if (FuncUtil.isNotEmpty(selectApplyMap) && FuncUtil.isNotEmpty(selectColumnCondition)) {
             deepCloneAliasMap = JsonUtil.readJson(JsonUtil.toJson(aliasMap), Map.class, String.class, String.class);
-            ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
-            for (Map.Entry<String, Object> entry : selectColumnCondition.entrySet()) {
-                engine.put(entry.getKey(), entry.getValue());
+            try {
+                Context context = Context.enter();
+                Scriptable scope = context.initStandardObjects();
+                for (Map.Entry<String, Object> entry : selectColumnCondition.entrySet()) {
+                    ScriptableObject.putProperty(scope, entry.getKey(), entry.getValue());
+                }
+                buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, context, scope);
+            } finally {
+                Context.exit();
             }
-            buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, engine);
+
         }
         return deepCloneAliasMap;
     }
 
     default void buildSelectWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap,
-                                    Map<String, List<DynamicColumn>> selectApplyMap, ScriptEngine engine) {
+                                    Map<String, List<DynamicColumn>> selectApplyMap, Context context, Scriptable scope) {
         if (FuncUtil.isNotEmpty(selectApplyMap)) {
-            String script = "function func() {%s} func();";
+            String format = "function func() {%s} func();";
             for (Map.Entry<String, List<DynamicColumn>> entry : selectApplyMap.entrySet()) {
                 if (FuncUtil.isNotEmpty(entry.getValue())) {
-                    String select = "";
+                    StringBuilder select = new StringBuilder();
                     for (DynamicColumn dynamicColumn : entry.getValue()) {
                         try {
-                            if (Boolean.parseBoolean(engine.eval(dynamicColumn.getCondition()).toString())) {
-                                String s = engine.eval(String.format(script, dynamicColumn.getScript())).toString();
+                            if (Context.toBoolean(context.evaluateString(scope, dynamicColumn.getCondition(), "", 1, null))) {
+                                String script = String.format(format, dynamicColumn.getScript());
+                                String s = Context.toString(context.evaluateString(scope, script, "", 1, null));
                                 if (FuncUtil.isNotEmpty(s)) {
                                     s = dynamicColumn.getPrefix() + s + dynamicColumn.getSuffix();
                                 }
-                                select += s;
+                                select.append(s);
                             }
                         } catch (Exception e) {
-                            e.printStackTrace();
-                        } catch (AssertionError e) {
-                            e.printStackTrace();
+                            LoggerFactory.getLogger(this.getClass()).error(e.getMessage(), e);
                         }
                     }
-                    if (FuncUtil.isEmpty(select)) {
-                        select = " null ";
+                    if (FuncUtil.isEmpty(select.toString())) {
+                        select = new StringBuilder(" null ");
                     }
                     aliasMap.put(entry.getKey(), "(" + select + ")");
                     wrapper.getSelectColum()
-                            .add(new SelectString(StringUtil.joinWith(" as ", select, "'" + entry.getKey() + "'"),
+                            .add(new SelectString(StringUtil.joinWith(" as ", select.toString(), "'" + entry.getKey() + "'"),
                                     wrapper.getAlias()));
                 }
 
