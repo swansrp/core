@@ -71,7 +71,6 @@ import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
 @Slf4j
 @SuppressWarnings("rawtypes, unchecked")
 public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelParseHandlerInf<ENTITY, VO>, PortalExcelTemplateHandlerInf {
-
     protected Map<String, String> aliasMap = new HashMap<>(32);
     protected Map<String, String> summaryAliasMap = new HashMap<>(32);
     protected Set<String> havingFields = new HashSet<>();
@@ -161,7 +160,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         if (FuncUtil.isNotEmpty(portalDynamicColumns)) {
             List<DynamicColumn> list = map.getOrDefault(field.getName(), new ArrayList<>());
             for (PortalDynamicColumn dynamic : portalDynamicColumns) {
-                list.add(new DynamicColumn(dynamic.condition(), dynamic.script(), dynamic.prefix(), dynamic.suffix()));
+                list.add(new DynamicColumn(dynamic.condition(), dynamic.script(), dynamic.prefix(), dynamic.suffix(),
+                        dynamic.complex()));
             }
             map.put(field.getName(), list);
         }
@@ -229,11 +229,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public void handleUpdate(List<ENTITY> entityList) {
         batchUpdate(entityList);
-    }    @Override
-    public final MPJLambdaWrapper<ENTITY> getJoinWrapper() {
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        getJoinWrapper(wrapper);
-        return wrapper;
     }
 
     @Override
@@ -258,8 +253,12 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         return ReflectionUtil.copy(data, getEntityClass());
     }
 
-
-
+    @Override
+    public final MPJLambdaWrapper<ENTITY> getJoinWrapper() {
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        getJoinWrapper(wrapper);
+        return wrapper;
+    }
 
     /**
      * 根据vo
