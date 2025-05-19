@@ -19,4 +19,5 @@ public class DynamicColumn {
     String script;
     String prefix;
     String suffix;
+    boolean complex;
 }

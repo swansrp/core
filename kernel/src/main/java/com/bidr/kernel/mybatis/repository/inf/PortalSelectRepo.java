@@ -519,21 +519,23 @@ public interface PortalSelectRepo<T> {
     }
 
     default void buildSelectWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap,
-                                    Map<String, List<DynamicColumn>> selectApplyMap, Context context, Scriptable scope) {
+                                    Map<String, List<DynamicColumn>> selectApplyMap, Context context,
+                                    Scriptable scope) {
         if (FuncUtil.isNotEmpty(selectApplyMap)) {
-            String format = "function func() {%s} func();";
+            String complexScriptFormat = "function func() {%s} func();";
+            String simpleScriptFormat = "function func() {return '%s';} func();";
             for (Map.Entry<String, List<DynamicColumn>> entry : selectApplyMap.entrySet()) {
                 if (FuncUtil.isNotEmpty(entry.getValue())) {
                     StringBuilder select = new StringBuilder();
-                    for (DynamicColumn dynamicColumn : entry.getValue()) {
+                    for (DynamicColumn column : entry.getValue()) {
                         try {
-                            if (Context.toBoolean(context.evaluateString(scope, dynamicColumn.getCondition(), "", 1, null))) {
-                                String script = String.format(format, dynamicColumn.getScript());
+                            if (Context.toBoolean(context.evaluateString(scope, column.getCondition(), "", 1, null))) {
+                                String format = column.isComplex() ? complexScriptFormat : simpleScriptFormat;
+                                String script = String.format(format, column.getScript());
                                 String s = Context.toString(context.evaluateString(scope, script, "", 1, null));
                                 if (FuncUtil.isNotEmpty(s)) {
-                                    s = dynamicColumn.getPrefix() + s + dynamicColumn.getSuffix();
+                                    select.append(column.getPrefix()).append(s).append(column.getSuffix());
                                 }
-                                select.append(s);
                             }
                         } catch (Exception e) {
                             LoggerFactory.getLogger(this.getClass()).error(e.getMessage(), e);
@@ -543,9 +545,9 @@ public interface PortalSelectRepo<T> {
                         select = new StringBuilder(" null ");
                     }
                     aliasMap.put(entry.getKey(), "(" + select + ")");
-                    wrapper.getSelectColum()
-                            .add(new SelectString(StringUtil.joinWith(" as ", select.toString(), "'" + entry.getKey() + "'"),
-                                    wrapper.getAlias()));
+                    wrapper.getSelectColum().add(new SelectString(
+                            StringUtil.joinWith(" as ", select.toString(), "'" + entry.getKey() + "'"),
+                            wrapper.getAlias()));
                 }
 
             }
