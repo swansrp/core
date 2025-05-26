@@ -78,12 +78,13 @@ public class PasswordServiceImpl implements PasswordService {
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
-        Validator.assertNotBlank(user.getPassword(), AccountErrCode.AC_PASSWORD_NOT_EXISTED);
-        Validator.assertTrue(Md5Util.verify(req.getOldPassword(), user.getPassword()),
-                AccountErrCode.AC_PASSWORD_OLD_NOT_RIGHT);
+        if (FuncUtil.isNotEmpty(user.getPassword())) {
+            Validator.assertTrue(Md5Util.verify(req.getOldPassword(), user.getPassword()),
+                    AccountErrCode.AC_PASSWORD_OLD_NOT_RIGHT);
+            Validator.assertFalse(Md5Util.verify(req.getPassword(), user.getPassword()),
+                    AccountErrCode.AC_PASSWORD_OLD_NEW_SAME);
+        }
         Validator.assertEquals(req.getPassword(), req.getPasswordConfirm(), AccountErrCode.AC_PASSWORD_CONFIRM_DIFF);
-        Validator.assertFalse(Md5Util.verify(req.getPassword(), user.getPassword()),
-                AccountErrCode.AC_PASSWORD_OLD_NEW_SAME);
         initPassword(user, req.getPassword());
     }
 
@@ -92,6 +93,23 @@ public class PasswordServiceImpl implements PasswordService {
         TokenInfo token = tokenService.buildEmailToken(userId);
         fillChangePasswordToken(userId, email, token);
         sendEmail(userId, email, token);
+    }
+
+    @Override
+    public void changePasswordByMsgCode(String phoneNumber, String password) {
+        AcUser user = acUserService.getUserByPhoneNumber(phoneNumber);
+        Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
+        Validator.assertTrue(StringUtils.equals(user.getPhoneNumber(), phoneNumber), ErrCodeSys.PA_DATA_DIFF,
+                "登录用户手机号码");
+        changePassword(user, password);
+    }
+
+    @Override
+    public void emailChangeReq(String userId, String email) {
+        AcUser user = acUserService.getByCustomerNumber(userId);
+        Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
+        Validator.assertTrue(StringUtils.equals(user.getEmail(), email), ErrCodeSys.PA_DATA_DIFF, "登录用户邮箱");
+        sendChangePasswordEmail(userId, email);
     }
 
     private void fillChangePasswordToken(String userId, String email, TokenInfo token) {
@@ -110,23 +128,6 @@ public class PasswordServiceImpl implements PasswordService {
         String url = String.format(confirmUrlFormat, id, token.getToken());
         String text = String.format(textFormat, url);
         emailService.sendEmail(email, title, text);
-    }
-
-    @Override
-    public void changePasswordByMsgCode(String phoneNumber, String password) {
-        AcUser user = acUserService.getUserByPhoneNumber(phoneNumber);
-        Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
-        Validator.assertTrue(StringUtils.equals(user.getPhoneNumber(), phoneNumber), ErrCodeSys.PA_DATA_DIFF,
-                "登录用户手机号码");
-        changePassword(user, password);
-    }
-
-    @Override
-    public void emailChangeReq(String userId, String email) {
-        AcUser user = acUserService.getByCustomerNumber(userId);
-        Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
-        Validator.assertTrue(StringUtils.equals(user.getEmail(), email), ErrCodeSys.PA_DATA_DIFF, "登录用户邮箱");
-        sendChangePasswordEmail(userId, email);
     }
 
     @Override
