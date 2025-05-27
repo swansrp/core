@@ -28,9 +28,12 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
     default MPJLambdaWrapper<ENTITY> buildGeneralFromWrapper(QueryConditionReq req, MPJLambdaWrapper<ENTITY> from) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
+            Map<String, String> aliasMap = null;
+            if (FuncUtil.isNotEmpty(req.getSelectColumnCondition())) {
+                aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(), getPortalService().getAliasMap(),
+                        getPortalService().getSelectApplyMap(), from);
+            }
             if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(),
-                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
                         from);
             }
@@ -48,9 +51,12 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
     default MPJLambdaWrapper<ENTITY> buildAdvancedFromWrapper(AdvancedQueryReq req, MPJLambdaWrapper<ENTITY> from) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
+            Map<String, String> aliasMap = null;
+            if (FuncUtil.isNotEmpty(req.getSelectColumnCondition())) {
+                aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(), getPortalService().getAliasMap(),
+                        getPortalService().getSelectApplyMap(), from);
+            }
             if (FuncUtil.isNotEmpty(req.getCondition())) {
-                Map<String, String> aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(),
-                        getPortalService().getAliasMap(), getPortalService().getSelectApplyMap(), from);
                 getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
             }
         }
