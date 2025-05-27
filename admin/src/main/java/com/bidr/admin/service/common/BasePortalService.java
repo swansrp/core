@@ -1,6 +1,5 @@
 package com.bidr.admin.service.common;
 
-import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.config.PortalDynamicColumn;
@@ -54,6 +53,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.beans.Introspector;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -446,7 +446,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
-                StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
+                Introspector.decapitalize(getEntityClass().getSimpleName()) + "Service");
     }
 
 
