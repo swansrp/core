@@ -55,36 +55,6 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
     }
 
     /**
-     * 指标统计分布
-     *
-     * @param req 指标统计分布
-     * @return 统计个数数据
-     */
-    default List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req) {
-        if (!isAdmin()) {
-            beforeQuery(req);
-        }
-        Validator.assertNotEmpty(req.getStatisticColumn(), ErrCodeSys.PA_DATA_NOT_EXIST, "统计数据");
-        if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
-            MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getMetricCondition(),
-                    req.getStatisticColumn());
-            wrapper.from(from -> buildAdvancedFromWrapper(req, from));
-            if (StringUtil.convertSwitch(req.getMajorCondition()) || FuncUtil.isEmpty(req.getMajorCondition())) {
-                return getConditionMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
-                        req.getStatisticColumn(), req.getSort());
-            } else {
-                return getMetricMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
-                        req.getStatisticColumn(), req.getSort());
-            }
-        } else {
-            MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
-                    req.getSort());
-            wrapper.from(from -> buildAdvancedFromWrapper(req, from));
-            return getStatisticRes(wrapper, req.getMetricColumn(), req.getStatisticColumn());
-        }
-    }
-
-    /**
      * 自定义指标
      *
      * @param metricColumn        字典分级指标
@@ -102,11 +72,12 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                 if (FuncUtil.isNotEmpty(statistic.getValue())) {
                     wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
                             parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
-                            StringUtil.joinWith(StringUtil.HYPHEN, metricCondition.getLabel(), statistic.getLabel())),
+                            StringUtil.joinWith(StringUtil.SPLITTER, metricCondition.getLabel(), statistic.getLabel())),
                             wrapper.getAlias()));
                 } else {
                     wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
-                            parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY), StringUtil.joinWith(StringUtil.HYPHEN,
+                            parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
+                            StringUtil.joinWith(StringUtil.SPLITTER,
                                     metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                 }
             }
@@ -115,64 +86,6 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             buildMetricWrapperByMetricColumn(metricColumn, wrapper);
         }
         return wrapper;
-    }
-
-    /**
-     * 字典分级指标
-     *
-     * @param metricColumn    字典分级指标
-     * @param statisticColumn 统计目标
-     * @param sort            排序
-     * @return 字典分级
-     */
-    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<Metric> metricColumn,
-                                                           List<KeyValueResVO> statisticColumn, Integer sort) {
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        for (KeyValueResVO statistic : statisticColumn) {
-            if (FuncUtil.isNotEmpty(statistic.getValue())) {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("sum(%s) as %s", statistic.getValue(), statistic.getLabel()),
-                        wrapper.getAlias()));
-            } else {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("count(1) as %s", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)),
-                        wrapper.getAlias()));
-            }
-        }
-        Validator.assertNotEmpty(metricColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
-        if (FuncUtil.isNotEmpty(sort)) {
-            switch (PortalSortDict.of(sort)) {
-                case ASC:
-                    wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-                    break;
-                case DESC:
-                    wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
-                    break;
-                default:
-                    break;
-            }
-        }
-        buildMetricWrapperByMetricColumn(metricColumn, wrapper);
-        return wrapper;
-    }
-
-    /**
-     * 构建多指标wrapper
-     *
-     * @param metricColumn 指标
-     * @param wrapper      wrapper
-     */
-    default void buildMetricWrapperByMetricColumn(List<Metric> metricColumn, MPJLambdaWrapper<ENTITY> wrapper) {
-        for (Metric metric : metricColumn) {
-            String column = metric.getColumn();
-            if (FuncUtil.isNotEmpty(column)) {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("IFNULL(%s, '%s') as %s", column, StatisticRes.NULL, column),
-                        wrapper.getAlias()));
-                wrapper.groupBy(column);
-                wrapper.orderByAsc(column);
-            }
-        }
     }
 
     /**
@@ -233,7 +146,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     // 无分类指标
                     for (MetricCondition condition : metricCondition) {
                         for (KeyValueResVO statistic : statisticColumn) {
-                            String value = StringUtil.joinWith(StringUtil.HYPHEN, condition.getLabel(),
+                            String value = StringUtil.joinWith(StringUtil.SPLITTER, condition.getLabel(),
                                     statistic.getLabel());
                             resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
                         }
@@ -308,7 +221,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                 } else {
                     for (MetricCondition condition : metricCondition) {
                         for (KeyValueResVO statistic : statisticColumn) {
-                            String value = StringUtil.joinWith(StringUtil.HYPHEN, condition.getLabel(),
+                            String value = StringUtil.joinWith(StringUtil.SPLITTER, condition.getLabel(),
                                     statistic.getLabel());
                             resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
                         }
@@ -336,74 +249,42 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
     }
 
     /**
-     * 根据自定义指标 对多指标统计进行分组
+     * 字典分级指标
      *
-     * @param metricCondition 自定义指标
-     * @param res             排序后结果
-     * @return 分组后数据
+     * @param metricColumn    字典分级指标
+     * @param statisticColumn 统计目标
+     * @param sort            排序
+     * @return 字典分级
      */
-    default List<StatisticRes> groupByCondition(List<MetricCondition> metricCondition, List<StatisticRes> res) {
-        Map<String, StatisticRes> resultMap = new LinkedHashMap<>();
-        for (MetricCondition condition : metricCondition) {
-            resultMap.put(condition.getLabel(),
-                    new StatisticRes(null, condition.getValue(), condition.getLabel(), null));
-        }
-        for (StatisticRes re : res) {
-            String[] metricArray = re.getMetric().split(StringUtil.HYPHEN);
-            resultMap.get(metricArray[0]).getChildren().add(re);
-            re.setMetricLabel(re.getMetric());
-            re.setMetric(metricArray[1]);
-        }
-        return new ArrayList<>(resultMap.values());
-    }
-
-    /**
-     * 根据自定义指标 对多指标统计子项进行分组
-     *
-     * @param statisticColumn 指标列
-     * @param res             排序后结果
-     * @return 分组后数据
-     */
-    default List<StatisticRes> groupChildrenByCondition(List<KeyValueResVO> statisticColumn, List<StatisticRes> res) {
-        List<StatisticRes> resultList = new ArrayList<>();
-        for (StatisticRes re : res) {
-            resultList.add(re);
-            Map<String, StatisticRes> resultMap = new LinkedHashMap<>();
-            for (KeyValueResVO column : statisticColumn) {
-                resultMap.put(column.getLabel(), new StatisticRes(re.getMetric(), column.getValue(), column.getLabel(), re.getStatistic()));
+    default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<Metric> metricColumn,
+                                                           List<KeyValueResVO> statisticColumn, Integer sort) {
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        for (KeyValueResVO statistic : statisticColumn) {
+            if (FuncUtil.isNotEmpty(statistic.getValue())) {
+                wrapper.getSelectColum().add(new SelectString(
+                        String.format("sum(%s) as %s", statistic.getValue(), statistic.getLabel()),
+                        wrapper.getAlias()));
+            } else {
+                wrapper.getSelectColum().add(new SelectString(
+                        String.format("count(1) as %s", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)),
+                        wrapper.getAlias()));
             }
-            for (StatisticRes child : re.getChildren()) {
-                String[] metricArray = child.getMetric().split(StringUtil.HYPHEN);
-                resultMap.get(metricArray[1]).getChildren().add(child);
-            }
-            re.setStatistic(BigDecimal.ZERO);
-            re.setChildren(new ArrayList<>(resultMap.values()));
         }
-        return resultList;
-    }
-
-    /**
-     * 对自定义条件结果进行排序
-     *
-     * @param resMap 结果
-     * @param sort   排序
-     * @return 结果
-     */
-    default List<StatisticRes> getConditionStatisticRes(Map<String, StatisticRes> resMap, Integer sort) {
-        List<StatisticRes> resList = new ArrayList<>(resMap.values());
+        Validator.assertNotEmpty(metricColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
         if (FuncUtil.isNotEmpty(sort)) {
             switch (PortalSortDict.of(sort)) {
                 case ASC:
-                    resList.sort(Comparator.comparing(StatisticRes::getStatistic));
+                    wrapper.orderByAsc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
                     break;
                 case DESC:
-                    resList.sort((o1, o2) -> o2.getStatistic().compareTo(o1.getStatistic()));
+                    wrapper.orderByDesc(LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
                     break;
                 default:
                     break;
             }
         }
-        return resList;
+        buildMetricWrapperByMetricColumn(metricColumn, wrapper);
+        return wrapper;
     }
 
     /**
@@ -432,6 +313,122 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             }
         }
         return resList;
+    }
+
+    /**
+     * 构建多指标wrapper
+     *
+     * @param metricColumn 指标
+     * @param wrapper      wrapper
+     */
+    default void buildMetricWrapperByMetricColumn(List<Metric> metricColumn, MPJLambdaWrapper<ENTITY> wrapper) {
+        for (Metric metric : metricColumn) {
+            String column = metric.getColumn();
+            if (FuncUtil.isNotEmpty(column)) {
+                wrapper.getSelectColum().add(new SelectString(
+                        String.format("IFNULL(%s, '%s') as %s", column, StatisticRes.NULL, column),
+                        wrapper.getAlias()));
+                wrapper.groupBy(column);
+                wrapper.orderByAsc(column);
+            }
+        }
+    }
+
+    /**
+     * 根据传入所有指标类型 补充有没有数据的统计值
+     *
+     * @param metric  指标
+     * @param resList 结果
+     * @return 结果
+     */
+    default Map<String, StatisticRes> fillDictMetric(Metric metric, List<StatisticRes> resList) {
+        Map<String, String> dictMap = metric.getDictMap();
+        Map<String, StatisticRes> map = new LinkedHashMap<>(dictMap.size());
+        for (Map.Entry<String, String> entry : dictMap.entrySet()) {
+            map.put(entry.getKey(),
+                    new StatisticRes(metric.getColumn(), entry.getKey(), entry.getValue(), BigDecimal.ZERO));
+        }
+        for (StatisticRes res : resList) {
+            StatisticRes statistic = map.get(res.getMetric());
+            if (FuncUtil.isNotEmpty(statistic)) {
+                statistic.setStatistic(res.getStatistic());
+            } else {
+                map.put(res.getMetric(), res);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 对自定义条件结果进行排序
+     *
+     * @param resMap 结果
+     * @param sort   排序
+     * @return 结果
+     */
+    default List<StatisticRes> getConditionStatisticRes(Map<String, StatisticRes> resMap, Integer sort) {
+        List<StatisticRes> resList = new ArrayList<>(resMap.values());
+        if (FuncUtil.isNotEmpty(sort)) {
+            switch (PortalSortDict.of(sort)) {
+                case ASC:
+                    resList.sort(Comparator.comparing(StatisticRes::getStatistic));
+                    break;
+                case DESC:
+                    resList.sort((o1, o2) -> o2.getStatistic().compareTo(o1.getStatistic()));
+                    break;
+                default:
+                    break;
+            }
+        }
+        return resList;
+    }
+
+    /**
+     * 根据自定义指标 对多指标统计进行分组
+     *
+     * @param metricCondition 自定义指标
+     * @param res             排序后结果
+     * @return 分组后数据
+     */
+    default List<StatisticRes> groupByCondition(List<MetricCondition> metricCondition, List<StatisticRes> res) {
+        Map<String, StatisticRes> resultMap = new LinkedHashMap<>();
+        for (MetricCondition condition : metricCondition) {
+            resultMap.put(condition.getLabel(),
+                    new StatisticRes(null, condition.getValue(), condition.getLabel(), null));
+        }
+        for (StatisticRes re : res) {
+            String[] metricArray = re.getMetric().split(StringUtil.SPLITTER);
+            resultMap.get(metricArray[0]).getChildren().add(re);
+            re.setMetricLabel(re.getMetric());
+            re.setMetric(metricArray[1]);
+        }
+        return new ArrayList<>(resultMap.values());
+    }
+
+    /**
+     * 根据自定义指标 对多指标统计子项进行分组
+     *
+     * @param statisticColumn 指标列
+     * @param res             排序后结果
+     * @return 分组后数据
+     */
+    default List<StatisticRes> groupChildrenByCondition(List<KeyValueResVO> statisticColumn, List<StatisticRes> res) {
+        List<StatisticRes> resultList = new ArrayList<>();
+        for (StatisticRes re : res) {
+            resultList.add(re);
+            Map<String, StatisticRes> resultMap = new LinkedHashMap<>();
+            for (KeyValueResVO column : statisticColumn) {
+                resultMap.put(column.getLabel(),
+                        new StatisticRes(re.getMetric(), column.getValue(), column.getLabel(), re.getStatistic()));
+            }
+            for (StatisticRes child : re.getChildren()) {
+                String[] metricArray = child.getMetric().split(StringUtil.SPLITTER);
+                resultMap.get(metricArray[1]).getChildren().add(child);
+            }
+            re.setStatistic(BigDecimal.ZERO);
+            re.setChildren(new ArrayList<>(resultMap.values()));
+        }
+        return resultList;
     }
 
     /**
@@ -478,27 +475,32 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
     }
 
     /**
-     * 根据传入所有指标类型 补充有没有数据的统计值
+     * 指标统计分布
      *
-     * @param metric  指标
-     * @param resList 结果
-     * @return 结果
+     * @param req 指标统计分布
+     * @return 统计个数数据
      */
-    default Map<String, StatisticRes> fillDictMetric(Metric metric, List<StatisticRes> resList) {
-        Map<String, String> dictMap = metric.getDictMap();
-        Map<String, StatisticRes> map = new LinkedHashMap<>(dictMap.size());
-        for (Map.Entry<String, String> entry : dictMap.entrySet()) {
-            map.put(entry.getKey(),
-                    new StatisticRes(metric.getColumn(), entry.getKey(), entry.getValue(), BigDecimal.ZERO));
+    default List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req) {
+        if (!isAdmin()) {
+            beforeQuery(req);
         }
-        for (StatisticRes res : resList) {
-            StatisticRes statistic = map.get(res.getMetric());
-            if (FuncUtil.isNotEmpty(statistic)) {
-                statistic.setStatistic(res.getStatistic());
+        Validator.assertNotEmpty(req.getStatisticColumn(), ErrCodeSys.PA_DATA_NOT_EXIST, "统计数据");
+        if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
+            MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getMetricCondition(),
+                    req.getStatisticColumn());
+            wrapper.from(from -> buildAdvancedFromWrapper(req, from));
+            if (StringUtil.convertSwitch(req.getMajorCondition()) || FuncUtil.isEmpty(req.getMajorCondition())) {
+                return getConditionMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
+                        req.getStatisticColumn(), req.getSort());
             } else {
-                map.put(res.getMetric(), res);
+                return getMetricMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
+                        req.getStatisticColumn(), req.getSort());
             }
+        } else {
+            MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
+                    req.getSort());
+            wrapper.from(from -> buildAdvancedFromWrapper(req, from));
+            return getStatisticRes(wrapper, req.getMetricColumn(), req.getStatisticColumn());
         }
-        return map;
     }
 }
