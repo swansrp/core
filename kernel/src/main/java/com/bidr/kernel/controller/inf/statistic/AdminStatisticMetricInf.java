@@ -72,13 +72,13 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                 if (FuncUtil.isNotEmpty(statistic.getValue())) {
                     wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
                             parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
-                            StringUtil.joinWith(StringUtil.SPLITTER, metricCondition.getLabel(), statistic.getLabel())),
+                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())),
                             wrapper.getAlias()));
                 } else {
                     wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
                             parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
-                            StringUtil.joinWith(StringUtil.SPLITTER,
-                                    metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
+                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())),
+                            wrapper.getAlias()));
                 }
             }
         }
@@ -146,7 +146,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     // 无分类指标
                     for (MetricCondition condition : metricCondition) {
                         for (KeyValueResVO statistic : statisticColumn) {
-                            String value = StringUtil.joinWith(StringUtil.SPLITTER, condition.getLabel(),
+                            String value = StringUtil.join(condition.getLabel(),
                                     statistic.getLabel());
                             resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
                         }
@@ -218,10 +218,22 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                             }
                         }
                     }
+                    // 填充sql没有的分类
+                    for (Map.Entry<String, StatisticRes> entry : resMap.entrySet()) {
+                        if (FuncUtil.isEmpty(entry.getValue().getChildren())) {
+                            for (MetricCondition condition : metricCondition) {
+                                for (KeyValueResVO statistic : statisticColumn) {
+                                    String value = StringUtil.join(condition.getLabel(), statistic.getLabel());
+                                    entry.getValue().getChildren()
+                                            .add(new StatisticRes(null, value, value, BigDecimal.ZERO));
+                                }
+                            }
+                        }
+                    }
                 } else {
                     for (MetricCondition condition : metricCondition) {
                         for (KeyValueResVO statistic : statisticColumn) {
-                            String value = StringUtil.joinWith(StringUtil.SPLITTER, condition.getLabel(),
+                            String value = StringUtil.join(condition.getLabel(),
                                     statistic.getLabel());
                             resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
                         }
