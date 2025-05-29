@@ -364,8 +364,6 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             StatisticRes statistic = map.get(res.getMetric());
             if (FuncUtil.isNotEmpty(statistic)) {
                 statistic.setStatistic(res.getStatistic());
-            } else {
-                map.put(res.getMetric(), res);
             }
         }
         return map;
