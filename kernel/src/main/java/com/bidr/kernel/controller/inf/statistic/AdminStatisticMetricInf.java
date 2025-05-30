@@ -45,12 +45,11 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                 return getMetricMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
                         req.getStatisticColumn(), req.getSort());
             }
-
         } else {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
                     req.getSort());
             wrapper.from(from -> buildGeneralFromWrapper(req, from));
-            return getStatisticRes(wrapper, req.getMetricColumn(), req.getStatisticColumn());
+            return getStatisticRes(wrapper, req.getMetricColumn());
         }
     }
 
@@ -72,13 +71,11 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                 if (FuncUtil.isNotEmpty(statistic.getValue())) {
                     wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
                             parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
-                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())),
-                            wrapper.getAlias()));
+                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                 } else {
                     wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
                             parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
-                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())),
-                            wrapper.getAlias()));
+                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                 }
             }
         }
@@ -111,14 +108,23 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             if (FuncUtil.isNotEmpty(maps.get(0))) {
                 if (FuncUtil.isNotEmpty(metric)) {
                     // 根据第一个组数据初始化各个统计指标数组初始值
-                    for (Map.Entry<String, Object> entry : maps.get(0).entrySet()) {
-                        if (!entry.getKey().equals(metric.getColumn())) {
-                            resMap.put(entry.getKey(), new StatisticRes(null, entry.getKey(), entry.getKey()));
+                    for (MetricCondition condition : metricCondition) {
+                        for (KeyValueResVO column : statisticColumn) {
+                            String key = StringUtil.join(condition.getLabel(), column.getLabel());
+                            if (FuncUtil.isNotEmpty(maps.get(0).get(key))) {
+                                resMap.put(key, new StatisticRes(null, key, key));
+                            }
                         }
                     }
                     // 解析数据
                     for (Map<String, Object> map : maps) {
                         Object metricObj = map.get(metric.getColumn());
+                        // 剔除groupBy出来的 不在字典中的条目
+                        if (FuncUtil.isNotEmpty(metric.getDictMap())) {
+                            if (!metric.getDictMap().containsKey(metricObj)) {
+                                continue;
+                            }
+                        }
                         for (Map.Entry<String, Object> entry : map.entrySet()) {
                             StatisticRes res = resMap.get(entry.getKey());
                             if (FuncUtil.isNotEmpty(res) && !entry.getKey().equals(metric.getColumn())) {
@@ -146,8 +152,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     // 无分类指标
                     for (MetricCondition condition : metricCondition) {
                         for (KeyValueResVO statistic : statisticColumn) {
-                            String value = StringUtil.join(condition.getLabel(),
-                                    statistic.getLabel());
+                            String value = StringUtil.join(condition.getLabel(), statistic.getLabel());
                             resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
                         }
                     }
@@ -202,18 +207,23 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     // 解析数据
                     for (Map<String, Object> map : maps) {
                         String metricObj = map.get(metric.getColumn()).toString();
-                        for (Map.Entry<String, Object> entry : map.entrySet()) {
-                            StatisticRes res = resMap.get(metricObj);
-                            if (FuncUtil.isEmpty(res)) {
-                                res = new StatisticRes(metric.getColumn(), metricObj, null, BigDecimal.ZERO);
-                                resMap.put(metricObj, res);
+                        StatisticRes res = resMap.get(metricObj);
+                        // 按分类指标初始化结果
+                        if (FuncUtil.isEmpty(res)) {
+                            // 剔除不属于字典的数据
+                            if (FuncUtil.isNotEmpty(metric.getDictMap())) {
+                                continue;
                             }
-                            // 自定义条件成为分类指标数据下属
-                            if (!entry.getKey().equals(metric.getColumn())) {
-                                BigDecimal statistic = FuncUtil.isNotEmpty(entry.getValue()) ? new BigDecimal(
-                                        entry.getValue().toString()) : BigDecimal.ZERO;
-                                res.getChildren()
-                                        .add(new StatisticRes(null, entry.getKey(), entry.getKey(), statistic));
+                            res = new StatisticRes(metric.getColumn(), metricObj, null, BigDecimal.ZERO);
+                            resMap.put(metricObj, res);
+                        }
+                        // 按条件顺序填入分类指标下属数据
+                        for (MetricCondition condition : metricCondition) {
+                            for (KeyValueResVO column : statisticColumn) {
+                                String key = StringUtil.join(condition.getLabel(), column.getLabel());
+                                BigDecimal statistic = FuncUtil.isNotEmpty(map.get(key)) ? new BigDecimal(
+                                        map.get(key).toString()) : BigDecimal.ZERO;
+                                res.getChildren().add(new StatisticRes(null, key, key, statistic));
                                 res.setStatistic(res.getStatistic().add(statistic));
                             }
                         }
@@ -233,8 +243,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                 } else {
                     for (MetricCondition condition : metricCondition) {
                         for (KeyValueResVO statistic : statisticColumn) {
-                            String value = StringUtil.join(condition.getLabel(),
-                                    statistic.getLabel());
+                            String value = StringUtil.join(condition.getLabel(), statistic.getLabel());
                             resMap.put(value, new StatisticRes(null, value, statistic.getLabel(), BigDecimal.ZERO));
                         }
                     }
@@ -306,8 +315,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
      * @param metricColumns 分类指标
      * @return 字典分类指标统计结果
      */
-    default List<StatisticRes> getStatisticRes(MPJLambdaWrapper<ENTITY> wrapper, List<Metric> metricColumns,
-                                               List<KeyValueResVO> statisticColumns) {
+    default List<StatisticRes> getStatisticRes(MPJLambdaWrapper<ENTITY> wrapper, List<Metric> metricColumns) {
         List<Map<String, Object>> maps = getRepo().selectJoinMaps(wrapper);
         List<StatisticRes> resList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(maps)) {
@@ -510,7 +518,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
                     req.getSort());
             wrapper.from(from -> buildAdvancedFromWrapper(req, from));
-            return getStatisticRes(wrapper, req.getMetricColumn(), req.getStatisticColumn());
+            return getStatisticRes(wrapper, req.getMetricColumn());
         }
     }
 }
