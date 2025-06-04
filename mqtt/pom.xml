@@ -81,7 +81,7 @@
                     <!-- 指定该Main Class为全局的唯一入口 -->
                     <mainClass>com.bidr.mqtt.MqttApplication</mainClass>
                     <layout>ZIP</layout>
-                    <!--                    <classifier>exec</classifier>-->
+                    <classifier>exec</classifier>
                 </configuration>
                 <executions>
                     <execution>
