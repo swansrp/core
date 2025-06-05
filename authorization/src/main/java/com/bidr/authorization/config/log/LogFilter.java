@@ -123,6 +123,8 @@ public class LogFilter extends OncePerRequestFilter {
                 if (handlerMethod.getMethod().isAnnotationPresent(ApiTrace.class)) {
                     traceResponse = handlerMethod.getMethod().getAnnotation(ApiTrace.class).response();
                 }
+            } catch (ClassCastException ignored) {
+
             } catch (Exception e) {
                 log.error("", e);
             }
