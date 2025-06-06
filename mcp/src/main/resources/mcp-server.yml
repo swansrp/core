@@ -1,0 +1,3 @@
+# 如果使用 servlet 则使用与 springboot 相同的等口
+server.port: 8080
+server.contextPath: "/"
