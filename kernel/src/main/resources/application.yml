@@ -176,6 +176,8 @@ my:
         timeout: 30000
   project:
     name: sharp
+  mcp:
+    path: mcp
 app:
   projectId: sharp
   moduleId: ${spring.application.name}

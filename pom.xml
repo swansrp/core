@@ -23,6 +23,7 @@
         <module>qichacha</module>
         <module>mongo</module>
         <module>socket-io</module>
+        <module>mcp</module>
     </modules>
     <packaging>pom</packaging>
 
