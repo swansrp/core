@@ -1,5 +1,6 @@
 package com.bidr.mqtt.controller;
 
+import com.bidr.kernel.config.anno.IgnoreAuth;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.mqtt.service.MqttService;
 import io.swagger.annotations.Api;
@@ -25,31 +26,34 @@ public class MqttTestController {
 
     private final MqttService mqttService;
 
+    @IgnoreAuth
     @RequestMapping(path = {"/connect"}, method = {RequestMethod.POST})
     public void connect() {
         mqttService.connect();
         Resp.notice("成功连接MQTT服务器");
     }
 
+    @IgnoreAuth
     @RequestMapping(path = {"/disconnect"}, method = {RequestMethod.POST})
     public void disconnect() {
         mqttService.disconnect();
         Resp.notice("已与MQTT服务器断开");
-
-
     }
 
+    @IgnoreAuth
     @RequestMapping(path = {"/publish"}, method = {RequestMethod.POST})
     public void publish(int qos, boolean retained, String topic, String message) {
         mqttService.publish(qos, retained, topic, message);
     }
 
+    @IgnoreAuth
     @RequestMapping(path = {"/subscribe"}, method = {RequestMethod.POST})
     public void subscribe(int qos, String topic) {
         mqttService.subscribe(topic, qos);
         Resp.notice("已成功订阅: " + topic);
     }
 
+    @IgnoreAuth
     @RequestMapping(path = {"/unsubscribe"}, method = {RequestMethod.POST})
     public void unsubscribe(String topic) {
         mqttService.unsubscribe(topic);
