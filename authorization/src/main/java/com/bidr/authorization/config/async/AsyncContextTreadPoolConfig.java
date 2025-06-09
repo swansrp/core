@@ -5,6 +5,7 @@ import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.config.log.MdcConfig;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TokenHolder;
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
@@ -17,6 +18,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -58,6 +60,24 @@ public class AsyncContextTreadPoolConfig implements AsyncConfigurer {
         return new SpringAsyncExceptionHandler();
     }
 
+    private Map<String, String> getMdcMap() {
+        Map<String, String> map = MDC.getCopyOfContextMap();
+        if (FuncUtil.isEmpty(map)) {
+            map = new HashMap<>(0);
+        }
+        return map;
+    }
+
+    private RequestAttributes getMvcContext() {
+        RequestAttributes attributes = null;
+        try {
+            attributes = RequestContextHolder.currentRequestAttributes();
+        } catch (IllegalStateException ignore) {
+
+        }
+        return attributes;
+    }
+
     static class SpringAsyncExceptionHandler implements AsyncUncaughtExceptionHandler {
         @Override
         public void handleUncaughtException(Throwable throwable, Method method, Object... obj) {
@@ -70,8 +90,8 @@ public class AsyncContextTreadPoolConfig implements AsyncConfigurer {
         @Override
         public Runnable decorate(Runnable runnable) {
             // 复制线程上下文信息
-            Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
-            RequestAttributes context = RequestContextHolder.currentRequestAttributes();
+            Map<String, String> copyOfContextMap = getMdcMap();
+            RequestAttributes context = getMvcContext();
             AccountInfo accountInfo = AccountContext.get();
             TokenInfo tokenInfo = TokenHolder.get();
             return () -> {

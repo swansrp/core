@@ -16,16 +16,17 @@ import com.bidr.authorization.service.sms.MsgVerificationService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.captcha.CaptchaVerificationReq;
 import com.bidr.authorization.vo.msg.MsgVerificationReq;
+import com.bidr.kernel.config.anno.IgnoreAuth;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.platform.config.anno.IgnoreAuth;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
 import org.springframework.context.ApplicationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -70,10 +71,13 @@ public class AuthInterceptor implements HandlerInterceptor {
         HandlerMethod handlerMethod = (HandlerMethod) handler;
         Method method = handlerMethod.getMethod();
         Class<?> clazz = handlerMethod.getBeanType();
-        validateClientType(request);
-        validateAuth(request, method, clazz);
-        validateCaptcha(request, method);
-        validateMsgCode(request, method);
+        if (!BasicErrorController.class.isAssignableFrom(
+                clazz)) {
+            validateClientType(request);
+            validateAuth(request, method, clazz);
+            validateCaptcha(request, method);
+            validateMsgCode(request, method);
+        }
         return true;
     }
 
