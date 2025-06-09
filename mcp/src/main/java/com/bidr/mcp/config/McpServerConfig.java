@@ -27,13 +27,12 @@ import java.util.List;
 
 @Configuration
 public class McpServerConfig {
-
-    @Value("${my.mcp.path:mcp}")
+    @Value("${my.mcp.path:/mcp}")
     private String mcpPath;
 
     @PostConstruct
     public void start() {
-        Solon.start(McpServerConfig.class, new String[]{"--cfg=mcp-server.yml"});
+        Solon.start(McpServerConfig.class, new String[]{"--cfg=mcp-server.properties"});
     }
 
     @PreDestroy
@@ -73,7 +72,8 @@ public class McpServerConfig {
     public FilterRegistrationBean<SolonServletFilter> mcpServerFilter() {
         FilterRegistrationBean<SolonServletFilter> filter = new FilterRegistrationBean<>();
         filter.setName("SolonFilter");
-        filter.addUrlPatterns("/" + mcpPath + "/*");
+        String path = mcpPath + "/*";
+        filter.addUrlPatterns(path);
         filter.setFilter(new SolonServletFilter());
         return filter;
     }
