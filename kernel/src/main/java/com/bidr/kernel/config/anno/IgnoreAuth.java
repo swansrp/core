@@ -1,4 +1,4 @@
-package com.bidr.platform.config.anno;
+package com.bidr.kernel.config.anno;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
