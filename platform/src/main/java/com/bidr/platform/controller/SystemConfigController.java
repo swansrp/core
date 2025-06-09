@@ -1,6 +1,6 @@
 package com.bidr.platform.controller;
 
-import com.bidr.platform.config.anno.IgnoreAuth;
+import com.bidr.kernel.config.anno.IgnoreAuth;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
