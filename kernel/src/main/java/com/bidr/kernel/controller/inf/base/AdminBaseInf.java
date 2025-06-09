@@ -3,8 +3,11 @@ package com.bidr.kernel.controller.inf.base;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.service.PortalCommonService;
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+
+import java.beans.Introspector;
 
 /**
  * Title: AdminBaseInf
@@ -15,15 +18,6 @@ import com.bidr.kernel.utils.ReflectionUtil;
  */
 
 public interface AdminBaseInf<ENTITY, VO> {
-    /**
-     * 数据库字段类
-     *
-     * @return 字段类
-     */
-    default Class<ENTITY> getEntityClass() {
-        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
-    }
-
     /**
      * 显示类
      *
@@ -60,5 +54,17 @@ public interface AdminBaseInf<ENTITY, VO> {
      *
      * @return repo
      */
-    BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
+    default BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
+        return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) BeanUtil.getBean(
+                Introspector.decapitalize(getEntityClass().getSimpleName()) + "Service");
+    }
+
+    /**
+     * 数据库字段类
+     *
+     * @return 字段类
+     */
+    default Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
 }

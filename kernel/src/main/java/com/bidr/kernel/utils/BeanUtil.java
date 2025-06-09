@@ -24,6 +24,7 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.*;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.web.context.ContextLoader;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.ServletRequestHandledEvent;
 
@@ -53,6 +54,10 @@ public class BeanUtil implements ApplicationContextAware, ApplicationListener<Ap
      * @return bean 对象
      */
     public static <T> T getBean(Class<T> clazz) {
+        if (ctx == null) {
+            log.debug("ApplicationContext未初始化，通过ContextLoader获取!");
+            ctx = ContextLoader.getCurrentWebApplicationContext();
+        }
         if (ctx == null) {
             log.info("Call BeanUtils too early");
             return null;

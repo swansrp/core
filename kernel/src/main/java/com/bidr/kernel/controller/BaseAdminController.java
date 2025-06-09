@@ -32,6 +32,7 @@ import springfox.documentation.annotations.ApiIgnore;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.beans.Introspector;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -140,30 +141,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
-    @ApiOperation("汇总")
-    @RequestMapping(value = "/general/summary", method = RequestMethod.POST)
-    public Map<String, Object> generalSummary(@RequestBody GeneralSummaryReq req) {
-        return summaryByGeneralReq(req);
-    }
-
-    @Override
-    @ApiIgnore
-    @ApiOperation("个数统计")
-    @RequestMapping(value = "/general/count", method = RequestMethod.POST)
-    public Long generalCount(@RequestBody QueryConditionReq req) {
-        return countByGeneralReq(req);
-    }
-
-    @Override
-    @ApiIgnore
-    @ApiOperation("指标统计")
-    @RequestMapping(value = "/general/statistic", method = RequestMethod.POST)
-    public List<StatisticRes> generalStatistic(@RequestBody GeneralStatisticReq req) {
-        return statisticByGeneralReq(req);
-    }
-
-    @Override
-    @ApiIgnore
     @ApiOperation("高级查询数据")
     @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
     public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
@@ -182,10 +159,17 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
-    @ApiOperation("汇总")
-    @RequestMapping(value = "/advanced/summary", method = RequestMethod.POST)
-    public Map<String, Object> advancedSummary(@RequestBody AdvancedSummaryReq req) {
-        return summaryByAdvancedReq(req);
+    public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
+        return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
+                Introspector.decapitalize(getEntityClass().getSimpleName()) + "Service");
+    }
+
+    @Override
+    @ApiIgnore
+    @ApiOperation("个数统计")
+    @RequestMapping(value = "/general/count", method = RequestMethod.POST)
+    public Long generalCount(@RequestBody QueryConditionReq req) {
+        return countByGeneralReq(req);
     }
 
     @Override
@@ -194,6 +178,30 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @RequestMapping(value = "/advanced/count", method = RequestMethod.POST)
     public Long advancedCount(@RequestBody AdvancedQueryReq req) {
         return countByAdvancedReq(req);
+    }
+
+    @Override
+    @ApiIgnore
+    @ApiOperation("汇总")
+    @RequestMapping(value = "/general/summary", method = RequestMethod.POST)
+    public Map<String, Object> generalSummary(@RequestBody GeneralSummaryReq req) {
+        return summaryByGeneralReq(req);
+    }
+
+    @Override
+    @ApiIgnore
+    @ApiOperation("汇总")
+    @RequestMapping(value = "/advanced/summary", method = RequestMethod.POST)
+    public Map<String, Object> advancedSummary(@RequestBody AdvancedSummaryReq req) {
+        return summaryByAdvancedReq(req);
+    }
+
+    @Override
+    @ApiIgnore
+    @ApiOperation("指标统计")
+    @RequestMapping(value = "/general/statistic", method = RequestMethod.POST)
+    public List<StatisticRes> generalStatistic(@RequestBody GeneralStatisticReq req) {
+        return statisticByGeneralReq(req);
     }
 
     @Override
@@ -294,12 +302,5 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     public Object importUpdateProgress(@RequestParam(required = false) String name) {
         Validator.assertNotNull(getPortalService(), ErrCodeSys.PA_DATA_NOT_SUPPORT, "获取导入修改进度操作");
         return getPortalService().getUploadProgressRes(name);
-    }
-
-    @Override
-    @ApiIgnore
-    public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
-        return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
-                StrUtil.lowerFirst(getEntityClass().getSimpleName()) + "Service");
     }
 }

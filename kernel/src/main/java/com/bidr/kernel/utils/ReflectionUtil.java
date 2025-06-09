@@ -218,28 +218,6 @@ public class ReflectionUtil {
         return target;
     }
 
-    public static boolean existedField(Class<?> aClass, String fieldName) {
-        List<Field> fieldList = getFields(aClass);
-        for (Field field : fieldList) {
-            if (fieldName.equals(field.getName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static List<Field> getFields(Class<?> aClass) {
-        List<Field> fieldList = new ArrayList<>();
-        Class<?> tempClass = aClass;
-        // 当父类为null的时候说明到达了最上层的父类(Object类).
-        while (tempClass != null) {
-            fieldList.addAll(Arrays.asList(tempClass.getDeclaredFields()));
-            // 得到父类,然后赋给自己
-            tempClass = tempClass.getSuperclass();
-        }
-        return fieldList;
-    }
-
     public static <T> T deltaCopy(Object source, T dis) {
         List<Field> fields = getFields(source);
         for (Field field : fields) {
@@ -291,6 +269,18 @@ public class ReflectionUtil {
             throw new ServiceException("设置对象单个属性值发生异常", e);
         }
         return true;
+    }
+
+    public static List<Field> getFields(Class<?> aClass) {
+        List<Field> fieldList = new ArrayList<>();
+        Class<?> tempClass = aClass;
+        // 当父类为null的时候说明到达了最上层的父类(Object类).
+        while (tempClass != null) {
+            fieldList.addAll(Arrays.asList(tempClass.getDeclaredFields()));
+            // 得到父类,然后赋给自己
+            tempClass = tempClass.getSuperclass();
+        }
+        return fieldList;
     }
 
     public static Field getField(Class<?> aClass, String fieldName) {
@@ -626,7 +616,7 @@ public class ReflectionUtil {
         return res;
     }
 
-    private static String convertDateFormat(Field field, Date value) {
+    public static String convertDateFormat(Field field, Date value) {
         SimpleDateFormat format = new SimpleDateFormat(DateUtil.DATE_TIME_NORMAL);
         String res = format.format(value);
         DateTimeFormat dateTimeFormatAnnotation = field.getAnnotation(DateTimeFormat.class);
@@ -839,6 +829,11 @@ public class ReflectionUtil {
         return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
     }
 
+    public static <T, K> K copyAndMerge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
+        K copy = (K) copy(dist, dist.getClass());
+        return merge(source, copy, ignoreNull);
+    }
+
     public static <T, K> K merge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
         for (Field field : getFields(dist)) {
             if (Modifier.isFinal(field.getModifiers())) {
@@ -869,8 +864,13 @@ public class ReflectionUtil {
         return dist;
     }
 
-    public static <T, K> K copyAndMerge(@NotNull T source, @NotNull K dist, boolean ignoreNull) {
-        K copy = (K) copy(dist, dist.getClass());
-        return merge(source, copy, ignoreNull);
+    public static boolean existedField(Class<?> aClass, String fieldName) {
+        List<Field> fieldList = getFields(aClass);
+        for (Field field : fieldList) {
+            if (fieldName.equals(field.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -1,4 +1,3 @@
-
 # 开发环境配置
 server: # 服务器的HTTP端口，默认为8080
   port: 8080
@@ -177,7 +176,7 @@ my:
   project:
     name: sharp
   mcp:
-    path: mcp
+    path: /mcp
 app:
   projectId: sharp
   moduleId: ${spring.application.name}
