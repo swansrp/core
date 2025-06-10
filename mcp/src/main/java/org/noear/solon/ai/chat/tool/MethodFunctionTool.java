@@ -26,6 +26,8 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.ContextEmpty;
 import org.noear.solon.core.util.Assert;
 import org.noear.solon.core.wrap.MethodWrap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -41,6 +43,7 @@ import java.util.Map;
  * @since 3.1
  */
 public class MethodFunctionTool implements FunctionTool {
+    static final Logger log = LoggerFactory.getLogger(MethodFunctionTool.class);
     private final BeanWrap beanWrap;
     private final MethodWrap methodWrap;
 
@@ -51,8 +54,7 @@ public class MethodFunctionTool implements FunctionTool {
     private final ToolCallResultConverter resultConverter;
     private final String inputSchema;
     private final String mimeType;
-    private String outputSchema;
-    private final boolean enableOutputSchema;
+    private final String outputSchema;
 
     public MethodFunctionTool(BeanWrap beanWrap, Method method, ToolMapping mapping) {
         this.beanWrap = beanWrap;
@@ -66,7 +68,6 @@ public class MethodFunctionTool implements FunctionTool {
         this.name = Utils.annoAlias(mapping.name(), method.getName());
         this.description = mapping.description();
         this.returnDirect = mapping.returnDirect();
-        this.enableOutputSchema = mapping.enableOutputSchema();
 
         Produces producesAnno = method.getAnnotation(Produces.class);
         if (producesAnno != null) {
@@ -96,11 +97,10 @@ public class MethodFunctionTool implements FunctionTool {
             }
         }
 
-        inputSchema = ToolSchemaUtil.buildToolParametersNode(params, new ONode())
-                .toJson();
+        inputSchema = ToolSchemaUtil.buildToolParametersNode(params, new ONode()).toJson();
 
         // 输出参数 outputSchema
-        if (enableOutputSchema) {
+        {
             Type returnType = method.getGenericReturnType();
             ONode outputSchemaNode = new ONode();
             // 如果返回类型，则需要处理
@@ -152,6 +152,17 @@ public class MethodFunctionTool implements FunctionTool {
      */
     @Override
     public String handle(Map<String, Object> args) throws Throwable {
+        try {
+            return doHandle(args);
+        } catch (Throwable ex) {
+            if (log.isWarnEnabled()) {
+                log.warn("Tool handle error, name: '{}'", name, ex);
+            }
+            throw ex;
+        }
+    }
+
+    private String doHandle(Map<String, Object> args) throws Throwable {
         Context ctx = Context.current();
         if (ctx == null) {
             ctx = new ContextEmpty();
@@ -159,8 +170,7 @@ public class MethodFunctionTool implements FunctionTool {
 
         ctx.attrSet(MethodExecuteHandler.MCP_BODY_ATTR, args);
 
-        ctx.result = MethodExecuteHandler.getInstance()
-                .executeHandle(ctx, beanWrap.get(), methodWrap);
+        ctx.result = MethodExecuteHandler.getInstance().executeHandle(ctx, beanWrap.get(), methodWrap);
 
         if (resultConverter == null) {
             return String.valueOf(ctx.result);
@@ -171,12 +181,8 @@ public class MethodFunctionTool implements FunctionTool {
 
     @Override
     public String toString() {
-        return "MethodFunctionTool{" +
-                "name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", returnDirect=" + returnDirect +
-                ", inputSchema=" + inputSchema() +
-                ", outputSchema=" + outputSchema() +
-                '}';
+        return "MethodFunctionTool{" + "name='" + name + '\'' + ", description='" + description + '\'' +
+                ", returnDirect=" + returnDirect + ", inputSchema=" + inputSchema() + ", outputSchema=" +
+                outputSchema() + '}';
     }
 }

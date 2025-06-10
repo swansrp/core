@@ -29,9 +29,12 @@ import java.util.List;
 public class McpServerConfig {
     @Value("${my.mcp.path:/mcp}")
     private String mcpPath;
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
 
     @PostConstruct
     public void start() {
+        System.setProperty("server.contextPath", contextPath);
         Solon.start(McpServerConfig.class, new String[]{"--cfg=mcp-server.properties"});
     }
 
