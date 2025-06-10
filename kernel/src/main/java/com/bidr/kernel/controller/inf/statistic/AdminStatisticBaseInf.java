@@ -28,7 +28,7 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
     default MPJLambdaWrapper<ENTITY> buildGeneralFromWrapper(QueryConditionReq req, MPJLambdaWrapper<ENTITY> from) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
-            Map<String, String> aliasMap = null;
+            Map<String, String> aliasMap = getPortalService().getAliasMap();
             if (FuncUtil.isNotEmpty(req.getSelectColumnCondition())) {
                 aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(), getPortalService().getAliasMap(),
                         getPortalService().getSelectApplyMap(), from);
@@ -51,7 +51,7 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
     default MPJLambdaWrapper<ENTITY> buildAdvancedFromWrapper(AdvancedQueryReq req, MPJLambdaWrapper<ENTITY> from) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
             getPortalService().getJoinWrapper(from);
-            Map<String, String> aliasMap = null;
+            Map<String, String> aliasMap = getPortalService().getAliasMap();
             if (FuncUtil.isNotEmpty(req.getSelectColumnCondition())) {
                 aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(), getPortalService().getAliasMap(),
                         getPortalService().getSelectApplyMap(), from);
@@ -62,6 +62,4 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
         }
         return from;
     }
-
-
 }
