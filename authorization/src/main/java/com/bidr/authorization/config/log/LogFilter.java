@@ -44,23 +44,6 @@ import static com.bidr.platform.config.log.LogMdcConstant.*;
 @Component
 public class LogFilter extends OncePerRequestFilter {
 
-    public static boolean isJsonResponse(HttpServletResponse response) {
-        return response.getContentType().contains("json");
-    }
-
-    public static String extractResultPayload(MultiReadHttpServletResponse response) {
-        byte[] buf = response.getBody();
-        String payload = "";
-        if (buf.length > 0) {
-            try {
-                payload = new String(buf, 0, buf.length, response.getCharacterEncoding());
-            } catch (UnsupportedEncodingException ex) {
-                payload = "[unknown]";
-            }
-        }
-        return payload;
-    }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
@@ -85,11 +68,14 @@ public class LogFilter extends OncePerRequestFilter {
                 filterChain.doFilter(temRequest, temResponse);
                 return;
             }
-
-            TokenInfo tokenInfo = AuthTokenUtil.extractToken(request);
-
+            TokenInfo tokenInfo = null;
+            try {
+                tokenInfo = AuthTokenUtil.extractToken(request);
+                MDC.put(LOG_TOKEN, tokenInfo == null ? "" : tokenInfo.getToken());
+            } catch (Exception e) {
+                log.debug("token解析失败", e);
+            }
             // 记录请求的消息体
-            MDC.put(LOG_TOKEN, tokenInfo == null ? "" : tokenInfo.getToken());
             MDC.put(REQUEST_ID, requestId);
             MDC.put(URI, request.getRequestURI());
             MDC.put(METHOD, request.getMethod());
@@ -174,6 +160,23 @@ public class LogFilter extends OncePerRequestFilter {
             sb.append("]");
         }
         return sb.toString();
+    }
+
+    public static boolean isJsonResponse(HttpServletResponse response) {
+        return response.getContentType().contains("json");
+    }
+
+    public static String extractResultPayload(MultiReadHttpServletResponse response) {
+        byte[] buf = response.getBody();
+        String payload = "";
+        if (buf.length > 0) {
+            try {
+                payload = new String(buf, 0, buf.length, response.getCharacterEncoding());
+            } catch (UnsupportedEncodingException ex) {
+                payload = "[unknown]";
+            }
+        }
+        return payload;
     }
 
     private String formatGetRspMsg(String totalTime, String resultJson, boolean detail) {
