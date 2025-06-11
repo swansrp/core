@@ -18,7 +18,7 @@ package org.noear.solon.ai.chat.tool;
 import org.noear.solon.Solon;
 import org.noear.solon.ai.annotation.ToolMapping;
 import org.noear.solon.core.BeanWrap;
-import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.aop.support.AopUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -44,11 +44,10 @@ public class MethodToolProvider implements ToolProvider {
 
     public MethodToolProvider(BeanWrap beanWrap) {
         //添加带注释的工具
-        for (Method method : beanWrap.rawClz().getMethods()) {
+        for (Method method : AopUtils.getTargetClass(beanWrap.raw()).getMethods()) {
             //兼容 mvc 注解
-            ToolMapping toolMapping = AnnotationUtils.findAnnotation(method, ToolMapping.class);
-            if (toolMapping != null) {
-                MethodFunctionTool func = new MethodFunctionTool(beanWrap, method, toolMapping);
+            if (method.isAnnotationPresent(ToolMapping.class)) {
+                MethodFunctionTool func = new MethodFunctionTool(beanWrap, method);
                 tools.add(func);
             }
         }
