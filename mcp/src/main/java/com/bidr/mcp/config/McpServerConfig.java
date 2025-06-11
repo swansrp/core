@@ -7,6 +7,7 @@ import org.noear.solon.ai.mcp.server.annotation.McpServerEndpoint;
 import org.noear.solon.ai.mcp.server.prompt.MethodPromptProvider;
 import org.noear.solon.ai.mcp.server.resource.MethodResourceProvider;
 import org.noear.solon.web.servlet.SolonServletFilter;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -49,18 +50,18 @@ public class McpServerConfig {
     public McpServerConfig init(List<IMcpServerEndpoint> serverEndpoints) {
         //提取实现容器里 IMcpServerEndpoint 接口的 bean ，并注册为服务端点
         for (IMcpServerEndpoint serverEndpoint : serverEndpoints) {
-            McpServerEndpoint anno = AnnotationUtils.findAnnotation(serverEndpoint.getClass(), McpServerEndpoint.class);
+            Class<?> targetClass = AopUtils.getTargetClass(serverEndpoint);
+            McpServerEndpoint anno = AnnotationUtils.findAnnotation(targetClass, McpServerEndpoint.class);
 
             if (anno == null) {
                 continue;
             }
 
-            McpServerEndpointProvider serverEndpointProvider = McpServerEndpointProvider.builder()
-                    .from(serverEndpoint.getClass(), anno).build();
+            McpServerEndpointProvider serverEndpointProvider = McpServerEndpointProvider.builder().from(targetClass, anno).build();
 
-            serverEndpointProvider.addTool(new MethodToolProvider(serverEndpoint));
-            serverEndpointProvider.addResource(new MethodResourceProvider(serverEndpoint));
-            serverEndpointProvider.addPrompt(new MethodPromptProvider(serverEndpoint));
+            serverEndpointProvider.addTool(new MethodToolProvider(targetClass, serverEndpoint));
+            serverEndpointProvider.addResource(new MethodResourceProvider(targetClass, serverEndpoint));
+            serverEndpointProvider.addPrompt(new MethodPromptProvider(targetClass, serverEndpoint));
 
             serverEndpointProvider.postStart();
 
