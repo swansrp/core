@@ -11,7 +11,7 @@
 
     <artifactId>mcp</artifactId>
     <version>${jarVersion}</version>
-    
+
     <profiles>
         <profile>
             <id>development</id>
@@ -22,7 +22,7 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <solon.version>3.3.2</solon.version>
+                <solon.version>3.3.3-M2</solon.version>
                 <kernel.version>${jarVersion}</kernel.version>
             </properties>
         </profile>
@@ -35,8 +35,8 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <solon.version>3.3.2</solon.version>
-                <kernel.version>20250609174220-92</kernel.version>
+                <solon.version>3.3.3-M2</solon.version>
+                <kernel.version>20250613133440-95</kernel.version>
             </properties>
         </profile>
     </profiles>
