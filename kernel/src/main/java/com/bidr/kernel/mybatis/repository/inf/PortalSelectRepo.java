@@ -479,16 +479,29 @@ public interface PortalSelectRepo<T> {
      */
 
     default String getColumnName(String property, Map<String, String> aliasMap, Class<?> entityClass) {
+        return getColumnName(property, aliasMap, entityClass, FuncUtil.isNotEmpty(aliasMap) ? "t" : "");
+    }
+
+    /**
+     * 获取数据库字段名
+     *
+     * @param property    字段名
+     * @param aliasMap    别名表
+     * @param entityClass 所属数据库entity
+     * @param alias       别名
+     * @return 字段名
+     */
+    default String getColumnName(String property, Map<String, String> aliasMap, Class<?> entityClass, String alias) {
         if (FuncUtil.isNotEmpty(property)) {
             String columnName = null;
             if (FuncUtil.isNotEmpty(aliasMap)) {
                 columnName = aliasMap.get(property);
             }
             if (FuncUtil.isEmpty(columnName)) {
-                if (FuncUtil.isEmpty(aliasMap)) {
+                if (FuncUtil.isEmpty(alias)) {
                     columnName = getColumnName(property, entityClass);
                 } else {
-                    columnName = "t." + getColumnName(property, entityClass);
+                    columnName = alias + "." + getColumnName(property, entityClass);
                 }
             }
             return columnName;
