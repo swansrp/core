@@ -63,6 +63,9 @@ public class QueryConditionReq extends QueryReqVO {
             condition.setProperty(property);
             condition.setRelation(relation.getValue());
             condition.setValue(data);
+            if (FuncUtil.isEmpty(conditionList)) {
+                conditionList = new ArrayList<>();
+            }
             this.conditionList.add(condition);
         }
     }

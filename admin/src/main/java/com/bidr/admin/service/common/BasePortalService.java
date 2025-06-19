@@ -343,6 +343,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 wrapper.getSelectColum()
                         .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
             } else {
+                if (FuncUtil.isEmpty(sqlFieldName)) {
+                    sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
+                }
                 wrapper.getSelectColum()
                         .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
             }
