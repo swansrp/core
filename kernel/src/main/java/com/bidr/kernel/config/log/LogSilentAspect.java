@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LogSilentAspect {
 
-    @Pointcut("@annotation(com.bidr.kernel.config.log.LogSilent)")
+    @Pointcut("@annotation(com.bidr.kernel.config.log.LogSilent)||@within(com.bidr.kernel.config.log.LogSilent)")
     public void logSilent() {
     }
 
