@@ -158,6 +158,18 @@ public class HttpUtil {
         return buffer;
     }
 
+    public static void setExcelExportContent(HttpServletRequest request, HttpServletResponse response,
+                                             String fileName) {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        int suffixIndex = fileName.lastIndexOf(".");
+        if (suffixIndex != -1) {
+            String suffix = fileName.substring(suffixIndex);
+            fileName = fileName.substring(0, suffixIndex) + "-" + DateUtil.formatDate(new Date(), DateUtil.DATE_TIME) +
+                    suffix;
+        }
+        contentDisposition(fileName, request, response);
+    }
+
     /**
      * @param request
      * @param response
@@ -185,24 +197,16 @@ public class HttpUtil {
         }
     }
 
-    public static void setExcelExportContent(HttpServletRequest request, HttpServletResponse response,
-                                             String fileName) {
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        int suffixIndex = fileName.lastIndexOf(".");
-        if (suffixIndex != -1) {
-            String suffix = fileName.substring(suffixIndex);
-            fileName = fileName.substring(0, suffixIndex) + "-" + DateUtil.formatDate(new Date(), DateUtil.DATE_TIME) +
-                    suffix;
-        }
-        contentDisposition(fileName, request, response);
-    }
-
     public static void export(HttpServletRequest request, HttpServletResponse response, String contentType,
                               String charset, String fileName, byte[] buffers) {
         contentDisposition(fileName, request, response);
         // response.reset();
         response.setContentType(contentType);
         response.setCharacterEncoding(charset);
+        export(response, buffers);
+    }
+
+    public static void export(HttpServletResponse response, byte[] buffers) {
         try (OutputStream outputStream = response.getOutputStream()) {
             outputStream.write(buffers);
             outputStream.flush();
@@ -212,7 +216,8 @@ public class HttpUtil {
     }
 
     public static boolean systemRequest(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI().matches(".*/(actuator|webjars|v3|captcha.*|csrf|swagger.*|error|web/log/fetch).*");
+        return httpServletRequest.getRequestURI()
+                .matches(".*/(actuator|webjars|v3|captcha.*|csrf|swagger.*|error|web/log/fetch).*");
     }
 
     public static InputStream getStream(String url) throws IOException {

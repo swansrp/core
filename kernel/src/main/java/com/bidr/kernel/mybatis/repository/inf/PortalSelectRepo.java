@@ -544,7 +544,7 @@ public interface PortalSelectRepo<T> {
                         try {
                             if (Context.toBoolean(context.evaluateString(scope, column.getCondition(), "", 1, null))) {
                                 String format = column.isComplex() ? complexScriptFormat : simpleScriptFormat;
-                                String script = String.format(format, column.getScript());
+                                String script = String.format(format, column.getScript().replace("'", "\\'"));
                                 String s = Context.toString(context.evaluateString(scope, script, "", 1, null));
                                 if (FuncUtil.isNotEmpty(s)) {
                                     select.append(column.getPrefix()).append(s).append(column.getSuffix());
