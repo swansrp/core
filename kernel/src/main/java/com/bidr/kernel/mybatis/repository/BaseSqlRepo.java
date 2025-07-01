@@ -168,7 +168,7 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         if (FuncUtil.isNotEmpty(condition)) {
             parseAdvancedQuery(condition, selectAliasMap, wrapper);
         }
-        parseSort(sortList, aliasMap, wrapper);
+        parseSort(sortList, selectAliasMap, wrapper);
         return selectJoinList(vo, wrapper);
     }
 
