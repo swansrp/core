@@ -6,6 +6,7 @@ import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -33,6 +34,8 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
                 wrapper.getSelectColum()
                         .add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
             }
+        } else {
+            return new HashMap<>(0);
         }
         wrapper.from(from -> buildGeneralFromWrapper(req, from));
         return getRepo().selectJoinMap(wrapper);
@@ -54,6 +57,8 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
                 wrapper.getSelectColum()
                         .add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
             }
+        } else {
+            return new HashMap<>(0);
         }
         wrapper.from(from -> buildAdvancedFromWrapper(req, from));
         return getRepo().selectJoinMap(wrapper);
