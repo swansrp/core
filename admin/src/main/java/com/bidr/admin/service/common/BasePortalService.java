@@ -87,6 +87,11 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     protected SysConfigCacheService sysConfigCacheService;
 
     @Override
+    public PortalCommonService<ENTITY, VO> getPortalService() {
+        return this;
+    }
+
+    @Override
     public void run(String... args) {
         for (Field field : ReflectionUtil.getFields(getVoClass())) {
             setAlias(field, aliasMap);
