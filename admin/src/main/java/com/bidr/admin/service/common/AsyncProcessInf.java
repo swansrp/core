@@ -31,7 +31,6 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
     default void handle(List<T> items) {
         if (FuncUtil.isNotEmpty(items)) {
             startUploadProgress(items.size());
-            TransactionStatus status = getTransactionStatus();
             startValidateRecord(items.size());
             List<T> entityList = new ArrayList<>();
             int i = 1;
@@ -41,6 +40,7 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
                     addUploadProgress(i++);
                 }
             }
+            TransactionStatus status = getTransactionStatus();
             try {
                 startSaveRecord();
                 i = 1;
