@@ -7,6 +7,7 @@ import com.bidr.admin.config.PortalSortField;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.diboot.core.binding.annotation.BindField;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -56,7 +57,7 @@ public class BaseVO {
     @ApiModelProperty(value = "更新人")
     private String updateName;
 
-    @PortalDisplayNoneField
+    @JsonIgnore
     @ApiModelProperty(value = "有效性")
     private String valid;
 }
