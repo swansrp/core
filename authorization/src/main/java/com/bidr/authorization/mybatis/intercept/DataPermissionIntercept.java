@@ -5,6 +5,7 @@ import com.bidr.authorization.mybatis.permission.DataPermissionHolder;
 import com.bidr.authorization.mybatis.permission.DataPermissionInf;
 import com.bidr.authorization.mybatis.permission.NoDataPermission;
 import com.bidr.kernel.mybatis.intercept.BaseIntercept;
+import com.bidr.kernel.mybatis.intercept.ExecutorQueryIntercept;
 import com.bidr.kernel.mybatis.parse.SqlParseUtil;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
@@ -16,6 +17,7 @@ import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.springframework.stereotype.Component;
@@ -33,7 +35,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class DataPermissionIntercept extends BaseIntercept {
+public class DataPermissionIntercept implements ExecutorQueryIntercept {
 
     @Override
     public void proceed(MappedStatement mappedStatement, Object parameter, RowBounds rowBounds,

@@ -10,6 +10,7 @@ import org.apache.ibatis.executor.resultset.ResultSetHandler;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
@@ -32,16 +33,20 @@ import java.util.List;
  * @since 2022/7/25 14:54
  */
 @Slf4j
-@Intercepts({@Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class,
-        RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}), @Signature(type =
-        StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}), @Signature(type =
-        ParameterHandler.class, method = "setParameters", args = {PreparedStatement.class}), @Signature(type =
-        ResultSetHandler.class, method = "handleResultSets", args = {Statement.class})})
+@Intercepts({@Signature(type = Executor.class, method = "query",
+                        args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class,
+                                CacheKey.class, BoundSql.class}),
+             @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
+             @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}),
+             @Signature(type = ParameterHandler.class, method = "setParameters", args = {PreparedStatement.class}),
+             @Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {Statement.class})})
 @Component
 public class MybatisInterceptManager implements Interceptor {
 
     @Autowired(required = false)
-    private List<ExecutorIntercept> executorIntercepts;
+    private List<ExecutorQueryIntercept> executorQueryIntercepts;
+    @Autowired(required = false)
+    private List<ExecutorUpdateIntercept> executorUpdateIntercepts;
     @Autowired(required = false)
     private List<StatementIntercept> statementIntercepts;
     @Autowired(required = false)
@@ -54,13 +59,23 @@ public class MybatisInterceptManager implements Interceptor {
         if (invocation.getTarget() instanceof Executor) {
             MappedStatement mappedStatement = (MappedStatement) invocation.getArgs()[0];
             Object parameter = invocation.getArgs()[1];
-            RowBounds rowBounds = (RowBounds) invocation.getArgs()[2];
-            ResultHandler resultHandler = (ResultHandler) invocation.getArgs()[3];
-            CacheKey cacheKey = (CacheKey) invocation.getArgs()[4];
-            BoundSql boundSql = (BoundSql) invocation.getArgs()[5];
-            if (FuncUtil.isNotEmpty(executorIntercepts)) {
-                for (ExecutorIntercept executorIntercept : executorIntercepts) {
-                    executorIntercept.proceed(mappedStatement, parameter, rowBounds, resultHandler, cacheKey, boundSql);
+            SqlCommandType sqlCommandType = mappedStatement.getSqlCommandType();
+            if (sqlCommandType == SqlCommandType.SELECT) {
+                RowBounds rowBounds = (RowBounds) invocation.getArgs()[2];
+                ResultHandler resultHandler = (ResultHandler) invocation.getArgs()[3];
+                CacheKey cacheKey = (CacheKey) invocation.getArgs()[4];
+                BoundSql boundSql = (BoundSql) invocation.getArgs()[5];
+                if (FuncUtil.isNotEmpty(executorQueryIntercepts)) {
+                    for (ExecutorQueryIntercept executorQueryIntercept : executorQueryIntercepts) {
+                        executorQueryIntercept.proceed(mappedStatement, parameter, rowBounds, resultHandler, cacheKey,
+                                boundSql);
+                    }
+                }
+            } else if (sqlCommandType == SqlCommandType.UPDATE || sqlCommandType == SqlCommandType.INSERT) {
+                if (FuncUtil.isNotEmpty(executorUpdateIntercepts)) {
+                    for (ExecutorUpdateIntercept executorUpdateIntercept : executorUpdateIntercepts) {
+                        executorUpdateIntercept.proceed(mappedStatement, parameter);
+                    }
                 }
             }
             return invocation.proceed();

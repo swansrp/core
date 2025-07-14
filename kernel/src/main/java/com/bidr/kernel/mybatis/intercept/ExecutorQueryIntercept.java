@@ -7,13 +7,13 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 /**
- * Title: ExecutorIntercept
+ * Title: ExecutorQueryIntercept
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
  * @since 2022/7/25 11:18
  */
-public interface ExecutorIntercept extends MybatisIntercept {
+public interface ExecutorQueryIntercept extends MybatisIntercept {
 
     /**
      *
