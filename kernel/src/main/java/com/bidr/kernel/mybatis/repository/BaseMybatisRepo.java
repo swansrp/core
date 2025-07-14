@@ -26,6 +26,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.annotation.Resource;
 import java.io.Serializable;
@@ -49,6 +53,8 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     @Resource
     private CommonMapper commonMapper;
+    @Resource
+    protected PlatformTransactionManager transactionManager;
 
     public QueryWrapper<T> getQueryWrapper(String fieldName, Object value) {
         QueryWrapper<T> wrapper = Wrappers.query();
@@ -362,5 +368,11 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
                 }
             }
         }
+    }
+
+    protected TransactionStatus getTransactionStatus() {
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return transactionManager.getTransaction(def);
     }
 }
