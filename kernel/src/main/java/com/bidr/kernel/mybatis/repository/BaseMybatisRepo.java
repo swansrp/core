@@ -50,11 +50,11 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl<M, T> {
 
+    @Resource
+    protected PlatformTransactionManager transactionManager;
     Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     @Resource
     private CommonMapper commonMapper;
-    @Resource
-    protected PlatformTransactionManager transactionManager;
 
     public QueryWrapper<T> getQueryWrapper(String fieldName, Object value) {
         QueryWrapper<T> wrapper = Wrappers.query();
@@ -74,6 +74,10 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
 
     public LambdaQueryWrapper<T> getQueryWrapper() {
         return Wrappers.lambdaQuery(entityClass);
+    }
+
+    public MPJLambdaWrapper<T> getMPJLambdaWrapper() {
+        return new MPJLambdaWrapper<>();
     }
 
     public LambdaUpdateWrapper<T> getUpdateWrapper() {

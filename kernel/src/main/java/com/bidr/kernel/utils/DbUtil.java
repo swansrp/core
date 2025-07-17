@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DbUtil {
 
-    public static <T extends SFunction> String getSqlColumn(T column) {
+    public static <T> String getSqlColumn(SFunction<T, ?> column) {
         Field field = LambdaUtil.getField(column);
         TableField annotation = field.getAnnotation(TableField.class);
         return FuncUtil.isNotEmpty(annotation) ? annotation.value() :
@@ -185,7 +185,7 @@ public class DbUtil {
         }
     }
 
-    public static String getSelectSqlName(GetFunc fieldFunc) {
+    public static <T> String getSelectSqlName(GetFunc<T, ?> fieldFunc) {
         Field field = LambdaUtil.getFieldByGetFunc(fieldFunc);
         TableField annotation = field.getAnnotation(TableField.class);
         if (FuncUtil.isNotEmpty(annotation)) {

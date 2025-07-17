@@ -30,7 +30,7 @@ import java.util.*;
  * @author Sharp
  * @since 2023/05/05 16:20
  */
-public interface PortalSelectRepo<T> {
+public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
 
     /**
      * 构造通用查询wrapper
@@ -74,23 +74,7 @@ public interface PortalSelectRepo<T> {
                 if (FuncUtil.isNotEmpty(condition.getValue())) {
                     if (FuncUtil.isNotEmpty(condition.getValue().get(0))) {
                         if (condition.getValue().get(0) instanceof String) {
-                            final String[] andArray = condition.getValue().get(0).toString().split(" ");
-                            final String[] orArray = condition.getValue().get(0).toString().split("\\|");
-                            if (andArray.length > 1) {
-                                wrapper.nested(wr -> {
-                                    for (String s : andArray) {
-                                        wr.like(FuncUtil.isNotEmpty(s), columnName, s);
-                                    }
-                                });
-                            } else if (orArray.length > 1) {
-                                wrapper.nested(wr -> {
-                                    for (String s : orArray) {
-                                        wr.like(FuncUtil.isNotEmpty(s), columnName, s).or();
-                                    }
-                                });
-                            } else {
-                                wrapper.like(columnName, condition.getValue().get(0));
-                            }
+                            smartLike(wrapper, columnName, condition.getValue().get(0).toString());
                         }
                     }
                 }
@@ -265,23 +249,7 @@ public interface PortalSelectRepo<T> {
                     if (FuncUtil.isNotEmpty(condition.getValue())) {
                         if (FuncUtil.isNotEmpty(condition.getValue().get(0))) {
                             if (condition.getValue().get(0) instanceof String) {
-                                final String[] andArray = condition.getValue().get(0).toString().split(" ");
-                                final String[] orArray = condition.getValue().get(0).toString().split("\\|");
-                                if (andArray.length > 1) {
-                                    wrapper.nested(wr -> {
-                                        for (String s : andArray) {
-                                            wr.like(FuncUtil.isNotEmpty(s), columnName, s);
-                                        }
-                                    });
-                                } else if (orArray.length > 1) {
-                                    wrapper.nested(wr -> {
-                                        for (String s : orArray) {
-                                            wr.like(FuncUtil.isNotEmpty(s), columnName, s).or();
-                                        }
-                                    });
-                                } else {
-                                    wrapper.like(columnName, condition.getValue().get(0));
-                                }
+                                smartLike(wrapper, columnName, condition.getValue().get(0).toString());
                             } else {
                                 wrapper.like(columnName, condition.getValue().get(0));
                             }
