@@ -3,14 +3,10 @@ package com.bidr.authorization.mybatis.handler;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.mybatis.handler.MetaObjectHandlerManager;
-import com.bidr.kernel.mybatis.intercept.ExecutorUpdateIntercept;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.reflection.MetaObject;
-import org.apache.ibatis.reflection.SystemMetaObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -73,12 +69,21 @@ public class AccountContextFillHandler implements MetaObjectHandler {
         for (Field field : declaredFields) {
             String fieldName = field.getName();
             String operator = AccountContext.getOperator();
+            Long userId = AccountContext.getUserId();
             if (FuncUtil.isNotEmpty(operator)) {
                 if (AUTO_OPERATOR_MAP.getOrDefault(clazz, new HashSet<>()).contains(field)) {
-                    this.fillStrategy(metaObject, fieldName, operator);
+                    if (field.getType().equals(String.class)) {
+                        this.fillStrategy(metaObject, fieldName, operator);
+                    } else if (field.getType().equals(Long.class)) {
+                        this.fillStrategy(metaObject, fieldName, userId);
+                    }
                 }
                 if (FORCE_OPERATOR_MAP.getOrDefault(clazz, new HashSet<>()).contains(field)) {
-                    metaObject.setValue(fieldName, operator);
+                    if (field.getType().equals(String.class)) {
+                        metaObject.setValue(fieldName, operator);
+                    } else if (field.getType().equals(Long.class)) {
+                        this.fillStrategy(metaObject, fieldName, userId);
+                    }
                 }
             }
             if (AUTO_TIMESTAMP_MAP.getOrDefault(clazz, new HashSet<>()).contains(field)) {
