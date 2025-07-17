@@ -183,7 +183,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         return tableName + "." + selectSqlName;
     }
 
-    protected void addAliasMap(GetFunc reqFiled, String alias, GetFunc entityField) {
+    protected void addAliasMap(GetFunc<VO, ?> reqFiled, String alias, GetFunc<ENTITY, ?> entityField) {
         aliasMap.put(LambdaUtil.getFieldNameByGetFunc(reqFiled), alias + "." + DbUtil.getSelectSqlName(entityField));
     }
 

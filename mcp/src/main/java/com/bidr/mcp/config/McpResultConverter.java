@@ -3,6 +3,7 @@ package com.bidr.mcp.config;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.mcp.anno.McpIgnore;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -86,7 +87,7 @@ public class McpResultConverter implements ToolCallResultConverter {
             return res;
         }
         for (Field field : fieldList) {
-            if (Modifier.isFinal(field.getModifiers())) {
+            if (Modifier.isFinal(field.getModifiers()) || field.isAnnotationPresent(McpIgnore.class)) {
                 continue;
             }
             String name = field.getName();
