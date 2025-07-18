@@ -46,4 +46,6 @@ public @interface PortalEntityField {
     boolean aggregation() default false;
 
     String origFieldName() default "";
+
+    boolean select() default true;
 }
