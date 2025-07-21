@@ -358,7 +358,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                         .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
             }
             if (portalEntityField.group()) {
-                wrapper.groupBy(field.getName());
+                wrapper.groupBy(sqlFieldName);
             }
             return true;
         } else {
