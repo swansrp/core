@@ -30,8 +30,9 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         return super.selectOne(wrapper);
     }
 
-    public List<SysPortal> getByBeanName(String dbEntityClassName) {
-        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getBean, dbEntityClassName);
+    public List<SysPortal> getByBeanName(String dbEntityClassName, String name) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getBean, dbEntityClassName)
+                .eq(SysPortal::getName, name);
         return super.select(wrapper);
     }
 
