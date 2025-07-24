@@ -3,7 +3,7 @@ package com.bidr.mcp.config;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.mcp.anno.McpIgnore;
+import com.bidr.mcp.anno.McpProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -87,7 +87,11 @@ public class McpResultConverter implements ToolCallResultConverter {
             return res;
         }
         for (Field field : fieldList) {
-            if (Modifier.isFinal(field.getModifiers()) || field.isAnnotationPresent(McpIgnore.class)) {
+            if (Modifier.isFinal(field.getModifiers())) {
+                continue;
+            }
+            McpProperty mcpProperty = field.getAnnotation(McpProperty.class);
+            if (mcpProperty != null && mcpProperty.ignore()) {
                 continue;
             }
             String name = field.getName();
@@ -95,8 +99,16 @@ public class McpResultConverter implements ToolCallResultConverter {
             if (annotation != null && StringUtils.isNotEmpty((annotation).value())) {
                 name = annotation.value();
             }
+            if (mcpProperty != null && StringUtils.isNotEmpty(mcpProperty.name())) {
+                name = mcpProperty.name();
+            }
             Object value = ReflectionUtil.getValue(obj, field);
             if (value != null) {
+                if (FuncUtil.isEmpty(value)) {
+                    if (mcpProperty != null && mcpProperty.ignoreEmpty()) {
+                        continue;
+                    }
+                }
                 if (field.getType().equals(Date.class)) {
                     value = ReflectionUtil.convertDateFormat(field, (Date) value);
                     res.put(name, value);

@@ -9,5 +9,11 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface McpIgnore {
+public @interface McpProperty {
+    String name() default "";
+
+    boolean ignoreEmpty() default false;
+
+    boolean ignore() default false;
+
 }
