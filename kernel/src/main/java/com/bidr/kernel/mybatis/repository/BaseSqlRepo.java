@@ -114,14 +114,9 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     public <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
                                 Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
                                 Class<VO> vo) {
-        if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<T>(entityClass);
-        }
-        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
-                wrapper);
-        parseGeneralQuery(req.getConditionList(), selectAliasMap, havingFields, wrapper);
-        parseSort(req.getSortList(), selectAliasMap, wrapper);
-        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
+        MPJLambdaWrapper<T> wr = buildPortalWrapper(req.getConditionList(), req.getSortList(),
+                req.getSelectColumnCondition(), aliasMap, havingFields, selectApplyMap, wrapper);
+        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wr);
     }
 
     @Override
@@ -129,13 +124,9 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
                                 Map<String, Object> selectColumnCondition, Map<String, String> aliasMap,
                                 Collection<String> havingFields, Map<String, List<DynamicColumn>> selectApplyMap,
                                 MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
-        if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<T>(entityClass);
-        }
-        Map<String, String> selectAliasMap = parseSelectApply(selectColumnCondition, aliasMap, selectApplyMap, wrapper);
-        parseGeneralQuery(conditionList, selectAliasMap, havingFields, wrapper);
-        parseSort(sortList, selectAliasMap, wrapper);
-        return selectJoinList(vo, wrapper);
+        MPJLambdaWrapper<T> wr = buildPortalWrapper(conditionList, sortList, selectColumnCondition, aliasMap,
+                havingFields, selectApplyMap, wrapper);
+        return selectJoinList(vo, wr);
     }
 
     @Override
@@ -145,8 +136,8 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap,
-                                Map<String, List<DynamicColumn>> selectApplyMap,
-                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+                                Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
+                                Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }

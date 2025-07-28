@@ -477,6 +477,34 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
         return null;
     }
 
+    default MPJLambdaWrapper<T> buildPortalWrapper(QueryConditionReq req, Map<String, String> aliasMap,
+                                                   Collection<String> havingFields,
+                                                   Map<String, List<DynamicColumn>> selectApplyMap,
+                                                   MPJLambdaWrapper<T> wrapper) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<>();
+        }
+        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
+                wrapper);
+        parseGeneralQuery(req.getConditionList(), selectAliasMap, havingFields, wrapper);
+        parseSort(req.getSortList(), selectAliasMap, wrapper);
+        return wrapper;
+    }
+
+    default MPJLambdaWrapper<T> buildPortalWrapper(List<ConditionVO> conditionList, List<SortVO> sortList,
+                                                   Map<String, Object> selectColumnCondition,
+                                                   Map<String, String> aliasMap, Collection<String> havingFields,
+                                                   Map<String, List<DynamicColumn>> selectApplyMap,
+                                                   MPJLambdaWrapper<T> wrapper) {
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<>();
+        }
+        Map<String, String> selectAliasMap = parseSelectApply(selectColumnCondition, aliasMap, selectApplyMap, wrapper);
+        parseGeneralQuery(conditionList, selectAliasMap, havingFields, wrapper);
+        parseSort(sortList, selectAliasMap, wrapper);
+        return wrapper;
+    }
+
     default Map<String, String> parseSelectApply(Map<String, Object> selectColumnCondition,
                                                  Map<String, String> aliasMap,
                                                  Map<String, List<DynamicColumn>> selectApplyMap,

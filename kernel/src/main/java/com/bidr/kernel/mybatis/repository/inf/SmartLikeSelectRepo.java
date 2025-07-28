@@ -38,9 +38,9 @@ public interface SmartLikeSelectRepo<T> {
     /**
      * 增强LIKE条件
      *
-     * @param wrapper wrapper
-     * @param field   查询字段
-     * @param value   查询内容
+     * @param wrapper    wrapper
+     * @param columnName 查询字段
+     * @param value      查询内容
      */
     default void smartLike(QueryWrapper<T> wrapper, String columnName, String value) {
         final String[] andArray = value.split(" ");

@@ -65,9 +65,10 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
         }
-        getRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getVoClass());
+        MPJLambdaWrapper<ENTITY> wr = getRepo().buildPortalWrapper(req, aliasMap, havingFields, selectApplyMap,
+                wrapper);
         Class<?> mapperClass = ReflectionUtil.getSuperClassGenericType(getRepo().getClass(), 0);
-        return DbUtil.getRealSql(mapperClass, "selectJoinPage", wrapper);
+        return DbUtil.getRealSql(mapperClass, "selectJoinPage", wr);
     }
 
     default Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
