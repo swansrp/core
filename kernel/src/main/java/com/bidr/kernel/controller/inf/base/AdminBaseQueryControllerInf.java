@@ -2,7 +2,9 @@ package com.bidr.kernel.controller.inf.base;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -48,6 +50,26 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         }
     }
 
+    default String getSql() {
+        QueryConditionReq req = new QueryConditionReq();
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
+        Map<String, String> aliasMap = null;
+        Set<String> havingFields = null;
+        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getPortalService().getAliasMap();
+            wrapper = getPortalService().getJoinWrapper();
+            havingFields = getPortalService().getHavingFields();
+            selectApplyMap = getPortalService().getSelectApplyMap();
+        }
+        getRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getVoClass());
+        Class<?> mapperClass = ReflectionUtil.getSuperClassGenericType(getRepo().getClass(), 0);
+        return DbUtil.getRealSql(mapperClass, "selectJoinPage", wrapper);
+    }
+
     default Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
         if (!isAdmin()) {
             beforeQuery(req);
@@ -89,8 +111,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             selectApplyMap = getPortalService().getSelectApplyMap();
         }
         return getRepo().select(req.getConditionList(), req.getSortList(), req.getSelectColumnCondition(), aliasMap,
-                havingFields, selectApplyMap,
-                wrapper, getVoClass());
+                havingFields, selectApplyMap, wrapper, getVoClass());
     }
 
     default List<VO> selectByAdvancedReq(AdvancedQueryReq req) {

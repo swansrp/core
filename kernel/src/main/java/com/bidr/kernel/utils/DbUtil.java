@@ -19,11 +19,17 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.ibatis.mapping.BoundSql;
+import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.ParameterMapping;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.SqlSessionFactory;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.*;
@@ -215,6 +221,119 @@ public class DbUtil {
             }
         }
         return sql;
+    }
+
+    /**
+     * 构建完整可读 SQL（含参数替换）
+     *
+     * @param wrapper MPJLambdaWrapper 条件构造器
+     * @return 可直接查看的完整 SQL
+     */
+    public static String getRealSql(Class<?> mapperClass, String methodName, Object wrapper) {
+        Configuration configuration = BeanUtil.getBean(SqlSessionFactory.class).getConfiguration();
+        MappedStatement ms = configuration.getMappedStatement(mapperClass.getName() + "." + methodName);
+        Map<String, Object> parameterObject = new HashMap<>();
+        parameterObject.put("ew", wrapper);
+        BoundSql boundSql = ms.getBoundSql(parameterObject);
+        Map<String, Object> paramMap = buildWrapperParamMap(wrapper);
+        List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+        String sql = boundSql.getSql();
+
+        StringBuilder finalSql = new StringBuilder();
+        int paramIndex = 0;
+        int offset = 0;
+
+        while (sql.indexOf("?", offset) != -1 && paramIndex < parameterMappings.size()) {
+            int qMarkIndex = sql.indexOf("?", offset);
+            String property = parameterMappings.get(paramIndex).getProperty();
+            Object value = resolveParamValue(boundSql, paramMap, property);
+
+            finalSql.append(sql, offset, qMarkIndex);
+            finalSql.append(formatParameter(value));
+
+            offset = qMarkIndex + 1;
+            paramIndex++;
+        }
+
+        finalSql.append(sql.substring(offset));
+        return finalSql.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> buildWrapperParamMap(Object wrapper) {
+        Map<String, Object> pairs = (Map<String, Object>) ReflectionUtil.invoke(wrapper, "getParamNameValuePairs");
+        if (pairs != null) {
+            Map<String, Object> paramMap = new HashMap<>(pairs.size());
+            for (Map.Entry<String, Object> entry : pairs.entrySet()) {
+                paramMap.put("ew.paramNameValuePairs." + entry.getKey(), entry.getValue());
+            }
+            return paramMap;
+        }
+        return new HashMap<>(0);
+    }
+
+    private static Object resolveParamValue(BoundSql boundSql, Object parameterObject, String property) {
+        if (boundSql.hasAdditionalParameter(property)) {
+            return boundSql.getAdditionalParameter(property);
+        } else if (parameterObject instanceof Map) {
+            return ((Map) parameterObject).get(property);
+        } else {
+            try {
+                Field field = parameterObject.getClass().getDeclaredField(property);
+                field.setAccessible(true);
+                return field.get(parameterObject);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
+
+    private static String formatParameter(Object val) {
+        if (val == null) {
+            return "NULL";
+        }
+
+        if (val instanceof Collection) {
+            StringBuilder sb = new StringBuilder("(");
+            Iterator<?> iter = ((Collection<?>) val).iterator();
+            while (iter.hasNext()) {
+                sb.append(formatSingleVal(iter.next()));
+                if (iter.hasNext()) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(")");
+            return sb.toString();
+        }
+
+        if (val.getClass().isArray()) {
+            StringBuilder sb = new StringBuilder("(");
+            int len = Array.getLength(val);
+            for (int i = 0; i < len; i++) {
+                sb.append(formatSingleVal(Array.get(val, i)));
+                if (i < len - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(")");
+            return sb.toString();
+        }
+
+        return formatSingleVal(val);
+    }
+
+    private static String formatSingleVal(Object val) {
+        if (val == null) {
+            return "NULL";
+        }
+        if (val instanceof String || val instanceof Date) {
+            return "'" + escapeSql(val.toString()) + "'";
+        }
+        return val.toString();
+    }
+
+    private static String escapeSql(String input) {
+        return input.replace("'", "''");
     }
 
     @Retention(RetentionPolicy.RUNTIME)

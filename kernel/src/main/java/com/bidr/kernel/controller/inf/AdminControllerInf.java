@@ -107,4 +107,11 @@ public interface AdminControllerInf<ENTITY, VO> extends AdminBaseInsertControlle
      * @return 数据
      */
     List<VO> advancedSelect(@RequestBody AdvancedQueryReq req);
+
+    /**
+     * 查询的基础sql
+     *
+     * @return sql
+     */
+    String getPortalSql();
 }
