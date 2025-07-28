@@ -113,5 +113,7 @@ public interface AdminControllerInf<ENTITY, VO> extends AdminBaseInsertControlle
      *
      * @return sql
      */
-    String getPortalSql();
+    default String getPortalSql() {
+        return getSql();
+    }
 }

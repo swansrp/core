@@ -136,5 +136,11 @@ public class AdminPortalController {
         Resp.notice("导入配置成功");
     }
 
+    @RequestMapping(path = {"/config/sql"}, method = {RequestMethod.GET})
+    @ApiOperation(value = "获取指定配置的sql")
+    public String getPortalSql(PortalReq req) {
+        return portalConfigService.getPortalSql(req.getName());
+    }
+
 
 }

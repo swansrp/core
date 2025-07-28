@@ -25,10 +25,7 @@ import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
@@ -631,5 +628,12 @@ public class PortalConfigService implements LoginFillTokenInf {
                 sysPortalAssociateService.updateById(newAssociate);
             }
         }
+    }
+
+    public String getPortalSql(String name) {
+        SysPortal sysPortal = sysPortalService.getByName(name, DEFAULT_CONFIG_ROLE_ID);
+        AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(sysPortal.getBean());
+        Validator.assertNotNull(bean, ErrCodeSys.PA_DATA_NOT_EXIST, name);
+        return bean.getPortalSql();
     }
 }

@@ -159,14 +159,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiIgnore
-    @ApiOperation("表格基础sql")
-    @RequestMapping(value = "/sql", method = RequestMethod.GET)
-    public String getPortalSql() {
-        return getSql();
-    }
-
-    @Override
-    @ApiIgnore
     public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
                 Introspector.decapitalize(getEntityClass().getSimpleName()) + "Service");
