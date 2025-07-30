@@ -36,7 +36,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <solon.version>3.3.3-M2</solon.version>
-                <kernel.version>20250717113117-104</kernel.version>
+                <admin.version>20250728162812-73</admin.version>
             </properties>
         </profile>
     </profiles>
@@ -44,8 +44,8 @@
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
-            <artifactId>kernel</artifactId>
-            <version>${kernel.version}</version>
+            <artifactId>admin</artifactId>
+            <version>${admin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.noear</groupId>

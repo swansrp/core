@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.mcp.dao.mapper.SysMcpMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.mcp.dao.entity.SysMcp">
+    <!--@mbg.generated-->
+    <!--@Table erp.sys_mcp-->
+    <id column="end_point" jdbcType="VARCHAR" property="endPoint" />
+    <id column="name" jdbcType="VARCHAR" property="name" />
+    <id column="type" jdbcType="VARCHAR" property="type" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    end_point, `name`, `type`, description
+  </sql>
+</mapper>
