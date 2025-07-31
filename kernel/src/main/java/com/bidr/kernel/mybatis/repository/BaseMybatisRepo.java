@@ -128,6 +128,13 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
                 col = validField.getAnnotation(TableField.class).value();
             } else if (validField.isAnnotationPresent(TableId.class)) {
                 col = validField.getAnnotation(TableId.class).value();
+            } else if (validField.isAnnotationPresent(MppMultiId.class)) {
+                String colName = validField.getAnnotation(MppMultiId.class).value();
+                if (FuncUtil.isNotEmpty(colName)) {
+                    col = colName;
+                } else {
+                    col = field;
+                }
             } else {
                 col = field;
             }
@@ -364,10 +371,9 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
                         } else {
                             entityFieldSql = StringUtil.camelToUnderline(entityField.getName());
                         }
-                        wrapper.getSelectColum()
-                                .add(new SelectString(
-                                        StringUtil.joinWith(" as ", entityFieldSql, "'" + fieldName + "'"),
-                                        wrapper.getAlias()));
+                        wrapper.getSelectColum().add(new SelectString(
+                                StringUtil.joinWith(" as ", entityFieldSql, "'" + fieldName + "'"),
+                                wrapper.getAlias()));
                     }
                 }
             }
