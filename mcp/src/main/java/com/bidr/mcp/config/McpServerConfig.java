@@ -78,7 +78,8 @@ public class McpServerConfig {
                 continue;
             }
 
-            McpServerEndpointProvider serverEndpointProvider = McpServerEndpointProvider.builder().from(targetClass, anno).build();
+            McpServerEndpointProvider serverEndpointProvider = McpServerEndpointProvider.builder()
+                    .from(targetClass, anno).build();
 
             addTool(serverEndpoint, targetClass, serverEndpointProvider);
             addResource(serverEndpoint, targetClass, serverEndpointProvider);
@@ -93,7 +94,8 @@ public class McpServerConfig {
         return this;
     }
 
-    public void addTool(IMcpServerEndpoint serverEndpoint, Class<?> targetClass, McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
+    public void addTool(IMcpServerEndpoint serverEndpoint, Class<?> targetClass,
+                        McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
         MethodToolProvider methodToolProvider = new MethodToolProvider(targetClass, serverEndpoint);
         for (FunctionTool tool : methodToolProvider.getTools()) {
             syncToDb(targetClass, tool, TOOL);
@@ -101,7 +103,8 @@ public class McpServerConfig {
         serverEndpointProvider.addTool(methodToolProvider);
     }
 
-    private void addResource(IMcpServerEndpoint serverEndpoint, Class<?> targetClass, McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
+    private void addResource(IMcpServerEndpoint serverEndpoint, Class<?> targetClass,
+                             McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
         MethodResourceProvider methodResourceProvider = new MethodResourceProvider(targetClass, serverEndpoint);
         for (FunctionResource resource : methodResourceProvider.getResources()) {
             syncToDb(targetClass, resource, McpTypeDict.RESOURCE);
@@ -109,7 +112,8 @@ public class McpServerConfig {
         serverEndpointProvider.addResource(methodResourceProvider);
     }
 
-    private void addPrompt(IMcpServerEndpoint serverEndpoint, Class<?> targetClass, McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
+    private void addPrompt(IMcpServerEndpoint serverEndpoint, Class<?> targetClass,
+                           McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
         MethodPromptProvider methodPromptProvider = new MethodPromptProvider(targetClass, serverEndpoint);
         for (FunctionPrompt prompt : methodPromptProvider.getPrompts()) {
             syncToDb(targetClass, prompt, McpTypeDict.PROMPT);
@@ -118,21 +122,30 @@ public class McpServerConfig {
     }
 
     private void syncToDb(Class<?> targetClass, Object obj, McpTypeDict type) throws IllegalAccessException {
-        Field nameField = ReflectionUtil.getField(obj, "name");
-        nameField.setAccessible(true);
-        String name = (String) nameField.get(obj);
+        String name = getField(obj, "name");
         SysMcp sysMcp = sysMcpService.get(targetClass.getName(), name, type.getValue());
         if (FuncUtil.isNotEmpty(sysMcp)) {
-            Field field = ReflectionUtil.getField(obj, "description");
-            field.setAccessible(true);
-            field.set(obj, sysMcp.getDescription());
+            setField(obj, "description", sysMcp.getDescription());
         } else {
-            sysMcp = new SysMcp();
-            sysMcp.setEndPoint(targetClass.getName());
-            sysMcp.setName(name);
-            sysMcp.setName(type.getValue());
+            sysMcp = buildSysMcp(targetClass, obj, type);
             sysMcpService.insert(sysMcp);
         }
+    }
+
+    private String getField(Object obj, String fieldName) throws IllegalAccessException {
+        Field field = ReflectionUtil.getField(obj, fieldName);
+        field.setAccessible(true);
+        return (String) field.get(obj);
+    }
+
+    private SysMcp buildSysMcp(Class<?> targetClass, Object obj, McpTypeDict type) throws IllegalAccessException {
+        SysMcp sysMcp = new SysMcp();
+        sysMcp.setEndPoint(targetClass.getName());
+        sysMcp.setEndPointName(AnnotationUtils.findAnnotation(targetClass, McpServerEndpoint.class).name());
+        sysMcp.setName(getField(obj, "name"));
+        sysMcp.setType(type.getValue());
+        sysMcp.setDescription(getField(obj, "description"));
+        return sysMcp;
     }
 
     @Bean
@@ -149,30 +162,35 @@ public class McpServerConfig {
         return map.get(clazz.getName());
     }
 
-    public void updateDescription(Class<?> clazz, String name, String type, String description) throws IllegalAccessException {
+    public void updateDescription(Class<?> clazz, String name, String type,
+                                  String description) throws IllegalAccessException {
         updateDescription(clazz.getName(), name, DictEnumUtil.getEnumByValue(type, McpTypeDict.class), description);
     }
 
-    public void updateDescription(String endpointClassName, String name, McpTypeDict type, String description) throws IllegalAccessException {
+    public void updateDescription(String endpointClassName, String name, McpTypeDict type,
+                                  String description) throws IllegalAccessException {
         McpServerEndpointProvider mcpServerEndpointProvider = map.get(endpointClassName);
         switch (type) {
             case TOOL:
                 Collection<FunctionTool> tools = mcpServerEndpointProvider.getTools();
-                FunctionTool functionTool = tools.stream().filter(tool -> tool.name().equals(name)).findFirst().orElse(null);
+                FunctionTool functionTool = tools.stream().filter(tool -> tool.name().equals(name)).findFirst()
+                        .orElse(null);
                 mcpServerEndpointProvider.removeTool(name);
                 setField(functionTool, "description", description);
                 mcpServerEndpointProvider.addTool(functionTool);
                 break;
             case RESOURCE:
                 Collection<FunctionResource> resources = mcpServerEndpointProvider.getResources();
-                FunctionResource functionResource = resources.stream().filter(resource -> resource.name().equals(name)).findFirst().orElse(null);
+                FunctionResource functionResource = resources.stream().filter(resource -> resource.name().equals(name))
+                        .findFirst().orElse(null);
                 mcpServerEndpointProvider.removeResource(name);
                 setField(functionResource, "description", description);
                 mcpServerEndpointProvider.addResource(functionResource);
                 break;
             case PROMPT:
                 Collection<FunctionPrompt> prompts = mcpServerEndpointProvider.getPrompts();
-                FunctionPrompt functionPrompt = prompts.stream().filter(prompt -> prompt.name().equals(name)).findFirst().orElse(null);
+                FunctionPrompt functionPrompt = prompts.stream().filter(prompt -> prompt.name().equals(name))
+                        .findFirst().orElse(null);
                 mcpServerEndpointProvider.removePrompt(name);
                 setField(functionPrompt, "description", description);
                 mcpServerEndpointProvider.addPrompt(functionPrompt);
@@ -194,7 +212,8 @@ public class McpServerConfig {
         field.set(obj, value);
     }
 
-    public void updateDescription(SysMcp sysMcp, String description) throws IllegalAccessException {
-        updateDescription(sysMcp.getEndPoint(), sysMcp.getName(), DictEnumUtil.getEnumByValue(sysMcp.getType(), McpTypeDict.class), description);
+    public void updateDescription(SysMcp sysMcp) throws IllegalAccessException {
+        updateDescription(sysMcp.getEndPoint(), sysMcp.getName(),
+                DictEnumUtil.getEnumByValue(sysMcp.getType(), McpTypeDict.class), sysMcp.getDescription());
     }
 }

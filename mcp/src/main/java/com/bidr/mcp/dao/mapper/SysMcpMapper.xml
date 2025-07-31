@@ -7,10 +7,11 @@
     <id column="end_point" jdbcType="VARCHAR" property="endPoint" />
     <id column="name" jdbcType="VARCHAR" property="name" />
     <id column="type" jdbcType="VARCHAR" property="type" />
+    <result column="end_point_name" jdbcType="VARCHAR" property="endPointName" />
     <result column="description" jdbcType="VARCHAR" property="description" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    end_point, `name`, `type`, description
+    end_point, `name`, `type`, end_point_name, description
   </sql>
 </mapper>

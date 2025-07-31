@@ -12,12 +12,12 @@ import lombok.Data;
  */
 @ApiModel(description = "mcp配置表")
 @Data
-@TableName(value = "erp.sys_mcp")
+@TableName(value = "sys_mcp")
 public class SysMcp {
     /**
      * mcp服务
      */
-    @MppMultiId
+    @MppMultiId("end_point")
     @ApiModelProperty(value = "mcp服务")
     private String endPoint;
 
@@ -34,6 +34,13 @@ public class SysMcp {
     @MppMultiId
     @ApiModelProperty(value = "mcp类型")
     private String type;
+
+    /**
+     * mcp服务名称
+     */
+    @TableField(value = "end_point_name")
+    @ApiModelProperty(value = "mcp服务名称")
+    private String endPointName;
 
     /**
      * mcp方法描述
