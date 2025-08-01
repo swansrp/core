@@ -24,6 +24,7 @@
         <module>mongo</module>
         <module>socket-io</module>
         <module>mcp</module>
+        <module>elasticsearch</module>
     </modules>
     <packaging>pom</packaging>
 

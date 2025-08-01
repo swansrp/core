@@ -1,0 +1,9 @@
+my:
+  elasticsearch:
+    username:
+    password:
+    host:
+    port:
+    proxy:
+      host:
+      port:
