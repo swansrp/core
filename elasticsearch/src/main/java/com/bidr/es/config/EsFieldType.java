@@ -9,6 +9,9 @@ package com.bidr.es.config;
  */
 
 public enum EsFieldType {
+    /**
+     * ES字段类型
+     */
     TEXT,
     KEYWORD,
     DATE,

@@ -69,6 +69,7 @@ public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner {
 
     }
 
+    @SuppressWarnings("unchecked")
     private Class<T> getEntityClass() {
         return (Class<T>) ReflectionUtil.getSuperClassGenericType(getClass(), 0);
     }

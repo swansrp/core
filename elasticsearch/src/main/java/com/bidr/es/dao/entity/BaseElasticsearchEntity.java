@@ -3,8 +3,6 @@ package com.bidr.es.dao.entity;
 import com.bidr.es.anno.EsField;
 import com.bidr.es.config.EsFieldType;
 
-import java.util.List;
-
 /**
  * Title: BaseElasticsearchEntity
  * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
@@ -14,12 +12,6 @@ import java.util.List;
  */
 
 public abstract class BaseElasticsearchEntity {
-    /**
-     * 人工分词
-     */
-    @EsField(type = EsFieldType.TEXT, keyword = true)
-    private List<String> tokens;
-
     /**
      * 自动补全
      */

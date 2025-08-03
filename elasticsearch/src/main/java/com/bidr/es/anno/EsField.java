@@ -20,5 +20,18 @@ import java.lang.annotation.Target;
 public @interface EsField {
     EsFieldType type() default EsFieldType.TEXT; // text, keyword, completion, etc.
 
+    boolean index() default false;
+
+
     boolean keyword() default false; // 是否同时生成 keyword 字段
+
+    boolean useIk() default false;
+
+    boolean usePinyin() default false;
+
+    boolean useStConvert() default false;
+
+    boolean useHanLP() default true;
+
+
 }

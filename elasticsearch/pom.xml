@@ -47,7 +47,12 @@
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
-            <version>8.11.4</version> <!-- 请根据你的 ES 版本匹配 -->
+            <version>8.17.3</version> <!-- 请根据你的 ES 版本匹配 -->
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-client</artifactId>
+            <version>8.17.3</version>
         </dependency>
 
         <!-- HanLP -->
@@ -55,6 +60,19 @@
             <groupId>com.hankcs</groupId>
             <artifactId>hanlp</artifactId>
             <version>portable-1.8.6</version>
+        </dependency>
+
+        <!-- 为 elasticsearch-java 客户端 serialize 支持 -->
+        <dependency>
+            <groupId>jakarta.json</groupId>
+            <artifactId>jakarta.json-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.json</artifactId>
+            <version>2.0.1</version>
         </dependency>
     </dependencies>
 
