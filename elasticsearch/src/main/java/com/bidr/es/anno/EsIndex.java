@@ -18,7 +18,9 @@ import java.lang.annotation.Target;
 public @interface EsIndex {
     String name();
 
-    int shards() default 1;
+    String shards() default "1";
 
-    int replicas() default 1;
+    String replicas() default "1";
+
+    String allTokenField() default "allToken";
 }

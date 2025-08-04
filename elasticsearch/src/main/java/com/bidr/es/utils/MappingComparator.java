@@ -1,4 +1,4 @@
-package com.bidr.es.dao.repository;
+package com.bidr.es.utils;
 
 import co.elastic.clients.elasticsearch._types.mapping.*;
 
@@ -52,11 +52,16 @@ public class MappingComparator {
                         return false;
                     }
                     break;
-                case Boolean:
-                    // nothing to compare
+                case ScaledFloat:
+                    if (!compareScaledFloat(p1.scaledFloat(), p2.scaledFloat())) {
+                        return false;
+                    }
                     break;
+                case Boolean:
+                case Integer:
+                case Float:
                 default:
-                    // 不支持的类型
+                    // nothing to compare
                     return false;
             }
         }
@@ -82,7 +87,7 @@ public class MappingComparator {
         if (p1 == null || p2 == null) {
             return false;
         }
-        return Objects.equals(p1.analyzer(), p2.analyzer()) && Objects.equals(p1.searchAnalyzer(), p2.searchAnalyzer());
+        return Objects.equals(p1.analyzer(), p2.analyzer());
     }
 
     private static boolean compareDate(DateProperty p1, DateProperty p2) {
@@ -90,5 +95,12 @@ public class MappingComparator {
             return false;
         }
         return Objects.equals(p1.format(), p2.format());
+    }
+
+    private static boolean compareScaledFloat(ScaledFloatNumberProperty p1, ScaledFloatNumberProperty p2) {
+        if (p1 == null || p2 == null) {
+            return false;
+        }
+        return Objects.equals(p1.scalingFactor(), p2.scalingFactor());
     }
 }

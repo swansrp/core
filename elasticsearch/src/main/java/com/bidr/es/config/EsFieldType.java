@@ -17,6 +17,7 @@ public enum EsFieldType {
     DATE,
     INTEGER,
     FLOAT,
+    SCALED_FLOAT,
     BOOLEAN,
     COMPLETION
 }

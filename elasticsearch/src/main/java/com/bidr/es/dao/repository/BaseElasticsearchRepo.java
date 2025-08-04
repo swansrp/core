@@ -11,6 +11,8 @@ import co.elastic.clients.elasticsearch.indices.GetAliasResponse;
 import co.elastic.clients.elasticsearch.indices.update_aliases.Action;
 import co.elastic.clients.json.JsonData;
 import com.bidr.es.anno.EsIndex;
+import com.bidr.es.config.ElasticsearchMappingConfig;
+import com.bidr.es.utils.MappingComparator;
 import com.bidr.kernel.utils.ReflectionUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,10 +34,14 @@ import java.util.Map;
 @Slf4j
 public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner {
     @Autowired
-    private ElasticsearchClient client;
+    private ElasticsearchClient elasticsearchClient;
 
     @Override
     public void run(String... args) throws IOException {
+        init(elasticsearchClient);
+    }
+
+    public void init(ElasticsearchClient client) throws IOException {
         Class<T> clazz = getEntityClass();
         EsIndex esIndex = clazz.getAnnotation(EsIndex.class);
         String aliasName = esIndex.name();
@@ -43,11 +49,11 @@ public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner {
 
         boolean aliasExists = client.indices().exists(b -> b.index(aliasName)).value();
 
-        Map<String, Property> currentMapping = MappingBuilder.buildMapping(clazz);
+        Map<String, Property> currentMapping = ElasticsearchMappingConfig.buildMapping(clazz);
 
         if (!aliasExists) {
-            createIndex(currentIndexName, esIndex, currentMapping);
-            bindAlias(aliasName, currentIndexName);
+            createIndex(client, currentIndexName, clazz, currentMapping);
+            bindAlias(client, aliasName, currentIndexName);
             return;
         }
 
@@ -60,27 +66,27 @@ public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner {
                 .mappings().properties();
 
         if (!MappingComparator.compare(oldMapping, currentMapping)) {
-            createIndex(currentIndexName, esIndex, currentMapping);
-            migrateData(oldIndex, currentIndexName);
-            bindAlias(aliasName, currentIndexName);
+            createIndex(client, currentIndexName, clazz, currentMapping);
+            migrateData(client, oldIndex, currentIndexName);
+            bindAlias(client, aliasName, currentIndexName);
             client.indices().delete(b -> b.index(oldIndex));
             log.info("索引 {} 重建完成，旧索引 {} 已删除", aliasName, oldIndex);
         }
-
     }
 
     @SuppressWarnings("unchecked")
-    private Class<T> getEntityClass() {
+    protected Class<T> getEntityClass() {
         return (Class<T>) ReflectionUtil.getSuperClassGenericType(getClass(), 0);
     }
 
-    private void createIndex(String indexName, EsIndex esIndex, Map<String, Property> mapping) throws IOException {
-        client.indices().create(c -> c.index(indexName).settings(s -> s.numberOfShards(String.valueOf(esIndex.shards()))
-                .numberOfReplicas(String.valueOf(esIndex.replicas()))).mappings(m -> m.properties(mapping)));
+    private void createIndex(ElasticsearchClient client, String indexName, Class<T> clazz,
+                             Map<String, Property> mapping) throws IOException {
+        client.indices().create(c -> c.index(indexName).settings(ElasticsearchMappingConfig.buildIndexSettings(clazz))
+                .mappings(m -> m.properties(mapping)));
         log.info("创建索引：{}", indexName);
     }
 
-    private void bindAlias(String alias, String targetIndex) throws IOException {
+    private void bindAlias(ElasticsearchClient client, String alias, String targetIndex) throws IOException {
         GetAliasResponse aliasResp;
         try {
             aliasResp = client.indices().getAlias(b -> b.name(alias));
@@ -101,7 +107,7 @@ public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner {
                 Collections.singletonList(Action.of(ad -> ad.add(a1 -> a1.index(targetIndex).alias(alias))))));
     }
 
-    private void migrateData(String oldIndex, String newIndex) throws IOException {
+    private void migrateData(ElasticsearchClient client, String oldIndex, String newIndex) throws IOException {
         int batchSize = 500;
         long total = 0;
         String scrollId;

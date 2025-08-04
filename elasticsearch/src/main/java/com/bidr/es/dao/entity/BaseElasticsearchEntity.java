@@ -12,6 +12,9 @@ import com.bidr.es.config.EsFieldType;
  */
 
 public abstract class BaseElasticsearchEntity {
+
+    @EsField(type = EsFieldType.TEXT, useHanLP = false)
+    private String allToken;
     /**
      * 自动补全
      */

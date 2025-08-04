@@ -40,31 +40,39 @@ public class ElasticsearchConfig {
     @Value("${my.elasticsearch.proxy.port:}")
     private int proxyPort;
 
-    public static ElasticsearchClient getElasticsearchClient(String host, Integer port, String username, String password, Boolean proxyEnable,
-                                                             String proxyHost, Integer proxyPort) {
-        // 构建 RestClientBuilder
-        RestClientBuilder builder = RestClient.builder(new HttpHost(host, port, "http")).setHttpClientConfigCallback(httpClientBuilder -> {
-            if (FuncUtil.isNotEmpty(username) && FuncUtil.isNotEmpty(password)) {
-                // 设置账号密码
-                CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-                credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
-                httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-            }
-            if (proxyEnable) {
-                // 设置代理
-                httpClientBuilder.setProxy(new HttpHost(proxyHost, proxyPort));
-            }
-            return httpClientBuilder;
-        });
+    @Bean
+    public ElasticsearchClient elasticsearchClient() {
+        return ElasticsearchConfig.getElasticsearchClient(host, port, username, password, proxyEnable, proxyHost,
+                proxyPort);
+    }
 
-        RestClient restClient = builder.build();
+    public static ElasticsearchClient getElasticsearchClient(String host, Integer port, String username,
+                                                             String password, Boolean proxyEnable, String proxyHost,
+                                                             Integer proxyPort) {
+        RestClient restClient = getRestClient(host, port, username, password, proxyEnable, proxyHost, proxyPort);
         RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
-
         return new ElasticsearchClient(transport);
     }
 
-    @Bean
-    public ElasticsearchClient elasticsearchClient() {
-        return ElasticsearchConfig.getElasticsearchClient(host, port, username, password, proxyEnable, proxyHost, proxyPort);
+    public static RestClient getRestClient(String host, Integer port, String username, String password,
+                                           Boolean proxyEnable, String proxyHost, Integer proxyPort) {
+        // 构建 RestClientBuilder
+        RestClientBuilder builder = RestClient.builder(new HttpHost(host, port, "http"))
+                .setHttpClientConfigCallback(httpClientBuilder -> {
+                    if (FuncUtil.isNotEmpty(username) && FuncUtil.isNotEmpty(password)) {
+                        // 设置账号密码
+                        CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                        credentialsProvider.setCredentials(AuthScope.ANY,
+                                new UsernamePasswordCredentials(username, password));
+                        httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+                    }
+                    if (proxyEnable) {
+                        // 设置代理
+                        httpClientBuilder.setProxy(new HttpHost(proxyHost, proxyPort));
+                    }
+                    return httpClientBuilder;
+                });
+
+        return builder.build();
     }
 }

@@ -18,20 +18,43 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface EsField {
-    EsFieldType type() default EsFieldType.TEXT; // text, keyword, completion, etc.
+    // 强制指定 ES 类型（可选）
+    EsFieldType type() default EsFieldType.TEXT;
 
-    boolean index() default false;
+    // 是否加 .keyword 子字段
+    boolean keyword() default false;
 
+    // 是否参与索引
+    boolean index() default true;
 
-    boolean keyword() default false; // 是否同时生成 keyword 字段
+    // 是否开启 doc_values
+    boolean docValues() default true;
+
+    // keyword 默认长度限制
+    int ignoreAbove() default 256;
+
+    int scalingFactor() default 100;
 
     boolean useIk() default false;
 
+    String ikAnalyzer() default "ik_max_word";
+
+    String ikFieldSuffix() default "ik";
+
     boolean usePinyin() default false;
+
+    String pinyinAnalyzer() default "pinyin_analyzer";
+
+    String pinyinFieldSuffix() default "pinyin";
 
     boolean useStConvert() default false;
 
+    String stConvertAnalyzer() default "ik_smart_stconvert";
+
+    String stConvertFieldSuffix() default "stConvert";
+
     boolean useHanLP() default true;
 
+    String hanlpFieldSuffix() default "hanlp";
 
 }
