@@ -39,7 +39,7 @@ public class ElasticsearchTest {
         getAnalyserTest(restClient);
         aliasExistTest(client, ElasticsearchTestEntity.class);
         ElasticsearchTestRepo repo = new ElasticsearchTestRepo();
-        repo.init(client);
+        repo.init();
     }
 
     public static void mappingTest(ElasticsearchClient client, Class<?> clazz) {

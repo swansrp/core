@@ -23,8 +23,6 @@
                 <java.version>1.8</java.version>
 
                 <bidr.core.kernel.version>${jarVersion}</bidr.core.kernel.version>
-                <bidr.core.authorization.version>${jarVersion}</bidr.core.authorization.version>
-                <bidr.core.admin.version>${jarVersion}</bidr.core.admin.version>
             </properties>
         </profile>
         <profile>
@@ -37,9 +35,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
 
-                <bidr.core.authorization.version>20250714162108-57</bidr.core.authorization.version>
                 <bidr.core.kernel.version>20250714161723-102</bidr.core.kernel.version>
-                <bidr.core.admin.version>20250714162312-67</bidr.core.admin.version>
             </properties>
         </profile>
     </profiles>
@@ -52,18 +48,8 @@
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
-            <artifactId>authorization</artifactId>
-            <version>${bidr.core.authorization.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
             <version>${bidr.core.kernel.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bidr</groupId>
-            <artifactId>admin</artifactId>
-            <version>${bidr.core.admin.version}</version>
         </dependency>
     </dependencies>
 

@@ -1,7 +1,5 @@
 package com.bidr.neo4j.controller;
 
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.neo4j.service.Neo4jConfigurationService;
 import com.bidr.neo4j.vo.configuration.NodeRes;
 import com.bidr.neo4j.vo.configuration.PropertiesRes;
@@ -21,7 +19,6 @@ import java.util.List;
  * @author Sharp
  * @since 2023/11/08 14:00
  */
-@Auth(AuthNone.class)
 @Api(tags = "知识图谱 - 基础信息")
 @RestController("Neo4jConfigurationController")
 @RequestMapping(value = "/web/neo4j")
