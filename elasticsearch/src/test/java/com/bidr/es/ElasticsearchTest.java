@@ -39,6 +39,7 @@ public class ElasticsearchTest {
         getAnalyserTest(restClient);
         aliasExistTest(client, ElasticsearchTestEntity.class);
         ElasticsearchTestRepo repo = new ElasticsearchTestRepo();
+        repo.setClient(client);
         repo.init();
     }
 

@@ -10,5 +10,4 @@ import com.bidr.es.dao.repository.BaseElasticsearchRepo;
  * @since 2025/8/3 11:44
  */
 public class ElasticsearchTestRepo extends BaseElasticsearchRepo<ElasticsearchTestEntity> {
-
 }

@@ -4,6 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.bidr.kernel.utils.FuncUtil;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -40,17 +42,14 @@ public class ElasticsearchConfig {
     @Value("${my.elasticsearch.proxy.port:}")
     private int proxyPort;
 
-    @Bean
-    public ElasticsearchClient elasticsearchClient() {
-        return ElasticsearchConfig.getElasticsearchClient(host, port, username, password, proxyEnable, proxyHost,
-                proxyPort);
-    }
-
     public static ElasticsearchClient getElasticsearchClient(String host, Integer port, String username,
                                                              String password, Boolean proxyEnable, String proxyHost,
                                                              Integer proxyPort) {
         RestClient restClient = getRestClient(host, port, username, password, proxyEnable, proxyHost, proxyPort);
-        RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        JacksonJsonpMapper jsonpMapper = new JacksonJsonpMapper(objectMapper);
+        RestClientTransport transport = new RestClientTransport(restClient, jsonpMapper);
         return new ElasticsearchClient(transport);
     }
 
@@ -74,5 +73,11 @@ public class ElasticsearchConfig {
                 });
 
         return builder.build();
+    }
+
+    @Bean
+    public ElasticsearchClient elasticsearchClient() {
+        return ElasticsearchConfig.getElasticsearchClient(host, port, username, password, proxyEnable, proxyHost,
+                proxyPort);
     }
 }

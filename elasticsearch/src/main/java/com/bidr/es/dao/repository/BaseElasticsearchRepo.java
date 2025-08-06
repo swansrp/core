@@ -16,7 +16,8 @@ import java.io.IOException;
  * @since 2025/8/1 9:41
  */
 @Slf4j
-public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner, ElasticsearchInsertRepoInf<T>, ElasticsearchUpdateRepoInf<T>, ElasticsearchDeleteRepoInf<T>, ElasticsearchCountRepoInf<T>, ElasticsearchSelectRepoInf<T>, ElasticsearchInitRepoInf<T> {
+public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner, ElasticsearchInsertRepoInf<T>, ElasticsearchUpdateRepoInf<T>,
+        ElasticsearchDeleteRepoInf<T>, ElasticsearchCountRepoInf<T>, ElasticsearchSelectRepoInf<T>, ElasticsearchInitRepoInf<T> {
     @Resource
     private ElasticsearchClient elasticsearchClient;
 
@@ -31,6 +32,10 @@ public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner, Ela
     @Override
     public ElasticsearchClient getClient() {
         return elasticsearchClient;
+    }
+
+    public void setClient(ElasticsearchClient elasticsearchClient) {
+        this.elasticsearchClient = elasticsearchClient;
     }
 
 
