@@ -1,6 +1,7 @@
 package com.bidr.es.dao.repository;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.bidr.es.anno.EsIndex;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 
@@ -21,7 +22,10 @@ public abstract class BaseElasticsearchRepo<T> implements CommandLineRunner, Ela
 
     @Override
     public void run(String... args) throws IOException {
-        init();
+        EsIndex esIndex = getEntityClass().getAnnotation(EsIndex.class);
+        if (esIndex != null) {
+            init();
+        }
     }
 
     @Override

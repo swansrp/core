@@ -1,9 +1,7 @@
 package com.bidr.es.dao.repository;
 
-import co.elastic.clients.elasticsearch.core.BulkRequest;
-import co.elastic.clients.elasticsearch.core.CreateRequest;
-import co.elastic.clients.elasticsearch.core.DeleteRequest;
-import co.elastic.clients.elasticsearch.core.IndexRequest;
+import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.json.JsonData;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +26,8 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
     default boolean insertOrUpdate(T doc) {
         try {
             String id = extractId(doc);
-            IndexRequest.Builder<T> builder = new IndexRequest.Builder<T>().index(getIndexName()).document(doc);
+            IndexRequest.Builder<T> builder = new IndexRequest.Builder<T>().index(getIndexName())
+                    .withJson(getJsonParser(doc), getJsonpMapper());
             if (id != null) {
                 builder.id(id);
             }
@@ -64,7 +63,7 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
             for (T doc : docs) {
                 String id = extractId(doc);
                 br.operations(op -> op.index(idx -> {
-                    idx.index(getIndexName()).document(doc);
+                    idx.index(getIndexName()).document(JsonData.of(buildMap(doc)));
                     if (id != null) {
                         idx.id(id);
                     }
@@ -72,7 +71,8 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
                 }));
                 tempList.add(doc);
                 if (tempList.size() == batchSize) {
-                    getClient().bulk(br.build());
+                    BulkResponse bulk = getClient().bulk(br.build());
+                    handleBulkResponse(bulk);
                     tempList.clear();
                     br = new BulkRequest.Builder();
                 }
@@ -96,7 +96,8 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
     default boolean insert(T doc) {
         try {
             String id = extractId(doc);
-            CreateRequest.Builder<T> builder = new CreateRequest.Builder<T>().index(getIndexName()).document(doc);
+            CreateRequest.Builder<JsonData> builder = new CreateRequest.Builder<JsonData>().index(getIndexName())
+                    .document(JsonData.of(buildMap(doc)));
             if (id != null) {
                 builder.id(id);
             }
@@ -139,7 +140,7 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
             for (T doc : docs) {
                 String id = extractId(doc);
                 br.operations(op -> op.create(idx -> {
-                    idx.index(getIndexName()).document(doc);
+                    idx.index(getIndexName()).document(JsonData.of(buildMap(doc)));
                     if (id != null) {
                         idx.id(id);
                     }

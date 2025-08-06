@@ -11,8 +11,12 @@ import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import com.bidr.es.anno.EsField;
 import com.bidr.es.anno.EsId;
 import com.bidr.es.anno.EsIndex;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.validate.Validator;
 import jakarta.json.Json;
 import jakarta.json.stream.JsonGenerator;
 
@@ -33,8 +37,7 @@ import java.util.*;
 public class ElasticsearchMappingConfig {
 
     public static String toJson(Class<?> clazz) {
-        EsIndex annotation = clazz.getAnnotation(EsIndex.class);
-        CreateIndexRequest request = new CreateIndexRequest.Builder().index(annotation.name())
+        CreateIndexRequest request = new CreateIndexRequest.Builder().index(getIndex(clazz))
                 .mappings(m -> m.properties(buildMapping(clazz))).settings(buildIndexSettings(clazz)).build();
         JacksonJsonpMapper mapper = new JacksonJsonpMapper();
         StringWriter writer = new StringWriter();
@@ -47,22 +50,34 @@ public class ElasticsearchMappingConfig {
         return writer.toString();
     }
 
+    public static String getIndex(Class<?> clazz) {
+        EsIndex annotation = clazz.getAnnotation(EsIndex.class);
+        Validator.assertNotNull(annotation, ErrCodeSys.PA_PARAM_NULL, "索引配置");
+        if (FuncUtil.isEmpty(annotation.name())) {
+            return StringUtil.camelToUnderline(clazz.getSimpleName()).substring(1);
+        } else {
+            return annotation.name().toLowerCase();
+        }
+    }
+
     public static Map<String, Property> buildMapping(Class<?> clazz) {
         Map<String, Property> mapping = new LinkedHashMap<>();
-        String allTokensField = clazz.getAnnotation(EsIndex.class).allTokenField();
         for (Field field : ReflectionUtil.getFields(clazz)) {
             Property property;
             if (field.isAnnotationPresent(EsId.class)) {
                 property = new KeywordProperty.Builder().ignoreAbove(256).build()._toProperty();
             } else {
-                EsField esField = field.getAnnotation(EsField.class);
-                if (esField != null) {
-                    property = buildPropertyFromAnnotation(field, allTokensField);
+                EsField anno = field.getAnnotation(EsField.class);
+                if (anno != null) {
+                    if (anno.useHanLP()) {
+                        mapping.put(field.getName() + "_" + anno.hanlpFieldSuffix(),
+                                new TextProperty.Builder().build()._toProperty());
+                    }
+                    property = buildPropertyFromAnnotation(field);
                 } else {
-                    property = buildPropertyFromFieldType(field, allTokensField);
+                    property = buildPropertyFromFieldType(field);
                 }
             }
-
             mapping.put(field.getName(), property);
         }
         return mapping;
@@ -110,9 +125,9 @@ public class ElasticsearchMappingConfig {
                         .analysis(analysis -> analysis.analyzer(analyzer).filter(filter)));
     }
 
-    private static Property buildPropertyFromAnnotation(Field field, String allTokensField) {
-        Map<String, Property> multiFields = new HashMap<>(4);
+    private static Property buildPropertyFromAnnotation(Field field) {
         EsField anno = field.getAnnotation(EsField.class);
+        Map<String, Property> multiFields = new HashMap<>(3);
         // keyword 子字段
         if (anno.keyword()) {
             multiFields.put("keyword",
@@ -134,15 +149,10 @@ public class ElasticsearchMappingConfig {
             multiFields.put(anno.stConvertFieldSuffix(),
                     new TextProperty.Builder().analyzer(anno.stConvertAnalyzer()).build()._toProperty());
         }
-        // hanLP分词
-        if (anno.useHanLP()) {
-            multiFields.put(anno.hanlpFieldSuffix(), new TextProperty.Builder().build()._toProperty());
-        }
         EsFieldType type = anno.type();
         switch (type) {
             case TEXT: {
-                TextProperty.Builder tb = new TextProperty.Builder().fields(multiFields).copyTo(allTokensField);
-                tb.index(anno.index());
+                TextProperty.Builder tb = new TextProperty.Builder().index(anno.index()).fields(multiFields);
                 return tb.build()._toProperty();
             }
             case KEYWORD:
@@ -169,17 +179,14 @@ public class ElasticsearchMappingConfig {
         }
     }
 
-    private static Property buildPropertyFromFieldType(Field field, String allTokensField) {
+    private static Property buildPropertyFromFieldType(Field field) {
         Class<?> type = field.getType();
         if (type == String.class) {
             Map<String, Property> multiFields = new HashMap<>(2);
             // IK 分词
-            multiFields.put("ik",
-                    new TextProperty.Builder().analyzer("ik_max_word").copyTo(allTokensField).build()._toProperty());
+            multiFields.put("ik", new TextProperty.Builder().analyzer("ik_max_word").build()._toProperty());
             // 拼音分词
-            multiFields.put("pinyin",
-                    new TextProperty.Builder().analyzer("pinyin_analyzer").copyTo(allTokensField).build()
-                            ._toProperty());
+            multiFields.put("pinyin", new TextProperty.Builder().analyzer("pinyin_analyzer").build()._toProperty());
             return new TextProperty.Builder().fields(multiFields).build()._toProperty();
         } else if (type == Integer.class || type == int.class) {
             return new IntegerNumberProperty.Builder().build()._toProperty();

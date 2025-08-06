@@ -53,7 +53,7 @@ public @interface EsField {
 
     String stConvertFieldSuffix() default "stConvert";
 
-    boolean useHanLP() default true;
+    boolean useHanLP() default false;
 
     String hanlpFieldSuffix() default "hanlp";
 

@@ -3,18 +3,25 @@ package com.bidr.es.dao.repository;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
-import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
+import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import com.bidr.es.anno.EsField;
 import com.bidr.es.anno.EsId;
-import com.bidr.es.anno.EsIndex;
+import com.bidr.es.config.ElasticsearchMappingConfig;
+import com.bidr.es.utils.HanLPUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.json.spi.JsonProvider;
+import jakarta.json.stream.JsonGenerator;
+import jakarta.json.stream.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,14 +39,6 @@ import java.util.stream.Collectors;
 
 public interface ElasticsearchBaseRepoInf<T> {
 
-    /**
-     * 获取logger
-     *
-     * @return logger
-     */
-    default Logger getLogger() {
-        return LoggerFactory.getLogger(this.getClass());
-    }
 
     /**
      * 获取非空的doc map
@@ -62,13 +61,6 @@ public interface ElasticsearchBaseRepoInf<T> {
         return map;
     }
 
-    default List<String> getMatchingIds(Query query) throws IOException {
-        SearchResponse<T> response = getClient().search(
-                s -> s.index(getIndexName()).query(query).source(sf -> sf.filter(f -> f.includes("_id"))).size(1000),
-                (Class<T>) Object.class);
-        return response.hits().hits().stream().map(Hit::id).collect(Collectors.toList());
-    }
-
     ElasticsearchClient getClient();
 
     /**
@@ -77,8 +69,7 @@ public interface ElasticsearchBaseRepoInf<T> {
      * @return 索引名称
      */
     default String getIndexName() {
-        EsIndex esIndex = getEntityClass().getAnnotation(EsIndex.class);
-        return esIndex.name();
+        return ElasticsearchMappingConfig.getIndex(getEntityClass());
     }
 
     @SuppressWarnings("unchecked")
@@ -119,6 +110,7 @@ public interface ElasticsearchBaseRepoInf<T> {
 
     /**
      * 处理bulk 返回
+     *
      * @param response 返回
      * @return
      */
@@ -135,5 +127,81 @@ public interface ElasticsearchBaseRepoInf<T> {
             getLogger().info("所有批量更新操作都成功执行。");
             return false;
         }
+    }
+
+    /**
+     * 获取logger
+     *
+     * @return logger
+     */
+    default Logger getLogger() {
+        return LoggerFactory.getLogger(this.getClass());
+    }
+
+    /**
+     * 转换成 jsonParser
+     *
+     * @param obj 实体内容
+     * @return jsonParser
+     */
+    @SuppressWarnings("unchecked")
+    default JsonParser getJsonParser(Object obj) {
+        StringReader stringReader = null;
+
+        try {
+            Object value = obj.getClass().isAssignableFrom(getEntityClass()) ? buildMap((T) obj) : obj;
+            stringReader = new StringReader(getJsonpMapper().objectMapper().writeValueAsString(value));
+        } catch (JsonProcessingException e) {
+            getLogger().error("JSON序列化失败", e);
+        }
+        return getJsonpMapper().jsonProvider().createParser(stringReader);
+    }
+
+    /**
+     * 获取非空的doc map
+     *
+     * @param doc document
+     * @return map
+     */
+    default Map<String, Object> buildMap(T doc) {
+        Map<String, Object> map = new HashMap<>();
+        for (Field field : ReflectionUtil.getFields(doc)) {
+            EsField anno = field.getAnnotation(EsField.class);
+            try {
+                field.setAccessible(true);
+                Object value = field.get(doc);
+                if (value != null) {
+                    map.put(field.getName(), value);
+                    if (anno != null) {
+                        if (anno.useHanLP() && value instanceof String) {
+                            map.put(field.getName() + "_" + anno.hanlpFieldSuffix(),
+                                    HanLPUtil.tokenize(String.valueOf(value)));
+                        }
+                    }
+                }
+            } catch (IllegalAccessException ignored) {
+
+            }
+        }
+        return map;
+    }
+
+    default JacksonJsonpMapper getJsonpMapper() {
+        return new JacksonJsonpMapper();
+    }
+
+    /**
+     * 解析query
+     *
+     * @param query query
+     * @return query解析结果
+     */
+    default String parseQuery(Query query) {
+        StringWriter sw = new StringWriter();
+        JsonpMapper mapper = new JacksonJsonpMapper();
+        JsonGenerator generator = JsonProvider.provider().createGenerator(sw);
+        query.serialize(generator, mapper);
+        generator.close();
+        return sw.toString();
     }
 }

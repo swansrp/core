@@ -7,10 +7,16 @@ import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.util.ObjectBuilder;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.es.anno.EsField;
+import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.LambdaUtil;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -143,8 +149,9 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default List<T> select(Query query) throws IOException {
         SearchRequest request = SearchRequest.of(s -> s.index(getIndexName()).query(query));
-        SearchResponse<T> response = getClient().search(request, getEntityClass());
-        return response.hits().hits().stream().map(Hit::source).collect(Collectors.toList());
+        SearchResponse<Map> response = getClient().search(request, Map.class);
+        return JsonUtil.readJson(response.hits().hits().stream().map(Hit::source).collect(Collectors.toList()),
+                List.class, getEntityClass());
     }
 
     /**
@@ -243,5 +250,26 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
     default T selectById(String id) throws IOException {
         GetRequest.Builder builder = new GetRequest.Builder().index(getIndexName()).id(id);
         return getClient().get(builder.build(), getEntityClass()).source();
+    }
+
+    default Query buildMatchQuery(SFunction<T, ?> sFunction, String keyword) {
+        return Query.of(q -> q.bool(b -> {
+            Field field = LambdaUtil.getField(sFunction);
+            EsField anno = field.getAnnotation(EsField.class);
+            if (anno.useIk()) {
+                b.should(s -> s.match(m -> m.field(field.getName() + "." + anno.ikFieldSuffix()).query(keyword)));
+            }
+            if (anno.usePinyin()) {
+                b.should(s -> s.match(m -> m.field(field.getName() + "." + anno.pinyinFieldSuffix()).query(keyword)));
+            }
+            if (anno.useStConvert()) {
+                b.should(
+                        s -> s.match(m -> m.field(field.getName() + "." + anno.stConvertFieldSuffix()).query(keyword)));
+            }
+            if (anno.useHanLP()) {
+                b.should(s -> s.match(m -> m.field(field.getName() + "_" + anno.useHanLP()).query(keyword)));
+            }
+            return b.minimumShouldMatch("1");
+        }));
     }
 }

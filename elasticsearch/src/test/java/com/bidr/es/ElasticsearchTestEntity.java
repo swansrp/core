@@ -17,7 +17,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@EsIndex(name = "test-index")
+@EsIndex
 public class ElasticsearchTestEntity extends BaseElasticsearchEntity {
     @EsId
     private String id;

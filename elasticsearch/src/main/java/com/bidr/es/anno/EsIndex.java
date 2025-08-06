@@ -16,11 +16,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface EsIndex {
-    String name();
+    String name() default "";
 
     String shards() default "1";
 
     String replicas() default "1";
-
-    String allTokenField() default "allToken";
 }

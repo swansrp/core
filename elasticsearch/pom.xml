@@ -49,11 +49,13 @@
             <artifactId>elasticsearch-java</artifactId>
             <version>8.17.3</version> <!-- 请根据你的 ES 版本匹配 -->
         </dependency>
+        <!-- 将以上依赖版本写入项目 -->
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-client</artifactId>
             <version>8.17.3</version>
         </dependency>
+        <!-- 将以上依赖版本写入项目 -->
 
         <!-- HanLP -->
         <dependency>
