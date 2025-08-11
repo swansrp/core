@@ -1,9 +1,6 @@
 package com.bidr.es.anno;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Title: EsIndex
@@ -14,6 +11,7 @@ import java.lang.annotation.Target;
  */
 
 @Target(ElementType.TYPE)
+@Inherited
 @Retention(RetentionPolicy.RUNTIME)
 public @interface EsIndex {
     String name() default "";
