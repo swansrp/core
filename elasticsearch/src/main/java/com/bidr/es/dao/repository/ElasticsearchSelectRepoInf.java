@@ -96,7 +96,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default Page<Hit<T>> selectHit(long currentPage, long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()));
         return buildHitPage(request, currentPage, pageSize);
     }
@@ -144,7 +144,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
     default Page<Hit<T>> selectHit(Function<SortOptions.Builder, ObjectBuilder<SortOptions>> fn, long currentPage,
                                    long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()).sort(fn));
         return buildHitPage(request, currentPage, pageSize);
     }
@@ -159,7 +159,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default Page<Hit<T>> selectHit(Query query, long currentPage, long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()).query(query));
         return buildHitPage(request, currentPage, pageSize);
     }
@@ -176,7 +176,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
     default Page<Hit<T>> selectHit(Query query, Function<SortOptions.Builder, ObjectBuilder<SortOptions>> fn,
                                    long currentPage, long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()).sort(fn).query(query));
         return buildHitPage(request, currentPage, pageSize);
     }
@@ -232,7 +232,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
     default Page<T> select(Query query, Function<SortOptions.Builder, ObjectBuilder<SortOptions>> fn, long currentPage,
                            long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()).sort(fn).query(query));
         return buildPage(request, currentPage, pageSize);
     }
@@ -267,7 +267,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default Page<T> select(long currentPage, long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()));
         return buildPage(request, currentPage, pageSize);
     }
@@ -283,7 +283,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
     default Page<T> select(Function<SortOptions.Builder, ObjectBuilder<SortOptions>> fn, long currentPage,
                            long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()).sort(fn));
         return buildPage(request, currentPage, pageSize);
     }
@@ -434,7 +434,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default Page<T> select(Query query, long currentPage, long pageSize) {
         SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                s -> s.index(getIndexName()).from(Long.valueOf((currentPage - 1) * pageSize).intValue())
                         .size(Long.valueOf(pageSize).intValue()).query(query));
         return buildPage(request, currentPage, pageSize);
     }
