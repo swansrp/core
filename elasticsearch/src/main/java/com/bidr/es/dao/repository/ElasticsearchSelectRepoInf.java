@@ -199,6 +199,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default List<T> buildList(SearchRequest request) {
         try {
+            logRequest(request);
             SearchResponse<T> response = getClient().search(request, getEntityClass());
             return response.hits().hits().stream().map(Hit::source).collect(Collectors.toList());
         } catch (IOException e) {
@@ -222,14 +223,17 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
     /**
      * 查询
      *
+     * @param query       条件
+     * @param fn          排序
      * @param currentPage 当前页
      * @param pageSize    每页大小
      * @return 查询结果
      */
-    default Page<T> select(long currentPage, long pageSize) {
+    default Page<T> select(Query query, Function<SortOptions.Builder, ObjectBuilder<SortOptions>> fn, long currentPage,
+                           long pageSize) {
         SearchRequest request = SearchRequest.of(
                 s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
-                        .size(Long.valueOf(pageSize).intValue()));
+                        .size(Long.valueOf(pageSize).intValue()).sort(fn).query(query));
         return buildPage(request, currentPage, pageSize);
     }
 
@@ -243,6 +247,7 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default Page<T> buildPage(SearchRequest request, long currentPage, long pageSize) {
         try {
+            logRequest(request);
             SearchResponse<T> response = getClient().search(request, getEntityClass());
             Page<T> page = new Page<>(currentPage, pageSize, safeGetTotal(response));
             page.setRecords(response.hits().hits().stream().map(Hit::source).collect(Collectors.toList()));
@@ -251,6 +256,20 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
             getLogger().error("查询失败", e);
             return new Page<>(currentPage, pageSize, 0);
         }
+    }
+
+    /**
+     * 查询
+     *
+     * @param currentPage 当前页
+     * @param pageSize    每页大小
+     * @return 查询结果
+     */
+    default Page<T> select(long currentPage, long pageSize) {
+        SearchRequest request = SearchRequest.of(
+                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                        .size(Long.valueOf(pageSize).intValue()));
+        return buildPage(request, currentPage, pageSize);
     }
 
     /**
@@ -266,38 +285,6 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
         SearchRequest request = SearchRequest.of(
                 s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
                         .size(Long.valueOf(pageSize).intValue()).sort(fn));
-        return buildPage(request, currentPage, pageSize);
-    }
-
-    /**
-     * 查询
-     *
-     * @param query       查询条件
-     * @param currentPage 当前页
-     * @param pageSize    每页大小
-     * @return 查询结果
-     */
-    default Page<T> select(Query query, long currentPage, long pageSize) {
-        SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
-                        .size(Long.valueOf(pageSize).intValue()).query(query));
-        return buildPage(request, currentPage, pageSize);
-    }
-
-    /**
-     * 查询
-     *
-     * @param query       条件
-     * @param fn          排序
-     * @param currentPage 当前页
-     * @param pageSize    每页大小
-     * @return 查询结果
-     */
-    default Page<T> select(Query query, Function<SortOptions.Builder, ObjectBuilder<SortOptions>> fn, long currentPage,
-                           long pageSize) {
-        SearchRequest request = SearchRequest.of(
-                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
-                        .size(Long.valueOf(pageSize).intValue()).sort(fn).query(query));
         return buildPage(request, currentPage, pageSize);
     }
 
@@ -397,7 +384,6 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
      */
     default List<T> smartQuery(String keyword) {
         Query query = buildMatchQuery(keyword);
-        getLogger().info("es => {}", parseQuery(query));
         return select(query);
     }
 
@@ -426,4 +412,32 @@ public interface ElasticsearchSelectRepoInf<T> extends ElasticsearchBaseRepoInf<
         SearchRequest request = SearchRequest.of(s -> s.index(getIndexName()).query(query));
         return buildList(request);
     }
+
+    /**
+     * 根据一个关键词 尽最大可能查询 结果
+     *
+     * @param keyword 关键词
+     * @return 查询结果列表
+     */
+    default List<T> smartQuery(String keyword, long pageSize) {
+        Query query = buildMatchQuery(keyword);
+        return select(query, 1, pageSize).getRecords();
+    }
+
+    /**
+     * 查询
+     *
+     * @param query       查询条件
+     * @param currentPage 当前页
+     * @param pageSize    每页大小
+     * @return 查询结果
+     */
+    default Page<T> select(Query query, long currentPage, long pageSize) {
+        SearchRequest request = SearchRequest.of(
+                s -> s.index(getIndexName()).from(Long.valueOf((pageSize - 1) * currentPage).intValue())
+                        .size(Long.valueOf(pageSize).intValue()).query(query));
+        return buildPage(request, currentPage, pageSize);
+    }
+
+
 }

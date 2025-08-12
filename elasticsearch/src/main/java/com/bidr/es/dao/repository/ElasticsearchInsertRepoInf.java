@@ -31,7 +31,9 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
             if (id != null) {
                 builder.id(id);
             }
-            getClient().index(builder.build());
+            IndexRequest<T> request = builder.build();
+            logRequest(request);
+            getClient().index(request);
             return true;
         } catch (IOException e) {
             getLogger().error("添加或更新失败, 不回滚", e);
@@ -71,14 +73,19 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
                 }));
                 tempList.add(doc);
                 if (tempList.size() == batchSize) {
-                    BulkResponse bulk = getClient().bulk(br.build());
+                    BulkRequest request = br.build();
+                    logRequest(request);
+                    BulkResponse bulk = getClient().bulk(request);
                     handleBulkResponse(bulk);
                     tempList.clear();
                     br = new BulkRequest.Builder();
                 }
             }
             if (!tempList.isEmpty()) {
-                getClient().bulk(br.build());
+                BulkRequest request = br.build();
+                logRequest(request);
+                BulkResponse bulk = getClient().bulk(request);
+                handleBulkResponse(bulk);
             }
             return true;
         } catch (IOException e) {
@@ -101,7 +108,9 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
             if (id != null) {
                 builder.id(id);
             }
-            getClient().create(builder.build());
+            CreateRequest request = builder.build();
+            logRequest(request);
+            getClient().create(request);
             return true;
         } catch (IOException e) {
             getLogger().error("插入实体失败", e);
@@ -148,6 +157,8 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
                 }));
                 tempList.add(doc);
                 if (tempList.size() == batchSize) {
+                    BulkRequest request = br.build();
+                    logRequest(request);
                     getClient().bulk(br.build());
                     saveList.addAll(tempList);
                     tempList.clear();
@@ -155,6 +166,8 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
                 }
             }
             if (!tempList.isEmpty()) {
+                BulkRequest request = br.build();
+                logRequest(request);
                 getClient().bulk(br.build());
                 saveList.addAll(tempList);
             }
@@ -167,7 +180,9 @@ public interface ElasticsearchInsertRepoInf<T> extends ElasticsearchBaseRepoInf<
                 br.operations(op -> op.delete(d -> d.index(getIndexName()).id(savedId)));
             }
             try {
-                getClient().bulk(br.build());
+                BulkRequest request = br.build();
+                logRequest(request);
+                getClient().bulk(request);
             } catch (IOException ee) {
                 getLogger().error("回滚失败", e);
             }

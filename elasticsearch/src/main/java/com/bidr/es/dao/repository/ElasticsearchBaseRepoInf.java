@@ -1,11 +1,11 @@
 package com.bidr.es.dao.repository;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.json.JsonData;
 import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.json.JsonpSerializable;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import com.bidr.es.anno.EsField;
 import com.bidr.es.anno.EsId;
@@ -124,7 +124,7 @@ public interface ElasticsearchBaseRepoInf<T> {
             }
             return true;
         } else {
-            getLogger().info("所有批量更新操作都成功执行。");
+            getLogger().trace("所有批量更新操作都成功执行。");
             return false;
         }
     }
@@ -191,16 +191,26 @@ public interface ElasticsearchBaseRepoInf<T> {
     }
 
     /**
-     * 解析query
+     * 打印 request
      *
-     * @param query query
-     * @return query解析结果
+     * @param request 请求
+     * @return request解析结果
      */
-    default String parseQuery(Query query) {
+    default void logRequest(JsonpSerializable request) {
+        getLogger().trace("es => {}", parseRequest(request));
+    }
+
+    /**
+     * 解析request
+     *
+     * @param request 请求
+     * @return request解析结果
+     */
+    default String parseRequest(JsonpSerializable request) {
         StringWriter sw = new StringWriter();
         JsonpMapper mapper = new JacksonJsonpMapper();
         JsonGenerator generator = JsonProvider.provider().createGenerator(sw);
-        query.serialize(generator, mapper);
+        request.serialize(generator, mapper);
         generator.close();
         return sw.toString();
     }

@@ -1,9 +1,8 @@
-my:
+spring:
   elasticsearch:
+    uris:
     username:
     password:
-    host:
-    port:
     proxy:
       enable:
       host:

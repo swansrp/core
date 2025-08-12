@@ -62,7 +62,7 @@ public class MappingComparator {
                 case Float:
                 default:
                     // nothing to compare
-                    return false;
+                    return true;
             }
         }
 

@@ -17,6 +17,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 /**
  * Title: ElasticsearchConfig
  * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
@@ -27,25 +30,28 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ElasticsearchConfig {
-    @Value("${my.elasticsearch.username:}")
+    @Value("${spring.elasticsearch.username:}")
     private String username;
-    @Value("${my.elasticsearch.password:}")
+    @Value("${spring.elasticsearch.password:}")
     private String password;
-    @Value("${my.elasticsearch.host}")
-    private String host;
-    @Value("${my.elasticsearch.port}")
-    private int port;
-    @Value("${my.elasticsearch.proxy.enable:false}")
+    @Value("${spring.elasticsearch.uris}")
+    private String uris;
+    @Value("${spring.elasticsearch.proxy.enable:false}")
     private boolean proxyEnable;
-    @Value("${my.elasticsearch.proxy.host:}")
+    @Value("${spring.elasticsearch.proxy.host:}")
     private String proxyHost;
-    @Value("${my.elasticsearch.proxy.port:}")
+    @Value("${spring.elasticsearch.proxy.port:}")
     private int proxyPort;
 
-    public static ElasticsearchClient getElasticsearchClient(String host, Integer port, String username,
-                                                             String password, Boolean proxyEnable, String proxyHost,
-                                                             Integer proxyPort) {
-        RestClient restClient = getRestClient(host, port, username, password, proxyEnable, proxyHost, proxyPort);
+    @Bean
+    public ElasticsearchClient elasticsearchClient() throws URISyntaxException {
+        return ElasticsearchConfig.getElasticsearchClient(uris, username, password, proxyEnable, proxyHost, proxyPort);
+    }
+
+    public static ElasticsearchClient getElasticsearchClient(String uris, String username, String password,
+                                                             Boolean proxyEnable, String proxyHost,
+                                                             Integer proxyPort) throws URISyntaxException {
+        RestClient restClient = getRestClient(uris, username, password, proxyEnable, proxyHost, proxyPort);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         JacksonJsonpMapper jsonpMapper = new JacksonJsonpMapper(objectMapper);
@@ -53,10 +59,10 @@ public class ElasticsearchConfig {
         return new ElasticsearchClient(transport);
     }
 
-    public static RestClient getRestClient(String host, Integer port, String username, String password,
-                                           Boolean proxyEnable, String proxyHost, Integer proxyPort) {
+    public static RestClient getRestClient(String uris, String username, String password, Boolean proxyEnable,
+                                           String proxyHost, Integer proxyPort) throws URISyntaxException {
         // 构建 RestClientBuilder
-        RestClientBuilder builder = RestClient.builder(new HttpHost(host, port, "http"))
+        RestClientBuilder builder = RestClient.builder(createHttpHost(uris))
                 .setHttpClientConfigCallback(httpClientBuilder -> {
                     if (FuncUtil.isNotEmpty(username) && FuncUtil.isNotEmpty(password)) {
                         // 设置账号密码
@@ -75,9 +81,9 @@ public class ElasticsearchConfig {
         return builder.build();
     }
 
-    @Bean
-    public ElasticsearchClient elasticsearchClient() {
-        return ElasticsearchConfig.getElasticsearchClient(host, port, username, password, proxyEnable, proxyHost,
-                proxyPort);
+    public static HttpHost createHttpHost(String uriString) throws URISyntaxException {
+        URI uri = new URI(uriString);
+        return new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
     }
+
 }

@@ -47,6 +47,7 @@ public interface ElasticsearchDeleteRepoInf<T> extends ElasticsearchBaseRepoInf<
     default DeleteByQueryResponse delete(Query query) throws IOException {
         DeleteByQueryRequest request = DeleteByQueryRequest.of(c -> c.index(getIndexName()).query(query)
                 .conflicts(co.elastic.clients.elasticsearch._types.Conflicts.Proceed));
+        logRequest(request);
         return getClient().deleteByQuery(request);
     }
 
@@ -88,6 +89,8 @@ public interface ElasticsearchDeleteRepoInf<T> extends ElasticsearchBaseRepoInf<
         for (String savedId : savedIds) {
             br.operations(op -> op.delete(d -> d.index(getIndexName()).id(savedId)));
         }
-        return getClient().bulk(br.build());
+        BulkRequest request = br.build();
+        logRequest(request);
+        return getClient().bulk(request);
     }
 }

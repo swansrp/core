@@ -109,8 +109,9 @@ public interface ElasticsearchUpdateRepoInf<T> extends ElasticsearchBaseRepoInf<
                 JsonParser parser = mapper.jsonProvider().createParser(reader);
                 br.operations(op -> op.update(i -> i.index(getIndexName()).id(docId).withJson(parser, mapper)));
             }
-
-            BulkResponse result = getClient().bulk(br.build());
+            BulkRequest request = br.build();
+            logRequest(request);
+            BulkResponse result = getClient().bulk(request);
             return handleBulkResponse(result);
         } catch (IOException e) {
             getLogger().error("批量更新失败, 不回滚", e);
@@ -135,6 +136,7 @@ public interface ElasticsearchUpdateRepoInf<T> extends ElasticsearchBaseRepoInf<
         UpdateByQueryRequest request = UpdateByQueryRequest.of(
                 u -> u.index(Collections.singletonList(getIndexName())).query(query).conflicts(Conflicts.Proceed)
                         .script(s -> s.params(updateData)));
+        logRequest(request);
         return getClient().updateByQuery(request);
     }
 

@@ -14,6 +14,7 @@ import org.elasticsearch.client.RestClient;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -26,15 +27,14 @@ import java.util.Map;
  */
 @Slf4j
 public class ElasticsearchTest {
-    public static void main(String[] args) throws IOException {
-        final String host = "10.3.4.174";
-        final int port = 9200;
+    public static void main(String[] args) throws IOException, URISyntaxException {
+        final String uris = "http://10.3.4.174:9200";
         final String proxyHost = "10.3.4.175";
         final int proxyPort = 65535;
-        RestClient restClient = ElasticsearchConfig.getRestClient(host, port, null, null, true, proxyHost, proxyPort);
-        ElasticsearchClient client = ElasticsearchConfig.getElasticsearchClient(host, port, null, null, true, proxyHost,
+        RestClient restClient = ElasticsearchConfig.getRestClient(uris, null, null, true, proxyHost, proxyPort);
+        ElasticsearchClient client = ElasticsearchConfig.getElasticsearchClient(uris, null, null, true, proxyHost,
                 proxyPort);
-        mappingTest(client, ElasticsearchTestEntity.class);
+        mappingTest(ElasticsearchTestEntity.class);
         healthTest(client);
         getAnalyserTest(restClient);
         aliasExistTest(client, ElasticsearchTestEntity.class);
@@ -43,7 +43,7 @@ public class ElasticsearchTest {
         repo.init();
     }
 
-    public static void mappingTest(ElasticsearchClient client, Class<?> clazz) {
+    public static void mappingTest(Class<?> clazz) {
         String json = ElasticsearchMappingConfig.toJson(clazz);
         log.info(json);
     }
