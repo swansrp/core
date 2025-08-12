@@ -269,9 +269,8 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         for (KeyValueResVO statistic : statisticColumn) {
             if (FuncUtil.isNotEmpty(statistic.getValue())) {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("sum(%s) as %s", statistic.getValue(), statistic.getLabel()),
-                        wrapper.getAlias()));
+                wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as %s", statistic.getValue(),
+                        LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)), wrapper.getAlias()));
             } else {
                 wrapper.getSelectColum().add(new SelectString(
                         String.format("count(1) as %s", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)),
