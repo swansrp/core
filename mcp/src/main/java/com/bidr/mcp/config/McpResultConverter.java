@@ -82,7 +82,7 @@ public class McpResultConverter implements ToolCallResultConverter {
             return res;
         }
         Class<?> aClass = obj.getClass();
-        List<Field> fieldList = ReflectionUtil.getFields(aClass);
+        Collection<Field> fieldList = ReflectionUtil.getFieldMap(aClass).values();
         if (FuncUtil.isEmpty(fieldList)) {
             return res;
         }
