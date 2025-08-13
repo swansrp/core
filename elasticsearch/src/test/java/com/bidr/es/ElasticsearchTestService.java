@@ -1,6 +1,7 @@
 package com.bidr.es;
 
 import com.bidr.es.dao.repository.BaseElasticsearchRepo;
+import com.bidr.es.service.BaseElasticsearchService;
 
 /**
  * Title: ElasticsearchTestEntity
@@ -9,5 +10,5 @@ import com.bidr.es.dao.repository.BaseElasticsearchRepo;
  * @author Sharp
  * @since 2025/8/3 11:44
  */
-public class ElasticsearchTestRepo extends BaseElasticsearchRepo<ElasticsearchTestEntity> {
+public class ElasticsearchTestService extends BaseElasticsearchService<ElasticsearchTestEntity> {
 }
