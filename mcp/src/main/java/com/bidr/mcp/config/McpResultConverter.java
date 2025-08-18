@@ -26,9 +26,7 @@ import java.util.*;
 public class McpResultConverter implements ToolCallResultConverter {
     @Override
     public String convert(Object result) throws ConvertException {
-        String s = JsonUtil.toJson(converting(result), false, false, true);
-        log.info("[MCP]<======={}", s);
-        return s;
+        return JsonUtil.toJson(converting(result), false, false, true);
     }
 
     private Object converting(Object result) {

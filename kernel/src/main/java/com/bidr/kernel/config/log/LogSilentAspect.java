@@ -30,7 +30,12 @@ public class LogSilentAspect {
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         LogSuppressor.suppressLogs(true);
         try {
-            return joinPoint.proceed(joinPoint.getArgs());
+            Object[] args = joinPoint.getArgs();
+            if (args != null) {
+                return joinPoint.proceed(args);
+            } else {
+                return joinPoint.proceed();
+            }
         } finally {
             LogSuppressor.suppressLogs(false);
         }
