@@ -24,7 +24,7 @@ public class XxlLogUtil {
 
             public Class<?> getClassName() {
                 try {
-                    return Class.forName(getClassContext()[4].getName());
+                    return Class.forName(getClassContext()[3].getName());
                 } catch (ClassNotFoundException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
