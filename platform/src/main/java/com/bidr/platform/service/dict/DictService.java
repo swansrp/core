@@ -11,6 +11,7 @@ import com.bidr.platform.dao.repository.SysDictTypeService;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
 import com.bidr.platform.vo.dict.AddDictReq;
+import com.bidr.platform.vo.dict.DictRes;
 import com.bidr.platform.vo.dict.UpdateDictDefaultReq;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
@@ -100,19 +101,20 @@ public class DictService {
         sysDictService.deleteByDictName(dictName);
     }
 
-    public List<KeyValueResVO> getSysDictByLabel(String dictName, String label) {
+    public List<DictRes> getSysDictByLabel(String dictName, String label) {
         dictCacheService.cachePrepare(dictName);
         List<SysDict> sysDictList = sysDictService.getSysDictByLabel(dictName, label);
         return buildKeyValueListByDict(sysDictList);
     }
 
-    private List<KeyValueResVO> buildKeyValueListByDict(List<SysDict> sysDictList) {
-        List<KeyValueResVO> resList = new ArrayList<>();
+    private List<DictRes> buildKeyValueListByDict(List<SysDict> sysDictList) {
+        List<DictRes> resList = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(sysDictList)) {
             for (SysDict sysDict : sysDictList) {
-                KeyValueResVO res = new KeyValueResVO();
+                DictRes res = new DictRes();
                 res.setValue(sysDict.getDictValue());
                 res.setLabel(sysDict.getDictLabel());
+                res.setShow(sysDict.getShow());
                 resList.add(res);
             }
         }

@@ -17,6 +17,7 @@ import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.dao.repository.SysDictTypeService;
+import com.bidr.platform.vo.dict.DictRes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
@@ -78,17 +79,18 @@ public class DictCacheService implements CommandLineRunner {
         return getDict(dictName, label, DictTypeEnum.LABEL);
     }
 
-    public List<KeyValueResVO> getKeyValue(String dictName) {
-        List<KeyValueResVO> resList = new ArrayList<>();
+    public List<DictRes> getKeyValue(String dictName) {
+        List<DictRes> resList = new ArrayList<>();
         DictCacheProvider dictCacheProvider = MAP.get(dictName);
         if (FuncUtil.isNotEmpty(dictCacheProvider)) {
             LinkedHashMap<String, SysDict> valueMap = dictCacheProvider.getCache(DictTypeEnum.VALUE.name());
             // Validator.assertNotEmpty(valueMap, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
             if (FuncUtil.isNotEmpty(valueMap)) {
                 valueMap.forEach((key, value) -> {
-                    KeyValueResVO res = new KeyValueResVO();
+                    DictRes res = new DictRes();
                     res.setValue(key);
                     res.setLabel(value.getDictLabel());
+                    res.setShow(value.getShow());
                     resList.add(res);
                 });
             }
@@ -99,10 +101,11 @@ public class DictCacheService implements CommandLineRunner {
 
     }
 
-    public KeyValueResVO buildKeyValueResVO(SysDict dict) {
-        KeyValueResVO vo = new KeyValueResVO();
+    public DictRes buildKeyValueResVO(SysDict dict) {
+        DictRes vo = new DictRes();
         vo.setValue(dict.getDictValue());
         vo.setLabel(dict.getDictLabel());
+        vo.setShow(dict.getShow());
         return vo;
     }
 
