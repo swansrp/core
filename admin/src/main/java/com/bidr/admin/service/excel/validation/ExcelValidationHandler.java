@@ -14,6 +14,7 @@ import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.service.cache.DictTreeCacheService;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.utils.excel.EasyExcelUtil;
+import com.bidr.platform.vo.dict.DictRes;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -81,7 +82,7 @@ public class ExcelValidationHandler implements SheetWriteHandler {
     }
 
     protected List<String> getDictConstraint(String dictName) {
-        List<KeyValueResVO> keyValue = BeanUtil.getBean(DictCacheService.class).getKeyValue(dictName);
+        List<DictRes> keyValue = BeanUtil.getBean(DictCacheService.class).getKeyValue(dictName);
         return ReflectionUtil.getFieldList(keyValue, KeyValueResVO::getLabel);
     }
 
