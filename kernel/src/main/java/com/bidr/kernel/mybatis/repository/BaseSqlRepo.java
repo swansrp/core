@@ -116,7 +116,9 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
                                 Class<VO> vo) {
         MPJLambdaWrapper<T> wr = buildPortalWrapper(req.getConditionList(), req.getSortList(),
                 req.getSelectColumnCondition(), aliasMap, havingFields, selectApplyMap, wrapper);
-        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wr);
+        Page page = new Page(req.getCurrentPage(), req.getPageSize());
+        page.setOptimizeCountSql(false);
+        return selectJoinListPage(page, vo, wr);
     }
 
     @Override
@@ -144,7 +146,9 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
         Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
                 wrapper);
         parseAdvancedQuery(req, selectAliasMap, wrapper);
-        return selectJoinListPage(new Page(req.getCurrentPage(), req.getPageSize()), vo, wrapper);
+        Page page = new Page(req.getCurrentPage(), req.getPageSize());
+        page.setOptimizeCountSql(false);
+        return selectJoinListPage(page, vo, wrapper);
     }
 
     @Override
