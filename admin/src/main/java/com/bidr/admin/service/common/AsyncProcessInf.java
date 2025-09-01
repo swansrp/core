@@ -41,18 +41,21 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
                         addUploadProgress(i++);
                     }
                 }
-                TransactionStatus status = getTransactionStatus();
+                TransactionStatus status = null;
                 try {
                     startSaveRecord();
                     i = 1;
                     for (T item : entityList) {
+                        status = getTransactionStatus();
                         handle(item);
+                        getTransactionManager().commit(status);
                         addUploadProgress(i++);
                     }
-                    getTransactionManager().commit(status);
                     uploadProgressFinish();
                 } catch (Exception e) {
-                    getTransactionManager().rollback(status);
+                    if (status != null) {
+                        getTransactionManager().rollback(status);
+                    }
                     uploadProgressException(e.getMessage());
                 }
             } else {
@@ -64,6 +67,16 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
     }
 
     /**
+     * 校验数据
+     *
+     * @param item
+     * @return 是否可以进行处理
+     */
+    default boolean validate(T item) {
+        return true;
+    }
+
+    /**
      * 获取TransactionStatus
      *
      * @return 获取TransactionStatus
@@ -72,16 +85,6 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         return getTransactionManager().getTransaction(def);
-    }
-
-    /**
-     * 校验数据
-     *
-     * @param item
-     * @return 是否可以进行处理
-     */
-    default boolean validate(T item) {
-        return true;
     }
 
     /**
