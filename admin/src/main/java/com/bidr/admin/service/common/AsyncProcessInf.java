@@ -29,33 +29,37 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
      */
     @Async
     default void handle(List<T> items) {
-        if (FuncUtil.isNotEmpty(items)) {
-            startUploadProgress(items.size());
-            startValidateRecord(items.size());
-            List<T> entityList = new ArrayList<>();
-            int i = 1;
-            for (T item : items) {
-                if (validate(item)) {
-                    entityList.add(item);
-                    addUploadProgress(i++);
+        try {
+            if (FuncUtil.isNotEmpty(items)) {
+                startUploadProgress(items.size());
+                startValidateRecord(items.size());
+                List<T> entityList = new ArrayList<>();
+                int i = 1;
+                for (T item : items) {
+                    if (validate(item)) {
+                        entityList.add(item);
+                        addUploadProgress(i++);
+                    }
                 }
-            }
-            TransactionStatus status = getTransactionStatus();
-            try {
-                startSaveRecord();
-                i = 1;
-                for (T item : entityList) {
-                    handle(item);
-                    addUploadProgress(i++);
+                TransactionStatus status = getTransactionStatus();
+                try {
+                    startSaveRecord();
+                    i = 1;
+                    for (T item : entityList) {
+                        handle(item);
+                        addUploadProgress(i++);
+                    }
+                    getTransactionManager().commit(status);
+                    uploadProgressFinish();
+                } catch (Exception e) {
+                    getTransactionManager().rollback(status);
+                    uploadProgressException(e.getMessage());
                 }
-                getTransactionManager().commit(status);
+            } else {
                 uploadProgressFinish();
-            } catch (Exception e) {
-                getTransactionManager().rollback(status);
-                uploadProgressException(e.getMessage());
             }
-        } else {
-            uploadProgressFinish();
+        } catch (Exception e) {
+            uploadProgressException(e.getMessage());
         }
     }
 
