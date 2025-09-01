@@ -125,12 +125,32 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
+     * 基础查询处理
+     *
+     * @param req 查询条件
+     */
+    @Override
+    default void defaultQuery(QueryConditionReq req) {
+
+    }
+
+    /**
      * 查询前处理
      *
      * @param req 查询条件
      */
     @Override
     default void beforeQuery(AdvancedQueryReq req) {
+
+    }
+
+    /**
+     * 基础查询处理
+     *
+     * @param req 查询条件
+     */
+    @Override
+    default void defaultQuery(AdvancedQueryReq req) {
 
     }
 

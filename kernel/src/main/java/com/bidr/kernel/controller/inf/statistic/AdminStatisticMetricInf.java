@@ -30,6 +30,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
      * @return 统计个数数据
      */
     default List<StatisticRes> statisticByGeneralReq(GeneralStatisticReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -500,6 +501,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
      * @return 统计个数数据
      */
     default List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }

@@ -25,6 +25,7 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
      * @return 汇总数据
      */
     default Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }

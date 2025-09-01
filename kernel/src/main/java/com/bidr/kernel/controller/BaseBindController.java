@@ -60,7 +60,10 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "获取已绑定(分页)")
     @RequestMapping(value = "/bind/advanced/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getBind(@RequestBody @Validated AdvancedQueryBindReq req) {
-        beforeQuery(req);
+        defaultQuery(req);
+        if (!isAdmin()) {
+            beforeQuery(req);
+        }
         IPage<ATTACH_VO> res = bindRepo().advancedQueryAttachList(req);
         return Resp.convert(res, getAttachVoClass());
     }
@@ -119,6 +122,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "全量绑定")
     @RequestMapping(value = "/bind/all", method = RequestMethod.POST)
     public void bindAllByCondition(@RequestBody @Validated AdvancedQueryBindReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -142,6 +146,12 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         }
     }
 
+    protected void defaultQuery(AdvancedQueryBindReq req) {
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            getAttachPortalService().defaultQuery(req);
+        }
+    }
+
     @ApiIgnore
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/query", method = RequestMethod.POST)
@@ -154,6 +164,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/advanced/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getUnBind(@RequestBody @Validated AdvancedQueryBindReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -197,6 +208,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "替换绑定")
     @RequestMapping(value = "/advanced/replace", method = RequestMethod.POST)
     public void replace(@RequestBody @Validated AdvancedQueryBindReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }

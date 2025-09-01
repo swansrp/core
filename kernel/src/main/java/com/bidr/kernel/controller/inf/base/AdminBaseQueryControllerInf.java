@@ -23,6 +23,7 @@ import java.util.Set;
 
 public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
     default Page<VO> queryByGeneralReq(QueryConditionReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -50,8 +51,25 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         }
     }
 
+    /**
+     * 基础查询条件
+     *
+     * @param req 查询条件
+     */
+    default void defaultQuery(QueryConditionReq req) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().defaultQuery(req);
+        }
+    }
+
+    /**
+     * 获取查询sql语句
+     *
+     * @return sql语句
+     */
     default String getSql() {
         QueryConditionReq req = new QueryConditionReq();
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -72,6 +90,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
     }
 
     default Page<VO> queryByAdvancedReq(AdvancedQueryReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -87,17 +106,18 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
     }
 
     /**
-     * 高级查询前操作
+     * 基础查询条件
      *
-     * @param req 高级查询
+     * @param req 查询条件
      */
-    default void beforeQuery(AdvancedQueryReq req) {
+    default void defaultQuery(AdvancedQueryReq req) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
-            getPortalService().beforeQuery(req);
+            getPortalService().defaultQuery(req);
         }
     }
 
     default List<VO> selectByGeneralReq(QueryConditionReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -116,6 +136,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
     }
 
     default List<VO> selectByAdvancedReq(AdvancedQueryReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -129,5 +150,16 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         }
         return getRepo().select(req.getCondition(), req.getSortList(), req.getSelectColumnCondition(), aliasMap,
                 selectApplyMap, wrapper, getVoClass());
+    }
+
+    /**
+     * 高级查询前操作
+     *
+     * @param req 高级查询
+     */
+    default void beforeQuery(AdvancedQueryReq req) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().beforeQuery(req);
+        }
     }
 }

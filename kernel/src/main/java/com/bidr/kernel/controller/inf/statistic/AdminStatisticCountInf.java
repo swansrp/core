@@ -21,6 +21,7 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
      * @return 统计个数数据
      */
     default Long countByGeneralReq(QueryConditionReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -37,6 +38,7 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
      * @return 统计个数数据
      */
     default Long countByAdvancedReq(AdvancedQueryReq req) {
+        defaultQuery(req);
         if (!isAdmin()) {
             beforeQuery(req);
         }
