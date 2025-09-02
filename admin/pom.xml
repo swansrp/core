@@ -44,7 +44,7 @@
                 <kernel.version>20250901152903-115</kernel.version>
                 <platform.version>20250822140059-44</platform.version>
                 <redis.version>20250416171510-30</redis.version>
-                <authorization.version>20250717113908-58</authorization.version>
+                <authorization.version>20250902154432-59</authorization.version>
             </properties>
         </profile>
     </profiles>
