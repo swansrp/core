@@ -14,7 +14,7 @@ import lombok.Data;
  */
 @ApiModel(description = "对接接口访问记录")
 @Data
-@TableName(value = "open_api.ac_partner_history")
+@TableName(value = "ac_partner_history")
 public class AcPartnerHistory {
     /**
      * id
