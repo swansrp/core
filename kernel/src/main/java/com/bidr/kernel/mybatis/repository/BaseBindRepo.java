@@ -214,8 +214,9 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
-        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId());
-        wrapper.and(w -> w.isNull(bindEntityId()).or().ne(bindEntityId(), req.getEntityId()));
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()),
+                on -> on.eq(bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId()));
+        wrapper.isNull(attachId());
         return attachRepo().select(req, aliasMap, selectApplyMap, wrapper, getAttachVOClass());
     }
 
