@@ -2,10 +2,15 @@ package com.bidr.kernel.config.db;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.Resource;
+import javax.sql.DataSource;
+import java.util.Map;
 
 /**
  * Mybatis Plus 配置
@@ -16,6 +21,8 @@ import javax.annotation.Resource;
 public class MybatisPlusConfig {
     @Resource
     private AppProperties appProperties;
+    @Resource
+    private DataSource dataSource;
 
     /**
      * mybatis-plus分页插件
@@ -33,5 +40,16 @@ public class MybatisPlusConfig {
     @Bean
     public MPJConfig sqlInjector() {
         return new MPJConfig();
+    }
+
+    @Bean
+    public CommandLineRunner initTables(ApplicationContext applicationContext) {
+        return args -> {
+            Map<String, MybatisPlusTableInitializerInf> beans = applicationContext.getBeansOfType(
+                    MybatisPlusTableInitializerInf.class);
+            for (MybatisPlusTableInitializerInf initializer : beans.values()) {
+                initializer.initTable(dataSource);
+            }
+        };
     }
 }
