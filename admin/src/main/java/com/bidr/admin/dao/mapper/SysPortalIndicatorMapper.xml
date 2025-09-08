@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.admin.dao.mapper.SysPortalIndicatorMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalIndicator">
+    <!--@mbg.generated-->
+    <!--@Table erp.sys_portal_indicator-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="group_id" jdbcType="BIGINT" property="groupId" />
+    <result column="item_value" jdbcType="VARCHAR" property="itemValue" />
+    <result column="item_name" jdbcType="VARCHAR" property="itemName" />
+    <result column="condition" jdbcType="LONGVARCHAR" property="condition" />
+    <result column="dynamic_column" jdbcType="LONGVARCHAR" property="dynamicColumn" />
+    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
+    <result column="remark" jdbcType="VARCHAR" property="remark" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+    <result column="valid" jdbcType="CHAR" property="valid" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, group_id, item_value, item_name, `condition`, dynamic_column, display_order, 
+    remark, create_by, create_at, update_by, update_at, `valid`
+  </sql>
+</mapper>

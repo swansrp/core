@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.admin.dao.mapper.SysPortalIndicatorGroupMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalIndicatorGroup">
+    <!--@mbg.generated-->
+    <!--@Table erp.sys_portal_indicator_group-->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="pid" jdbcType="BIGINT" property="pid" />
+    <result column="portal_name" jdbcType="VARCHAR" property="portalName" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, pid, portal_name, `name`, display_order
+  </sql>
+</mapper>

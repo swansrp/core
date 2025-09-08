@@ -302,6 +302,7 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalNameField.class))) {
             portal.setNameColumn(field.getName());
+            column.setWidth(0);
         }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalPidField.class))) {
             portal.setPidColumn(field.getName());
