@@ -2,8 +2,10 @@ package com.bidr.admin.controller.statistic;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.dao.entity.SysPortalIndicator;
+import com.bidr.admin.service.statistic.AdminPortalIndicatorService;
 import com.bidr.admin.vo.statistic.PortalIndicatorVO;
 import com.bidr.kernel.controller.BaseAdminOrderController;
+import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Title: AdminPortalIndicatorController
+ * Title: AdminPortalIndicatorService
  * Description: Copyright: Copyright (c) 2024 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -23,6 +25,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/indicator"})
 public class AdminPortalIndicatorController extends BaseAdminOrderController<SysPortalIndicator, PortalIndicatorVO> {
+
+    private final AdminPortalIndicatorService adminPortalIndicatorService;
+
+    @Override
+    public PortalCommonService<SysPortalIndicator, PortalIndicatorVO> getPortalService() {
+        return adminPortalIndicatorService;
+    }
 
     @Override
     protected SFunction<SysPortalIndicator, ?> id() {
