@@ -10,10 +10,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.SortVO;
+import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.slf4j.LoggerFactory;
 
@@ -115,6 +112,16 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
+     * 基础查询处理
+     *
+     * @param req 查询条件
+     */
+    @Override
+    default void defaultQuery(Query req) {
+
+    }
+
+    /**
      * 查询前处理
      *
      * @param req 查询条件
@@ -125,32 +132,12 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
-     * 基础查询处理
-     *
-     * @param req 查询条件
-     */
-    @Override
-    default void defaultQuery(QueryConditionReq req) {
-
-    }
-
-    /**
      * 查询前处理
      *
      * @param req 查询条件
      */
     @Override
     default void beforeQuery(AdvancedQueryReq req) {
-
-    }
-
-    /**
-     * 基础查询处理
-     *
-     * @param req 查询条件
-     */
-    @Override
-    default void defaultQuery(AdvancedQueryReq req) {
 
     }
 
@@ -211,15 +198,6 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return 别名map
      */
     default Map<String, String> getSummaryAliasMap() {
-        return null;
-    }
-
-    /**
-     * 生成需要HAVING查询的字段
-     *
-     * @return having字段
-     */
-    default Set<String> getHavingFields() {
         return null;
     }
 
@@ -300,7 +278,18 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return 数据
      */
     default Page<VO> query(AdvancedQueryReq req) {
-        return getRepo().select(req, getAliasMap(), getSelectApplyMap(), getJoinWrapper(), getVoClass());
+        Query query = new Query(req);
+        return getRepo().select(query, req.getCurrentPage(), req.getPageSize(), getAliasMap(), getHavingFields(),
+                getSelectApplyMap(), getJoinWrapper(), getVoClass());
+    }
+
+    /**
+     * 生成需要HAVING查询的字段
+     *
+     * @return having字段
+     */
+    default Set<String> getHavingFields() {
+        return null;
     }
 
     /**
@@ -323,14 +312,9 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
         return wrapper;
     }
 
-    /**
-     * 获取entity类型
-     *
-     * @return entity类型
-     */
     @Override
-    default Class<ENTITY> getEntityClass() {
-        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    default Class<VO> getVoClass() {
+        return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     }
 
     /**
@@ -339,11 +323,6 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @param wrapper 联表wrapper
      */
     default void getJoinWrapper(MPJLambdaWrapper<ENTITY> wrapper) {
-    }
-
-    @Override
-    default Class<VO> getVoClass() {
-        return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     }
 
     /**
@@ -369,6 +348,16 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo();
 
     /**
+     * 获取entity类型
+     *
+     * @return entity类型
+     */
+    @Override
+    default Class<ENTITY> getEntityClass() {
+        return (Class<ENTITY>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    }
+
+    /**
      * 根据id获取数据
      *
      * @param id id
@@ -385,7 +374,8 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return 数据
      */
     default List<VO> select(AdvancedQuery condition) {
-        return getRepo().select(condition, null, null, getAliasMap(), getSelectApplyMap(), getJoinWrapper(),
+        Query query = new Query(new AdvancedQueryReq(condition));
+        return getRepo().select(query, getAliasMap(), getHavingFields(), getSelectApplyMap(), getJoinWrapper(),
                 getVoClass());
     }
 
@@ -397,7 +387,8 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return 数据
      */
     default List<VO> query(AdvancedQuery condition, List<SortVO> sortList) {
-        return getRepo().select(condition, sortList, null, getAliasMap(), getSelectApplyMap(), getJoinWrapper(),
+        Query query = new Query(new AdvancedQueryReq(condition, sortList));
+        return getRepo().select(query, getAliasMap(), getHavingFields(), getSelectApplyMap(), getJoinWrapper(),
                 getVoClass());
     }
 
@@ -410,8 +401,9 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return 数据
      */
     default List<VO> query(AdvancedQuery condition, List<SortVO> sortList, Map<String, Object> selectColumnCondition) {
-        return getRepo().select(condition, sortList, selectColumnCondition, getAliasMap(), getSelectApplyMap(),
-                getJoinWrapper(), getVoClass());
+        Query query = new Query(new AdvancedQueryReq(condition, sortList, selectColumnCondition));
+        return getRepo().select(query, getAliasMap(), getHavingFields(), getSelectApplyMap(), getJoinWrapper(),
+                getVoClass());
     }
 
 }

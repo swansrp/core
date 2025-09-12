@@ -7,6 +7,7 @@ import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.statistic.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
@@ -30,7 +31,8 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
      * @return 统计个数数据
      */
     default List<StatisticRes> statisticByGeneralReq(GeneralStatisticReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -501,7 +503,8 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
      * @return 统计个数数据
      */
     default List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }

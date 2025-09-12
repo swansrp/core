@@ -29,9 +29,32 @@ public class AdvancedQueryReq extends QueryReqVO {
         super();
     }
 
+    public AdvancedQueryReq(AdvancedQuery condition) {
+        this.condition = condition;
+    }
+
+    public AdvancedQueryReq(AdvancedQuery condition, List<SortVO> sortList) {
+        this.condition = condition;
+        this.sortList = sortList;
+    }
+
+    public AdvancedQueryReq(AdvancedQuery condition, List<SortVO> sortList, Map<String, Object> selectColumnCondition) {
+        this.condition = condition;
+        this.sortList = sortList;
+        this.selectColumnCondition = selectColumnCondition;
+    }
+
     public AdvancedQueryReq(AdvancedQuery condition, List<SortVO> sortList, Long currentPage, Long pageSize) {
         super(currentPage, pageSize);
         this.condition = condition;
         this.sortList = sortList;
+    }
+
+    public AdvancedQueryReq(AdvancedQuery condition, List<SortVO> sortList, Map<String, Object> selectColumnCondition,
+                            Long currentPage, Long pageSize) {
+        super(currentPage, pageSize);
+        this.condition = condition;
+        this.sortList = sortList;
+        this.selectColumnCondition = selectColumnCondition;
     }
 }

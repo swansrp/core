@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.service.PortalCommonService;
@@ -16,7 +17,8 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.bind.AdvancedQueryBindReq;
 import com.bidr.kernel.vo.bind.BindInfoReq;
 import com.bidr.kernel.vo.bind.QueryBindReq;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
+import com.bidr.kernel.vo.portal.Query;
+import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -24,7 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Title: BaseBindRepo
@@ -42,30 +47,14 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     public List<ATTACH_VO> getBindList(Object entityId) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        Map<String, String> aliasMap = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            aliasMap = getAttachPortalService().getAliasMap();
-            wrapper = getAttachPortalService().getJoinWrapper();
-            selectApplyMap = getAttachPortalService().getSelectApplyMap();
-        } else {
-            wrapper.selectAll(getAttachClass()).select(bindEntityId());
-        }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
                 .eq(bindEntityId(), entityId);
-        return attachRepo().select(new AdvancedQuery(), new ArrayList<>(), new HashMap<>(0), aliasMap, selectApplyMap,
-                wrapper, getAttachVOClass());
+        return select(new Query(), wrapper);
     }
 
     protected Class<ATTACH> getAttachClass() {
         return (Class<ATTACH>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 2);
     }
-
-    protected PortalCommonService<ATTACH, ATTACH_VO> getAttachPortalService() {
-        return null;
-    }
-
-    protected abstract SFunction<BIND, ?> bindEntityId();
 
     protected Class<BIND> getBindClass() {
         return (Class<BIND>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
@@ -74,6 +63,31 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     protected abstract SFunction<BIND, ?> bindAttachId();
 
     protected abstract SFunction<ATTACH, ?> attachId();
+
+    protected abstract SFunction<BIND, ?> bindEntityId();
+
+    protected List<ATTACH_VO> select(Query query, MPJLambdaWrapper<ATTACH> wrapper) {
+        Map<String, String> aliasMap = null;
+        Set<String> havingFields = null;
+        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            aliasMap = getAttachPortalService().getAliasMap();
+            wrapper = getAttachPortalService().getJoinWrapper();
+            havingFields = getAttachPortalService().getHavingFields();
+            selectApplyMap = getAttachPortalService().getSelectApplyMap();
+        } else {
+            wrapper.selectAll(getAttachClass()).select(bindEntityId());
+        }
+        return attachRepo().select(query, aliasMap, havingFields, selectApplyMap, wrapper, getAttachVOClass());
+    }
+
+    public PortalCommonService<ATTACH, ATTACH_VO> getPortalService() {
+        return getAttachPortalService();
+    }
+
+    protected PortalCommonService<ATTACH, ATTACH_VO> getAttachPortalService() {
+        return null;
+    }
 
     protected BaseSqlRepo attachRepo() {
         return (BaseSqlRepo) applicationContext.getBean(
@@ -94,16 +108,18 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         return (BaseSqlRepo) applicationContext.getBean(StrUtil.lowerFirst(getBindClass().getSimpleName()) + "Service");
     }
 
-    public PortalCommonService<ATTACH, ATTACH_VO> getPortalService() {
-        return getAttachPortalService();
-    }
-
     public IPage<ATTACH_VO> queryAttachList(QueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
+        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
+                .eq(bindEntityId(), req.getEntityId());
+        return query(new Query(req), req, wrapper);
+    }
+
+    protected Page<ATTACH_VO> query(Query query, QueryReqVO page, MPJLambdaWrapper<ATTACH> wrapper) {
         Map<String, String> aliasMap = null;
         Set<String> havingFields = null;
         Map<String, List<DynamicColumn>> selectApplyMap = null;
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getAttachPortalService().getAliasMap();
             wrapper = getAttachPortalService().getJoinWrapper();
             havingFields = getAttachPortalService().getHavingFields();
@@ -111,44 +127,23 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
-        wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
-                .eq(bindEntityId(), req.getEntityId());
-        return attachRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getAttachVOClass());
+        return attachRepo().select(query, page.getCurrentPage(), page.getPageSize(), aliasMap, havingFields,
+                selectApplyMap, wrapper, getAttachVOClass());
     }
 
     public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass());
-        Map<String, String> aliasMap = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            aliasMap = getAttachPortalService().getAliasMap();
-            selectApplyMap = getAttachPortalService().getSelectApplyMap();
-            wrapper = getAttachPortalService().getJoinWrapper();
-        } else {
-            wrapper.selectAll(getAttachClass()).select(bindEntityId());
-        }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()), bindAttachId(), attachId())
                 .eq(bindEntityId(), req.getEntityId());
-        return attachRepo().select(req, aliasMap, selectApplyMap, wrapper, getAttachVOClass());
+        return query(new Query(req), req, wrapper);
     }
 
-    public IPage<ATTACH> getUnbindList(QueryBindReq req) {
+    public IPage<ATTACH_VO> getUnbindList(QueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
-        Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            aliasMap = getAttachPortalService().getAliasMap();
-            wrapper = getAttachPortalService().getJoinWrapper();
-            havingFields = getAttachPortalService().getHavingFields();
-            selectApplyMap = getAttachPortalService().getSelectApplyMap();
-        } else {
-            wrapper.selectAll(getAttachClass()).select(bindEntityId());
-        }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()),
                 on -> on.eq(bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId()));
         wrapper.isNull(bindEntityId());
-        return attachRepo().select(req, aliasMap, havingFields, selectApplyMap, wrapper, getAttachVOClass());
+        return query(new Query(req), req, wrapper);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -191,33 +186,25 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     @Transactional(rollbackFor = Exception.class)
     public void bindAll(AdvancedQueryBindReq req) {
-        IPage<ATTACH> res = advancedQueryUnbindList(req);
+        IPage<ATTACH_VO> res = advancedQueryUnbindList(req);
         Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG,
                 "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
         List attachIdList = new ArrayList();
         if (FuncUtil.isNotEmpty(res.getRecords())) {
-            for (ATTACH record : res.getRecords()) {
-                attachIdList.add(attachId().apply(record));
+            for (ATTACH_VO record : res.getRecords()) {
+                ATTACH attach = ReflectionUtil.copy(record, getAttachClass());
+                attachIdList.add(attachId().apply(attach));
             }
         }
         bindList(attachIdList, req.getEntityId());
     }
 
-    public IPage<ATTACH> advancedQueryUnbindList(AdvancedQueryBindReq req) {
+    public IPage<ATTACH_VO> advancedQueryUnbindList(AdvancedQueryBindReq req) {
         MPJLambdaWrapper<ATTACH> wrapper = new MPJLambdaWrapper<>(getAttachClass()).distinct();
-        Map<String, String> aliasMap = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            aliasMap = getAttachPortalService().getAliasMap();
-            selectApplyMap = getAttachPortalService().getSelectApplyMap();
-            wrapper = getAttachPortalService().getJoinWrapper();
-        } else {
-            wrapper.selectAll(getAttachClass()).select(bindEntityId());
-        }
         wrapper.leftJoin(getBindClass(), DbUtil.getTableName(getBindClass()),
                 on -> on.eq(bindAttachId(), attachId()).eq(bindEntityId(), req.getEntityId()));
         wrapper.isNull(bindEntityId());
-        return attachRepo().select(req, aliasMap, selectApplyMap, wrapper, getAttachVOClass());
+        return query(new Query(req), req, wrapper);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -262,13 +249,14 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
     }
 
     public void advancedReplace(AdvancedQueryBindReq req) {
-        IPage<ATTACH> res = advancedQueryUnbindList(req);
+        IPage<ATTACH_VO> res = advancedQueryUnbindList(req);
         Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG,
                 "符合条件的数据量过多: " + res.getTotal() + "条, 请设置合理过滤条件");
         List attachIdList = new ArrayList();
         if (FuncUtil.isNotEmpty(res.getRecords())) {
-            for (ATTACH record : res.getRecords()) {
-                attachIdList.add(attachId().apply(record));
+            for (ATTACH_VO record : res.getRecords()) {
+                ATTACH attach = ReflectionUtil.copy(record, getAttachClass());
+                attachIdList.add(attachId().apply(attach));
             }
         }
         replace(attachIdList, req.getEntityId());

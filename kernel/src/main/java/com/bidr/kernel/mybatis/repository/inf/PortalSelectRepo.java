@@ -477,31 +477,17 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
         return null;
     }
 
-    default MPJLambdaWrapper<T> buildPortalWrapper(QueryConditionReq req, Map<String, String> aliasMap,
+    default MPJLambdaWrapper<T> buildPortalWrapper(Query query, Map<String, String> aliasMap,
                                                    Collection<String> havingFields,
                                                    Map<String, List<DynamicColumn>> selectApplyMap,
                                                    MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<>();
         }
-        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
-                wrapper);
-        parseGeneralQuery(req.getConditionList(), selectAliasMap, havingFields, wrapper);
-        parseSort(req.getSortList(), selectAliasMap, wrapper);
-        return wrapper;
-    }
-
-    default MPJLambdaWrapper<T> buildPortalWrapper(List<ConditionVO> conditionList, List<SortVO> sortList,
-                                                   Map<String, Object> selectColumnCondition,
-                                                   Map<String, String> aliasMap, Collection<String> havingFields,
-                                                   Map<String, List<DynamicColumn>> selectApplyMap,
-                                                   MPJLambdaWrapper<T> wrapper) {
-        if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<>();
-        }
-        Map<String, String> selectAliasMap = parseSelectApply(selectColumnCondition, aliasMap, selectApplyMap, wrapper);
-        parseGeneralQuery(conditionList, selectAliasMap, havingFields, wrapper);
-        parseSort(sortList, selectAliasMap, wrapper);
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap,
+                selectApplyMap, wrapper);
+        parseQuery(query, selectAliasMap, havingFields, wrapper);
+        parseSort(query.getSortList(), selectAliasMap, wrapper);
         return wrapper;
     }
 
@@ -563,6 +549,28 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
 
             }
         }
+    }
+
+    default void parseQuery(Query query, Map<String, String> aliasMap, Collection<String> havingFields,
+                            MPJLambdaWrapper<T> wrapper) {
+        wrapper.and(w -> {
+            boolean emptyCondition = true;
+            if (FuncUtil.isNotEmpty(query.getConditionList())) {
+                w.nested(ww -> parseGeneralQuery(query.getConditionList(), aliasMap, havingFields, ww));
+                emptyCondition = false;
+            }
+            if (FuncUtil.isNotEmpty(query.getCondition())) {
+                w.nested(ww -> parseAdvancedQuery(query.getCondition(), aliasMap, ww));
+                emptyCondition = false;
+            }
+            if (FuncUtil.isNotEmpty(query.getDefaultQuery())) {
+                w.nested(ww -> parseAdvancedQuery(query.getDefaultQuery(), aliasMap, ww));
+                emptyCondition = false;
+            }
+            if (emptyCondition) {
+                w.apply("1=1");
+            }
+        });
     }
 
     default void parseGeneralQuery(List<ConditionVO> conditionList, Map<String, String> aliasMap,

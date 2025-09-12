@@ -9,6 +9,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.bind.*;
+import com.bidr.kernel.vo.portal.Query;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,10 +28,6 @@ import java.util.List;
  * @since 2023/05/09 17:02
  */
 public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> extends BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
-
-    protected BaseAdminController<ATTACH, ?> attachAdminController() {
-        return null;
-    }
 
     @ApiIgnore
     @ApiOperation(value = "获取已绑定(列表)")
@@ -60,12 +57,33 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "获取已绑定(分页)")
     @RequestMapping(value = "/bind/advanced/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getBind(@RequestBody @Validated AdvancedQueryBindReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
         IPage<ATTACH_VO> res = bindRepo().advancedQueryAttachList(req);
         return Resp.convert(res, getAttachVoClass());
+    }
+
+    protected void defaultQuery(Query req) {
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            getAttachPortalService().defaultQuery(req);
+        }
+    }
+
+    protected boolean isAdmin() {
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            return getAttachPortalService().isAdmin();
+        } else {
+            return false;
+        }
+    }
+
+    protected void beforeQuery(AdvancedQueryBindReq req) {
+        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
+            getAttachPortalService().beforeQuery(req);
+        }
     }
 
     @ApiIgnore
@@ -74,6 +92,10 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     public Page<?> getAttach(@RequestBody @Validated QueryBindReq req) {
         Validator.assertNotNull(attachAdminController(), ErrCodeSys.PA_DATA_NOT_SUPPORT, "实体列表");
         return attachAdminController().generalQuery(req);
+    }
+
+    protected BaseAdminController<ATTACH, ?> attachAdminController() {
+        return null;
     }
 
     @ApiIgnore
@@ -122,7 +144,8 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "全量绑定")
     @RequestMapping(value = "/bind/all", method = RequestMethod.POST)
     public void bindAllByCondition(@RequestBody @Validated AdvancedQueryBindReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -132,31 +155,11 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         Resp.notice("绑定成功");
     }
 
-    protected boolean isAdmin() {
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            return getAttachPortalService().isAdmin();
-        } else {
-            return false;
-        }
-    }
-
-    protected void beforeQuery(AdvancedQueryBindReq req) {
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            getAttachPortalService().beforeQuery(req);
-        }
-    }
-
-    protected void defaultQuery(AdvancedQueryBindReq req) {
-        if (FuncUtil.isNotEmpty(getAttachPortalService())) {
-            getAttachPortalService().defaultQuery(req);
-        }
-    }
-
     @ApiIgnore
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getUnBind(@RequestBody @Validated QueryBindReq req) {
-        IPage<ATTACH> res = bindRepo().getUnbindList(req);
+        IPage<ATTACH_VO> res = bindRepo().getUnbindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
@@ -164,11 +167,12 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "获取未绑定")
     @RequestMapping(value = "/unbind/advanced/query", method = RequestMethod.POST)
     public Page<ATTACH_VO> getUnBind(@RequestBody @Validated AdvancedQueryBindReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        IPage<ATTACH> res = bindRepo().advancedQueryUnbindList(req);
+        IPage<ATTACH_VO> res = bindRepo().advancedQueryUnbindList(req);
         return Resp.convert(res, getAttachVoClass());
     }
 
@@ -208,7 +212,8 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
     @ApiOperation(value = "替换绑定")
     @RequestMapping(value = "/advanced/replace", method = RequestMethod.POST)
     public void replace(@RequestBody @Validated AdvancedQueryBindReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }

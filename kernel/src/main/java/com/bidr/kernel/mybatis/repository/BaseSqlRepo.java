@@ -12,7 +12,7 @@ import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.vo.portal.*;
+import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.apache.commons.collections4.CollectionUtils;
@@ -111,60 +111,33 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
+    public <VO> List<VO> select(Query query, Map<String, String> aliasMap, Collection<String> havingFields,
                                 Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
                                 Class<VO> vo) {
-        MPJLambdaWrapper<T> wr = buildPortalWrapper(req.getConditionList(), req.getSortList(),
-                req.getSelectColumnCondition(), aliasMap, havingFields, selectApplyMap, wrapper);
-        Page page = new Page(req.getCurrentPage(), req.getPageSize());
-        page.setOptimizeCountSql(false);
-        return selectJoinListPage(page, vo, wr);
+        if (FuncUtil.isEmpty(wrapper)) {
+            wrapper = new MPJLambdaWrapper<T>(entityClass);
+        }
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap,
+                selectApplyMap, wrapper);
+        parseQuery(query, selectAliasMap, havingFields, wrapper);
+        parseSort(query.getSortList(), selectAliasMap, wrapper);
+        return selectJoinList(vo, wrapper);
     }
 
     @Override
-    public <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList,
-                                Map<String, Object> selectColumnCondition, Map<String, String> aliasMap,
+    public <VO> Page<VO> select(Query query, long currentPage, long pageSize, Map<String, String> aliasMap,
                                 Collection<String> havingFields, Map<String, List<DynamicColumn>> selectApplyMap,
                                 MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
-        MPJLambdaWrapper<T> wr = buildPortalWrapper(conditionList, sortList, selectColumnCondition, aliasMap,
-                havingFields, selectApplyMap, wrapper);
-        return selectJoinList(vo, wr);
-    }
-
-    @Override
-    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo) {
-        return select(req, aliasMap, null, null, vo);
-    }
-
-    @Override
-    public <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap,
-                                Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
-                                Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(req.getSelectColumnCondition(), aliasMap, selectApplyMap,
-                wrapper);
-        parseAdvancedQuery(req, selectAliasMap, wrapper);
-        Page page = new Page(req.getCurrentPage(), req.getPageSize());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap,
+                selectApplyMap, wrapper);
+        parseQuery(query, selectAliasMap, havingFields, wrapper);
+        Page page = new Page(currentPage, pageSize);
         page.setOptimizeCountSql(false);
+        parseSort(query.getSortList(), selectAliasMap, wrapper);
         return selectJoinListPage(page, vo, wrapper);
-    }
-
-    @Override
-    public <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList,
-                                Map<String, Object> selectColumnCondition, Map<String, String> aliasMap,
-                                Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
-                                Class<VO> vo) {
-        if (FuncUtil.isEmpty(wrapper)) {
-            wrapper = new MPJLambdaWrapper<T>(entityClass);
-        }
-        Map<String, String> selectAliasMap = parseSelectApply(selectColumnCondition, aliasMap, selectApplyMap, wrapper);
-        if (FuncUtil.isNotEmpty(condition)) {
-            parseAdvancedQuery(condition, selectAliasMap, wrapper);
-        }
-        parseSort(sortList, selectAliasMap, wrapper);
-        return selectJoinList(vo, wrapper);
     }
 
     @Override

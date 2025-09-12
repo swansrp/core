@@ -3,7 +3,7 @@ package com.bidr.kernel.mybatis.repository.inf;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
-import com.bidr.kernel.vo.portal.*;
+import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
@@ -31,24 +31,12 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
 
-    <VO> Page<VO> select(QueryConditionReq req, Map<String, String> aliasMap, Collection<String> havingFields,
+    <VO> List<VO> select(Query query, Map<String, String> aliasMap, Collection<String> havingFields,
                          Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
-    <VO> List<VO> select(List<ConditionVO> conditionList, List<SortVO> sortList,
-                         Map<String, Object> selectColumnCondition, Map<String, String> aliasMap,
+    <VO> Page<VO> select(Query query, long currentPage, long pageSize, Map<String, String> aliasMap,
                          Collection<String> havingFields, Map<String, List<DynamicColumn>> selectApplyMap,
                          MPJLambdaWrapper<T> wrapper, Class<VO> vo);
-
-    <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap, Class<VO> vo);
-
-    <VO> Page<VO> select(AdvancedQueryReq req, Map<String, String> aliasMap,
-                         Map<String, List<DynamicColumn>> selectApplyMap,
-                         MPJLambdaWrapper<T> wrapper, Class<VO> vo);
-
-    <VO> List<VO> select(AdvancedQuery condition, List<SortVO> sortList, Map<String, Object> selectColumnCondition,
-                         Map<String, String> aliasMap, Map<String, List<DynamicColumn>> selectApplyMap,
-                         MPJLambdaWrapper<T> wrapper,
-                         Class<VO> vo);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

@@ -1,6 +1,7 @@
 package com.bidr.kernel.controller.inf.statistic;
 
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
@@ -21,7 +22,8 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
      * @return 统计个数数据
      */
     default Long countByGeneralReq(QueryConditionReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
@@ -38,7 +40,8 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
      * @return 统计个数数据
      */
     default Long countByAdvancedReq(AdvancedQueryReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }

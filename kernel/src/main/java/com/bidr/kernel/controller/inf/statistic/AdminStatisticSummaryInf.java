@@ -1,6 +1,7 @@
 package com.bidr.kernel.controller.inf.statistic;
 
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -25,7 +26,8 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
      * @return 汇总数据
      */
     default Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req) {
-        defaultQuery(req);
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
