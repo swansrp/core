@@ -226,7 +226,8 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
      */
     public String getSelectSql(SFunction<T, ?>... columns) {
         return Arrays.stream(columns)
-                .map(c -> StringUtil.camelToUnderline(LambdaUtils.getName(c)) + " as " + LambdaUtils.getName(c))
+                .map(c -> StringUtil.camelToUnderline(LambdaUtils.getName(c)) + " as " + "'" + LambdaUtils.getName(c) +
+                        "'")
                 .collect(Collectors.joining(StringPool.COMMA, StringPool.SPACE, StringPool.SPACE));
     }
 
@@ -239,7 +240,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     public String getSelectSql(String prefix, SFunction<T, ?>... columns) {
         return Arrays.stream(columns)
                 .map(c -> prefix + "." + StringUtil.camelToUnderline(LambdaUtils.getName(c)) + " as " +
-                        LambdaUtils.getName(c))
+                        "'" + LambdaUtils.getName(c) + "'")
                 .collect(Collectors.joining(StringPool.COMMA, StringPool.SPACE, StringPool.SPACE));
     }
 
@@ -249,7 +250,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         map.forEach((name, field) -> {
             if (!Modifier.isFinal(field.getModifiers())) {
                 String columnName = getSelectSqlName(field);
-                sb.append(" ").append(columnName).append(" as ").append(name).append(" ,");
+                sb.append(" ").append(columnName).append(" as ").append("'").append(name).append("'").append(" ,");
             }
         });
         String sql = sb.toString();
@@ -272,7 +273,8 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
         map.forEach((name, field) -> {
             if (!Modifier.isFinal(field.getModifiers())) {
                 String columnName = getSelectSqlName(field);
-                sb.append(" ").append(prefix).append(".").append(columnName).append(" as ").append(name).append(" ,");
+                sb.append(" ").append(prefix).append(".").append(columnName).append(" as ").append("'").append(name)
+                        .append("'").append(" ,");
             }
         });
         String sql = sb.toString();
