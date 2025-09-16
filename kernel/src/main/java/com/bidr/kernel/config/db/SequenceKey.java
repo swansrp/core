@@ -11,7 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Title: SequenceKey
@@ -29,8 +31,14 @@ public class SequenceKey implements IdentifierGenerator {
 
     @Override
     public Number nextId(Object entity) {
-        String sequence = getSeqName(entity);
-        return new BigDecimal(sequence);
+        try {
+            String sequence = getSeqName(entity);
+            return new BigDecimal(sequence);
+        } catch (Exception e) {
+            UUID uuid = UUID.randomUUID();
+            // 转换为正数的 BigInteger
+            return new BigInteger(uuid.toString().replace("-", ""), 16);
+        }
     }
 
     private String getSeqName(Object entity) {
@@ -48,6 +56,10 @@ public class SequenceKey implements IdentifierGenerator {
 
     @Override
     public String nextUUID(Object entity) {
-        return getSeqName(entity);
+        try {
+            return getSeqName(entity);
+        } catch (Exception e) {
+            return UUID.randomUUID().toString().replace("-", "");
+        }
     }
 }
