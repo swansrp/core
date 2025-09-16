@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.admin.dao.mapper.SysPortalDashboardStatisticMapper">
+    <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalDashboardStatistic">
+        <!--@mbg.generated-->
+        <!--@Table sys_portal_dashboard_statistic-->
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="pid" jdbcType="BIGINT" property="pid"/>
+        <result column="table_id" jdbcType="VARCHAR" property="tableId"/>
+        <result column="title" jdbcType="VARCHAR" property="title"/>
+        <result column="customer_number" jdbcType="VARCHAR" property="customerNumber"/>
+        <result column="order" jdbcType="INTEGER" property="order"/>
+        <result column="indicator" jdbcType="LONGVARCHAR" property="indicator"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        <!--@mbg.generated-->
+        id, pid, table_id, title, customer_number, `order`, `indicator`
+    </sql>
+</mapper>

@@ -6,15 +6,16 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import java.util.Date;
 import lombok.Data;
+
+import java.util.Date;
 
 /**
  * 统计指标
  */
 @ApiModel(description = "统计指标")
 @Data
-@TableName(value = "erp.sys_portal_indicator")
+@TableName(value = "sys_portal_indicator")
 public class SysPortalIndicator {
     /**
      * id

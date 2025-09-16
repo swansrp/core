@@ -349,13 +349,13 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 SelectCache cache = cacheMap.get(portalEntityField.field());
                 sqlFieldName = StringUtil.joinWith(".", alias, cache.getColumn());
                 wrapper.getSelectColum()
-                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
+                        .add(new SelectString(sqlFieldName + " AS " + "'" + field.getName() + "'", wrapper.getAlias()));
             } else {
                 if (FuncUtil.isEmpty(sqlFieldName)) {
                     sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
                 }
                 wrapper.getSelectColum()
-                        .add(new SelectString(sqlFieldName + " AS " + field.getName(), wrapper.getAlias()));
+                        .add(new SelectString(sqlFieldName + " AS " + "'" + field.getName() + "'", wrapper.getAlias()));
             }
             if (portalEntityField.group()) {
                 wrapper.groupBy(sqlFieldName);
