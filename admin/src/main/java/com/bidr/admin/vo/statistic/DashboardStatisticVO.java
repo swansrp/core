@@ -28,6 +28,10 @@ public class DashboardStatisticVO {
     @ApiModelProperty(value = "key")
     private Long key;
 
+    @PortalDisplayNoneField
+    @ApiModelProperty(value = "表id")
+    private String tableId;
+
     @PortalNameField
     @ApiModelProperty(value = "显示名称")
     private String title;

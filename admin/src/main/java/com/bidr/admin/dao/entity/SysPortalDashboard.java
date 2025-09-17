@@ -35,11 +35,18 @@ public class SysPortalDashboard {
     private String customerNumber;
 
     /**
-     * 仪表盘展示顺序
+     * 图表横坐标
      */
-    @TableField(value = "`order`")
-    @ApiModelProperty(value = "仪表盘展示顺序")
-    private Integer order;
+    @TableField(value = "x_position")
+    @ApiModelProperty(value = "图表横坐标")
+    private Integer xPosition;
+
+    /**
+     * 图表纵坐标
+     */
+    @TableField(value = "y_position")
+    @ApiModelProperty(value = "图表纵坐标")
+    private Integer yPosition;
 
     /**
      * 图表宽度

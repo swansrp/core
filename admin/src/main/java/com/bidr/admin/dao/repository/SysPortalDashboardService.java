@@ -15,7 +15,8 @@ public class SysPortalDashboardService extends BaseSqlRepo<SysPortalDashboardMap
                 "  `id` varchar(50) NOT NULL DEFAULT '',\n" +
                 "  `statistic_id` bigint NOT NULL COMMENT '数据id',\n" +
                 "  `customer_number` varchar(50) NOT NULL COMMENT '所属用户',\n" +
-                "  `order` int NOT NULL COMMENT '仪表盘展示顺序',\n" +
+                "  `x_position` int NOT NULL COMMENT '图表横坐标',\n" +
+                "  `y_position` int NOT NULL COMMENT '图表纵坐标',\n" +
                 "  `x_grid` int NOT NULL COMMENT '图表宽度',\n" +
                 "  `y_grid` int NOT NULL COMMENT '图表高度',\n" +
                 "  PRIMARY KEY (`id`),\n" +

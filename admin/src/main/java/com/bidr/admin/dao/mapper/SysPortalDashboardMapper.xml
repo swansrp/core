@@ -7,12 +7,13 @@
         <id column="id" jdbcType="VARCHAR" property="id"/>
         <result column="statistic_id" jdbcType="BIGINT" property="statisticId"/>
         <result column="customer_number" jdbcType="VARCHAR" property="customerNumber"/>
-        <result column="order" jdbcType="INTEGER" property="order"/>
+        <result column="x_position" jdbcType="INTEGER" property="xPosition"/>
+        <result column="y_position" jdbcType="INTEGER" property="yPosition"/>
         <result column="x_grid" jdbcType="INTEGER" property="xGrid"/>
         <result column="y_grid" jdbcType="INTEGER" property="yGrid"/>
     </resultMap>
     <sql id="Base_Column_List">
         <!--@mbg.generated-->
-        id, statistic_id, customer_number, `order`, x_grid, y_grid
+        id, statistic_id, customer_number, x_position, y_position, x_grid, y_grid
     </sql>
 </mapper>

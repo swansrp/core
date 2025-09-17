@@ -50,4 +50,12 @@ public class AdminPortalDashboardStatisticService extends BasePortalService<SysP
         wrapper.eq(SysPortalDashboardStatistic::getTableId, tableId);
         return getRepo().selectJoinList(DashboardStatisticVO.class, wrapper);
     }
+
+    public List<DashboardStatisticVO> getStatisticList(List<Long> ids) {
+        MPJLambdaWrapper<SysPortalDashboardStatistic> wrapper = getJoinWrapper();
+        String operator = AccountContext.getOperator();
+        Validator.assertNotNull(operator, ErrCodeSys.PA_PARAM_NULL, "当前登录用户");
+        wrapper.in(SysPortalDashboardStatistic::getId, ids);
+        return getRepo().selectJoinList(DashboardStatisticVO.class, wrapper);
+    }
 }
