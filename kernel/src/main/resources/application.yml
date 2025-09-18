@@ -64,17 +64,17 @@ spring:
     restart: # 热部署开关
       enabled: true
   datasource:
-#    type: com.alibaba.druid.pool.DruidDataSource
-#    driverClassName: com.mysql.cj.jdbc.Driver
-#    druid:
-#      statViewServlet:
-#        enabled: true
-#        # 设置白名单，不填则允许所有访问
-#        allow:
-#        url-pattern: /druid/*
-#        # 控制台管理用户名和密码
-#        login-username: ruoyi
-#        login-password: 123456
+    #    type: com.alibaba.druid.pool.DruidDataSource
+    #    driverClassName: com.mysql.cj.jdbc.Driver
+    #    druid:
+    #      statViewServlet:
+    #        enabled: true
+    #        # 设置白名单，不填则允许所有访问
+    #        allow:
+    #        url-pattern: /druid/*
+    #        # 控制台管理用户名和密码
+    #        login-username: ruoyi
+    #        login-password: 123456
     dynamic:
       primary: master
       strict: false
@@ -111,6 +111,17 @@ spring:
         max-active: 8
         # #连接池最大阻塞等待时间（使用负值表示没有限制）
         max-wait: -1ms
+  mail:
+    host: smtp.qq.com
+    username: 56093273@qq.com
+    password: tljbvojjskilbhdc
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: true
+            required: true
 
 management:
   info:

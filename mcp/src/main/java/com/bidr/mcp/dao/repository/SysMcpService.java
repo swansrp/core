@@ -1,7 +1,6 @@
 package com.bidr.mcp.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.mcp.dao.entity.SysMcp;
@@ -15,7 +14,7 @@ import java.util.List;
  * @author sharp
  */
 @Service
-public class SysMcpService extends BaseSqlRepo<SysMcpMapper, SysMcp> implements MybatisPlusTableInitializerInf {
+public class SysMcpService extends BaseSqlRepo<SysMcpMapper, SysMcp> {
 
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_mcp` (\n" +

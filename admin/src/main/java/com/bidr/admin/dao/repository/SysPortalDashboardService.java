@@ -2,7 +2,6 @@ package com.bidr.admin.dao.repository;
 
 import com.bidr.admin.dao.entity.SysPortalDashboard;
 import com.bidr.admin.dao.mapper.SysPortalDashboardMapper;
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
 
@@ -10,7 +9,7 @@ import org.springframework.stereotype.Service;
  * @author Sharp
  */
 @Service
-public class SysPortalDashboardService extends BaseSqlRepo<SysPortalDashboardMapper, SysPortalDashboard> implements MybatisPlusTableInitializerInf {
+public class SysPortalDashboardService extends BaseSqlRepo<SysPortalDashboardMapper, SysPortalDashboard> {
 
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_portal_dashboard` (\n" +

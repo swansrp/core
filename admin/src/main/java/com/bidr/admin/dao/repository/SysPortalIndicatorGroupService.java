@@ -6,7 +6,6 @@ import com.bidr.admin.dao.mapper.SysPortalIndicatorGroupMapper;
 import com.bidr.admin.vo.statistic.IndicatorItem;
 import com.bidr.admin.vo.statistic.IndicatorRes;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
@@ -17,7 +16,7 @@ import java.util.List;
  * @author Sharp
  */
 @Service
-public class SysPortalIndicatorGroupService extends BaseSqlRepo<SysPortalIndicatorGroupMapper, SysPortalIndicatorGroup> implements MybatisPlusTableInitializerInf {
+public class SysPortalIndicatorGroupService extends BaseSqlRepo<SysPortalIndicatorGroupMapper, SysPortalIndicatorGroup> {
 
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_portal_indicator_group` (\n" +
