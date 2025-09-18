@@ -17,6 +17,16 @@ import java.util.List;
 @Service
 public class SysMcpService extends BaseSqlRepo<SysMcpMapper, SysMcp> implements MybatisPlusTableInitializerInf {
 
+    static {
+        setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_mcp` (\n" +
+                "  `end_point` varchar(200) NOT NULL COMMENT 'mcp服务',\n" +
+                "  `end_point_name` varchar(200) NOT NULL COMMENT 'mcp服务名称',\n" +
+                "  `name` varchar(200) NOT NULL COMMENT 'mcp方法名',\n" +
+                "  `type` varchar(20) NOT NULL COMMENT 'mcp类型',\n" +
+                "  `description` LONGTEXT NOT NULL COMMENT 'mcp方法描述',\n" +
+                "  PRIMARY KEY (`end_point`,`name`,`type`) USING BTREE\n" + ") COMMENT='mcp配置表';");
+    }
+
     public SysMcp get(String endPoint, String name, String type) {
         LambdaQueryWrapper<SysMcp> wrapper = super.getQueryWrapper();
         wrapper.eq(SysMcp::getEndPoint, endPoint);
@@ -38,17 +48,5 @@ public class SysMcpService extends BaseSqlRepo<SysMcpMapper, SysMcp> implements 
         wrapper.selectAs(SysMcp::getEndPointName, KeyValueResVO::getLabel);
         wrapper.groupBy(SysMcp::getEndPoint, SysMcp::getEndPointName);
         return selectJoinList(KeyValueResVO.class, wrapper);
-    }
-
-    @Override
-    public String getSql() {
-        return "CREATE TABLE IF NOT EXISTS `sys_mcp` (\n" +
-                "  `end_point` varchar(200) NOT NULL COMMENT 'mcp服务',\n" +
-                "  `end_point_name` varchar(200) NOT NULL COMMENT 'mcp服务名称',\n" +
-                "  `name` varchar(200) NOT NULL COMMENT 'mcp方法名',\n" +
-                "  `type` varchar(20) NOT NULL COMMENT 'mcp类型',\n" +
-                "  `description` LONGTEXT NOT NULL COMMENT 'mcp方法描述',\n" +
-                "  PRIMARY KEY (`end_point`,`name`,`type`) USING BTREE\n" +
-                ") COMMENT='mcp配置表';";
     }
 }

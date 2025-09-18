@@ -12,9 +12,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class SysPortalIndicatorService extends BaseSqlRepo<SysPortalIndicatorMapper, SysPortalIndicator> implements MybatisPlusTableInitializerInf {
 
-    @Override
-    public String getSql() {
-        return "CREATE TABLE IF NOT EXISTS `sys_portal_indicator` (\n" +
+    static {
+        setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_portal_indicator` (\n" +
                 "  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'id',\n" +
                 "  `group_id` bigint NOT NULL DEFAULT '0' COMMENT '指标分组id',\n" +
                 "  `item_value` varchar(100) NOT NULL COMMENT '指标项值',\n" +
@@ -30,6 +29,6 @@ public class SysPortalIndicatorService extends BaseSqlRepo<SysPortalIndicatorMap
                 "  `valid` char(1) NOT NULL DEFAULT '1' COMMENT '有效性',\n" +
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
                 "  KEY `group_id` (`group_id`)\n" +
-                ") COMMENT='统计指标';";
+                ") COMMENT='统计指标';");
     }
 }

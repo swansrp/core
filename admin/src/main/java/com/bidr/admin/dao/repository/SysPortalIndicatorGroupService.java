@@ -19,9 +19,8 @@ import java.util.List;
 @Service
 public class SysPortalIndicatorGroupService extends BaseSqlRepo<SysPortalIndicatorGroupMapper, SysPortalIndicatorGroup> implements MybatisPlusTableInitializerInf {
 
-    @Override
-    public String getSql() {
-        return "CREATE TABLE IF NOT EXISTS `sys_portal_indicator_group` (\n" +
+    static {
+        setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_portal_indicator_group` (\n" +
                 "  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'id',\n" +
                 "  `pid` bigint DEFAULT NULL COMMENT '父级指标id',\n" +
                 "  `portal_name` varchar(50) NOT NULL COMMENT '实体名称',\n" +
@@ -30,20 +29,24 @@ public class SysPortalIndicatorGroupService extends BaseSqlRepo<SysPortalIndicat
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
                 "  KEY `pid` (`pid`),\n" +
                 "  KEY `portal_id` (`portal_name`) USING BTREE\n" +
-                ") COMMENT='统计指标组';";
+                ") COMMENT='统计指标组';");
     }
 
     public List<IndicatorRes> getIndicator(String portalName) {
         MPJLambdaWrapper<SysPortalIndicatorGroup> wrapper = super.getMPJLambdaWrapper();
         wrapper.leftJoin(SysPortalIndicator.class,
-                on -> on.eq(SysPortalIndicatorGroup::getId, SysPortalIndicator::getGroupId).eq(SysPortalIndicator::getValid, CommonConst.YES));
+                on -> on.eq(SysPortalIndicatorGroup::getId, SysPortalIndicator::getGroupId)
+                        .eq(SysPortalIndicator::getValid, CommonConst.YES));
         wrapper.selectAs(SysPortalIndicatorGroup::getId, IndicatorRes::getId);
         wrapper.selectAs(SysPortalIndicatorGroup::getName, IndicatorRes::getTitle);
         wrapper.selectAs(SysPortalIndicatorGroup::getPid, IndicatorRes::getPid);
 
-        wrapper.selectCollection(SysPortalIndicator.class, IndicatorRes::getItems, map -> map.result(SysPortalIndicator::getItemName,
-                IndicatorItem::getTitle).result(SysPortalIndicator::getItemValue, IndicatorItem::getKey).result(SysPortalIndicator::getCondition,
-                IndicatorItem::getCondition).result(SysPortalIndicator::getDynamicColumn, IndicatorItem::getDynamicColumns));
+        wrapper.selectCollection(SysPortalIndicator.class, IndicatorRes::getItems,
+                map -> map.result(SysPortalIndicator::getItemName,
+                                IndicatorItem::getTitle).result(SysPortalIndicator::getItemValue, IndicatorItem::getKey)
+                        .result(SysPortalIndicator::getCondition,
+                                IndicatorItem::getCondition)
+                        .result(SysPortalIndicator::getDynamicColumn, IndicatorItem::getDynamicColumns));
 
         wrapper.eq(SysPortalIndicatorGroup::getPortalName, portalName);
 
