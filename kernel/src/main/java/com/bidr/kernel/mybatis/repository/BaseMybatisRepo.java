@@ -36,6 +36,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -49,12 +50,39 @@ import java.util.stream.Collectors;
 @Slf4j
 @SuppressWarnings("unchecked")
 public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl<M, T> {
-
+    /**
+     * 建表语句
+     */
+    protected static final Map<String, String> DDL_SQL = new ConcurrentHashMap<>();
+    /**
+     * 版本升级语句
+     */
+    protected static final Map<String, LinkedHashMap<Integer, String>> UPGRADE_SCRIPTS = new ConcurrentHashMap<>();
     @Resource
     protected PlatformTransactionManager transactionManager;
     Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     @Resource
     private CommonMapper commonMapper;
+
+    protected static void setCreateDDL(String createSql) {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        String callerClassName = stack[2].getClassName();
+        DDL_SQL.put(callerClassName, createSql);
+    }
+
+    protected static void setUpgradeDDL(Integer version, String sql) {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        String callerClassName = stack[2].getClassName();
+        UPGRADE_SCRIPTS.computeIfAbsent(callerClassName, k -> new LinkedHashMap<>()).put(version, sql);
+    }
+
+    public String getCreateSql() {
+        return DDL_SQL.get(getClass().getName());
+    }
+
+    public LinkedHashMap<Integer, String> getUpgradeScripts() {
+        return UPGRADE_SCRIPTS.getOrDefault(getClass().getName(), new LinkedHashMap<>());
+    }
 
     public QueryWrapper<T> getQueryWrapper(String fieldName, Object value) {
         QueryWrapper<T> wrapper = Wrappers.query();
