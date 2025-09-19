@@ -93,7 +93,7 @@ public class SyncAccountService {
         }
         map.setNickName(nickName);
         AcUser wechatUser = acUserService.getUserByWechatId(map.getUnionId());
-        if (FuncUtil.isEmpty(wechatUser) && FuncUtil.isEmpty(wechatUser.getPhoneNumber())) {
+        if (FuncUtil.isNotEmpty(wechatUser) && FuncUtil.isNotEmpty(wechatUser.getPhoneNumber())) {
             map.setPhone(wechatUser.getPhoneNumber());
         }
         return map;

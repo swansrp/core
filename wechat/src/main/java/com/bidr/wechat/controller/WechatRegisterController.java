@@ -5,9 +5,6 @@ import com.bidr.authorization.annotation.msg.MsgCodeVerify;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.msg.MsgVerificationReq;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.config.response.Response;
-import com.bidr.kernel.config.response.ResponseHandler;
-import com.bidr.kernel.vo.common.CommonResVO;
 import com.bidr.wechat.service.account.SyncAccountService;
 import com.bidr.wechat.service.auth.WechatAuthService;
 import com.bidr.wechat.vo.auth.AuthRealNameReq;
@@ -16,7 +13,6 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,8 +47,9 @@ public class WechatRegisterController {
     @Auth
     @ApiOperation(value = "实名认证", notes = "实名认证")
     @ApiImplicitParams({
-            @ApiImplicitParam(paramType = "query", dataType = "string", name = "idCardImgUrl", value = "身份证正面照片", required =
-                    true)})
+            @ApiImplicitParam(paramType = "query", dataType = "string", name = "idCardImgUrl", value = "身份证正面照片",
+                              required =
+                                      true)})
     @RequestMapping(value = "/realName", method = RequestMethod.POST)
     public void realName(AuthRealNameReq req) {
         syncAccountService.realName(req);
