@@ -8,7 +8,7 @@ import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.test.BaseTest;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
-import com.bidr.platform.MiniApplication;
+import com.bidr.platform.AdminApplication;
 import com.bidr.platform.bo.excel.ExcelExportBO;
 import com.bidr.platform.config.excel.jxls.JxlsGroupRowCommand;
 import com.bidr.platform.dao.entity.SysConfig;
@@ -45,7 +45,7 @@ import java.util.Map;
  * @since 2024/01/25 11:04
  */
 @Test
-@SpringBootTest(classes = MiniApplication.class)
+@SpringBootTest(classes = AdminApplication.class)
 public class ExcelExportTest extends BaseTest {
 
     @Resource
