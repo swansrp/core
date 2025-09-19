@@ -1,10 +1,12 @@
 package com.bidr.kernel.mybatis.parse;
 
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
+import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.mybatis.bo.SqlColumn;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
+import com.bidr.kernel.vo.portal.SortVO;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,8 +24,9 @@ import static com.bidr.kernel.vo.portal.AdvancedQuery.AND;
 
 public class SqlBuilder {
 
-    public static String buildSql(List<SqlColumn> columns, String from, AdvancedQuery where, List<String> groupBy,
-                                  List<String> orderBy, AdvancedQuery having, String lastSql) {
+    public static String buildSql(List<SqlColumn> columns, String from, AdvancedQuery where,
+                                  Collection<SqlColumn> groupBy, List<SortVO> orderBy, AdvancedQuery having,
+                                  String lastSql) {
         if (columns == null || columns.isEmpty()) {
             throw new IllegalArgumentException("columns 不能为空");
         }
@@ -39,14 +42,39 @@ public class SqlBuilder {
 
         // GROUP BY
         String groupPart = (groupBy != null && !groupBy.isEmpty()) ? " GROUP BY " +
-                groupBy.stream().map(f -> aliasToSql.getOrDefault(f, f)).collect(Collectors.joining(", ")) : "";
+                groupBy.stream().map(f -> aliasToSql.getOrDefault(f.getAlias(), f.getSql()))
+                        .collect(Collectors.joining(", ")) : "";
 
         // HAVING
-        String havingPart = (having != null) ? " HAVING " + parseAdvancedQuery(having, aliasToSql) : "";
+        String havingPart = (having != null && FuncUtil.isNotEmpty(having.getConditionList())) ?
+                " HAVING " + parseAdvancedQuery(having, aliasToSql) : "";
 
         // ORDER BY
-        String orderPart = (orderBy != null && !orderBy.isEmpty()) ? " ORDER BY " +
-                orderBy.stream().map(f -> aliasToSql.getOrDefault(f, f)).collect(Collectors.joining(", ")) : "";
+        String orderPart = "";
+        if (FuncUtil.isNotEmpty(orderBy)) {
+            List<String> orderFragments = new ArrayList<>();
+            for (SortVO s : orderBy) {
+                if (s == null || s.getProperty() == null) {
+                    continue;
+                }
+
+                // 1) 优先使用 alias 映射回原字段
+                String fieldSql = aliasToSql.getOrDefault(s.getProperty(), s.getProperty());
+
+                // 2) 根据 type 决定升降序（1=ASC, 2=DESC，其他默认 ASC）
+                String direction;
+                if (s.getType() != null && s.getType().equals(PortalSortDict.DESC.getValue())) {
+                    direction = "DESC";
+                } else {
+                    direction = "ASC";
+                }
+
+                orderFragments.add(fieldSql + " " + direction);
+            }
+            if (!orderFragments.isEmpty()) {
+                orderPart = " ORDER BY " + String.join(", ", orderFragments);
+            }
+        }
 
         String lastPart = (FuncUtil.isNotEmpty(lastSql)) ? " " + lastSql : "";
 
