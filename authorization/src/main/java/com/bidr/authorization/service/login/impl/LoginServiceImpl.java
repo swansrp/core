@@ -138,6 +138,10 @@ public class LoginServiceImpl implements LoginService {
         } else {
             if (FuncUtil.isNotEmpty(phoneNumberUser)) {
                 wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumberUser, avatar);
+            } else {
+                wechatUser.setCustomerNumber(phoneNumber);
+                wechatUser.setUserName(phoneNumber);
+                wechatUser.setPhoneNumber(phoneNumber);
             }
         }
         return buildLoginRes(wechatUser);

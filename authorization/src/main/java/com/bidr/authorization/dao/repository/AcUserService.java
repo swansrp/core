@@ -43,6 +43,14 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         return super.insert(entity);
     }
 
+    @Override
+    public boolean updateById(AcUser entity) {
+        if (FuncUtil.isNotEmpty(customerNumberHandler) && FuncUtil.isEmpty(entity.getCustomerNumber())) {
+            entity.setCustomerNumber(customerNumberHandler.getCustomerNumber(entity));
+        }
+        return super.updateById(entity);
+    }
+
     public List<AcUser> getUserByDeptAndName(List<String> deptIdList, String name) {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper();
         wrapper.in(FuncUtil.isNotEmpty(deptIdList), AcUser::getDeptId, deptIdList)
