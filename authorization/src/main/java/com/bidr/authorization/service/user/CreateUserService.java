@@ -68,11 +68,11 @@ public interface CreateUserService {
      *
      * @param unionId
      * @param nickName
-     * @param phoneNumber
+     * @param phoneNumberUser
      * @param avatar
      * @return
      */
-    AcUser mergeWechatPhoneNumber(String unionId, String nickName, String phoneNumber, String avatar);
+    AcUser mergeWechatPhoneNumber(String unionId, String nickName, AcUser phoneNumberUser, String avatar);
 
     /**
      * 将白名单用户加入用户表

@@ -100,16 +100,15 @@ public class CreateUserServiceImpl implements CreateUserService {
     }
 
     @Override
-    public AcUser mergeWechatPhoneNumber(String unionId, String nickName, String phoneNumber, String avatar) {
-        AcUser user = acUserService.getUserByPhoneNumber(phoneNumber);
-        Validator.assertBlank(user.getWechatId(), ErrCodeSys.SYS_ERR_MSG, "手机号账户已绑定微信");
-        user.setWechatId(unionId);
-        if (StringUtils.isBlank(user.getName())) {
-            user.setName(nickName);
+    public AcUser mergeWechatPhoneNumber(String unionId, String nickName, AcUser phoneNumberUser, String avatar) {
+        Validator.assertBlank(phoneNumberUser.getWechatId(), ErrCodeSys.SYS_ERR_MSG, "手机号账户已绑定微信");
+        phoneNumberUser.setWechatId(unionId);
+        if (StringUtils.isBlank(phoneNumberUser.getName())) {
+            phoneNumberUser.setName(nickName);
         }
         acUserService.deleteByUserName(unionId);
-        acUserService.updateById(user);
-        return user;
+        acUserService.updateById(phoneNumberUser);
+        return phoneNumberUser;
     }
 
     @Override

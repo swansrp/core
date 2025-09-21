@@ -161,10 +161,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public TokenInfo buildWechatToken(String customerNumber) {
-        boolean loginSingleton = frameCacheService.getParamSwitch(AccountParam.LOGIN_SINGLETON);
-        if (loginSingleton) {
-            removeTokenForLoginSingleton(customerNumber, TokenType.WECHAT_TOKEN);
-        }
+        // 由于存在微信账号merge的场景 微信环境不校验单一token登录
         return buildToken(customerNumber, TokenType.WECHAT_TOKEN);
     }
 

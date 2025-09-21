@@ -128,12 +128,16 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public LoginRes loginOrRegByWechatPhoneNumber(String wechatId, String nickName, String phoneNumber, String avatar) {
         AcUser wechatUser = acUserService.getUserByWechatId(wechatId);
+        AcUser phoneNumberUser = acUserService.getUserByPhoneNumber(phoneNumber);
         if (FuncUtil.isEmpty(wechatUser)) {
-            AcUser phoneNumberUser = acUserService.getUserByPhoneNumber(phoneNumber);
             if (FuncUtil.isNotEmpty(phoneNumberUser)) {
-                wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumber, avatar);
+                wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumberUser, avatar);
             } else {
                 wechatUser = creatUserService.createUserFromWechat(wechatId, nickName, phoneNumber, avatar);
+            }
+        } else {
+            if (FuncUtil.isNotEmpty(phoneNumberUser)) {
+                wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumberUser, avatar);
             }
         }
         return buildLoginRes(wechatUser);

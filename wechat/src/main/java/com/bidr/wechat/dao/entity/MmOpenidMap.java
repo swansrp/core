@@ -22,6 +22,7 @@ public class MmOpenidMap {
      * openId
      */
     @MppMultiId
+    @TableField(value = "open_id")
     @ApiModelProperty(value = "openId")
     @Size(max = 50, message = "openId最大长度要小于 50")
     @NotBlank(message = "openId不能为空")
@@ -31,6 +32,7 @@ public class MmOpenidMap {
      * 开放平台id
      */
     @MppMultiId
+    @TableField(value = "union_id")
     @ApiModelProperty(value = "开放平台id")
     @Size(max = 50, message = "开放平台id最大长度要小于 50")
     @NotBlank(message = "开放平台id不能为空")
