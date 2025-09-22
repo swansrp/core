@@ -5,6 +5,7 @@ import com.bidr.admin.dao.entity.SysPortalDashboardStatistic;
 import com.bidr.admin.service.statistic.AdminPortalDashboardStatisticService;
 import com.bidr.admin.vo.statistic.DashboardStatisticRes;
 import com.bidr.admin.vo.statistic.DashboardStatisticVO;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.controller.BaseAdminTreeController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -56,6 +57,12 @@ public class AdminPortalDashboardStatisticController extends BaseAdminTreeContro
     @Override
     protected SFunction<SysPortalDashboardStatistic, String> name() {
         return SysPortalDashboardStatistic::getTitle;
+    }
+
+    @Override
+    public void beforeAdd(SysPortalDashboardStatistic sysPortalDashboardStatistic) {
+        sysPortalDashboardStatistic.setCustomerNumber(AccountContext.getOperator());
+        super.beforeAdd(sysPortalDashboardStatistic);
     }
 
     @RequestMapping(value = "/common", method = RequestMethod.GET)
