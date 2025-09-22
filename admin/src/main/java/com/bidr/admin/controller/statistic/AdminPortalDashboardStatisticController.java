@@ -6,6 +6,7 @@ import com.bidr.admin.service.statistic.AdminPortalDashboardStatisticService;
 import com.bidr.admin.vo.statistic.DashboardStatisticRes;
 import com.bidr.admin.vo.statistic.DashboardStatisticVO;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.controller.BaseAdminTreeController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -61,7 +62,11 @@ public class AdminPortalDashboardStatisticController extends BaseAdminTreeContro
 
     @Override
     public void beforeAdd(SysPortalDashboardStatistic sysPortalDashboardStatistic) {
-        sysPortalDashboardStatistic.setCustomerNumber(AccountContext.getOperator());
+        if (sysPortalDashboardStatistic.getCustomerNumber().equals(CommonConst.NO)) {
+            sysPortalDashboardStatistic.setCustomerNumber(null);
+        } else {
+            sysPortalDashboardStatistic.setCustomerNumber(AccountContext.getOperator());
+        }
         super.beforeAdd(sysPortalDashboardStatistic);
     }
 
