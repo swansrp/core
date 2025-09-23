@@ -49,8 +49,11 @@ public interface MybatisPlusTableInitializerInf {
         String tableName = getTableName();
         try (Connection connection = dataSource.getConnection(); Statement stmt = connection.createStatement()) {
             DatabaseMetaData metaData = connection.getMetaData();
-            handleCreateDDL(tableName, stmt, metaData);
-            handleUpgradeDDL(tableName, stmt, metaData);
+            String createSql = getCreateSql();
+            if (FuncUtil.isNotEmpty(createSql)) {
+                handleCreateDDL(tableName, createSql, stmt, metaData);
+                handleUpgradeDDL(tableName, getUpgradeScripts(), stmt, metaData);
+            }
         } catch (Exception e) {
             LoggerFactory.getLogger(getClass()).error("表 {} 检查失败", tableName, e);
         }
@@ -64,15 +67,23 @@ public interface MybatisPlusTableInitializerInf {
     String getTableName();
 
     /**
+     * 获取建表 SQL。
+     *
+     * @return 创建表的 SQL 语句
+     */
+    String getCreateSql();
+
+    /**
      * 处理建表语句
      *
      * @param tableName 表名
+     * @param createSql 创建表DDL语句
      * @param stmt      数据库连接
      * @param metaData  数据库元数据
      * @throws SQLException 异常
      */
-    default void handleCreateDDL(String tableName, Statement stmt, DatabaseMetaData metaData) throws SQLException {
-        String createSql = getCreateSql();
+    default void handleCreateDDL(String tableName, String createSql, Statement stmt,
+                                 DatabaseMetaData metaData) throws SQLException {
         if (FuncUtil.isNotEmpty(createSql)) {
             if (!tableExists(metaData, tableName)) {
                 stmt.executeUpdate(createSql);
@@ -88,11 +99,13 @@ public interface MybatisPlusTableInitializerInf {
      * 处理更新表结构语句
      *
      * @param tableName 表名
+     * @param scripts   各版本表结构更新map
      * @param stmt      数据库连接
      * @param metaData  数据库元数据
      * @throws SQLException 异常
      */
-    default void handleUpgradeDDL(String tableName, Statement stmt, DatabaseMetaData metaData) throws SQLException {
+    default void handleUpgradeDDL(String tableName, LinkedHashMap<Integer, String> scripts, Statement stmt,
+                                  DatabaseMetaData metaData) throws SQLException {
         // 2. 获取当前版本
         int currentVersion = 0;
         try (ResultSet vrs = stmt.executeQuery(
@@ -106,7 +119,6 @@ public interface MybatisPlusTableInitializerInf {
             }
         }
 
-        LinkedHashMap<Integer, String> scripts = getUpgradeScripts();
         if (!scripts.isEmpty()) {
             // 找到目标版本（LinkedHashMap 有序，最后一个就是最高版本）
             int latestVersion = scripts.keySet().stream().max(Integer::compareTo).orElse(currentVersion);
@@ -138,11 +150,14 @@ public interface MybatisPlusTableInitializerInf {
     }
 
     /**
-     * 获取建表 SQL。
+     * 获取升级脚本集合。
+     * <p>
+     * key = 版本号（递增），value = 升级 SQL
+     * </p>
      *
-     * @return 创建表的 SQL 语句
+     * @return 升级 SQL 的有序集合
      */
-    String getCreateSql();
+    LinkedHashMap<Integer, String> getUpgradeScripts();
 
     /**
      * 判断表是否存在
@@ -157,16 +172,6 @@ public interface MybatisPlusTableInitializerInf {
             return rs.next();
         }
     }
-
-    /**
-     * 获取升级脚本集合。
-     * <p>
-     * key = 版本号（递增），value = 升级 SQL
-     * </p>
-     *
-     * @return 升级 SQL 的有序集合
-     */
-    LinkedHashMap<Integer, String> getUpgradeScripts();
 
     /** ----------------- 列/索引/表判断 ----------------- */
 
