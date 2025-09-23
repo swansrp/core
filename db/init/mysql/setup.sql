@@ -628,3 +628,10 @@ CREATE TABLE IF NOT EXISTS `sys_portal_column` (
   KEY `role_id` (`role_id`),
   KEY `portal_id` (`portal_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统表表头';
+
+CREATE TABLE IF NOT EXISTS `sys_table_version` (
+  `table_name` varchar(255) NOT NULL COMMENT '表名',
+  `version` int NOT NULL COMMENT '版本',
+  `update_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  PRIMARY KEY (`table_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='表版本控制';
