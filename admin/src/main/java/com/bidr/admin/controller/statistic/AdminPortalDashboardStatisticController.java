@@ -60,16 +60,6 @@ public class AdminPortalDashboardStatisticController extends BaseAdminTreeContro
         return SysPortalDashboardStatistic::getTitle;
     }
 
-    @Override
-    public void beforeAdd(SysPortalDashboardStatistic sysPortalDashboardStatistic) {
-        if (sysPortalDashboardStatistic.getCustomerNumber().equals(CommonConst.NO)) {
-            sysPortalDashboardStatistic.setCustomerNumber(null);
-        } else {
-            sysPortalDashboardStatistic.setCustomerNumber(AccountContext.getOperator());
-        }
-        super.beforeAdd(sysPortalDashboardStatistic);
-    }
-
     @RequestMapping(value = "/common", method = RequestMethod.GET)
     public List<DashboardStatisticRes> getCommonStatistic(String tableId) {
         List<DashboardStatisticVO> list = adminPortalDashboardStatisticService.getCommonStatistic(tableId);

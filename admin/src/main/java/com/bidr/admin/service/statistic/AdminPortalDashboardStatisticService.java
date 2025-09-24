@@ -25,6 +25,15 @@ import java.util.List;
 @Service
 public class AdminPortalDashboardStatisticService extends BasePortalService<SysPortalDashboardStatistic, DashboardStatisticVO> {
 
+    @Override
+    public void beforeAdd(SysPortalDashboardStatistic sysPortalDashboardStatistic) {
+        if (sysPortalDashboardStatistic.getCustomerNumber().equals(CommonConst.NO)) {
+            sysPortalDashboardStatistic.setCustomerNumber(null);
+        } else {
+            sysPortalDashboardStatistic.setCustomerNumber(AccountContext.getOperator());
+        }
+        super.beforeAdd(sysPortalDashboardStatistic);
+    }
 
     @Override
     public void getJoinWrapper(MPJLambdaWrapper<SysPortalDashboardStatistic> wrapper) {
