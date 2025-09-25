@@ -36,6 +36,16 @@ public class AdminPortalDashboardStatisticService extends BasePortalService<SysP
     }
 
     @Override
+    public void beforeUpdate(SysPortalDashboardStatistic sysPortalDashboardStatistic) {
+        if (sysPortalDashboardStatistic.getCustomerNumber().equals(CommonConst.NO)) {
+            sysPortalDashboardStatistic.setCustomerNumber(null);
+        } else {
+            sysPortalDashboardStatistic.setCustomerNumber(AccountContext.getOperator());
+        }
+        super.beforeAdd(sysPortalDashboardStatistic);
+    }
+
+    @Override
     public void getJoinWrapper(MPJLambdaWrapper<SysPortalDashboardStatistic> wrapper) {
         super.getJoinWrapper(wrapper);
         wrapper.leftJoin(AcUser.class, DbUtil.getTableName(AcUser.class),
