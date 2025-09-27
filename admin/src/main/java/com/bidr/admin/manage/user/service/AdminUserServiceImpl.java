@@ -6,7 +6,6 @@ import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.user.CreateUserService;
-import com.bidr.authorization.vo.admin.UserRes;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
@@ -32,6 +31,7 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
     private final SaSequenceService sequenceService;
     @Autowired(required = false)
     private CustomerNumberHandler customerNumberHandler;
+
     @Override
     public void beforeAdd(AcUser user) {
         String customerNumber;
@@ -59,7 +59,6 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
     @Override
     public void getJoinWrapper(MPJLambdaWrapper<AcUser> wrapper) {
         super.getJoinWrapper(wrapper);
-        wrapper.selectAs(AcDept::getName, UserRes::getDeptName);
         wrapper.leftJoin(AcDept.class, DbUtil.getTableName(AcDept.class), AcDept::getDeptId, AcUser::getDeptId);
         wrapper.eq(AcUser::getValid, CommonConst.YES);
     }

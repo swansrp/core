@@ -1,18 +1,16 @@
 package com.bidr.admin.manage.user.vo;
 
-import com.bidr.admin.config.*;
+import com.bidr.admin.config.PortalDictField;
+import com.bidr.admin.config.PortalEntityField;
+import com.bidr.admin.config.PortalIdField;
+import com.bidr.admin.config.PortalImageField;
+import com.bidr.authorization.constants.dict.GenderDict;
 import com.bidr.authorization.dao.entity.AcDept;
-import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.vo.admin.UserRes;
-import com.diboot.core.binding.annotation.BindField;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.springframework.format.annotation.DateTimeFormat;
-
-import javax.validation.constraints.Size;
-import java.util.Date;
 
 /**
  * Title: UserAdminRes
@@ -24,6 +22,18 @@ import java.util.Date;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class UserAdminRes extends UserRes {
+
+    @PortalIdField
+    @ApiModelProperty(value = "用户ID")
+    private Long userId;
+
+    @PortalDictField(GenderDict.class)
+    @ApiModelProperty(value = "用户性别")
+    private String sex;
+
+    @PortalDictField(ActiveStatusDict.class)
+    @ApiModelProperty(value = "帐号状态")
+    private Integer status;
 
     @PortalEntityField(entity = AcDept.class, field = "name")
     @ApiModelProperty(value = "部门名称")
