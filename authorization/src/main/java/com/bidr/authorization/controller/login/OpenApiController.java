@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Sharp
  * @since 2023/05/30 16:52
  */
-@Api(tags = "外部对接系统 - 登录操作")
+@Api(tags = "系统外部对接 - 登录操作")
 @RestController("OpenApiController")
 @RequestMapping(value = "/open-api")
 @RequiredArgsConstructor
