@@ -84,6 +84,15 @@ spring:
           url: jdbc:${my.master-db.config.type}://${my.master-db.config.url}:${my.master-db.config.port}/${my.master-db.config.db}?${my.master-db.config.property}
           username: ${my.master-db.config.username}
           password: ${my.master-db.config.password}
+          hikari:
+            maximum-pool-size: 20
+            minimum-idle: 5
+            connection-timeout: 30000
+            idle-timeout: 60000
+            max-lifetime: 270000   # 270 秒，略小于 wait_timeout
+            keepalive-time: 30000  # 每 30 秒发一次心跳
+            validation-timeout: 3000
+            connection-test-query: SELECT 1
         # 从库数据源
         slave:
           lazy: true

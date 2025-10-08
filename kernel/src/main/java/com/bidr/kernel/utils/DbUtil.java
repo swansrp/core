@@ -17,8 +17,11 @@ import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.ParameterMapping;
@@ -33,6 +36,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -257,6 +262,75 @@ public class DbUtil {
 
         finalSql.append(sql.substring(offset));
         return finalSql.toString();
+    }
+
+    private static final Pattern FUNC_PATTERN = Pattern.compile(
+            "^(?i)(sum|count|avg|max|min)\\s*\\((.*?)\\)$"
+    );
+
+    /**
+     * 向 wrapper.getSelectColum() 安全添加字段
+     * 自动识别函数表达式并补表别名
+     *
+     * @param wrapper MPJLambdaWrapper
+     * @param column  字段名或函数表达式，如 "id", "price", "sum(price)", "count(*)"
+     * @param alias   结果集别名，可为空
+     */
+    public static void addSelect(MPJLambdaWrapper<?> wrapper, String column, String alias) {
+        if (wrapper == null || StringUtils.isBlank(column)) {
+            return;
+        }
+
+        String tableAlias = Optional.ofNullable(wrapper.getAlias()).orElse("").trim();
+        String safeAlias = tableAlias.isEmpty() ? "t" : tableAlias;
+
+        String selectExpr = resolveColumn(tableAlias, column.trim());
+
+        // 拼接 AS
+        if (StringUtils.isNotBlank(alias)) {
+            selectExpr += " AS " + alias.trim();
+        }
+
+        wrapper.getSelectColum().add(new SelectString(selectExpr, safeAlias));
+    }
+
+    public static void addSumSelect(MPJLambdaWrapper<?> wrapper, String column, String alias) {
+        addSelect(wrapper, "sum(" + column + ")", alias);
+    }
+
+    public static void addCountSelect(MPJLambdaWrapper<?> wrapper, String column, String alias) {
+        addSelect(wrapper, "count(" + column + ")", alias);
+    }
+
+    /**
+     * 解析字段：普通字段加表前缀，函数表达式智能处理
+     */
+    private static String resolveColumn(String tableAlias, String column) {
+        Matcher matcher = FUNC_PATTERN.matcher(column);
+        if (matcher.find()) {
+            // 函数名和字段体
+            String func = matcher.group(1).toUpperCase();
+            String inner = matcher.group(2).trim();
+
+            // COUNT(*) 不加表前缀
+            if ("*".equals(inner)) {
+                return func + "(*)";
+            }
+
+            // 已经有表别名，不处理
+            if (inner.contains(".")) {
+                return func + "(" + inner + ")";
+            }
+
+            return func + "(" + tableAlias + "." + inner + ")";
+        }
+
+        // 普通字段，加表别名前缀
+        if (!column.contains(".")) {
+            return tableAlias + "." + column;
+        }
+
+        return column;
     }
 
     @SuppressWarnings("unchecked")

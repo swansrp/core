@@ -2,6 +2,7 @@ package com.bidr.kernel.controller.inf.statistic;
 
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -10,7 +11,6 @@ import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.statistic.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.github.yulichang.wrapper.segments.SelectString;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -72,13 +72,13 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         for (MetricCondition metricCondition : metricConditionList) {
             for (KeyValueResVO statistic : statisticColumn) {
                 if (FuncUtil.isNotEmpty(statistic.getValue())) {
-                    wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
+                    DbUtil.addSumSelect(wrapper,
                             parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
-                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
+                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel()));
                 } else {
-                    wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
+                    DbUtil.addCountSelect(wrapper,
                             parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
-                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
+                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel()));
                 }
             }
         }
@@ -272,12 +272,9 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         for (KeyValueResVO statistic : statisticColumn) {
             if (FuncUtil.isNotEmpty(statistic.getValue())) {
-                wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as %s", statistic.getValue(),
-                        LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)), wrapper.getAlias()));
+                DbUtil.addSumSelect(wrapper, statistic.getValue(), LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
             } else {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("count(1) as %s", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic)),
-                        wrapper.getAlias()));
+                DbUtil.addCountSelect(wrapper, "1", LambdaUtil.getFieldNameByGetFunc(StatisticRes::getStatistic));
             }
         }
         Validator.assertNotEmpty(metricColumn, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
@@ -336,9 +333,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         for (Metric metric : metricColumn) {
             String column = metric.getColumn();
             if (FuncUtil.isNotEmpty(column)) {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("IFNULL(%s, '%s') as %s", column, StatisticRes.NULL, column),
-                        wrapper.getAlias()));
+                DbUtil.addSelect(wrapper, String.format("IFNULL(%s, '%s')", column, StatisticRes.NULL), column);
                 wrapper.groupBy(column);
                 wrapper.orderByAsc(column);
             }

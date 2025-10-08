@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.yulichang.toolkit.LambdaUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -401,9 +400,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
                         } else {
                             entityFieldSql = StringUtil.camelToUnderline(entityField.getName());
                         }
-                        wrapper.getSelectColum().add(new SelectString(
-                                StringUtil.joinWith(" as ", entityFieldSql, "'" + fieldName + "'"),
-                                wrapper.getAlias()));
+                        DbUtil.addSelect(wrapper, entityFieldSql, fieldName);
                     }
                 }
             }

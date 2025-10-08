@@ -1,11 +1,11 @@
 package com.bidr.kernel.controller.inf.statistic;
 
+import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.github.yulichang.wrapper.segments.SelectString;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,8 +34,7 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(req.getColumns())) {
             for (String column : req.getColumns()) {
-                wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
+                DbUtil.addSumSelect(wrapper, column, column);
             }
         } else {
             return new HashMap<>(0);
@@ -57,8 +56,7 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(req.getColumns())) {
             for (String column : req.getColumns()) {
-                wrapper.getSelectColum()
-                        .add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
+                DbUtil.addSumSelect(wrapper, column, column);
             }
         } else {
             return new HashMap<>(0);

@@ -44,7 +44,6 @@ import com.diboot.core.binding.annotation.BindField;
 import com.github.yulichang.toolkit.support.ColumnCache;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectCache;
-import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -70,7 +69,8 @@ import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
  */
 @Slf4j
 @SuppressWarnings("rawtypes, unchecked")
-public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf, PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelParseHandlerInf<ENTITY, VO>, PortalExcelTemplateHandlerInf {
+public abstract class BasePortalService<ENTITY, VO> implements PortalCommonService<ENTITY, VO>, CommandLineRunner, PortalExcelUploadProgressInf,
+        PortalExcelInsertHandlerInf<ENTITY>, PortalExcelUpdateHandlerInf<ENTITY>, PortalExcelParseHandlerInf<ENTITY, VO>, PortalExcelTemplateHandlerInf {
     protected Map<String, String> aliasMap = new HashMap<>(32);
     protected Map<String, String> summaryAliasMap = new HashMap<>(32);
     protected Set<String> havingFields = new HashSet<>();
@@ -290,9 +290,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
         if (FuncUtil.isNotEmpty(selectColumnMap)) {
             for (Map.Entry<String, String> entry : selectColumnMap.entrySet()) {
-                wrapper.getSelectColum()
-                        .add(new SelectString(StringUtil.joinWith(" as ", entry.getKey(), "'" + entry.getValue() + "'"),
-                                wrapper.getAlias()));
+                DbUtil.addSelect(wrapper, entry.getKey(), entry.getValue());
             }
         } else {
             if (FuncUtil.isNotEmpty(unSelectFields)) {
@@ -301,9 +299,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                     Field field = fieldMap.get(unselectedField);
                     if (FuncUtil.isNotEmpty(field) && !getSelectApplyMap().containsKey(field.getName())) {
                         String sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
-                        wrapper.getSelectColum().add(new SelectString(
-                                StringUtil.joinWith(" as ", sqlFieldName, "'" + field.getName() + "'"),
-                                wrapper.getAlias()));
+                        DbUtil.addSelect(wrapper, sqlFieldName, field.getName());
                     }
                 }
             }
@@ -348,14 +344,12 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 Map<String, SelectCache> cacheMap = ColumnCache.getMapField(portalEntityField.entity());
                 SelectCache cache = cacheMap.get(portalEntityField.field());
                 sqlFieldName = StringUtil.joinWith(".", alias, cache.getColumn());
-                wrapper.getSelectColum()
-                        .add(new SelectString(sqlFieldName + " AS " + "'" + field.getName() + "'", wrapper.getAlias()));
+                DbUtil.addSelect(wrapper, sqlFieldName, field.getName());
             } else {
                 if (FuncUtil.isEmpty(sqlFieldName)) {
                     sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
                 }
-                wrapper.getSelectColum()
-                        .add(new SelectString(sqlFieldName + " AS " + "'" + field.getName() + "'", wrapper.getAlias()));
+                DbUtil.addSelect(wrapper, sqlFieldName, field.getName());
             }
             if (portalEntityField.group()) {
                 wrapper.groupBy(sqlFieldName);
