@@ -85,6 +85,8 @@ public interface MybatisPlusTableInitializerInf {
     default void handleCreateDDL(String tableName, String createSql, Statement stmt,
                                  DatabaseMetaData metaData) throws SQLException {
         if (FuncUtil.isNotEmpty(createSql)) {
+            // 确保 sys_table_version 表存在
+            ensureSysTableVersionTable(metaData, stmt);
             if (!tableExists(metaData, tableName)) {
                 stmt.executeUpdate(createSql);
                 stmt.executeUpdate(
@@ -92,6 +94,25 @@ public interface MybatisPlusTableInitializerInf {
                                 "ON DUPLICATE KEY UPDATE version=0");
                 LoggerFactory.getLogger(getClass()).info("表 {} 创建成功", tableName);
             }
+        }
+    }
+
+    /**
+     * 初始化 sys_table_version 表
+     * @param stmt      数据库连接
+     * @param metaData  数据库元数据
+     * @throws SQLException 异常
+     */
+    default void ensureSysTableVersionTable(DatabaseMetaData metaData, Statement stmt) throws SQLException {
+        String sysTableName = "sys_table_version";
+        if (!tableExists(metaData, sysTableName)) {
+            String createSysTableSql = "CREATE TABLE IF NOT EXISTS `sys_table_version` (\n" +
+                    "              `table_name` varchar(255) NOT NULL COMMENT '表名',\n" +
+                    "              `version` int NOT NULL COMMENT '版本',\n" +
+                    "              `update_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',\n" +
+                    "              PRIMARY KEY (`table_name`)\n" +
+                    "            ) COMMENT='表版本控制';";
+            stmt.executeUpdate(createSysTableSql);
         }
     }
 
