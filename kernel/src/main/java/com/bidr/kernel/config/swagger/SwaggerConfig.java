@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.RequestHandler;
 import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
@@ -25,9 +26,8 @@ import springfox.documentation.spi.service.contexts.SecurityContext;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.lang.reflect.Method;
+import java.util.*;
 
 /**
  * Swagger2的接口配置
@@ -38,6 +38,13 @@ import java.util.List;
 @EnableOpenApi
 @EnableSwagger2
 public class SwaggerConfig {
+
+    private static final Set<String> BASE_CLASS_NAMES = new HashSet<>(Arrays.asList(
+            "BaseAdminController",
+            "BaseAdminOrderController",
+            "BaseAdminTreeController",
+            "BaseBindController"
+    ));
 
     /**
      * 是否开启swagger
@@ -50,6 +57,9 @@ public class SwaggerConfig {
      */
     @Value("${swagger.pathMapping}")
     private String pathMapping;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     /**
      * 创建API
@@ -65,6 +75,8 @@ public class SwaggerConfig {
                 .select()
                 // 扫描所有有注解的api，用这种方式更灵活
                 // .apis(RequestHandlerSelectors.withMethodAnnotation(ApiOperation.class))
+                // 动态过滤
+                .apis(this::filterApis)
                 .apis(RequestHandlerSelectors.withClassAnnotation(RestController.class))
                 // 扫描指定包中的swagger注解
                 // .apis(RequestHandlerSelectors.basePackage("com.bidr"))
@@ -72,6 +84,48 @@ public class SwaggerConfig {
                 .paths(PathSelectors.any()).build()
                 /* 设置安全模式，swagger可以设置访问token */.securitySchemes(securitySchemes())
                 .securityContexts(securityContexts()).pathMapping(pathMapping);
+    }
+
+    /**
+     * 过滤逻辑：
+     * - dev环境：显示所有接口
+     * - 其他环境：隐藏 BASE_CLASS_NAMES 声明的方法，但保留子类定义的
+     */
+    private boolean filterApis(RequestHandler handler) {
+        if ("dev".equalsIgnoreCase(activeProfile) || "local".equalsIgnoreCase(activeProfile)) {
+            return true;
+        }
+
+        Class<?> declaringClass = handler.declaringClass();
+
+        // 如果当前接口直接定义在 BaseXXXController 里 -> 隐藏
+        if (isBaseController(declaringClass)) {
+            return false;
+        }
+        // 如果当前接口来自子类，但方法定义在父类中 -> 隐藏
+        try {
+            Method method = handler.getHandlerMethod().getMethod();
+            Class<?> methodDeclaringClass = method.getDeclaringClass();
+
+            // 隐藏方法定义在 BaseXXXController 中的接口
+            if (BASE_CLASS_NAMES.contains(methodDeclaringClass.getSimpleName())) {
+                return false;
+            }
+        } catch (Exception e) {
+            // 某些非标准 handler 类型，忽略
+        }
+
+        return true;
+    }
+
+    /**
+     * 判断是否属于需要隐藏的基础 Controller 类
+     */
+    private boolean isBaseController(Class<?> clazz) {
+        if (clazz == null) {
+            return false;
+        }
+        return BASE_CLASS_NAMES.contains(clazz.getSimpleName());
     }
 
     /**
@@ -87,7 +141,7 @@ public class SwaggerConfig {
                 // 作者信息
                 .contact(new Contact("Ruopeng Sha", null, null))
                 // 版本
-                .version("版本号:" + "2023").build();
+                .version("版本号:" + "2025").build();
     }
 
     /**

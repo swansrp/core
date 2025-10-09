@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import springfox.documentation.annotations.ApiIgnore;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -52,7 +51,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     private ApplicationContext applicationContext;
 
     @Override
-    @ApiIgnore
     @ApiOperation("添加数据")
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -62,7 +60,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -72,7 +69,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("删除数据列表")
     @RequestMapping(value = "/delete/list", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -86,7 +82,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -96,7 +91,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update/list", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
@@ -110,7 +104,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("根据id获取详情")
     @RequestMapping(value = "/id", method = RequestMethod.GET)
     public VO queryById(IdReqVO req) {
@@ -122,7 +115,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("通用查询数据")
     @RequestMapping(value = "/general/query", method = RequestMethod.POST)
     public Page<VO> generalQuery(@RequestBody QueryConditionReq req) {
@@ -131,7 +123,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("通用查询数据(不分页)")
     @RequestMapping(value = "/general/select", method = RequestMethod.POST)
     public List<VO> generalSelect(@RequestBody QueryConditionReq req) {
@@ -140,7 +131,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("高级查询数据")
     @RequestMapping(value = "/advanced/query", method = RequestMethod.POST)
     public Page<VO> advancedQuery(@RequestBody AdvancedQueryReq req) {
@@ -149,7 +139,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("高级查询数据(不分页)")
     @RequestMapping(value = "/advanced/select", method = RequestMethod.POST)
     public List<VO> advancedSelect(@RequestBody AdvancedQueryReq req) {
@@ -158,14 +147,12 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     public BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY> getRepo() {
         return (BaseSqlRepo<? extends MyBaseMapper<ENTITY>, ENTITY>) applicationContext.getBean(
                 Introspector.decapitalize(getEntityClass().getSimpleName()) + "Service");
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("个数统计")
     @RequestMapping(value = "/general/count", method = RequestMethod.POST)
     public Long generalCount(@RequestBody QueryConditionReq req) {
@@ -173,7 +160,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("统计个数")
     @RequestMapping(value = "/advanced/count", method = RequestMethod.POST)
     public Long advancedCount(@RequestBody AdvancedQueryReq req) {
@@ -181,7 +167,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("汇总")
     @RequestMapping(value = "/general/summary", method = RequestMethod.POST)
     public Map<String, Object> generalSummary(@RequestBody GeneralSummaryReq req) {
@@ -189,7 +174,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("汇总")
     @RequestMapping(value = "/advanced/summary", method = RequestMethod.POST)
     public Map<String, Object> advancedSummary(@RequestBody AdvancedSummaryReq req) {
@@ -197,7 +181,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("指标统计")
     @RequestMapping(value = "/general/statistic", method = RequestMethod.POST)
     public List<StatisticRes> generalStatistic(@RequestBody GeneralStatisticReq req) {
@@ -205,7 +188,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("指标统计")
     @RequestMapping(value = "/advanced/statistic", method = RequestMethod.POST)
     public List<StatisticRes> advancedStatistic(@RequestBody AdvancedStatisticReq req) {
@@ -213,7 +195,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
+
     @SneakyThrows
     @ApiOperation("数据导出")
     @RequestMapping(value = "/advanced/query/export", method = RequestMethod.POST)
@@ -237,7 +219,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
+
     @SneakyThrows
     @ApiOperation("模版导出")
     @RequestMapping(value = "/template/export", method = RequestMethod.GET)
@@ -257,7 +239,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("导入新增")
     @RequestMapping(value = "/import/add", method = RequestMethod.POST)
     public void importAdd(@RequestParam(required = false) String name, MultipartFile file) {
@@ -271,7 +252,6 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
     @ApiOperation("获取导入新增进度")
     @RequestMapping(value = "/import/add/progress", method = RequestMethod.GET)
     public Object importAddProgress(@RequestParam(required = false) String name) {
@@ -280,7 +260,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
+
     @SneakyThrows
     @ApiOperation("导入修改")
     @RequestMapping(value = "/import/update", method = RequestMethod.POST)
@@ -295,7 +275,7 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
-    @ApiIgnore
+
     @SneakyThrows
     @ApiOperation("导入修改进度")
     @RequestMapping(value = "/import/update/progress", method = RequestMethod.GET)

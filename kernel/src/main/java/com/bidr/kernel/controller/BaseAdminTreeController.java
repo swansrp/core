@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +30,7 @@ import java.util.List;
  */
 public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrderController<ENTITY, VO> {
 
-    @ApiIgnore
+
     @RequestMapping(value = "/tree/parent", method = RequestMethod.GET)
     public TreeDataItemVO getParent(IdReqVO req) {
         ENTITY self = getSelf(req);
@@ -43,7 +42,7 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
         }
     }
 
-    @ApiIgnore
+
     @RequestMapping(value = "/tree/children", method = RequestMethod.GET)
     public List<TreeDataItemVO> getChildren(IdReqVO req) {
         List<TreeDataItemVO> res = new ArrayList<>();
@@ -56,7 +55,7 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
         return res;
     }
 
-    @ApiIgnore
+
     @RequestMapping(value = "/tree/brothers", method = RequestMethod.GET)
     public List<TreeDataItemVO> getBrothers(IdReqVO req) {
         List<TreeDataItemVO> res = new ArrayList<>();
@@ -68,7 +67,6 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
     }
 
 
-    @ApiIgnore
     @RequestMapping(value = "/pid", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void pid(@RequestBody IdPidReqVO req) {
@@ -83,7 +81,7 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
      */
     protected abstract SFunction<ENTITY, ?> pid();
 
-    @ApiIgnore
+
     @RequestMapping(value = "/tree/data", method = RequestMethod.GET)
     public List<TreeDataResVO> getTreeData() {
         List<TreeDataItemVO> list = new ArrayList<>();
@@ -138,7 +136,7 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
      */
     protected abstract SFunction<ENTITY, String> name();
 
-    @ApiIgnore
+
     @RequestMapping(value = "/advanced/tree/data", method = RequestMethod.POST)
     public List<TreeDataResVO> getTreeData(@RequestBody AdvancedQueryReq req) {
         List<TreeDataItemVO> list = new ArrayList<>();
