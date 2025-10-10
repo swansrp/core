@@ -26,10 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Title: BaseBindRepo
@@ -248,6 +246,7 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         return (Class<ENTITY_VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 3);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void advancedReplace(AdvancedQueryBindReq req) {
         IPage<ATTACH_VO> res = advancedQueryUnbindList(req);
         Validator.assertTrue(res.getPages() < 2, ErrCodeSys.SYS_ERR_MSG,
@@ -264,29 +263,73 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
 
     @Transactional(rollbackFor = Exception.class)
     public void replace(List<Object> attachIdList, Object entityId) {
-        if (FuncUtil.isNotEmpty(attachIdList)) {
-            for (Object attachId : attachIdList) {
+        // 查询旧绑定
+        List<BIND> oldBinds = getBindRepo().list((Wrapper) getBindRepo().getQueryWrapper().eq(bindEntityId(), entityId));
+
+        // 旧的 attachId 集合（转为字符串避免类型不匹配）
+        Set<String> oldAttachIds = oldBinds.stream()
+                .map(bind -> String.valueOf(LambdaUtil.getValue(bind, bindAttachId())))
+                .collect(Collectors.toSet());
+
+        // 新的 attachId 集合（转为字符串）
+        Set<String> newAttachIds = new HashSet<>();
+        if (attachIdList != null && !attachIdList.isEmpty()) {
+            attachIdList.forEach(id -> newAttachIds.add(String.valueOf(id)));
+        }
+
+        // 需要解绑的 attachId
+        Set<String> toUnbind = new HashSet<>();
+        for (String id : oldAttachIds) {
+            if (!newAttachIds.contains(id)) {
+                toUnbind.add(id);
+            }
+        }
+
+        // 需要绑定的 attachId
+        Set<String> toBind = new HashSet<>();
+        for (String id : newAttachIds) {
+            if (!oldAttachIds.contains(id)) {
+                toBind.add(id);
+            }
+        }
+
+
+        if (!toUnbind.isEmpty()) {
+            // 解绑逻辑
+            toUnbind.forEach(attachId -> {
                 BIND bindEntity = buildBindEntity(attachId, entityId);
                 unBindBefore(bindEntity);
-            }
+            });
+            LambdaQueryWrapper wrapper = getBindRepo().getQueryWrapper();
+            wrapper.eq(bindEntityId(), entityId);
+            wrapper.in(bindAttachId(), toUnbind);
+            getBindRepo().delete(wrapper);
         }
-        Wrapper<BIND> wrapper = (Wrapper<BIND>) getBindRepo().getQueryWrapper().eq(bindEntityId(), entityId);
-        getBindRepo().delete(wrapper);
-        List<BIND> bindList = new ArrayList<>();
-        if (FuncUtil.isNotEmpty(attachIdList)) {
-            for (Object attachId : attachIdList) {
-                BIND bindEntity = buildBindEntity(attachId, entityId);
-                bindBefore(bindEntity);
-                bindList.add(bindEntity);
-            }
+
+        // 绑定逻辑
+        List<BIND> newBindList = toBind.stream()
+                .map(attachId -> {
+                    BIND bindEntity = buildBindEntity(attachId, entityId);
+                    bindBefore(bindEntity);
+                    return bindEntity;
+                })
+                .collect(Collectors.toList());
+
+        if (!newBindList.isEmpty()) {
+            getBindRepo().saveBatch(newBindList);
         }
-        getBindRepo().saveBatch(bindList);
     }
 
     public void bindInfo(Object entityId, Object attachId, Object data, boolean strict) {
         BIND bindEntity = (BIND) getBindRepo().selectById(buildBindEntity(attachId, entityId));
-        ReflectionUtil.merge(data, bindEntity, !strict);
-        getBindRepo().updateById(bindEntity);
+        if (FuncUtil.isNotEmpty(bindEntity)) {
+            ReflectionUtil.merge(data, bindEntity, !strict);
+            getBindRepo().updateById(bindEntity);
+        } else {
+            bindEntity = buildBindEntity(attachId, entityId);
+            ReflectionUtil.merge(data, bindEntity, !strict);
+            getBindRepo().insert(bindEntity);
+        }
     }
 
     public void bindInfoList(Object entityId, List<BindInfoReq> bindInfoList, boolean strict) {
@@ -294,8 +337,14 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         if (FuncUtil.isNotEmpty(bindInfoList)) {
             for (BindInfoReq bindInfo : bindInfoList) {
                 BIND bindEntity = (BIND) getBindRepo().selectById(buildBindEntity(bindInfo.getAttachId(), entityId));
-                ReflectionUtil.merge(bindInfo.getData(), bindEntity, !strict);
-                bindEntityList.add(bindEntity);
+                if (FuncUtil.isNotEmpty(bindEntity)) {
+                    ReflectionUtil.merge(bindInfo.getData(), bindEntity, !strict);
+                    bindEntityList.add(bindEntity);
+                } else {
+                    bindEntity = buildBindEntity(bindInfo.getAttachId(), entityId);
+                    ReflectionUtil.merge(bindInfo.getData(), bindEntity, !strict);
+                    getBindRepo().insert(bindEntity);
+                }
             }
         }
         getBindRepo().updateById(bindEntityList);
