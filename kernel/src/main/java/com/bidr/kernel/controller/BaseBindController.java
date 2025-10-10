@@ -210,7 +210,7 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
 
     @ApiOperation(value = "替换绑定")
     @RequestMapping(value = "/advanced/replace", method = RequestMethod.POST)
-    public void replace(@RequestBody @Validated AdvancedQueryBindReq req) {
+    public void replaceByAdvancedCondition(@RequestBody @Validated AdvancedQueryBindReq req) {
         Query query = new Query(req);
         defaultQuery(query);
         if (!isAdmin()) {
