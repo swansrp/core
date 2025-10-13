@@ -44,6 +44,7 @@ import com.diboot.core.binding.annotation.BindField;
 import com.github.yulichang.toolkit.support.ColumnCache;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectCache;
+import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -344,12 +345,14 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 Map<String, SelectCache> cacheMap = ColumnCache.getMapField(portalEntityField.entity());
                 SelectCache cache = cacheMap.get(portalEntityField.field());
                 sqlFieldName = StringUtil.joinWith(".", alias, cache.getColumn());
-                DbUtil.addSelect(wrapper, sqlFieldName, field.getName());
+                wrapper.getSelectColum()
+                        .add(new SelectString(sqlFieldName + " AS " + "'" + field.getName() + "'", wrapper.getAlias()));
             } else {
                 if (FuncUtil.isEmpty(sqlFieldName)) {
                     sqlFieldName = getRepo().getColumnName(field.getName(), getAliasMap(), getEntityClass());
                 }
-                DbUtil.addSelect(wrapper, sqlFieldName, field.getName());
+                wrapper.getSelectColum()
+                        .add(new SelectString(sqlFieldName + " AS " + "'" + field.getName() + "'", wrapper.getAlias()));
             }
             if (portalEntityField.group()) {
                 wrapper.groupBy(sqlFieldName);
