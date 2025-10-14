@@ -317,6 +317,11 @@ public class DbUtil {
                 return func + "(*)";
             }
 
+            // COUNT(1) 不加表前缀
+            if ("1".equals(inner)) {
+                return func + "(1)";
+            }
+
             // 已经有表别名，不处理
             if (inner.contains(".")) {
                 return func + "(" + inner + ")";

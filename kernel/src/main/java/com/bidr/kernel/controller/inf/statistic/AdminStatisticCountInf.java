@@ -1,6 +1,5 @@
 package com.bidr.kernel.controller.inf.statistic;
 
-import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
@@ -28,7 +27,7 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
             beforeQuery(req);
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        DbUtil.addCountSelect(wrapper, "1", "");
+        wrapper.select("1");
         wrapper.from(from -> buildGeneralFromWrapper(req, from));
         return getRepo().selectJoinCount(wrapper);
     }
@@ -46,7 +45,7 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
             beforeQuery(req);
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        DbUtil.addCountSelect(wrapper, "1", "");
+        wrapper.select("1");
         wrapper.from(from -> buildAdvancedFromWrapper(req, from));
         return getRepo().selectJoinCount(wrapper);
     }
