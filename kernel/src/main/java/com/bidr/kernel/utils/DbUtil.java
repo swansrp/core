@@ -43,6 +43,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DbUtil {
 
+    private static final Pattern FUNC_PATTERN = Pattern.compile(
+            "^(?i)(sum|count|avg|max|min)\\s*\\((.*?)\\)$"
+    );
+
     public static <T> String getSqlColumn(SFunction<T, ?> column) {
         Field field = LambdaUtil.getField(column);
         TableField annotation = field.getAnnotation(TableField.class);
@@ -264,10 +268,6 @@ public class DbUtil {
         return finalSql.toString();
     }
 
-    private static final Pattern FUNC_PATTERN = Pattern.compile(
-            "^(?i)(sum|count|avg|max|min)\\s*\\((.*?)\\)$"
-    );
-
     /**
      * 向 wrapper.getSelectColum() 安全添加字段
      * 自动识别函数表达式并补表别名
@@ -288,7 +288,7 @@ public class DbUtil {
 
         // 拼接 AS
         if (StringUtils.isNotBlank(alias)) {
-            selectExpr += " AS " + alias.trim();
+            selectExpr += " AS '" + alias.trim() + "'";
         }
 
         wrapper.getSelectColum().add(new SelectString(selectExpr, safeAlias));
