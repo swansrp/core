@@ -128,9 +128,15 @@ public class StringUtil {
     }
 
     public static String joinWith(String spliter, String... str) {
+        return joinWith(false, spliter, str);
+    }
+
+    public static String joinWith(boolean joinEmpty, String spliter, String... str) {
         StringBuilder sb = new StringBuilder();
         for (String s : str) {
-            sb.append(spliter).append(s);
+            if (FuncUtil.isNotEmpty(s) || joinEmpty) {
+                sb.append(spliter).append(s);
+            }
         }
         return sb.toString().replaceFirst(spliter, "");
     }
