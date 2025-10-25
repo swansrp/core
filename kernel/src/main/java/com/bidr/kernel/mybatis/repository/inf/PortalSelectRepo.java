@@ -8,9 +8,13 @@ import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
-import com.bidr.kernel.utils.*;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
@@ -506,7 +510,8 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                         select = new StringBuilder(" null ");
                     }
                     aliasMap.put(entry.getKey(), "(" + select + ")");
-                    DbUtil.addSelect(wrapper, select.toString(), entry.getKey());
+                    wrapper.getSelectColum().add(new SelectString(StringUtil.joinWith(" as ", select.toString(), "'" + entry.getKey() + "'"),
+                            wrapper.getAlias()));
                 }
 
             }
