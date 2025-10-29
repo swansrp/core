@@ -530,23 +530,11 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                 }
             }
         }
-        wrapper.and(w -> {
-            boolean emptyCondition = true;
-            if (FuncUtil.isNotEmpty(query.getConditionList())) {
-                w.nested(ww -> parseGeneralQuery(generalConditions, aliasMap, havingFields, ww));
-                emptyCondition = false;
-            }
-            if (FuncUtil.isNotEmpty(query.getCondition())) {
-                w.nested(ww -> parseAdvancedQuery(query.getCondition(), aliasMap, ww));
-                emptyCondition = false;
-            }
-            if (FuncUtil.isNotEmpty(query.getDefaultQuery())) {
-                w.nested(ww -> parseAdvancedQuery(query.getDefaultQuery(), aliasMap, ww));
-                emptyCondition = false;
-            }
-            if (emptyCondition) {
-                w.apply("1=1");
-            }
+        wrapper.and(FuncUtil.isNotEmpty(generalConditions) || FuncUtil.isNotEmpty(query.getCondition()) || FuncUtil.isNotEmpty(query.getDefaultQuery()),
+                w -> {
+                w.nested(FuncUtil.isNotEmpty(generalConditions), ww -> parseGeneralQuery(generalConditions, aliasMap, havingFields, ww));
+                w.nested(FuncUtil.isNotEmpty(query.getCondition()), ww -> parseAdvancedQuery(query.getCondition(), aliasMap, ww));
+                w.nested(FuncUtil.isNotEmpty(query.getDefaultQuery()), ww -> parseAdvancedQuery(query.getDefaultQuery(), aliasMap, ww));
         });
         if (FuncUtil.isNotEmpty(havingConditions)) {
             parseGeneralQuery(havingConditions, aliasMap, havingFields, wrapper);
