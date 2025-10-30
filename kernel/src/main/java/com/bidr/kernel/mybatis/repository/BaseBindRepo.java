@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
+import com.bidr.kernel.mybatis.repository.inf.PortalSelectRepo;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @SuppressWarnings("rawtypes,unchecked")
-public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
+public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> implements PortalSelectRepo<ATTACH> {
     @Resource
     private ApplicationContext applicationContext;
 
@@ -76,7 +77,9 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
-        return attachRepo().select(query, aliasMap, havingFields, selectApplyMap, wrapper, getAttachVOClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap,
+                selectApplyMap, wrapper);
+        return attachRepo().select(query, selectAliasMap, havingFields, wrapper, getAttachVOClass());
     }
 
     public PortalCommonService<ATTACH, ATTACH_VO> getPortalService() {
@@ -125,8 +128,8 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> {
         } else {
             wrapper.selectAll(getAttachClass()).select(bindEntityId());
         }
-        return attachRepo().select(query, page.getCurrentPage(), page.getPageSize(), aliasMap, havingFields,
-                selectApplyMap, wrapper, getAttachVOClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        return attachRepo().select(query, page.getCurrentPage(), page.getPageSize(), selectAliasMap, havingFields, wrapper, getAttachVOClass());
     }
 
     public IPage<ATTACH_VO> advancedQueryAttachList(AdvancedQueryBindReq req) {

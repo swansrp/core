@@ -31,12 +31,9 @@ public interface SqlSelectRepo<T> {
 
     Page<T> select(Wrapper<T> wrapper, long currentPage, long pageSize);
 
-    <VO> List<VO> select(Query query, Map<String, String> aliasMap, Collection<String> havingFields,
-                         Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
+    <VO> List<VO> select(Query query, Map<String, String> aliasMap, Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
-    <VO> Page<VO> select(Query query, long currentPage, long pageSize, Map<String, String> aliasMap,
-                         Collection<String> havingFields, Map<String, List<DynamicColumn>> selectApplyMap,
-                         MPJLambdaWrapper<T> wrapper, Class<VO> vo);
+    <VO> Page<VO> select(Query query, long currentPage, long pageSize, Map<String, String> aliasMap, Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo);
 
     Page<T> select(Wrapper<T> wrapper, QueryReqVO req);
 

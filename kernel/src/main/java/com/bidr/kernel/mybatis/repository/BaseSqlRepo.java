@@ -113,32 +113,26 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     }
 
     @Override
-    public <VO> List<VO> select(Query query, Map<String, String> aliasMap, Collection<String> havingFields,
-                                Map<String, List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper,
+    public <VO> List<VO> select(Query query, Map<String, String> aliasMap, Collection<String> havingFields, MPJLambdaWrapper<T> wrapper,
                                 Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap,
-                selectApplyMap, wrapper);
-        parseQuery(query, selectAliasMap, havingFields, wrapper);
-        parseSort(query.getSortList(), selectAliasMap, wrapper);
+        parseQuery(query, aliasMap, havingFields, wrapper);
+        parseSort(query.getSortList(), aliasMap, wrapper);
         return selectJoinList(vo, wrapper);
     }
 
     @Override
     public <VO> Page<VO> select(Query query, long currentPage, long pageSize, Map<String, String> aliasMap,
-                                Collection<String> havingFields, Map<String, List<DynamicColumn>> selectApplyMap,
-                                MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
+                                Collection<String> havingFields, MPJLambdaWrapper<T> wrapper, Class<VO> vo) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<T>(entityClass);
         }
-        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap,
-                selectApplyMap, wrapper);
-        parseQuery(query, selectAliasMap, havingFields, wrapper);
+        parseQuery(query, aliasMap, havingFields, wrapper);
         Page page = new Page(currentPage, pageSize);
         page.setOptimizeCountSql(false);
-        parseSort(query.getSortList(), selectAliasMap, wrapper);
+        parseSort(query.getSortList(), aliasMap, wrapper);
         return selectJoinListPage(page, vo, wrapper);
     }
 

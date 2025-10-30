@@ -6,6 +6,7 @@ import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.mybatis.repository.inf.PortalSelectRepo;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -28,7 +29,7 @@ import java.util.Set;
  * @since 2024/01/15 16:17
  */
 @SuppressWarnings("unchecked")
-public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO> {
+public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO>, AdminBaseQueryControllerInf<ENTITY, VO>, PortalSelectRepo<ENTITY> {
 
     /**
      * 管理员-添加前处理
@@ -279,8 +280,8 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      */
     default Page<VO> query(AdvancedQueryReq req) {
         Query query = new Query(req);
-        return getRepo().select(query, req.getCurrentPage(), req.getPageSize(), getAliasMap(), getHavingFields(),
-                getSelectApplyMap(), getJoinWrapper(), getVoClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), getAliasMap(), getSelectApplyMap(), getJoinWrapper());
+        return getRepo().select(query, req.getCurrentPage(), req.getPageSize(), selectAliasMap, getHavingFields(), getJoinWrapper(), getVoClass());
     }
 
     /**
@@ -375,8 +376,8 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      */
     default List<VO> select(AdvancedQuery condition) {
         Query query = new Query(new AdvancedQueryReq(condition));
-        return getRepo().select(query, getAliasMap(), getHavingFields(), getSelectApplyMap(), getJoinWrapper(),
-                getVoClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), getAliasMap(), getSelectApplyMap(), getJoinWrapper());
+        return getRepo().select(query, selectAliasMap, getHavingFields(), getJoinWrapper(), getVoClass());
     }
 
     /**
@@ -388,8 +389,8 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      */
     default List<VO> query(AdvancedQuery condition, List<SortVO> sortList) {
         Query query = new Query(new AdvancedQueryReq(condition, sortList));
-        return getRepo().select(query, getAliasMap(), getHavingFields(), getSelectApplyMap(), getJoinWrapper(),
-                getVoClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), getAliasMap(), getSelectApplyMap(), getJoinWrapper());
+        return getRepo().select(query, selectAliasMap, getHavingFields(), getJoinWrapper(), getVoClass());
     }
 
     /**
@@ -402,8 +403,8 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      */
     default List<VO> query(AdvancedQuery condition, List<SortVO> sortList, Map<String, Object> selectColumnCondition) {
         Query query = new Query(new AdvancedQueryReq(condition, sortList, selectColumnCondition));
-        return getRepo().select(query, getAliasMap(), getHavingFields(), getSelectApplyMap(), getJoinWrapper(),
-                getVoClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), getAliasMap(), getSelectApplyMap(), getJoinWrapper());
+        return getRepo().select(query, selectAliasMap, getHavingFields(), getJoinWrapper(), getVoClass());
     }
 
 }

@@ -2,6 +2,7 @@ package com.bidr.kernel.controller.inf.base;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
+import com.bidr.kernel.mybatis.repository.inf.PortalSelectRepo;
 import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -10,7 +11,9 @@ import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +26,7 @@ import java.util.Set;
  * @since 2025/4/28 14:55
  */
 
-public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO> {
+public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<ENTITY, VO>, PortalSelectRepo<ENTITY> {
     default Page<VO> queryByGeneralReq(QueryConditionReq req) {
         if (!isAdmin()) {
             beforeQuery(req);
@@ -45,17 +48,33 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
     default Page<VO> query(Query query, QueryReqVO page) {
         defaultQuery(query);
         Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        Set<String> havingFields;
+        Map<String, List<DynamicColumn>> selectApplyMap;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
+        } else {
+            selectApplyMap = null;
+            havingFields = null;
         }
-        return getRepo().select(query, page.getCurrentPage(), page.getPageSize(), aliasMap, havingFields,
-                selectApplyMap, wrapper, getVoClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        if (hasHavingFields(query.getDefaultQuery(), havingFields) || hasHavingFields(query.getCondition(), havingFields)) {
+            wrapper = new MPJLambdaWrapper<>(getEntityClass());
+            selectAllVO(wrapper, getVoClass());
+            wrapper.from(from -> {
+                if(FuncUtil.isNotEmpty(getPortalService())) {
+                    getPortalService().getJoinWrapper(from);
+                }
+                getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, from);
+                return from;
+            });
+            return getRepo().select(query, page.getCurrentPage(), page.getPageSize(), null, null, wrapper, getVoClass());
+        } else {
+            return getRepo().select(query, page.getCurrentPage(), page.getPageSize(), selectAliasMap, havingFields, wrapper, getVoClass());
+        }
     }
 
     /**
@@ -77,18 +96,36 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
     default String getSql() {
         Query query = new Query();
         defaultQuery(query);
-        Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        Map<String, String> aliasMap;
+        Set<String> havingFields;
+        Map<String, List<DynamicColumn>> selectApplyMap;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
+        } else {
+            selectApplyMap = null;
+            havingFields = null;
+            aliasMap = null;
         }
-        MPJLambdaWrapper<ENTITY> wr = getRepo().buildPortalWrapper(query, aliasMap, havingFields, selectApplyMap,
-                wrapper);
+        MPJLambdaWrapper<ENTITY> wr;
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        if (hasHavingFields(query.getDefaultQuery(), havingFields)) {
+            wrapper = new MPJLambdaWrapper<>(getEntityClass());
+            selectAllVO(wrapper, getVoClass());
+            wrapper.from(from -> {
+                if(FuncUtil.isNotEmpty(getPortalService())) {
+                    getPortalService().getJoinWrapper(from);
+                }
+                getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, from);
+                return from;
+            });
+            wr = getRepo().buildPortalWrapper(query, null, null, wrapper);
+        } else {
+            wr = getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, wrapper);
+        }
         Class<?> mapperClass = ReflectionUtil.getSuperClassGenericType(getRepo().getClass(), 0);
         return DbUtil.getRealSql(mapperClass, "selectJoinPage", wr);
     }
@@ -121,16 +158,33 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
     default List<VO> select(Query query) {
         defaultQuery(query);
         Map<String, String> aliasMap = null;
-        Set<String> havingFields = null;
-        Map<String, List<DynamicColumn>> selectApplyMap = null;
+        Set<String> havingFields;
+        Map<String, List<DynamicColumn>> selectApplyMap;
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
+        } else {
+            selectApplyMap = null;
+            havingFields = null;
         }
-        return getRepo().select(query, aliasMap, havingFields, selectApplyMap, wrapper, getVoClass());
+        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        if (hasHavingFields(query.getDefaultQuery(), havingFields) || hasHavingFields(query.getCondition(), havingFields)) {
+            wrapper = new MPJLambdaWrapper<>(getEntityClass());
+            selectAllVO(wrapper, getVoClass());
+            wrapper.from(from -> {
+                if(FuncUtil.isNotEmpty(getPortalService())) {
+                    getPortalService().getJoinWrapper(from);
+                }
+                getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, from);
+                return from;
+            });
+            return getRepo().select(query, null, null, wrapper, getVoClass());
+        } else {
+            return getRepo().select(query, selectAliasMap, havingFields, wrapper, getVoClass());
+        }
     }
 
     default List<VO> selectByAdvancedReq(AdvancedQueryReq req) {
@@ -138,5 +192,12 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             beforeQuery(req);
         }
         return select(new Query(req));
+    }
+
+    default void selectAllVO(MPJLambdaWrapper<ENTITY> wrapper, Class<?> voClass) {
+        List<Field> fields = ReflectionUtil.getFields(voClass);
+        for (Field field : fields) {
+            wrapper.getSelectColum().add(new SelectString(field.getName(), field.getName()));
+        }
     }
 }

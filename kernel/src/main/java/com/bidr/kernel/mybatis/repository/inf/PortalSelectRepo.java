@@ -452,14 +452,12 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
         return null;
     }
 
-    default MPJLambdaWrapper<T> buildPortalWrapper(Query query, Map<String, String> aliasMap, Collection<String> havingFields, Map<String,
-            List<DynamicColumn>> selectApplyMap, MPJLambdaWrapper<T> wrapper) {
+    default MPJLambdaWrapper<T> buildPortalWrapper(Query query, Map<String, String> aliasMap, Collection<String> havingFields, MPJLambdaWrapper<T> wrapper) {
         if (FuncUtil.isEmpty(wrapper)) {
             wrapper = new MPJLambdaWrapper<>();
         }
-        Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
-        parseQuery(query, selectAliasMap, havingFields, wrapper);
-        parseSort(query.getSortList(), selectAliasMap, wrapper);
+        parseQuery(query, aliasMap, havingFields, wrapper);
+        parseSort(query.getSortList(), aliasMap, wrapper);
         return wrapper;
     }
 
