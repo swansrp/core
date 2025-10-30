@@ -18,6 +18,7 @@ import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.Select;
 import com.github.yulichang.wrapper.segments.SelectString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -46,6 +47,8 @@ public class DbUtil {
     private static final Pattern FUNC_PATTERN = Pattern.compile(
             "^(?i)(sum|count|avg|max|min)\\s*\\((.*?)\\)$"
     );
+    private static final Pattern SELECT_ALIAS_PATTERN =
+            Pattern.compile("(?i)([\\w.()*,\\s]+?)\\s*(?:as\\s+['\"]?([\\w_]+)['\"]?)?$");
 
     public static <T> String getSqlColumn(SFunction<T, ?> column) {
         Field field = LambdaUtil.getField(column);
@@ -413,6 +416,39 @@ public class DbUtil {
 
     private static String escapeSql(String input) {
         return input.replace("'", "''");
+    }
+
+    public static Map<String, String> extractSelectAliases(MPJLambdaWrapper<?> wrapper) {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Select select : wrapper.getSelectColumns()) {
+            String part = select.getColumn();
+            Matcher matcher = SELECT_ALIAS_PATTERN.matcher(part.trim());
+            if (matcher.find()) {
+                String field = matcher.group(1).trim();
+                String alias = matcher.group(2);
+
+                // 如果没有别名，则尝试从字段提取最后部分
+                if (alias == null || alias.isEmpty()) {
+                    alias = inferAlias(field);
+                }
+
+                result.put(field, alias);
+            }
+        }
+
+        return result;
+    }
+
+    private static String inferAlias(String expr) {
+        expr = expr.replaceAll("[()]", " ").trim();
+        if (expr.contains(".")) {
+            return expr.substring(expr.lastIndexOf('.') + 1).replaceAll("\\s+", "");
+        }
+        if (expr.contains(" ")) {
+            String[] arr = expr.split("\\s+");
+            return arr[arr.length - 1];
+        }
+        return expr;
     }
 
     @Retention(RetentionPolicy.RUNTIME)

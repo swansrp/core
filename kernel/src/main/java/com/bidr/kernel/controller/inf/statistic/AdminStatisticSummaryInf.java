@@ -6,8 +6,10 @@ import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.github.yulichang.wrapper.segments.SelectString;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,16 +33,7 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
         if (!isAdmin()) {
             beforeQuery(req);
         }
-        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(req.getColumns())) {
-            for (String column : req.getColumns()) {
-                DbUtil.addSumSelect(wrapper, column, column);
-            }
-        } else {
-            return new HashMap<>(0);
-        }
-        wrapper.from(from -> buildGeneralFromWrapper(req, from));
-        return getRepo().selectJoinMap(wrapper);
+        return summary(query, req.getColumns());
     }
 
     /**
@@ -50,18 +43,32 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
      * @return 汇总数据
      */
     default Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req) {
+        Query query = new Query(req);
+        defaultQuery(query);
         if (!isAdmin()) {
             beforeQuery(req);
         }
+        return summary(query, req.getColumns());
+    }
+
+    default Map<String, Object> summary(Query query, List<String> summaryColumns) {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        if (FuncUtil.isNotEmpty(req.getColumns())) {
-            for (String column : req.getColumns()) {
-                DbUtil.addSumSelect(wrapper, column, column);
+        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), getPortalService().getHavingFields());
+        boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), getPortalService().getHavingFields());
+        if (FuncUtil.isNotEmpty(summaryColumns)) {
+            if (defaultHaveHavingFields || conditionHaveHavingFields) {
+                for (String column : summaryColumns) {
+                    wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'", column, column), wrapper.getAlias()));
+                }
+            } else {
+                for (String column : summaryColumns) {
+                    DbUtil.addSumSelect(wrapper, column, column);
+                }
             }
         } else {
             return new HashMap<>(0);
         }
-        wrapper.from(from -> buildAdvancedFromWrapper(req, from));
+        wrapper.from(from -> buildSubFromWrapper(query, from));
         return getRepo().selectJoinMap(wrapper);
     }
 }

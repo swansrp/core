@@ -28,7 +28,7 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         wrapper.select("1");
-        wrapper.from(from -> buildGeneralFromWrapper(req, from));
+        wrapper.from(from -> buildSubFromWrapper(query, from));
         return getRepo().selectJoinCount(wrapper);
     }
 
@@ -46,7 +46,7 @@ public interface AdminStatisticCountInf<ENTITY, VO> extends AdminStatisticBaseIn
         }
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         wrapper.select("1");
-        wrapper.from(from -> buildAdvancedFromWrapper(req, from));
+        wrapper.from(from -> buildSubFromWrapper(query, from));
         return getRepo().selectJoinCount(wrapper);
     }
 }

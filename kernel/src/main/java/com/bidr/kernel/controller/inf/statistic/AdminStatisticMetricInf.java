@@ -2,7 +2,6 @@ package com.bidr.kernel.controller.inf.statistic;
 
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -41,7 +40,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getMetricCondition(),
                     req.getStatisticColumn());
-            wrapper.from(from -> buildGeneralFromWrapper(req, from));
+            wrapper.from(from -> buildSubFromWrapper(query, from));
             if (StringUtil.convertSwitch(req.getMajorCondition())) {
                 return getConditionMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
                         req.getStatisticColumn(), req.getSort());
@@ -52,7 +51,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         } else {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
                     req.getSort());
-            wrapper.from(from -> buildGeneralFromWrapper(req, from));
+            wrapper.from(from -> buildSubFromWrapper(query, from));
             return getStatisticRes(wrapper, req.getMetricColumn(), req.getSort());
         }
     }
@@ -511,7 +510,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getMetricCondition(),
                     req.getStatisticColumn());
-            wrapper.from(from -> buildAdvancedFromWrapper(req, from));
+            wrapper.from(from -> buildSubFromWrapper(query, from));
             if (StringUtil.convertSwitch(req.getMajorCondition()) || FuncUtil.isEmpty(req.getMajorCondition())) {
                 return getConditionMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
                         req.getStatisticColumn(), req.getSort());
@@ -522,7 +521,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         } else {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
                     req.getSort());
-            wrapper.from(from -> buildAdvancedFromWrapper(req, from));
+            wrapper.from(from -> buildSubFromWrapper(query, from));
             return getStatisticRes(wrapper, req.getMetricColumn(), req.getSort());
         }
     }

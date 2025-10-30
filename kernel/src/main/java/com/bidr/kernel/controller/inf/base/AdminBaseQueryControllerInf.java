@@ -13,10 +13,12 @@ import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
-import java.lang.reflect.Field;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static com.bidr.kernel.utils.DbUtil.extractSelectAliases;
 
 /**
  * Title: AdminBaseQueryControllerInf
@@ -61,20 +63,43 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             havingFields = null;
         }
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
-        if (hasHavingFields(query.getDefaultQuery(), havingFields) || hasHavingFields(query.getCondition(), havingFields)) {
-            wrapper = new MPJLambdaWrapper<>(getEntityClass());
-            selectAllVO(wrapper, getVoClass());
-            wrapper.from(from -> {
-                if(FuncUtil.isNotEmpty(getPortalService())) {
-                    getPortalService().getJoinWrapper(from);
-                }
-                getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, from);
-                return from;
-            });
-            return getRepo().select(query, page.getCurrentPage(), page.getPageSize(), null, null, wrapper, getVoClass());
+        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
+        boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), havingFields);
+        if (defaultHaveHavingFields || conditionHaveHavingFields) {
+            Map<String, String> newAliasMap = new LinkedHashMap<>();
+            wrapper = buildSubWrapperWithoutHavingField(query, havingFields, selectAliasMap, defaultHaveHavingFields, conditionHaveHavingFields, newAliasMap);
+            return getRepo().select(query, page.getCurrentPage(), page.getPageSize(), newAliasMap, null, wrapper, getVoClass());
         } else {
             return getRepo().select(query, page.getCurrentPage(), page.getPageSize(), selectAliasMap, havingFields, wrapper, getVoClass());
         }
+    }
+
+    default MPJLambdaWrapper<ENTITY> buildSubWrapperWithoutHavingField(Query query, Set<String> havingFields, Map<String, String> selectAliasMap,
+                                                                       boolean defaultHaveHavingFields, boolean conditionHaveHavingFields,
+                                                                       Map<String, String> newAliasMap) {
+        MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
+        buildSubWrapperWithoutHavingField(wrapper, query, havingFields, selectAliasMap, defaultHaveHavingFields, conditionHaveHavingFields, newAliasMap);
+        return wrapper;
+    }
+
+    default void buildSubWrapperWithoutHavingField(MPJLambdaWrapper<ENTITY> wrapper, Query query, Set<String> havingFields,
+                                                   Map<String, String> selectAliasMap, boolean defaultHaveHavingFields, boolean conditionHaveHavingFields,
+                                                   Map<String, String> newAliasMap) {
+        Query newQuery = new Query();
+        newQuery.setConditionList(query.getConditionList());
+        newQuery.setDefaultQuery(defaultHaveHavingFields ? null : query.getDefaultQuery());
+        newQuery.setCondition(conditionHaveHavingFields ? null : query.getCondition());
+        wrapper.from(from -> {
+            if (FuncUtil.isNotEmpty(getPortalService())) {
+                getPortalService().getJoinWrapper(from);
+            }
+            for (String value : extractSelectAliases(from).values()) {
+                newAliasMap.put(value, value);
+                wrapper.getSelectColum().add(new SelectString(value, wrapper.getAlias()));
+            }
+            getRepo().buildPortalWrapper(newQuery, selectAliasMap, havingFields, from);
+            return from;
+        });
     }
 
     /**
@@ -112,17 +137,12 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         }
         MPJLambdaWrapper<ENTITY> wr;
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
+        boolean conditionHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         if (hasHavingFields(query.getDefaultQuery(), havingFields)) {
-            wrapper = new MPJLambdaWrapper<>(getEntityClass());
-            selectAllVO(wrapper, getVoClass());
-            wrapper.from(from -> {
-                if(FuncUtil.isNotEmpty(getPortalService())) {
-                    getPortalService().getJoinWrapper(from);
-                }
-                getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, from);
-                return from;
-            });
-            wr = getRepo().buildPortalWrapper(query, null, null, wrapper);
+            Map<String, String> newAliasMap = new LinkedHashMap<>();
+            wrapper = buildSubWrapperWithoutHavingField(query, havingFields, selectAliasMap, defaultHaveHavingFields, conditionHaveHavingFields, newAliasMap);
+            wr = getRepo().buildPortalWrapper(query, newAliasMap, null, wrapper);
         } else {
             wr = getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, wrapper);
         }
@@ -171,17 +191,12 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             havingFields = null;
         }
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
-        if (hasHavingFields(query.getDefaultQuery(), havingFields) || hasHavingFields(query.getCondition(), havingFields)) {
-            wrapper = new MPJLambdaWrapper<>(getEntityClass());
-            selectAllVO(wrapper, getVoClass());
-            wrapper.from(from -> {
-                if(FuncUtil.isNotEmpty(getPortalService())) {
-                    getPortalService().getJoinWrapper(from);
-                }
-                getRepo().buildPortalWrapper(query, selectAliasMap, havingFields, from);
-                return from;
-            });
-            return getRepo().select(query, null, null, wrapper, getVoClass());
+        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
+        boolean conditionHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
+        if (defaultHaveHavingFields || conditionHaveHavingFields) {
+            Map<String, String> newAliasMap = new LinkedHashMap<>();
+            wrapper = buildSubWrapperWithoutHavingField(query, havingFields, selectAliasMap, defaultHaveHavingFields, conditionHaveHavingFields, newAliasMap);
+            return getRepo().select(query, newAliasMap, null, wrapper, getVoClass());
         } else {
             return getRepo().select(query, selectAliasMap, havingFields, wrapper, getVoClass());
         }
@@ -192,12 +207,5 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             beforeQuery(req);
         }
         return select(new Query(req));
-    }
-
-    default void selectAllVO(MPJLambdaWrapper<ENTITY> wrapper, Class<?> voClass) {
-        List<Field> fields = ReflectionUtil.getFields(voClass);
-        for (Field field : fields) {
-            wrapper.getSelectColum().add(new SelectString(field.getName(), field.getName()));
-        }
     }
 }

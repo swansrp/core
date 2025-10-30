@@ -3,10 +3,10 @@ package com.bidr.kernel.controller.inf.statistic;
 import com.bidr.kernel.controller.inf.base.AdminBaseInf;
 import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.Query;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -21,43 +21,29 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
     /**
      * 查询子表构建方法
      *
-     * @param req  请求
-     * @param from 查询wrapper
+     * @param query 请求
+     * @param from  查询wrapper
      * @return 带有查询子表的wrapper
      */
-    default MPJLambdaWrapper<ENTITY> buildGeneralFromWrapper(QueryConditionReq req, MPJLambdaWrapper<ENTITY> from) {
-        if (FuncUtil.isNotEmpty(getPortalService())) {
-            getPortalService().getJoinWrapper(from);
-            Map<String, String> aliasMap = getPortalService().getAliasMap();
-            if (FuncUtil.isNotEmpty(req.getSelectColumnCondition())) {
-                aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(), getPortalService().getAliasMap(),
-                        getPortalService().getSelectApplyMap(), from);
-            }
-            if (FuncUtil.isNotEmpty(req.getConditionList())) {
-                getRepo().parseGeneralQuery(req.getConditionList(), aliasMap, getPortalService().getHavingFields(),
-                        from);
-            }
-        }
-        return from;
+    default MPJLambdaWrapper<ENTITY> buildSubFromWrapper(Query query, MPJLambdaWrapper<ENTITY> from) {
+        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), getPortalService().getHavingFields());
+        boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), getPortalService().getHavingFields());
+        return buildSubFromWrapper(query, from, defaultHaveHavingFields, conditionHaveHavingFields);
     }
 
-    /**
-     * 查询子表构建方法
-     *
-     * @param req  请求
-     * @param from 查询wrapper
-     * @return 带有查询子表的wrapper
-     */
-    default MPJLambdaWrapper<ENTITY> buildAdvancedFromWrapper(AdvancedQueryReq req, MPJLambdaWrapper<ENTITY> from) {
+    default MPJLambdaWrapper<ENTITY> buildSubFromWrapper(Query query, MPJLambdaWrapper<ENTITY> from,
+                                                         boolean defaultHaveHavingFields, boolean conditionHaveHavingFields) {
         if (FuncUtil.isNotEmpty(getPortalService())) {
-            getPortalService().getJoinWrapper(from);
-            Map<String, String> aliasMap = getPortalService().getAliasMap();
-            if (FuncUtil.isNotEmpty(req.getSelectColumnCondition())) {
-                aliasMap = getRepo().parseSelectApply(req.getSelectColumnCondition(), getPortalService().getAliasMap(),
-                        getPortalService().getSelectApplyMap(), from);
-            }
-            if (FuncUtil.isNotEmpty(req.getCondition())) {
-                getRepo().parseAdvancedQuery(req.getCondition(), aliasMap, from);
+            Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), getPortalService().getAliasMap(),
+                    getPortalService().getSelectApplyMap(), from);
+            if (defaultHaveHavingFields || conditionHaveHavingFields) {
+                Map<String, String> newAliasMap = new LinkedHashMap<>();
+                buildSubWrapperWithoutHavingField(from, query, getPortalService().getHavingFields(), selectAliasMap, defaultHaveHavingFields,
+                        conditionHaveHavingFields, newAliasMap);
+                getRepo().parseQuery(query, newAliasMap, null, from);
+            } else {
+                getPortalService().getJoinWrapper(from);
+                getRepo().parseQuery(query, selectAliasMap, getPortalService().getHavingFields(), from);
             }
         }
         return from;
