@@ -35,7 +35,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
 
-                <bidr.core.kernel.version>20251023142239-132</bidr.core.kernel.version>
+                <bidr.core.kernel.version>20251031094356-135</bidr.core.kernel.version>
             </properties>
         </profile>
     </profiles>
