@@ -23,5 +23,6 @@ public class SysPortalDashboardService extends BaseSqlRepo<SysPortalDashboardMap
                 "  PRIMARY KEY (`id`),\n" +
                 "  UNIQUE KEY `statistic_id_customer_number` (`statistic_id`,`customer_number`)\n" +
                 ") COMMENT='个人仪表盘配置';");
+        setUpgradeDDL(1, "ALTER TABLE sys_portal_dashboard MODIFY COLUMN customer_number varchar(50) NULL COMMENT '所属用户';");
     }
 }

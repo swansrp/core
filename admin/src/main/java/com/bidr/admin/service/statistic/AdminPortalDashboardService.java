@@ -39,40 +39,75 @@ public class AdminPortalDashboardService extends BasePortalService<SysPortalDash
 
     @Override
     public void getJoinWrapper(MPJLambdaWrapper<SysPortalDashboard> wrapper) {
-        String operator = AccountContext.getOperator();
-        Validator.assertNotNull(operator, ErrCodeSys.PA_PARAM_NULL, "当前登录用户");
         super.getJoinWrapper(wrapper);
         wrapper.leftJoin(SysPortalDashboardStatistic.class, DbUtil.getTableName(SysPortalDashboardStatistic.class),
                 on -> on.eq(SysPortalDashboardStatistic::getId, SysPortalDashboard::getStatisticId)
                         .and(o -> o.eq(SysPortalDashboardStatistic::getCustomerNumber,
                                         SysPortalDashboard::getCustomerNumber).or()
                                 .isNull(SysPortalDashboardStatistic::getCustomerNumber)));
-        wrapper.eq(SysPortalDashboard::getCustomerNumber, operator);
         wrapper.orderByAsc(SysPortalDashboard::getXPosition, SysPortalDashboard::getYPosition);
     }
 
     public List<DashboardVO> getPersonalDashboard(String tableId) {
+        return getPersonalDashboard(tableId, AccountContext.getOperator());
+    }
+
+    public List<DashboardVO> getPersonalDashboard(String tableId, String operator) {
         MPJLambdaWrapper<SysPortalDashboard> wrapper = getJoinWrapper();
+        wrapper.eq(SysPortalDashboard::getCustomerNumber, operator);
         wrapper.eq(SysPortalDashboardStatistic::getTableId, tableId);
         return getRepo().selectJoinList(DashboardVO.class, wrapper);
     }
 
-    public void addStatistic(List<DashboardVO> dashboardList, String tableId) {
+    public List<DashboardVO> getCommonDashboard(String tableId) {
+        MPJLambdaWrapper<SysPortalDashboard> wrapper = getJoinWrapper();
+        wrapper.isNull(SysPortalDashboard::getCustomerNumber);
+        wrapper.eq(SysPortalDashboardStatistic::getTableId, tableId);
+        return getRepo().selectJoinList(DashboardVO.class, wrapper);
+    }
+
+    public void addPersonStatistic(List<DashboardVO> dashboardList, String tableId) {
         if (FuncUtil.isNotEmpty(dashboardList)) {
-            List<DashboardVO> personalDashboard = getPersonalDashboard(tableId);
+            String operator = AccountContext.getOperator();
+            Validator.assertNotNull(operator, ErrCodeSys.PA_PARAM_NULL, "当前登录用户");
+            List<DashboardVO> personalDashboard = getPersonalDashboard(tableId, operator);
+            List<DashboardVO> commonDashboard = getCommonDashboard(tableId);
+            // 如果已经添加了就不在添加了 如果是common指标按common的指标初始化
+            Map<Long, DashboardVO> personalMap = ReflectionUtil.reflectToMap(personalDashboard, DashboardVO::getStatisticId);
+            Map<Long, DashboardVO> commonMap = ReflectionUtil.reflectToMap(commonDashboard, DashboardVO::getStatisticId);
+            List<SysPortalDashboard> entityList = new ArrayList<>();
+            for (DashboardVO dashboardVO : dashboardList) {
+                if (!personalMap.containsKey(dashboardVO.getStatisticId())) {
+                    if (commonMap.containsKey(dashboardVO.getStatisticId())) {
+                        SysPortalDashboard sysPortalDashboard = ReflectionUtil.copy(commonMap.get(dashboardVO.getStatisticId()), SysPortalDashboard.class);
+                        sysPortalDashboard.setId(null);
+                        sysPortalDashboard.setCustomerNumber(AccountContext.getOperator());
+                        entityList.add(sysPortalDashboard);
+                    } else {
+                        SysPortalDashboard sysPortalDashboard = ReflectionUtil.copy(dashboardVO, SysPortalDashboard.class);
+                        sysPortalDashboard.setCustomerNumber(AccountContext.getOperator());
+                        entityList.add(sysPortalDashboard);
+                    }
+                }
+            }
+            getRepo().insert(entityList);
+        }
+    }
+
+    public void addCommonStatistic(List<DashboardVO> dashboardList, String tableId) {
+        if (FuncUtil.isNotEmpty(dashboardList)) {
+            List<DashboardVO> commonDashboard = getCommonDashboard(tableId);
             // 如果已经添加了就不在添加了
-            Map<Long, DashboardVO> map = ReflectionUtil.reflectToMap(personalDashboard, DashboardVO::getStatisticId);
-            int order = personalDashboard.size() + 1;
+            Map<Long, DashboardVO> map = ReflectionUtil.reflectToMap(commonDashboard, DashboardVO::getStatisticId);
             List<SysPortalDashboard> entityList = new ArrayList<>();
             for (DashboardVO dashboardVO : dashboardList) {
                 if (!map.containsKey(dashboardVO.getStatisticId())) {
                     SysPortalDashboard sysPortalDashboard = ReflectionUtil.copy(dashboardVO, SysPortalDashboard.class);
-                    sysPortalDashboard.setCustomerNumber(AccountContext.getOperator());
+                    sysPortalDashboard.setCustomerNumber(null);
                     entityList.add(sysPortalDashboard);
                 }
             }
             getRepo().insert(entityList);
-
         }
     }
 }

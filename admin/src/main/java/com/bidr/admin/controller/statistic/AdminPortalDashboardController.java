@@ -37,14 +37,25 @@ public class AdminPortalDashboardController extends BaseAdminController<SysPorta
         return adminPortalDashboardService;
     }
 
-    @RequestMapping(value = "", method = RequestMethod.GET)
+    @RequestMapping(value = "/personal", method = RequestMethod.GET)
     public List<DashboardVO> getPersonalStatistic(String tableId) {
         return adminPortalDashboardService.getPersonalDashboard(tableId);
     }
 
-    @RequestMapping(value = "", method = RequestMethod.POST)
+    @RequestMapping(value = "/common", method = RequestMethod.GET)
+    public List<DashboardVO> getCommonStatistic(String tableId) {
+        return adminPortalDashboardService.getCommonDashboard(tableId);
+    }
+
+    @RequestMapping(value = "/personal", method = RequestMethod.POST)
+    public void addPersonalStatistic(@RequestBody List<DashboardVO> dashboardList, String tableId) {
+        adminPortalDashboardService.addPersonStatistic(dashboardList, tableId);
+        Resp.notice("添加个人图表成功");
+    }
+
+    @RequestMapping(value = "/common", method = RequestMethod.POST)
     public void addCommonStatistic(@RequestBody List<DashboardVO> dashboardList, String tableId) {
-        adminPortalDashboardService.addStatistic(dashboardList, tableId);
-        Resp.notice("添加图表成功");
+        adminPortalDashboardService.addCommonStatistic(dashboardList, tableId);
+        Resp.notice("添加通用图表成功");
     }
 }
