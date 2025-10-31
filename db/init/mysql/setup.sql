@@ -250,7 +250,7 @@ CREATE TABLE IF NOT EXISTS `ac_user` (
 -- 正在导出表  aicxtek.ac_user 的数据：~1 rows (大约)
 DELETE FROM `ac_user`;
 INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`, `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`, `valid`) VALUES
-	(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', '332e99b4633437a86e12331647468b350d9057728f48fd81', 0, NULL, 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, '2025-06-04 09:48:51.332', NULL, '2025-06-04 11:44:52.616', NULL, '1');
+	(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', 'f1898b71cd8df3f02027be28f9a413119a0bd9f06f324d0a', 0, NULL, 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, '2025-06-04 09:48:51.332', NULL, '2025-06-04 11:44:52.616', NULL, '1');
 
 -- 导出  表 aicxtek.ac_user_dept 结构
 DROP TABLE IF EXISTS `ac_user_dept`;
