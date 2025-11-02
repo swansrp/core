@@ -3,6 +3,7 @@ package com.bidr.kernel.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.controller.inf.base.AdminBaseInf;
 import com.bidr.kernel.controller.inf.base.AdminBaseQueryControllerInf;
+import com.bidr.kernel.exception.NoImplementsException;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
@@ -13,10 +14,8 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -148,8 +147,7 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @return 全部数据
      */
     default List<ENTITY> getAllData() {
-        LoggerFactory.getLogger(this.getClass()).debug("没有配置获取全部数据生成树形结构的方法");
-        return new ArrayList<>();
+        throw new NoImplementsException("没有配置获取全部数据生成树形结构的方法");
     }
 
     /**
