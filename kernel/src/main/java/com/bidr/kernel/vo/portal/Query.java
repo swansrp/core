@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,15 +23,15 @@ import java.util.Map;
 @NoArgsConstructor
 public class Query {
     @ApiModelProperty("动态字段逻辑")
-    private Map<String, Object> selectColumnCondition;
+    private Map<String, Object> selectColumnCondition = new HashMap<>();
     @ApiModelProperty("高级查询条件")
-    private AdvancedQuery condition;
+    private AdvancedQuery condition = new AdvancedQuery();
     @ApiModelProperty("普通查询条件")
-    private List<ConditionVO> conditionList;
+    private List<ConditionVO> conditionList = new ArrayList<>();
     @ApiModelProperty("默认查询条件")
-    private AdvancedQuery defaultQuery;
+    private AdvancedQuery defaultQuery = new AdvancedQuery();;
     @ApiModelProperty("排序")
-    private List<SortVO> sortList;
+    private List<SortVO> sortList = new ArrayList<>();;
 
     public Query(AdvancedQueryReq advancedQueryReq, QueryConditionReq queryConditionReq) {
         Map<String, Object> map = advancedQueryReq.getSelectColumnCondition();
