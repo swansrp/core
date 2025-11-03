@@ -7,8 +7,6 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.mybatis.bo.DynamicColumn;
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.inf.*;
 import com.bidr.kernel.utils.FuncUtil;
@@ -36,7 +34,7 @@ import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
 
 @CacheConfig(cacheNames = "DB-CACHE", keyGenerator = "cacheKeyByParam")
 public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K, T> implements SqlCountRepo<T>, SqlSelectRepo<T>, SqlInsertRpo<T>,
-        SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo<T>, MybatisPlusTableInitializerInf {
+        SqlUpdateRepo<T>, SqlDeleteRepo<T>, PortalSelectRepo<T> {
 
     @Override
     public long count(T entity) {

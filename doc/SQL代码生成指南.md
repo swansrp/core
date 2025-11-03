@@ -4,15 +4,16 @@
 
 本文档说明如何从数据库SQL DDL语句生成完整的Java代码文件集。
 
-**完整代码生成包含7个文件**：
+**完整代码生成包含8个文件**：
 
 1. **Entity** - 数据库实体类
 2. **Mapper接口** - MyBatis数据访问层
 3. **Mapper XML** - MyBatis映射文件
-4. **Repository Service** - 数据仓库服务
-5. **VO** - 值对象（前端交互）
-6. **Portal Service** - 门户业务服务
-7. **Portal Controller** - 门户控制器（REST API）
+4. **Repository Service** - 数据仓库服务（仅包含业务逻辑，不包含DDL）
+5. **Schema Service** - 数据库初始化服务（包含DDL定义和升级脚本）
+6. **VO** - 值对象（前端交互）
+7. **Portal Service** - 门户业务服务
+8. **Portal Controller** - 门户控制器（REST API）
 
 ## 目录结构
 
@@ -20,11 +21,12 @@
 ${module_name}/src/main/java/com/bidr/*/
 ├── dao/
 │   ├── entity/          # 实体类
-│   ├── mapper/          # Mapper接口咏XML
-│   └── repository/      # Service仓库类
-├── vo/               # 值对象（VO）
-├── controller/   # Portal Controller
-└── service/      # Portal Service
+│   ├── mapper/          # Mapper接口与XML
+│   ├── repository/      # Repository Service（业务逻辑）
+│   └── schema/          # Schema Service（数据库初始化）
+├── vo/                  # 值对象（VO）
+├── controller/          # Portal Controller
+└── service/             # Portal Service
 ```
 
 ## 生成步骤
@@ -341,6 +343,40 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SchemaModuleService extends BaseSqlRepo<SchemaModuleMapper, SchemaModule> {
+    // 仅包含业务逻辑方法，不包含DDL定义。
+}
+```
+
+### 5. Schema Service生成
+
+**位置**：`${module_name}/src/main/java/com/bidr/*/dao/schema/`
+
+**面责分离体系**：
+
+Schema Service是中接水平的数据库初始化服务，特殊于残今Repository Service，其主要根砸：
+
+- **DDL存储地点**：仅在Schema Service中存储数据库实体定义。
+  Repository Service准为轻量化美化辅助思辞インターフェース的信突。
+- **供用户启动时配置数据库初始化**
+
+**生成规则**：
+
+- 类名：`{Entity}Schema`
+- 注解：`@Service`
+- 继承：`{Entity}Service`且实现`MybatisPlusTableInitializerInf`接口
+- 静态块：包含**CREATE TABLE DDL语句**与可选的**setUpgradeDDL升级脚本**
+
+**Java代码**：
+
+```
+package com.bidr.mpbe.dao.schema;
+
+import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
+import com.bidr.mpbe.dao.repository.SchemaModuleService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class SchemaModuleSchema extends SchemaModuleService implements MybatisPlusTableInitializerInf {
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `schema_module` (\n" +
                 "  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'id',\n" +
@@ -356,22 +392,26 @@ public class SchemaModuleService extends BaseSqlRepo<SchemaModuleMapper, SchemaM
                 "  `valid` char(1) DEFAULT '1' COMMENT '有效性',\n" +
                 "  PRIMARY KEY (`id`),\n" +
                 "  KEY `production_id` (`production_id`)\n" +
-                ") COMMENT='模块';\n");
+                ") COMMENT='模块';");
+        
+        // 可选：如果有数据库升级脚本，可以添加setUpgradeDDL
+        // setUpgradeDDL(1, "ALTER TABLE `schema_module` ADD COLUMN `new_field` VARCHAR(50) COMMENT '新字段' AFTER `sort`;");
     }
 }
 ```
 
-### 5. Portal Service生成
+### 6. Portal Service生成
 
-**位置**：`${module_name}/src/main/java/com/bidr/*/dao/service/`
+### 6. Portal Service生成
+
+**位置**：`${module_name}/src/main/java/com/bidr/*/service/`
 
 **生成规则**：
 
 - 类名：`{Entity}PortalService`
 - 注解：`@Service`、`@RequiredArgsConstructor`
-- 继承：`BasePortalService<{Entity}, {Entity}>`
-- 重写方法：`getJoinWrapper(MPJLambdaWrapper<{Entity}> wrapper)`
-    - 调用父类方法提供基础联表查询支持
+- 继承：`BasePortalService<{Entity}, {Entity}VO>`（注意：第二个泡类为VO！）
+- 需要注入Repository Service并继承
 
 **Java代码**：
 
@@ -380,22 +420,19 @@ package com.bidr.mpbe.manage.service.schema;
 
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.mpbe.dao.entity.SchemaModule;
+import com.bidr.mpbe.vo.SchemaModuleVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class SchemaModulePortalService extends BasePortalService<SchemaModule, SchemaModule> {
-
-    @Override
-    public void getJoinWrapper(MPJLambdaWrapper<SchemaModule> wrapper) {
-        super.getJoinWrapper(wrapper);
-    }
+public class SchemaModulePortalService extends BasePortalService<SchemaModule, SchemaModuleVO> {
+    // 业务逻辑方法
 }
 ```
 
-### 6. Portal Controller生成
+### 7. Portal Controller生成
 
 **位置**：`${module_name}/src/main/java/com/bidr/*/dao/controller/`
 
@@ -407,7 +444,7 @@ public class SchemaModulePortalService extends BasePortalService<SchemaModule, S
     - `@RestController`
     - `@RequiredArgsConstructor`
     - `@RequestMapping(path = {"/web/schema/{entity小写}"})`
-- 继承：`BaseAdminOrderController<{Entity}, {Entity}>`
+- 继承：`BaseAdminOrderController<{Entity}, {Entity}VO>`（注意：第二个泡类为VO！）
 - 注入字段：`private final {Entity}PortalService {entity}PortalService;`
 - 实现方法：
     - `getPortalService()`: 返回注入的PortalService
@@ -424,6 +461,7 @@ import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.mpbe.dao.entity.SchemaModule;
 import com.bidr.mpbe.manage.service.schema.SchemaModulePortalService;
+import com.bidr.mpbe.vo.SchemaModuleVO;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -433,12 +471,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/schema/module"})
-public class SchemaModulePortalController extends BaseAdminOrderController<SchemaModule, SchemaModule> {
+public class SchemaModulePortalController extends BaseAdminOrderController<SchemaModule, SchemaModuleVO> {
 
     private final SchemaModulePortalService schemaModulePortalService;
 
     @Override
-    public PortalCommonService<SchemaModule, SchemaModule> getPortalService() {
+    public PortalCommonService<SchemaModule, SchemaModuleVO> getPortalService() {
         return schemaModulePortalService;
     }
 
@@ -529,7 +567,8 @@ private String valid;
 
 **常见MySQL关键字列表**：
 `name`, `order`, `group`, `status`, `valid`, `key`, `value`, `type`, `date`, `index`, `select`, `from`, `where`, `insert`, `update`, `delete`
-等
+
+- 静态块：**不包含**DDL定义（仅包含业务逻辑方法）
 
 ### 2. 联合主键处理
 
@@ -556,10 +595,12 @@ private String valid;
 1. **Entity**: `${module_name}/src/main/java/com/bidr/*/dao/entity/SchemaModule.java`
 2. **Mapper接口**: `${module_name}/src/main/java/com/bidr/*/dao/mapper/SchemaModuleMapper.java`
 3. **Mapper XML**: `${module_name}/src/main/java/com/bidr/*/dao/mapper/SchemaModuleMapper.xml`
-4. **Repository Service**: `${module_name}/src/main/java/com/bidr/*/dao/repository/SchemaModuleService.java`
-5. **VO值对象**: `${module_name}/src/main/java/com/bidr/*/vo/SchemaModuleVO.java`
-6. **Portal Service**: `${module_name}/src/main/java/com/bidr/*/service/schema/SchemaModulePortalService.java`
-7. **Portal Controller**: `${module_name}/src/main/java/com/bidr/*/controller/SchemaModulePortalController.java`
+4. **Repository Service**: `${module_name}/src/main/java/com/bidr/*/dao/repository/SchemaModuleService.java` (
+   仅包含业务逻辑)
+5. **Schema Service**: `${module_name}/src/main/java/com/bidr/*/dao/schema/SchemaModuleSchema.java` (包含DDL和升级脚本)
+6. **VO值对象**: `${module_name}/src/main/java/com/bidr/*/vo/SchemaModuleVO.java`
+7. **Portal Service**: `${module_name}/src/main/java/com/bidr/*/service/schema/SchemaModulePortalService.java`
+8. **Portal Controller**: `${module_name}/src/main/java/com/bidr/*/controller/SchemaModulePortalController.java`
 
 ## 注意事项
 
@@ -572,8 +613,8 @@ private String valid;
 3. **导入语句完整性**：确保所有必需的import语句都已添加
 4. **注释保留**：从SQL的COMMENT字段提取注释并生成Javadoc
 5. **Schema名称**：`@TableName` 注解必须包含schema名（如 `mpbe.schema_module`）
-6. **DDL保留格式**：Repository Service中的DDL语句需保持原SQL格式
-7. **审计字段配置注意**：对于指定字段（create_by、create_at、update_by、update_at、valid），需按以下配置：
+6. **DDL不再嵌入Repository Service**：仅正常存放Schema Service中。
+7. **Schema Service指责**：Repository Service的Schema子类，管理数据库DDL定义和升级脚本（接收地定义前司詳売点序号功能）ィンターフェース序号没迍加詳売点。
     - **Entity类**需添加 `@AccountContextFill`
       注解，用于自动填充审计信息（导入：`import com.bidr.authorization.mybatis.anno.AccountContextFill`）
     - **create_by** 字段：`@TableField(value = "create_by", fill = FieldFill.INSERT)`
@@ -699,4 +740,4 @@ CREATE TABLE IF NOT EXISTS `table_name` (
 ) COMMENT='表注释';
 ```
 
-AI将根据此指南自动生成上述7个文件。
+AI将根据此指南自动生成上述8个文件。
