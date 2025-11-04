@@ -11,9 +11,11 @@
         <result column="customer_number" jdbcType="VARCHAR" property="customerNumber"/>
         <result column="order" jdbcType="INTEGER" property="order"/>
         <result column="indicator" jdbcType="LONGVARCHAR" property="indicator"/>
+        <result column="default_x_grid" jdbcType="INTEGER" property="defaultXGrid"/>
+        <result column="default_y_grid" jdbcType="INTEGER" property="defaultYGrid"/>
     </resultMap>
     <sql id="Base_Column_List">
         <!--@mbg.generated-->
-        id, pid, table_id, title, customer_number, `order`, `indicator`
+        id, pid, table_id, title, customer_number, `order`, `indicator`, default_x_grid, default_y_grid
     </sql>
 </mapper>

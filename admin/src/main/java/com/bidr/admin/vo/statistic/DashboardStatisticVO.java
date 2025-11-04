@@ -47,4 +47,10 @@ public class DashboardStatisticVO {
     @PortalTextAreaField
     @ApiModelProperty(value = "指标配置")
     private String indicator;
+
+    @ApiModelProperty(value = "默认横向网格数")
+    private Integer defaultXGrid;
+
+    @ApiModelProperty(value = "默认纵向网格数")
+    private Integer defaultYGrid;
 }
