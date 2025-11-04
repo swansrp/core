@@ -63,4 +63,18 @@ public class SysPortalDashboardStatistic {
     @TableField(value = "`indicator`")
     @ApiModelProperty(value = "指标配置")
     private String indicator;
+
+    /**
+     * 默认横向网格数
+     */
+    @TableField(value = "default_x_grid")
+    @ApiModelProperty(value = "默认横向网格数")
+    private Integer defaultXGrid;
+
+    /**
+     * 默认纵向网格数
+     */
+    @TableField(value = "default_y_grid")
+    @ApiModelProperty(value = "默认纵向网格数")
+    private Integer defaultYGrid;
 }

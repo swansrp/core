@@ -26,5 +26,9 @@ public class SysPortalDashboardStatisticSchema extends SysPortalDashboardStatist
                 ") COMMENT='通用仪表盘数据';");
         setUpgradeDDL(1,
                 "ALTER TABLE sys_portal_dashboard_statistic MODIFY COLUMN id bigint auto_increment NOT NULL COMMENT 'id';");
+        setUpgradeDDL(2,
+                "ALTER TABLE `sys_portal_dashboard_statistic` \n" +
+                        "ADD COLUMN `default_x_grid` INT DEFAULT 2 COMMENT '默认宽度',\n" +
+                        "ADD COLUMN `default_y_grid` INT DEFAULT 2 COMMENT '默认高度';");
     }
 }

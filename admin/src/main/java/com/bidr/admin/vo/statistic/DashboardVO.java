@@ -30,13 +30,11 @@ public class DashboardVO {
     private String commonStatistic;
 
     @ApiModelProperty(value = "数据名称")
-    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic",
-            field = "title")
+    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "title")
     private String title;
 
     @ApiModelProperty(value = "图表指标")
-    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic",
-            field = "indicator")
+    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "indicator")
     private String indicator;
 
     @JsonProperty("xPosition")
@@ -54,4 +52,14 @@ public class DashboardVO {
     @ApiModelProperty(value = "图表高度")
     @JsonProperty("yGrid")
     private Integer yGrid;
+
+    @ApiModelProperty(value = "默认横向网格数")
+    @JsonProperty("defaultXGrid")
+    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "defaultXGrid")
+    private Integer defaultXGrid;
+
+    @ApiModelProperty(value = "默认纵向网格数")
+    @JsonProperty("defaultYGrid")
+    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "defaultYGrid")
+    private Integer defaultYGrid;
 }
