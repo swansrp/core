@@ -631,35 +631,219 @@ private String valid;
 
 - 类名：`{Entity}VO`（如：`SchemaModule` → `SchemaModuleVO`）
 - 继承：`BaseVO`
+- 使用 `@EqualsAndHashCode(callSuper = true)` 注解
+- **主键字段id**：使用 `@PortalIdField` 注解替代Entity中的 `@TableId`
+- **名称字段**（title/name/displayName/label）：使用 `@PortalNameField` 注解
+- **排序字段**（sort/order/displayOrder）：使用 `@PortalOrderField` 注解
+- **父ID字段**（pid/parentId）：使用 `@PortalPidField` 注解（仅限树形结构）
+- **文本域字段**（text/longtext类型）：使用 `@PortalTextAreaField` 注解
+- **金钱字段**（price/amount/money/cost/fee等）：使用 `@PortalMoneyField` 注解
+- **百分比字段**（rate/ratio/percent等）：使用 `@PortalPercentField` 注解
 - 包含所有Entity字段（可选：根据前端需求选择性传递字段）
 - 添加**JavaDoc注释**
 
 **Java代码示例**：
 
-```
+```java
+import com.bidr.admin.config.PortalIdField;
+import com.bidr.admin.config.PortalNameField;
+import com.bidr.admin.config.PortalOrderField;
+import com.bidr.admin.config.PortalPidField;
+import com.bidr.admin.vo.BaseVO;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
 /**
  * 模块VO - 前端交互
- * 
- * @author xxx
- * @date 2024-xx-xx
+ *
+ * @author sharp
+ * @since YYYY-MM-DD
  */
+@ApiModel(description = "模块")
+@Data
+@EqualsAndHashCode(callSuper = true)
 public class SchemaModuleVO extends BaseVO {
+    /**
+     * 主键ID
+     */
+    @PortalIdField
+    @ApiModelProperty(value = "主键ID")
+    private Long id;
+
     @ApiModelProperty("产品id")
     private Long productionId;
 
+    /**
+     * 模块名称
+     */
+    @PortalNameField
     @ApiModelProperty("模块名称")
     private String title;
-    
+
+    /**
+     * 排序
+     */
+    @PortalOrderField
     @ApiModelProperty("排序")
     private Integer sort;
-    
+
     // ... 其他字段
 }
 ```
 
+**树形结构VO示例**（包含pid字段）：
+
+```java
+import com.bidr.admin.config.PortalIdField;
+import com.bidr.admin.config.PortalNameField;
+import com.bidr.admin.config.PortalOrderField;
+import com.bidr.admin.config.PortalPidField;
+import com.bidr.admin.vo.BaseVO;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+/**
+ * 产品VO - 树形结构
+ *
+ * @author sharp
+ * @since YYYY-MM-DD
+ */
+@ApiModel(description = "产品")
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class SchemaProductionVO extends BaseVO {
+    /**
+     * 主键ID
+     */
+    @PortalIdField
+    @ApiModelProperty(value = "主键ID")
+    private Long id;
+
+    /**
+     * 父ID
+     */
+    @PortalPidField
+    @ApiModelProperty(value = "父ID")
+    private Long pid;
+
+    /**
+     * 产品名称
+     */
+    @PortalNameField
+    @ApiModelProperty("产品名称")
+    private String title;
+
+    /**
+     * 排序
+     */
+    @PortalOrderField
+    @ApiModelProperty("排序")
+    private Integer sort;
+
+    // ... 其他字段
+}
+```
+
+**@PortalIdField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalIdField`
+- 作用：标记VO中的主键字段，用于Portal层识别实体的唯一标识
+- 使用规则：
+    - 每个VO类必须有且仅有一个被 `@PortalIdField` 标注的字段（通常是 `id`）
+    - Entity中使用 `@TableId` 注解，VO中使用 `@PortalIdField` 注解
+    - 这样实现了数据库层和展示层的分离
+
+**@PortalNameField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalNameField`
+- 作用：标记VO中表述名字的字段，用于Portal层显示实体名称
+- 适用字段：`name`、`title`、`displayName`、`label` 等名称类字段
+- 使用规则：
+    - 每个VO类建议有且仅有一个被 `@PortalNameField` 标注的字段
+    - 优先选择：`title` > `name` > `displayName` > `label`
+
+**@PortalOrderField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalOrderField`
+- 作用：标记VO中表述顺序的字段，用于Portal层排序显示
+- 适用字段：`sort`、`order`、`displayOrder`、`display_order` 等排序类字段
+- 使用规则：
+    - 每个VO类建议有且仅有一个被 `@PortalOrderField` 标注的字段
+    - 优先选择：`sort` > `order` > `displayOrder`
+
+**@PortalPidField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalPidField`
+- 作用：标记VO中表述父ID的字段，用于Portal层树形结构显示
+- 适用字段：`pid`、`parentId`、`parent_id` 等父节点关联字段
+- 使用规则：
+    - 仅在有树形结构的VO类中使用
+    - 每个树形结构VO类必须有且仅有一个被 `@PortalPidField` 标注的字段
+    - 优先选择：`pid` > `parentId`
+
+**@PortalTextAreaField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalTextAreaField`
+- 作用：标记VO中的文本域字段，用于Portal层使用多行文本输入框显示
+- 适用字段：数据库中的`text`、`longtext`类型字段
+- 常见字段名：`description`、`content`、`remark`、`comment`、`message` 等
+- 使用规则：
+    - 当字段内容较长或需要多行显示时使用
+    - 自动在前端渲染为多行文本输入框（textarea）
+
+**@PortalMoneyField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalMoneyField`
+- 作用：标记VO中的金钱类型字段，用于Portal层格式化显示和输入金额
+- 适用字段：数据库中存储金额的字段（通常为`DECIMAL`或`BIGINT`类型）
+- 常见字段名：`price`、`amount`、`money`、`cost`、`fee`、`salary` 等
+- 注解参数：
+    - `unit`：显示单位转换，默认`10000`（万元）
+    - `fix`：小数位数，默认`2`
+- 使用规则：
+    - **数据库永远存储元**
+    - **VO中默认不用写参数**，直接使用 `@PortalMoneyField`
+    - 如果前端需要以**万元**显示，设置 `unit = 10000`
+    - 如果前端需要以**元**显示，设置 `unit = 1` 或不设置参数使用默认值
+    - 自动在前端显示为货币格式（如￥12,345.67）
+
+**@PortalPercentField注解说明**：
+
+- 位置：`com.bidr.admin.config.PortalPercentField`
+- 作用：标记VO中的百分比类型字段，用于Portal层格式化显示和输入百分比
+- 适用字段：数据库中存储百分比的字段（通常为`DECIMAL`或`INT`类型）
+- 常见字段名：`rate`、`ratio`、`percent`、`percentage`、`discount` 等
+- 注解参数：
+    - `unit`：单位转换，默认`100`（百分比）
+    - `fix`：小数位数，默认`2`
+- 使用规则：
+    - **VO中默认不用写参数**，直接使用 `@PortalPercentField`
+    - 自动在前端显示为百分比格式（如 85.50%）
+    - 支持单位转换（如数据库存储 0.8550，显示为 85.50%）
+
 ## Portal Service与Portal Controller的VO配置
 
 **重点规范**：Portal Service和Portal Controller的**第二个泛型参数必须是VO类**，不是Entity！
+
+### VO类定义需求
+
+**VO类必须包含：**
+
+1. 继承 `BaseVO`
+2. 使用 `@EqualsAndHashCode(callSuper = true)` 注解（与Lombok的@Data注解配合，确保正確处理父类字段）
+3. 主键字段id使用 `@PortalIdField` 注解（源于`com.bidr.admin.config.PortalIdField`）
+4. 名称字段（title/name/displayName/label）使用 `@PortalNameField` 注解（源于`com.bidr.admin.config.PortalNameField`）
+5. 排序字段（sort/order/displayOrder）使用 `@PortalOrderField` 注解（源于`com.bidr.admin.config.PortalOrderField`）
+6. **树形结构**：父ID字段（pid/parentId）使用 `@PortalPidField` 注解（源于`com.bidr.admin.config.PortalPidField`）
+7. **文本域字段**：数据库text/longtext类型字段使用 `@PortalTextAreaField` 注解（源于`com.bidr.admin.config.PortalTextAreaField`）
+8. **金钱字段**：金额类型字段使用 `@PortalMoneyField` 注解（源于`com.bidr.admin.config.PortalMoneyField`）
+9. **百分比字段**：百分比类型字段使用 `@PortalPercentField` 注解（源于`com.bidr.admin.config.PortalPercentField`）
+10. 其他字段使用 `@ApiModelProperty` 注解
+11. 添加JavaDoc注释（@author sharp，@since 当前日期）
 
 ```java
 // Portal Service
