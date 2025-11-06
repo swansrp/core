@@ -547,6 +547,7 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                     buildQueryWrapper(wrapper, aliasMap, havingFields, condition);
                 }
             }
+            wrapper.apply(" 1 = 1 ");
         }
     }
 
