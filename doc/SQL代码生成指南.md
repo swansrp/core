@@ -4,6 +4,8 @@
 
 本文档说明如何从数据库SQL DDL语句生成完整的Java代码文件集。
 
+### 普通表代码生成（8个文件）
+
 **完整代码生成包含8个文件**：
 
 1. **Entity** - 数据库实体类
@@ -14,6 +16,19 @@
 6. **VO** - 值对象（前端交互）
 7. **Portal Service** - 门户业务服务
 8. **Portal Controller** - 门户控制器（REST API）
+
+### 多对多关系表代码生成（6个文件）
+
+**对于联合主键的多对多关系表，生成6个文件**：
+
+1. **Entity** - 数据库实体类（使用`@MppMultiId`标注联合主键）
+2. **Mapper接口** - MyBatis数据访问层
+3. **Mapper XML** - MyBatis映射文件
+4. **Repository Service** - 数据仓库服务（仅包含业务逻辑）
+5. **Schema Service** - 数据库初始化服务（包含DDL定义）
+6. **BindController** - 绑定关系控制器（管理多对多关系的绑定/解绑操作）
+
+**注意**：多对多关系表**不生成**PortalService、PortalController和VO，因为使用两个关联实体的VO。
 
 ## 目录结构
 
@@ -924,4 +939,217 @@ CREATE TABLE IF NOT EXISTS `table_name` (
 ) COMMENT='表注释';
 ```
 
-AI将根据此指南自动生成上述8个文件。
+AI将根据此指南自动生成相应文件。
+
+## 多对多关系表（联合主键表）生成规则
+
+### 识别多对多关系表
+
+多对多关系表通常具有以下特征：
+- 使用**联合主键**（由两个或多个外键组成）
+- 表名通常包含两个实体名（如`das_exam_team`连接`das_exam`和`das_team`）
+- 主要用于描述两个实体之间的关系
+
+**SQL示例**：
+
+```sql
+CREATE TABLE IF NOT EXISTS `das_exam_team` (
+  `team_id` bigint(20) NOT NULL COMMENT '队伍id',
+  `exam_id` bigint(20) NOT NULL COMMENT '考试id',
+  `team_leader` varchar(20) DEFAULT NULL COMMENT '领队姓名',
+  `phone_number` varchar(20) DEFAULT NULL COMMENT '联系方式',
+  PRIMARY KEY (`team_id`,`exam_id`),
+  KEY `team_id` (`team_id`),
+  KEY `exam_id` (`exam_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考试队伍报名';
+```
+
+### 生成文件清单（6个文件）
+
+对于多对多关系表（如`das_exam_team`），生成**6个文件**：
+
+1. **Entity** - `DasExamTeam.java`
+2. **Mapper接口** - `DasExamTeamMapper.java`
+3. **Mapper XML** - `DasExamTeamMapper.xml`
+4. **Repository Service** - `DasExamTeamService.java`
+5. **Schema Service** - `DasExamTeamSchema.java`
+6. **BindController** - `DasExamTeamBindController.java`
+
+**不生成的文件**：
+- ✗ PortalService
+- ✗ PortalController
+- ✗ VO（使用两个关联实体的VO）
+
+### BindController生成规则
+
+**位置**：`${module_name}/src/main/java/com/bidr/*/controller/`
+
+**生成规则**：
+
+- 类名：`{Entity1}{Entity2}BindController`（如：`DasExamTeamBindController`）
+- 注解：
+  - `@Api(tags = "功能模块 - 功能名称")`
+  - `@RestController`
+  - `@RequiredArgsConstructor`
+  - `@RequestMapping(path = {"/web/{Entity1Portal}/{Entity2Portal}"})`
+- 继承：`BaseBindController<ENTITY1, BIND, ENTITY2, ENTITY1_VO, ENTITY2_VO>`
+- 必须实现4个方法：
+  - `bindAttachId()` - 关联表中指向第二个实体的外键
+  - `attachId()` - 第二个实体的主键
+  - `bindEntityId()` - 关联表中指向第一个实体的外键
+  - `entityId()` - 第一个实体的主键
+
+**Java代码**：
+
+```java
+package com.bidr.das.controller.enrollment;
+
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.das.dao.entity.DasExam;
+import com.bidr.das.dao.entity.DasExamTeam;
+import com.bidr.das.dao.entity.DasTeam;
+import com.bidr.das.vo.enrollment.TeamVO;
+import com.bidr.das.vo.exam.ExamVO;
+import com.bidr.kernel.controller.BaseBindController;
+import io.swagger.annotations.Api;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 考试队伍报名绑定控制器
+ *
+ * @author sharp
+ * @since 2025-11-08
+ */
+@Api(tags = "考试管理 - 考试队伍报名")
+@RestController
+@RequiredArgsConstructor
+@RequestMapping(path = {"/web/Exam/Team"})  // 由两个实体的@AdminPortal值组成
+public class DasExamTeamBindController extends BaseBindController<DasExam, DasExamTeam, DasTeam, ExamVO, TeamVO> {
+
+    /**
+     * 关联表中指向第二个实体（Team）的外键
+     */
+    @Override
+    protected SFunction<DasExamTeam, ?> bindAttachId() {
+        return DasExamTeam::getTeamId;
+    }
+
+    /**
+     * 第二个实体（Team）的主键
+     */
+    @Override
+    protected SFunction<DasTeam, ?> attachId() {
+        return DasTeam::getId;
+    }
+
+    /**
+     * 关联表中指向第一个实体（Exam）的外键
+     */
+    @Override
+    protected SFunction<DasExamTeam, ?> bindEntityId() {
+        return DasExamTeam::getExamId;
+    }
+
+    /**
+     * 第一个实体（Exam）的主键
+     */
+    @Override
+    protected SFunction<DasExam, ?> entityId() {
+        return DasExam::getId;
+    }
+}
+```
+
+### RequestMapping路径规则
+
+BindController的`@RequestMapping`路径由两个关联实体的`@AdminPortal`注解值决定：
+
+**格式**：`/web/{Entity1Portal}/{Entity2Portal}`
+
+**示例**：
+
+```java
+// ExamPortalController.java - 第一个实体的Controller
+@Api(tags = "DAS - 考试管理 - 考试")
+@AdminPortal("Exam")  // ← 第一个路径部分
+@RestController
+@RequestMapping(path = {"/web/das/exam"})
+public class ExamPortalController extends BaseAdminController<DasExam, ExamVO> {
+    // ...
+}
+
+// DasTeamPortalController.java - 第二个实体的Controller
+@Api(tags = "报名管理 - 考试队伍")
+@AdminPortal("Team")  // ← 第二个路径部分
+@RestController
+@RequestMapping(path = {"/web/team"})
+public class DasTeamPortalController extends BaseAdminController<DasTeam, TeamVO> {
+    // ...
+}
+
+// DasExamTeamBindController.java - 多对多关系表的BindController
+@RequestMapping(path = {"/web/Exam/Team"})  // ← /web/{Exam}/{Team}
+public class DasExamTeamBindController extends BaseBindController<...> {
+    // ...
+}
+```
+
+**重要说明**：
+1. 路径中的值保持原样（包括大小写），如`Exam`和`Team`
+2. `@AdminPortal`注解标注在**PortalController**上，而不是Entity上
+3. 两个关联实体都必须有对应的PortalController且标注了`@AdminPortal`
+
+### BindController提供的API功能
+
+`BaseBindController`自动提供以下RESTful API：
+
+- **绑定操作**：
+  - `POST /bind` - 单个绑定
+  - `POST /bind/batch` - 批量绑定
+  - `POST /bind/all` - 全量绑定
+  - `POST /replace` - 替换绑定
+
+- **解绑操作**：
+  - `POST /unbind` - 单个解绑
+  - `POST /unbind/batch` - 批量解绑
+  - `POST /unbind/all` - 全量解绑
+
+- **查询操作**：
+  - `GET /bind/list` - 获取已绑定列表
+  - `POST /bind/query` - 分页查询已绑定
+  - `POST /unbind/query` - 分页查询未绑定
+
+- **信息管理**：
+  - `POST /bind/info` - 修改绑定信息
+  - `POST /bind/info/list` - 批量修改绑定信息
+
+### 完整示例
+
+以`das_exam_team`表为例，完整的文件生成：
+
+**1. Entity** - `DasExamTeam.java`：使用`@MppMultiId`标注联合主键
+**2. Mapper** - `DasExamTeamMapper.java`：标准Mapper接口
+**3. Mapper XML** - `DasExamTeamMapper.xml`：所有主键字段使用`<id>`标签
+**4. Repository Service** - `DasExamTeamService.java`：业务逻辑服务
+**5. Schema Service** - `DasExamTeamSchema.java`：DDL定义
+**6. BindController** - `DasExamTeamBindController.java`：绑定关系管理
+
+**所需的前置条件**：
+- `DasExam`实体和`ExamPortalController`（标注`@AdminPortal("Exam")`）
+- `DasTeam`实体和`DasTeamPortalController`（标注`@AdminPortal("Team")`）
+- `ExamVO`和`TeamVO`
+
+### 注意事项
+
+1. **识别多对多表**：通过联合主键和表名命名模式识别
+2. **不生成VO**：直接使用两个关联实体的VO
+3. **路径规则**：从两个PortalController的`@AdminPortal`注解获取路径部分
+4. **注解位置**：`@AdminPortal`标注在Controller上，不是Entity上
+5. **类型参数**：`BaseBindController<ENTITY1, BIND, ENTITY2, ENTITY1_VO, ENTITY2_VO>`
+   - ENTITY1：第一个关联实体
+   - BIND：关联表实体
+   - ENTITY2：第二个关联实体
+   - ENTITY1_VO：第一个实体的VO
+   - ENTITY2_VO：第二个实体的VO

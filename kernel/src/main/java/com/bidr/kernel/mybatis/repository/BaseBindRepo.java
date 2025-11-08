@@ -323,6 +323,10 @@ public abstract class BaseBindRepo<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH_VO> i
         }
     }
 
+    public BIND bindInfo(String entityId, String attachId) {
+        return (BIND) getBindRepo().selectById(buildBindEntity(attachId, entityId));
+    }
+
     public void bindInfo(Object entityId, Object attachId, Object data, boolean strict) {
         BIND bindEntity = (BIND) getBindRepo().selectById(buildBindEntity(attachId, entityId));
         if (FuncUtil.isNotEmpty(bindEntity)) {

@@ -105,6 +105,12 @@ public abstract class BaseBindController<ENTITY, BIND, ATTACH, ENTITY_VO, ATTACH
         return attachAdminController().advancedQuery(req);
     }
 
+    @ApiOperation(value = "查看绑定信息")
+    @RequestMapping(value = "/bind/info", method = RequestMethod.GET)
+    public BIND getBindInfo(String entityId, String attachId) {
+        return bindRepo().bindInfo(entityId, attachId);
+    }
+
 
     @ApiOperation(value = "修改绑定信息")
     @RequestMapping(value = "/bind/info", method = RequestMethod.POST)
