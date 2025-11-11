@@ -1,6 +1,7 @@
 package com.bidr.admin.service.common;
 
 import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
+import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.scheduling.annotation.Async;
@@ -101,5 +102,25 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
      */
     default PlatformTransactionManager getTransactionManager() {
         return BeanUtil.getBean(PlatformTransactionManager.class);
+    }
+
+    /**
+     * 获取token service
+     *
+     * @return Convert to Basic Latin
+     */
+    @Override
+    default TokenService getTokenService() {
+        return BeanUtil.getBean(TokenService.class);
+    }
+
+    /**
+     * 配置上传key
+     *
+     * @return 上传key
+     */
+    @Override
+    default String getProgressKey() {
+        return "UPLOAD_PROGRESS_" + this.getClass().getSimpleName();
     }
 }
