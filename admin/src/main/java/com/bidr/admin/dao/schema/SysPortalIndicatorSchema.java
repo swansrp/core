@@ -1,14 +1,17 @@
 package com.bidr.admin.dao.schema;
 
-import com.bidr.admin.dao.repository.SysPortalIndicatorService;
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
+import com.bidr.admin.dao.entity.SysPortalIndicator;
+import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
 import org.springframework.stereotype.Service;
 
 /**
- * @author Sharp
+ * 统计指标Schema Service
+ *
+ * @author sharp
+ * @since 2025-11-17
  */
 @Service
-public class SysPortalIndicatorSchema extends SysPortalIndicatorService implements MybatisPlusTableInitializerInf {
+public class SysPortalIndicatorSchema extends BaseMybatisSchema<SysPortalIndicator> {
 
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_portal_indicator` (\n" +

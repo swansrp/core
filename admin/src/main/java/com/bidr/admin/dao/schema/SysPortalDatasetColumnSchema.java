@@ -1,14 +1,17 @@
 package com.bidr.admin.dao.schema;
 
-import com.bidr.admin.dao.repository.SysPortalDatasetColumnService;
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
+import com.bidr.admin.dao.entity.SysPortalDatasetColumn;
+import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
 import org.springframework.stereotype.Service;
 
 /**
- * @author Sharp
+ * 低代码表格列描述Schema Service
+ *
+ * @author sharp
+ * @since 2025-11-17
  */
 @Service
-public class SysPortalDatasetColumnSchema extends SysPortalDatasetColumnService implements MybatisPlusTableInitializerInf {
+public class SysPortalDatasetColumnSchema extends BaseMybatisSchema<SysPortalDatasetColumn> {
 
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_portal_dataset_column` (\n" +
