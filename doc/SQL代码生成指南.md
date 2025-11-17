@@ -366,32 +366,32 @@ public class SchemaModuleService extends BaseSqlRepo<SchemaModuleMapper, SchemaM
 
 **位置**：`${module_name}/src/main/java/com/bidr/*/dao/schema/`
 
-**面责分离体系**：
+**职责分离**：
 
-Schema Service是中接水平的数据库初始化服务，特殊于残今Repository Service，其主要根砸：
+Schema Service是数据库初始化服务层，负责管理数据库DDL定义和升级脚本。与Repository Service分离，遵循单一职责原则：
 
-- **DDL存储地点**：仅在Schema Service中存储数据库实体定义。
-  Repository Service准为轻量化美化辅助思辞インターフェース的信突。
-- **供用户启动时配置数据库初始化**
+- **Schema Service**：仅存储数据库实体定义（DDL）和升级脚本
+- **Repository Service**：仅包含业务逻辑方法（不包含DDL）
 
 **生成规则**：
 
 - 类名：`{Entity}Schema`
 - 注解：`@Service`
-- 继承：`{Entity}Service`且实现`MybatisPlusTableInitializerInf`接口
+- 继承：`BaseMybatisSchema<{Entity}>`
 - 静态块：包含**CREATE TABLE DDL语句**与可选的**setUpgradeDDL升级脚本**
+- 无需其他业务方法
 
-**Java代码**：
+**Java代码示例**：
 
-```
+```java
 package com.bidr.mpbe.dao.schema;
 
-import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
-import com.bidr.mpbe.dao.repository.SchemaModuleService;
+import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
+import com.bidr.mpbe.dao.entity.SchemaModule;
 import org.springframework.stereotype.Service;
 
 @Service
-public class SchemaModuleSchema extends SchemaModuleService implements MybatisPlusTableInitializerInf {
+public class SchemaModuleSchema extends BaseMybatisSchema<SchemaModule> {
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `schema_module` (\n" +
                 "  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'id',\n" +
