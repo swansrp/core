@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.forge.dao.mapper.SysFormLinkageMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.forge.dao.entity.SysFormLinkage">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="form_config_id" jdbcType="BIGINT" property="formConfigId" />
+    <result column="linkage_name" jdbcType="VARCHAR" property="linkageName" />
+    <result column="trigger_event" jdbcType="VARCHAR" property="triggerEvent" />
+    <result column="condition_script" jdbcType="LONGVARCHAR" property="conditionScript" />
+    <result column="action_script" jdbcType="LONGVARCHAR" property="actionScript" />
+    <result column="target_fields" jdbcType="VARCHAR" property="targetFields" />
+    <result column="priority" jdbcType="INTEGER" property="priority" />
+    <result column="is_enabled" jdbcType="CHAR" property="isEnabled" />
+    <result column="sort" jdbcType="INTEGER" property="sort" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+    <result column="valid" jdbcType="CHAR" property="valid" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, form_config_id, linkage_name, trigger_event, condition_script, action_script, 
+    target_fields, priority, is_enabled, sort, create_by, create_at, update_by, 
+    update_at, `valid`
+  </sql>
+</mapper>

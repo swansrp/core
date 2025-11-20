@@ -25,6 +25,7 @@
         <module>socket-io</module>
         <module>mcp</module>
         <module>elasticsearch</module>
+        <module>forge</module>
     </modules>
     <packaging>pom</packaging>
 

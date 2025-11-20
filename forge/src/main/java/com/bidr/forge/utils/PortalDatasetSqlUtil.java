@@ -1,0 +1,206 @@
+package com.bidr.forge.utils;
+
+import com.bidr.forge.constant.dict.JoinTypeDict;
+import com.bidr.forge.dao.entity.SysPortalDataset;
+import com.bidr.forge.dao.entity.SysPortalDatasetColumn;
+import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.mybatis.bo.SqlColumn;
+import com.bidr.kernel.utils.DictEnumUtil;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
+import com.bidr.kernel.vo.portal.ConditionVO;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.Alias;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.*;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+/**
+ * Title: PortalDatasetSqlUtil
+ * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
+ *
+ * @author Sharp
+ * @since 2025/9/19 13:45
+ */
+
+public class PortalDatasetSqlUtil {
+    public static String buildSumSql(String querySql, List<String> columns) {
+        // 移除ORDER BY子句以提高性能
+        String sql = querySql.replaceAll("(?i)\\s+ORDER\\s+BY\\s+[^)]+", "");
+
+        // 根据columns拼接sum的sql
+        StringBuilder sumSql = new StringBuilder("SELECT ");
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
+                sumSql.append(", ");
+            }
+            sumSql.append("SUM(").append(columns.get(i)).append(") AS ").append(columns.get(i));
+        }
+        sumSql.append(" FROM (").append(sql).append(") AS tmp");
+        return sumSql.toString();
+    }
+
+    public static String buildCountSql(String querySql) {
+        // 移除ORDER BY子句以提高性能
+        String sql = querySql.replaceAll("(?i)\\s+ORDER\\s+BY\\s+[^)]+", "");
+        return "SELECT COUNT(*) FROM (" + sql + ") AS count_table";
+    }
+
+    public static String buildPaginatedSql(String querySql, Long currentPage, Long pageSize) {
+        long offset = (currentPage - 1) * pageSize;
+        return querySql + " LIMIT " + pageSize + " OFFSET " + offset;
+    }
+
+    public static String buildFromSql(List<SysPortalDataset> dataSet) {
+        StringBuilder fromSql = new StringBuilder();
+        for (int i = 0; i < dataSet.size(); i++) {
+            SysPortalDataset dataset = dataSet.get(i);
+            if (i == 0) {
+                // 主表
+                fromSql.append(dataset.getDatasetSql()).append(" AS ").append(dataset.getDatasetAlias());
+            } else {
+                // JOIN表
+                if (FuncUtil.isNotEmpty(dataset.getJoinType())) {
+                    fromSql.append(" ").append(DictEnumUtil.getEnumByValue(dataset.getJoinType(), JoinTypeDict.class,
+                            JoinTypeDict.INNER));
+                }
+                fromSql.append(" JOIN ").append(dataset.getDatasetSql()).append(" AS ")
+                        .append(dataset.getDatasetAlias());
+                if (FuncUtil.isNotEmpty(dataset.getJoinCondition())) {
+                    fromSql.append(" ON ").append(dataset.getJoinCondition());
+                }
+            }
+        }
+        return fromSql.toString();
+    }
+
+    public static void parseSqlColumn(List<SysPortalDatasetColumn> sysPortalDatasetColumns, List<SqlColumn> columns,
+                                      Map<String, SqlColumn> aggregateColumns,
+                                      Map<String, SqlColumn> notAggregateColumns) {
+        if (FuncUtil.isNotEmpty(sysPortalDatasetColumns)) {
+            for (SysPortalDatasetColumn column : sysPortalDatasetColumns) {
+                SqlColumn sqlColumn = new SqlColumn(column.getColumnSql(), column.getColumnAlias());
+                columns.add(sqlColumn);
+                if (StringUtil.convertSwitch(column.getIsAggregate())) {
+                    aggregateColumns.put(column.getColumnAlias(), sqlColumn);
+                } else {
+                    notAggregateColumns.put(column.getColumnAlias(), sqlColumn);
+                }
+            }
+        }
+    }
+
+    public static void parseCondition(Map<String, SqlColumn> aggregateColumns, QueryConditionReq req,
+                                      AdvancedQuery where, AdvancedQuery having) {
+        if (FuncUtil.isNotEmpty(req.getConditionList())) {
+            for (ConditionVO conditionVO : req.getConditionList()) {
+                if (aggregateColumns.containsKey(conditionVO.getProperty())) {
+                    having.addCondition(conditionVO);
+                } else {
+                    where.addCondition(conditionVO);
+                }
+            }
+        }
+    }
+
+    /**
+     * 解析SQL，返回两个配置对象列表
+     */
+    public static void parseSql(String sql, String tableId, List<SysPortalDataset> datasetList,
+                                List<SysPortalDatasetColumn> columnList) throws JSQLParserException {
+        Statement statement = CCJSqlParserUtil.parse(sql);
+        Validator.assertTrue((statement instanceof Select), ErrCodeSys.SYS_ERR_MSG, "仅支持 SELECT SQL");
+
+        Select select = (Select) statement;
+        PlainSelect plainSelect = (PlainSelect) select.getSelectBody();
+
+        AtomicInteger datasetOrder = new AtomicInteger(1);
+        AtomicInteger columnOrder = new AtomicInteger(1);
+
+        // === 1. 解析 FROM 主表 ===
+        FromItem fromItem = plainSelect.getFromItem();
+        datasetList.add(buildDataset(fromItem, "主表", datasetOrder.getAndIncrement(), null, null, tableId));
+
+        // === 2. 解析 JOIN 表 ===
+        if (plainSelect.getJoins() != null) {
+            for (Join join : plainSelect.getJoins()) {
+                FromItem joinItem = join.getRightItem();
+                String joinType = join.isInner() ? JoinTypeDict.INNER.getValue() : join.isLeft() ? JoinTypeDict.LEFT.getValue() : join.isRight() ?
+                        JoinTypeDict.RIGHT.getValue() : join.isFull() ? JoinTypeDict.FULL.getValue() : "JOIN";
+
+                Collection<Expression> on = join.getOnExpressions();
+                String condition = null;
+                if (on != null && !on.isEmpty()) {
+                    // 如果有多个表达式，默认用 AND 拼接
+                    condition = on.stream().map(Expression::toString).collect(Collectors.joining(" AND "));
+                }
+
+                datasetList.add(
+                        buildDataset(joinItem, "关联表", datasetOrder.getAndIncrement(), joinType, condition, tableId));
+            }
+        }
+
+        // === 3. 解析 SELECT 字段 ===
+        for (SelectItem selectItem : plainSelect.getSelectItems()) {
+            if (selectItem instanceof SelectExpressionItem) {
+                SelectExpressionItem exprItem = (SelectExpressionItem) selectItem;
+                Expression expression = exprItem.getExpression();
+                Alias alias = exprItem.getAlias();
+
+                SysPortalDatasetColumn column = new SysPortalDatasetColumn();
+                column.setTableId(tableId);
+                column.setColumnSql(expression.toString());
+                column.setColumnAlias(alias != null ? alias.getName() : expression.toString());
+                column.setIsAggregate(isAggregateField(expression.toString()) ? CommonConst.YES : CommonConst.NO);
+                column.setDisplayOrder(columnOrder.getAndIncrement());
+                column.setIsVisible(CommonConst.YES);
+                columnList.add(column);
+            }
+        }
+    }
+
+    /**
+     * 构建 SysPortalDataset
+     */
+    private static SysPortalDataset buildDataset(FromItem fromItem, String remark, int order, String joinType,
+                                                 String joinCondition, String tableId) {
+        SysPortalDataset dataset = new SysPortalDataset();
+        dataset.setTableId(tableId);
+        dataset.setDatasetOrder(order);
+
+        if (fromItem instanceof Table) {
+            Table table = (Table) fromItem;
+            dataset.setDatasetSql(table.getFullyQualifiedName());
+            dataset.setDatasetAlias(table.getAlias() != null ? table.getAlias().getName() : table.getName());
+        } else {
+            dataset.setDatasetSql(fromItem.toString());
+            dataset.setDatasetAlias(fromItem.getAlias() != null ? fromItem.getAlias().getName() : null);
+        }
+
+        dataset.setJoinType(joinType);
+        dataset.setJoinCondition(joinCondition);
+        dataset.setRemark(remark);
+        return dataset;
+    }
+
+    /**
+     * 判断是否为聚合字段
+     */
+    private static boolean isAggregateField(String expr) {
+        String upper = expr.toUpperCase();
+        return upper.contains("SUM(") || upper.contains("COUNT(") || upper.contains("MAX(") || upper.contains("MIN(") ||
+                upper.contains("AVG(");
+    }
+}

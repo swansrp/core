@@ -6,9 +6,7 @@ import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.SortVO;
 import com.bidr.platform.AdminApplication;
-import com.diboot.core.util.S;
 import net.sf.jsqlparser.JSQLParserException;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.testng.annotations.Test;
 
@@ -104,6 +102,6 @@ public class ParseSqlTest extends BaseTest {
         AdvancedQueryReq req = new AdvancedQueryReq();
         req.setCondition(query);
         req.setSortList(Collections.singletonList(new SortVO("dictLabel", 0)));
-        portalDatasetService.advancedSelect(req,"abd");
+        portalDatasetService.advancedSelect(req, "abd");
     }
 }
