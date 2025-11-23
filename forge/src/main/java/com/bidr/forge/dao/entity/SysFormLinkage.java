@@ -1,10 +1,6 @@
 package com.bidr.forge.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.bidr.authorization.mybatis.anno.AccountContextFill;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -21,7 +17,7 @@ import java.util.Date;
 @ApiModel(description = "表单项联动配置")
 @Data
 @AccountContextFill
-@TableName(value = "mpbe.sys_form_linkage")
+@TableName(value = "sys_form_linkage")
 public class SysFormLinkage {
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "主键ID")

@@ -1,9 +1,9 @@
-package com.bidr.forge.controller;
+package com.bidr.forge.controller.matrix;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
-import com.bidr.forge.service.SysMatrixColumnPortalService;
-import com.bidr.forge.vo.SysMatrixColumnVO;
+import com.bidr.forge.service.martix.SysMatrixColumnPortalService;
+import com.bidr.forge.vo.matrix.SysMatrixColumnVO;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import io.swagger.annotations.Api;

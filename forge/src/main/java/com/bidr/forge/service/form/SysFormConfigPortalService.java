@@ -1,8 +1,8 @@
-package com.bidr.forge.service;
+package com.bidr.forge.service.form;
 
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.forge.dao.entity.SysFormConfig;
-import com.bidr.forge.vo.SysFormConfigVO;
+import com.bidr.forge.vo.form.SysFormConfigVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

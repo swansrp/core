@@ -1,10 +1,6 @@
 package com.bidr.forge.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.bidr.authorization.mybatis.anno.AccountContextFill;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -21,7 +17,7 @@ import java.util.Date;
 @ApiModel(description = "矩阵配置")
 @Data
 @AccountContextFill
-@TableName(value = "mpbe.sys_matrix")
+@TableName(value = "sys_matrix")
 public class SysMatrix {
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "主键ID")
@@ -38,14 +34,6 @@ public class SysMatrix {
     @TableField(value = "data_source")
     @ApiModelProperty(value = "数据源名称")
     private String dataSource;
-
-    @TableField(value = "primary_key")
-    @ApiModelProperty(value = "主键字段")
-    private String primaryKey;
-
-    @TableField(value = "index_config")
-    @ApiModelProperty(value = "索引配置(JSON)")
-    private String indexConfig;
 
     @TableField(value = "engine")
     @ApiModelProperty(value = "存储引擎")

@@ -1,6 +1,7 @@
 package com.bidr.admin.excel;
 
 import com.alibaba.excel.EasyExcel;
+import com.bidr.admin.AdminApplication;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.service.PortalService;
 import com.bidr.admin.vo.PortalReq;
@@ -8,7 +9,6 @@ import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.test.BaseTest;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
-import com.bidr.platform.AdminApplication;
 import com.bidr.platform.bo.excel.ExcelExportBO;
 import com.bidr.platform.config.excel.jxls.JxlsGroupRowCommand;
 import com.bidr.platform.dao.entity.SysConfig;

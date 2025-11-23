@@ -1,4 +1,4 @@
-package com.bidr.forge.vo;
+package com.bidr.forge.vo.matrix;
 
 import com.bidr.admin.config.PortalIdField;
 import com.bidr.admin.config.PortalNameField;

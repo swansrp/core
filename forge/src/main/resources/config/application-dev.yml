@@ -1,0 +1,18 @@
+server: # 服务器的HTTP端口，默认为8080
+  servlet: # 应用的访问路径
+    context-path: /${spring.application.name}
+
+swagger: # 是否开启swagger
+  enabled: true
+  # 请求前缀
+  pathMapping:
+
+my:
+  master-db:
+    config:
+      db: mpbe
+      url: 152.136.57.16
+      port: 3306
+      username: mpbe
+      password: Adm!n123
+      driver: com.mysql.cj.jdbc.Driver

@@ -1,8 +1,11 @@
 package com.bidr.forge.service;
 
+import com.bidr.forge.bo.MatrixColumns;
+import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.SysMatrix;
+import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.SysMatrixService;
-import com.bidr.kernel.service.JdbcConnectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +31,7 @@ public class MatrixDataService {
      * 插入数据
      *
      * @param matrixId 矩阵ID
-     * @param data    数据
+     * @param data     数据
      * @return 影响行数
      */
     @Transactional(rollbackFor = Exception.class)
@@ -38,7 +41,9 @@ public class MatrixDataService {
             throw new RuntimeException("矩阵配置不存在");
         }
 
-        if (!"1".equals(matrix.getStatus()) && !"2".equals(matrix.getStatus())) {
+        if (!MatrixStatusDict.CREATED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.SYNCED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.PENDING_SYNC.getValue().equals(matrix.getStatus())) {
             throw new RuntimeException("表未创建");
         }
 
@@ -83,8 +88,8 @@ public class MatrixDataService {
      * 更新数据
      *
      * @param matrixId 矩阵ID
-     * @param id      主键ID
-     * @param data    数据
+     * @param id       主键ID
+     * @param data     数据
      * @return 影响行数
      */
     @Transactional(rollbackFor = Exception.class)
@@ -94,7 +99,9 @@ public class MatrixDataService {
             throw new RuntimeException("矩阵配置不存在");
         }
 
-        if (!"1".equals(matrix.getStatus()) && !"2".equals(matrix.getStatus())) {
+        if (!MatrixStatusDict.CREATED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.SYNCED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.PENDING_SYNC.getValue().equals(matrix.getStatus())) {
             throw new RuntimeException("表未创建");
         }
 
@@ -122,12 +129,49 @@ public class MatrixDataService {
                     .collect(Collectors.toList());
             sql.append(String.join(", ", sets));
 
-            String primaryKey = matrix.getPrimaryKey() != null ? matrix.getPrimaryKey() : "id";
-            sql.append(" WHERE `").append(primaryKey).append("` = ");
-            if (id instanceof Number) {
-                sql.append(id);
+            // 从字段配置获取主键
+            MatrixColumns matrixColumns = sysMatrixService.getMatrixColumns(matrixId);
+            List<SysMatrixColumn> primaryKeyColumns = matrixColumns.getColumns().stream()
+                    .filter(col -> "1".equals(col.getIsPrimaryKey()))
+                    .collect(Collectors.toList());
+
+            if (primaryKeyColumns.isEmpty()) {
+                throw new RuntimeException("表未配置主键字段");
+            }
+
+            // 构建 WHERE 条件（支持联合主键）
+            sql.append(" WHERE ");
+            if (primaryKeyColumns.size() == 1) {
+                // 单主键
+                String primaryKey = primaryKeyColumns.get(0).getColumnName();
+                sql.append("`").append(primaryKey).append("` = ");
+                if (id instanceof Number) {
+                    sql.append(id);
+                } else {
+                    sql.append("'").append(id.toString().replace("'", "''")).append("'");
+                }
             } else {
-                sql.append("'").append(id.toString().replace("'", "''")).append("'");
+                // 联合主键：id 应该是 Map 类型
+                if (!(id instanceof Map)) {
+                    throw new RuntimeException("联合主键表的 id 参数必须为 Map 类型");
+                }
+                Map<String, Object> idMap = (Map<String, Object>) id;
+                List<String> conditions = new java.util.ArrayList<>();
+                for (SysMatrixColumn pkColumn : primaryKeyColumns) {
+                    String columnName = pkColumn.getColumnName();
+                    Object value = idMap.get(columnName);
+                    if (value == null) {
+                        throw new RuntimeException("缺少主键字段: " + columnName);
+                    }
+                    String condition = "`" + columnName + "` = ";
+                    if (value instanceof Number) {
+                        condition += value;
+                    } else {
+                        condition += "'" + value.toString().replace("'", "''") + "'";
+                    }
+                    conditions.add(condition);
+                }
+                sql.append(String.join(" AND ", conditions));
             }
 
             return jdbcConnectService.executeUpdate(sql.toString());
@@ -142,7 +186,7 @@ public class MatrixDataService {
      * 删除数据
      *
      * @param matrixId 矩阵ID
-     * @param id      主键ID
+     * @param id       主键ID
      * @return 影响行数
      */
     @Transactional(rollbackFor = Exception.class)
@@ -152,7 +196,9 @@ public class MatrixDataService {
             throw new RuntimeException("矩阵配置不存在");
         }
 
-        if (!"1".equals(matrix.getStatus()) && !"2".equals(matrix.getStatus())) {
+        if (!MatrixStatusDict.CREATED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.SYNCED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.PENDING_SYNC.getValue().equals(matrix.getStatus())) {
             throw new RuntimeException("表未创建");
         }
 
@@ -165,12 +211,49 @@ public class MatrixDataService {
             StringBuilder sql = new StringBuilder();
             sql.append("DELETE FROM `").append(matrix.getTableName()).append("`");
 
-            String primaryKey = matrix.getPrimaryKey() != null ? matrix.getPrimaryKey() : "id";
-            sql.append(" WHERE `").append(primaryKey).append("` = ");
-            if (id instanceof Number) {
-                sql.append(id);
+            // 从字段配置获取主键
+            MatrixColumns matrixColumns = sysMatrixService.getMatrixColumns(matrixId);
+            List<SysMatrixColumn> primaryKeyColumns = matrixColumns.getColumns().stream()
+                    .filter(col -> "1".equals(col.getIsPrimaryKey()))
+                    .collect(Collectors.toList());
+
+            if (primaryKeyColumns.isEmpty()) {
+                throw new RuntimeException("表未配置主键字段");
+            }
+
+            // 构建 WHERE 条件（支持联合主键）
+            sql.append(" WHERE ");
+            if (primaryKeyColumns.size() == 1) {
+                // 单主键
+                String primaryKey = primaryKeyColumns.get(0).getColumnName();
+                sql.append("`").append(primaryKey).append("` = ");
+                if (id instanceof Number) {
+                    sql.append(id);
+                } else {
+                    sql.append("'").append(id.toString().replace("'", "''")).append("'");
+                }
             } else {
-                sql.append("'").append(id.toString().replace("'", "''")).append("'");
+                // 联合主键：id 应该是 Map 类型
+                if (!(id instanceof Map)) {
+                    throw new RuntimeException("联合主键表的 id 参数必须为 Map 类型");
+                }
+                Map<String, Object> idMap = (Map<String, Object>) id;
+                List<String> conditions = new java.util.ArrayList<>();
+                for (SysMatrixColumn pkColumn : primaryKeyColumns) {
+                    String columnName = pkColumn.getColumnName();
+                    Object value = idMap.get(columnName);
+                    if (value == null) {
+                        throw new RuntimeException("缺少主键字段: " + columnName);
+                    }
+                    String condition = "`" + columnName + "` = ";
+                    if (value instanceof Number) {
+                        condition += value;
+                    } else {
+                        condition += "'" + value.toString().replace("'", "''") + "'";
+                    }
+                    conditions.add(condition);
+                }
+                sql.append(String.join(" AND ", conditions));
             }
 
             return jdbcConnectService.executeUpdate(sql.toString());
@@ -185,7 +268,7 @@ public class MatrixDataService {
      * 查询单条数据
      *
      * @param matrixId 矩阵ID
-     * @param id      主键ID
+     * @param id       主键ID
      * @return 数据
      */
     public Map<String, Object> selectById(Long matrixId, Object id) {
@@ -194,7 +277,9 @@ public class MatrixDataService {
             throw new RuntimeException("矩阵配置不存在");
         }
 
-        if (!"1".equals(matrix.getStatus()) && !"2".equals(matrix.getStatus())) {
+        if (!MatrixStatusDict.CREATED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.SYNCED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.PENDING_SYNC.getValue().equals(matrix.getStatus())) {
             throw new RuntimeException("表未创建");
         }
 
@@ -207,12 +292,49 @@ public class MatrixDataService {
             StringBuilder sql = new StringBuilder();
             sql.append("SELECT * FROM `").append(matrix.getTableName()).append("`");
 
-            String primaryKey = matrix.getPrimaryKey() != null ? matrix.getPrimaryKey() : "id";
-            sql.append(" WHERE `").append(primaryKey).append("` = ");
-            if (id instanceof Number) {
-                sql.append(id);
+            // 从字段配置获取主键
+            MatrixColumns matrixColumns = sysMatrixService.getMatrixColumns(matrixId);
+            List<SysMatrixColumn> primaryKeyColumns = matrixColumns.getColumns().stream()
+                    .filter(col -> "1".equals(col.getIsPrimaryKey()))
+                    .collect(Collectors.toList());
+
+            if (primaryKeyColumns.isEmpty()) {
+                throw new RuntimeException("表未配置主键字段");
+            }
+
+            // 构建 WHERE 条件（支持联合主键）
+            sql.append(" WHERE ");
+            if (primaryKeyColumns.size() == 1) {
+                // 单主键
+                String primaryKey = primaryKeyColumns.get(0).getColumnName();
+                sql.append("`").append(primaryKey).append("` = ");
+                if (id instanceof Number) {
+                    sql.append(id);
+                } else {
+                    sql.append("'").append(id.toString().replace("'", "''")).append("'");
+                }
             } else {
-                sql.append("'").append(id.toString().replace("'", "''")).append("'");
+                // 联合主键：id 应该是 Map 类型
+                if (!(id instanceof Map)) {
+                    throw new RuntimeException("联合主键表的 id 参数必须为 Map 类型");
+                }
+                Map<String, Object> idMap = (Map<String, Object>) id;
+                List<String> conditions = new java.util.ArrayList<>();
+                for (SysMatrixColumn pkColumn : primaryKeyColumns) {
+                    String columnName = pkColumn.getColumnName();
+                    Object value = idMap.get(columnName);
+                    if (value == null) {
+                        throw new RuntimeException("缺少主键字段: " + columnName);
+                    }
+                    String condition = "`" + columnName + "` = ";
+                    if (value instanceof Number) {
+                        condition += value;
+                    } else {
+                        condition += "'" + value.toString().replace("'", "''") + "'";
+                    }
+                    conditions.add(condition);
+                }
+                sql.append(String.join(" AND ", conditions));
             }
 
             return jdbcConnectService.executeQueryOne(sql.toString());
@@ -235,7 +357,9 @@ public class MatrixDataService {
             throw new RuntimeException("矩阵配置不存在");
         }
 
-        if (!"1".equals(matrix.getStatus()) && !"2".equals(matrix.getStatus())) {
+        if (!MatrixStatusDict.CREATED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.SYNCED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.PENDING_SYNC.getValue().equals(matrix.getStatus())) {
             throw new RuntimeException("表未创建");
         }
 
@@ -257,7 +381,7 @@ public class MatrixDataService {
     /**
      * 根据条件查询
      *
-     * @param matrixId   矩阵ID
+     * @param matrixId  矩阵ID
      * @param condition 查询条件
      * @return 数据列表
      */
@@ -267,7 +391,9 @@ public class MatrixDataService {
             throw new RuntimeException("矩阵配置不存在");
         }
 
-        if (!"1".equals(matrix.getStatus()) && !"2".equals(matrix.getStatus())) {
+        if (!MatrixStatusDict.CREATED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.SYNCED.getValue().equals(matrix.getStatus()) &&
+                !MatrixStatusDict.PENDING_SYNC.getValue().equals(matrix.getStatus())) {
             throw new RuntimeException("表未创建");
         }
 

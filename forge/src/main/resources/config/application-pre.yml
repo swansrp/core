@@ -1,0 +1,9 @@
+my:
+  master-db:
+    config:
+      db: mpbe
+      url: 152.136.57.16
+      port: 3306
+      username: mpbe
+      password: Adm!n123
+      driver: com.mysql.cj.jdbc.Driver

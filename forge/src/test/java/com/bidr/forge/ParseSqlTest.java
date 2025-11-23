@@ -1,11 +1,11 @@
-package com.bidr.admin.dataset;
+package com.bidr.forge;
 
-import com.bidr.admin.service.PortalDatasetService;
+import com.bidr.admin.AdminApplication;
+import com.bidr.forge.service.dataset.PortalDatasetService;
 import com.bidr.kernel.test.BaseTest;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.SortVO;
-import com.bidr.platform.AdminApplication;
 import net.sf.jsqlparser.JSQLParserException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.testng.annotations.Test;

@@ -1,6 +1,7 @@
 package com.bidr.forge.service.dataset;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysPortalDataset;
 import com.bidr.forge.dao.entity.SysPortalDatasetColumn;
 import com.bidr.forge.dao.repository.SysPortalDatasetColumnService;
@@ -9,7 +10,6 @@ import com.bidr.forge.utils.PortalDatasetSqlUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.bo.SqlColumn;
 import com.bidr.kernel.mybatis.parse.SqlBuilder;
-import com.bidr.kernel.service.JdbcConnectService;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;

@@ -1,0 +1,24 @@
+my:
+  project:
+    name: mpbe-api
+  chat:
+    server:
+      port: 29092
+
+swagger: # 是否开启swagger
+  enabled: true
+  # 请求前缀
+  pathMapping:
+app:
+  projectId: mpbe
+  moduleId: ${spring.application.name}
+  log:
+    path: /data/log
+
+
+spring:
+  profiles:
+    active: dev
+  redis:
+    host: 152.136.57.16
+    port: 6379

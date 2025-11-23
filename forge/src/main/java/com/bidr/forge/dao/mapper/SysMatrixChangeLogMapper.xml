@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.forge.dao.mapper.SysMatrixChangeLogMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.forge.dao.entity.SysMatrixChangeLog">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="matrix_id" jdbcType="BIGINT" property="matrixId" />
+    <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="change_type" jdbcType="VARCHAR" property="changeType" />
+    <result column="change_desc" jdbcType="VARCHAR" property="changeDesc" />
+    <result column="ddl_statement" jdbcType="LONGVARCHAR" property="ddlStatement" />
+    <result column="affected_column" jdbcType="VARCHAR" property="affectedColumn" />
+    <result column="execute_status" jdbcType="VARCHAR" property="executeStatus" />
+    <result column="error_msg" jdbcType="LONGVARCHAR" property="errorMsg" />
+    <result column="sort" jdbcType="INTEGER" property="sort" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, matrix_id, version, change_type, change_desc, ddl_statement, affected_column, 
+    execute_status, error_msg, sort, create_at, create_by, update_at, update_by
+  </sql>
+</mapper>

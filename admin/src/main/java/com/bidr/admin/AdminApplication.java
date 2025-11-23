@@ -1,4 +1,4 @@
-package com.bidr.platform;
+package com.bidr.admin;
 
 import com.bidr.kernel.BaseApplication;
 import org.springframework.boot.SpringApplication;

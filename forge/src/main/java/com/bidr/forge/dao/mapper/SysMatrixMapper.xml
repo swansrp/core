@@ -6,8 +6,6 @@
     <result column="table_name" jdbcType="VARCHAR" property="tableName" />
     <result column="table_comment" jdbcType="VARCHAR" property="tableComment" />
     <result column="data_source" jdbcType="VARCHAR" property="dataSource" />
-    <result column="primary_key" jdbcType="VARCHAR" property="primaryKey" />
-    <result column="index_config" jdbcType="VARCHAR" property="indexConfig" />
     <result column="engine" jdbcType="VARCHAR" property="engine" />
     <result column="charset" jdbcType="VARCHAR" property="charset" />
     <result column="status" jdbcType="CHAR" property="status" />
@@ -19,7 +17,7 @@
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, table_name, table_comment, data_source, primary_key, index_config, engine, 
+    id, table_name, table_comment, data_source, engine, 
     charset, status, sort, create_by, create_at, update_by, update_at, `valid`
   </sql>
 </mapper>

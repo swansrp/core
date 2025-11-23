@@ -1,0 +1,14 @@
+my:
+  master-db:
+    config:
+      db: mpbe
+      url: 127.0.0.1
+      port: 3306
+      username: mpbe
+      password: Adm!n123
+      driver: com.mysql.cj.jdbc.Driver
+
+spring:
+  redis:
+    host: 127.0.0.1
+    port: 6379

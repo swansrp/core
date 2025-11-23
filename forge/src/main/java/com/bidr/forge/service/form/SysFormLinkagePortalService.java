@@ -1,10 +1,10 @@
-package com.bidr.forge.service;
+package com.bidr.forge.service.form;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.forge.dao.entity.SysFormLinkage;
 import com.bidr.forge.dao.repository.SysFormLinkageService;
-import com.bidr.forge.vo.SysFormLinkageVO;
+import com.bidr.forge.vo.form.SysFormLinkageVO;
 import lombok.RequiredArgsConstructor;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;

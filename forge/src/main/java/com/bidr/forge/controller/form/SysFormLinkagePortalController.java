@@ -1,9 +1,9 @@
-package com.bidr.forge.controller;
+package com.bidr.forge.controller.form;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.forge.dao.entity.SysFormLinkage;
-import com.bidr.forge.service.SysFormLinkagePortalService;
-import com.bidr.forge.vo.SysFormLinkageVO;
+import com.bidr.forge.service.form.SysFormLinkagePortalService;
+import com.bidr.forge.vo.form.SysFormLinkageVO;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import io.swagger.annotations.Api;

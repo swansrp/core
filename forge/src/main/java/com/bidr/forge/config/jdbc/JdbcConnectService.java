@@ -1,7 +1,8 @@
-package com.bidr.kernel.service;
+package com.bidr.forge.config.jdbc;
 
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -18,6 +19,7 @@ import java.util.Map;
  * @author Sharp
  * @since 2025/9/19 11:12
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JdbcConnectService {
@@ -55,13 +57,17 @@ public class JdbcConnectService {
      * @param sql SQL语句
      * @return 查询结果
      */
-    public <T> T queryObject (String sql, String column, Class<T> clazz) {
+    public <T> T queryObject(String sql, String column, Class<T> clazz) {
+        log.trace("==> 查询SQL: {}", sql);
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
-                return rs.getObject(column, clazz);
+                T result = rs.getObject(column, clazz);
+                log.trace("<== 查询结果: {}", result);
+                return result;
             }
+            log.trace("<== 查询结果: null");
         } catch (SQLException e) {
             throw new RuntimeException("执行查询失败: " + sql, e);
         }
@@ -76,7 +82,9 @@ public class JdbcConnectService {
      */
     public Map<String, Object> executeQueryOne(String sql) {
         List<Map<String, Object>> result = executeQuery(sql);
-        return result.isEmpty() ? null : result.get(0);
+        Map<String, Object> row = result.isEmpty() ? null : result.get(0);
+        log.trace("<== 查询单行结果: {}", row);
+        return row;
     }
 
     /**
@@ -86,6 +94,7 @@ public class JdbcConnectService {
      * @return 查询结果列表
      */
     public List<Map<String, Object>> executeQuery(String sql) {
+        log.trace("==> 查询SQL: {}", sql);
         List<Map<String, Object>> result = new ArrayList<>();
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -103,6 +112,7 @@ public class JdbcConnectService {
         } catch (SQLException e) {
             throw new RuntimeException("执行查询失败: " + sql, e);
         }
+        log.trace("<== 查询结果行数: {}", result.size());
         return result;
     }
 
@@ -113,9 +123,12 @@ public class JdbcConnectService {
      * @return 影响的行数
      */
     public int executeUpdate(String sql) {
+        log.trace("==> 更新SQL: {}", sql);
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            return ps.executeUpdate();
+            int affectedRows = ps.executeUpdate();
+            log.trace("<== 影响行数: {}", affectedRows);
+            return affectedRows;
         } catch (SQLException e) {
             throw new RuntimeException("执行更新失败: " + sql, e);
         }
@@ -128,6 +141,7 @@ public class JdbcConnectService {
      * @return ResultSet结果集
      */
     public ResultSet executeQueryResultSet(String sql) {
+        log.trace("==> 查询SQL: {}", sql);
         try {
             Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql);
@@ -184,6 +198,8 @@ public class JdbcConnectService {
      * @return 每条SQL语句影响的行数
      */
     public int[] executeBatch(List<String> sqlList) {
+        log.trace("==> 批量SQL, 总数: {}", sqlList.size());
+        sqlList.forEach(sql -> log.trace("  批量SQL: {}", sql));
         try (Connection conn = beginTransaction();
              Statement stmt = conn.createStatement()) {
             for (String sql : sqlList) {
@@ -191,6 +207,11 @@ public class JdbcConnectService {
             }
             int[] result = stmt.executeBatch();
             commitTransaction(conn);
+            int totalAffected = 0;
+            for (int affected : result) {
+                totalAffected += affected;
+            }
+            log.trace("<== 批量执行完成, 总影响行数: {}", totalAffected);
             return result;
         } catch (SQLException e) {
             throw new RuntimeException("执行批量SQL失败", e);

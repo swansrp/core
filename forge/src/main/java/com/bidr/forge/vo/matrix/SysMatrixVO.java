@@ -1,4 +1,4 @@
-package com.bidr.forge.vo;
+package com.bidr.forge.vo.matrix;
 
 import com.bidr.admin.config.PortalIdField;
 import com.bidr.admin.config.PortalNameField;
@@ -32,12 +32,6 @@ public class SysMatrixVO extends BaseVO {
 
     @ApiModelProperty(value = "数据源名称")
     private String dataSource;
-
-    @ApiModelProperty(value = "主键字段")
-    private String primaryKey;
-
-    @ApiModelProperty(value = "索引配置(JSON)")
-    private String indexConfig;
 
     @ApiModelProperty(value = "存储引擎")
     private String engine;
