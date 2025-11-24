@@ -15,14 +15,14 @@ import com.bidr.forge.vo.matrix.MatrixChangeLogExportVO;
 import com.bidr.forge.vo.matrix.SysMatrixChangeLogVO;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.validate.Validator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,7 +40,6 @@ public class SysMatrixChangeLogPortalService extends BasePortalService<SysMatrix
     private final SysMatrixService sysMatrixService;
     private final SysMatrixColumnService sysMatrixColumnService;
     private final JdbcConnectService jdbcConnectService;
-    private final ObjectMapper objectMapper;
 
     /**
      * 导出矩阵变更日志
@@ -86,21 +85,16 @@ public class SysMatrixChangeLogPortalService extends BasePortalService<SysMatrix
         // 查询当前字段配置
         MatrixColumns matrixColumns = sysMatrixService.getMatrixColumns(matrixId);
         List<SysMatrixColumn> columns = matrixColumns.getColumns();
-        List<MatrixChangeLogExportVO.MatrixColumnExportVO> columnVOs = columns.stream()
+        List<MatrixChangeLogExportVO.MatrixColumnExportVO> columnList = columns.stream()
                 .map(col -> {
                     MatrixChangeLogExportVO.MatrixColumnExportVO vo = new MatrixChangeLogExportVO.MatrixColumnExportVO();
                     BeanUtils.copyProperties(col, vo);
                     return vo;
                 })
                 .collect(Collectors.toList());
-        exportVO.setColumns(columnVOs);
+        exportVO.setColumns(columnList);
 
-        // 转换为JSON
-        try {
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(exportVO);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("导出变更日志失败: " + e.getMessage(), e);
-        }
+        return JsonUtil.toJson(exportVO);
     }
 
     /**
@@ -111,12 +105,7 @@ public class SysMatrixChangeLogPortalService extends BasePortalService<SysMatrix
     @Transactional(rollbackFor = Exception.class)
     public void importChangeLog(String changeLogData) {
         // 解析JSON
-        MatrixChangeLogExportVO importData;
-        try {
-            importData = objectMapper.readValue(changeLogData, MatrixChangeLogExportVO.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("解析变更日志数据失败: " + e.getMessage(), e);
-        }
+        MatrixChangeLogExportVO importData = JsonUtil.readJson(changeLogData, MatrixChangeLogExportVO.class);
 
         // 根据表名查找目标环境的矩阵
         SysMatrix targetMatrix = sysMatrixService.lambdaQuery()
@@ -210,7 +199,7 @@ public class SysMatrixChangeLogPortalService extends BasePortalService<SysMatrix
 
         // 执行DDL语句
         try {
-            jdbcConnectService.executeUpdate(ddl);
+            jdbcConnectService.update(ddl, new HashMap<>());
             // 记录成功日志
             logChange(targetMatrix.getId(), change.getVersion(), change.getChangeType(),
                     change.getChangeDesc(), ddl, change.getAffectedColumn(), CommonConst.YES, null);
@@ -272,103 +261,103 @@ public class SysMatrixChangeLogPortalService extends BasePortalService<SysMatrix
                 // 已存在字段：比较并更新配置
                 // 只更新有变化的字段
                 boolean hasChange = false;
-                
+
                 // 比较并更新字段注释
                 if (!java.util.Objects.equals(existingCol.getColumnComment(), importCol.getColumnComment())) {
                     existingCol.setColumnComment(importCol.getColumnComment());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新表单字段类型
                 if (!java.util.Objects.equals(existingCol.getFieldType(), importCol.getFieldType())) {
                     existingCol.setFieldType(importCol.getFieldType());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新字段长度
                 if (!java.util.Objects.equals(existingCol.getColumnLength(), importCol.getColumnLength())) {
                     existingCol.setColumnLength(importCol.getColumnLength());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新小数位数
                 if (!java.util.Objects.equals(existingCol.getDecimalPlaces(), importCol.getDecimalPlaces())) {
                     existingCol.setDecimalPlaces(importCol.getDecimalPlaces());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新是否可空
                 if (!java.util.Objects.equals(existingCol.getIsNullable(), importCol.getIsNullable())) {
                     existingCol.setIsNullable(importCol.getIsNullable());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新默认值
                 if (!java.util.Objects.equals(existingCol.getDefaultValue(), importCol.getDefaultValue())) {
                     existingCol.setDefaultValue(importCol.getDefaultValue());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新序列
                 if (!java.util.Objects.equals(existingCol.getSequence(), importCol.getSequence())) {
                     existingCol.setSequence(importCol.getSequence());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新是否主键
                 if (!java.util.Objects.equals(existingCol.getIsPrimaryKey(), importCol.getIsPrimaryKey())) {
                     existingCol.setIsPrimaryKey(importCol.getIsPrimaryKey());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新是否索引
                 if (!java.util.Objects.equals(existingCol.getIsIndex(), importCol.getIsIndex())) {
                     existingCol.setIsIndex(importCol.getIsIndex());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新是否唯一
                 if (!java.util.Objects.equals(existingCol.getIsUnique(), importCol.getIsUnique())) {
                     existingCol.setIsUnique(importCol.getIsUnique());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新排序
                 if (!java.util.Objects.equals(existingCol.getSort(), importCol.getSort())) {
                     existingCol.setSort(importCol.getSort());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新名称字段
                 if (!java.util.Objects.equals(existingCol.getIsDisplayNameField(), importCol.getIsDisplayNameField())) {
                     existingCol.setIsDisplayNameField(importCol.getIsDisplayNameField());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新顺序字段
                 if (!java.util.Objects.equals(existingCol.getIsOrderField(), importCol.getIsOrderField())) {
                     existingCol.setIsOrderField(importCol.getIsOrderField());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新父节点字段
                 if (!java.util.Objects.equals(existingCol.getIsPidField(), importCol.getIsPidField())) {
                     existingCol.setIsPidField(importCol.getIsPidField());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新关联矩阵
                 if (!java.util.Objects.equals(existingCol.getReferenceMatrixId(), importCol.getReferenceMatrixId())) {
                     existingCol.setReferenceMatrixId(importCol.getReferenceMatrixId());
                     hasChange = true;
                 }
-                
+
                 // 比较并更新关联字典
                 if (!java.util.Objects.equals(existingCol.getReferenceDict(), importCol.getReferenceDict())) {
                     existingCol.setReferenceDict(importCol.getReferenceDict());
                     hasChange = true;
                 }
-                
+
                 // 只有有变化时才更新
                 if (hasChange) {
                     sysMatrixColumnService.updateById(existingCol);

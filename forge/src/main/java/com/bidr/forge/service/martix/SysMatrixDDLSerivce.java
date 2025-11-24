@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -271,7 +272,7 @@ public class SysMatrixDDLSerivce {
     private boolean isTableExists(String tableName) {
         String sql = "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.TABLES " +
                 "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "'";
-        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql);
+        List<Map<String, Object>> result = jdbcConnectService.query(sql, new HashMap<>());
         if (!result.isEmpty()) {
             long count = ((Number) result.get(0).get("count")).longValue();
             return count > 0;

@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,7 +125,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
 
                 try {
                     // 执行DDL
-                    jdbcConnectService.executeUpdate(ddl);
+                    jdbcConnectService.executeUpdate(ddl, new HashMap<>(0));
 
                     // 记录成功日志
                     logChange(sysMatrix.getId(), version, "7",
@@ -169,7 +170,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
             try {
                 // 检查表中是否有数据
                 String checkSql = "SELECT COUNT(*) as count FROM `" + matrix.getTableName() + "`";
-                List<Map<String, Object>> result = jdbcConnectService.executeQuery(checkSql);
+                List<Map<String, Object>> result = jdbcConnectService.executeQuery(checkSql, new HashMap<>(0));
 
                 if (!result.isEmpty()) {
                     long count = ((Number) result.get(0).get("count")).longValue();
@@ -212,7 +213,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
             try {
                 // 删除物理表
                 String dropSql = "DROP TABLE IF EXISTS `" + matrix.getTableName() + "`";
-                jdbcConnectService.executeUpdate(dropSql);
+                jdbcConnectService.executeUpdate(dropSql, new HashMap<>(0));
             } catch (Exception e) {
                 // 如果删除失败（比如表不存在），忽略错误
                 // 错误信息已由JdbcConnectService记录
@@ -255,7 +256,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
         try {
             // 执行 TRUNCATE TABLE
             String truncateSql = "TRUNCATE TABLE `" + matrix.getTableName() + "`";
-            jdbcConnectService.executeUpdate(truncateSql);
+            jdbcConnectService.executeUpdate(truncateSql, new HashMap<>(0));
         } finally {
             // 重置数据源
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
@@ -318,7 +319,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
 
         try {
             // 执行建表语句
-            jdbcConnectService.executeUpdate(ddl);
+            jdbcConnectService.executeUpdate(ddl, new HashMap<>(0));
 
             // 记录成功日志
             logChange(matrixId, version, "1", "创建表 " + matrix.getTableName(),
@@ -391,7 +392,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                     // 新字段：添加字段（ADD COLUMN 已包含位置信息）
                     String addColumnDDL = buildAlterTableAddColumnDDL(matrix, column, columns, i);
                     try {
-                        jdbcConnectService.executeUpdate(addColumnDDL);
+                        jdbcConnectService.executeUpdate(addColumnDDL, new HashMap<>(0));
                         // 记录成功日志
                         logChange(matrixId, version, "2", "添加字段 " + columnName,
                                 addColumnDDL, columnName, "1", null);
@@ -408,12 +409,12 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                     // 计算实际位置：在 existingColumns 中的索引
                     int actualPosition = existingColumns.indexOf(columnName);
                     int expectedPosition = i;
-                    
+
                     // 只有位置不一致时才调整
                     if (actualPosition != expectedPosition) {
                         String modifyColumnDDL = buildAlterTableModifyColumnDDL(matrix, column, columns, i);
                         try {
-                            jdbcConnectService.executeUpdate(modifyColumnDDL);
+                            jdbcConnectService.executeUpdate(modifyColumnDDL, new HashMap<>(0));
                             // 记录成功日志
                             logChange(matrixId, version, "3", "调整字段顺序 " + columnName,
                                     modifyColumnDDL, columnName, "1", null);
@@ -434,7 +435,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                     // 需要删除的字段
                     String dropColumnDDL = "ALTER TABLE `" + matrix.getTableName() + "` DROP COLUMN `" + existingColumn + "`";
                     try {
-                        jdbcConnectService.executeUpdate(dropColumnDDL);
+                        jdbcConnectService.executeUpdate(dropColumnDDL, new HashMap<>(0));
                         // 记录成功日志
                         logChange(matrixId, version, "6", "删除字段 " + existingColumn,
                                 dropColumnDDL, existingColumn, "1", null);
@@ -477,7 +478,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
     private boolean isTableExists(String tableName) {
         String sql = "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.TABLES " +
                 "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "'";
-        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql);
+        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql, new HashMap<>(0));
         if (!result.isEmpty()) {
             long count = ((Number) result.get(0).get("count")).longValue();
             return count > 0;
@@ -489,8 +490,9 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
      * 获取表中已存在的字段列表（排除审计字段）
      */
     private List<String> getExistingColumns(String tableName) {
-        String sql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "' ORDER BY ORDINAL_POSITION";
-        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql);
+        String sql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "' ORDER BY " +
+                "ORDINAL_POSITION";
+        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql, new HashMap<>(0));
         // 定义审计字段，这些字段不参与同步
         Set<String> auditFields = new java.util.HashSet<>(java.util.Arrays.asList(
                 "create_by", "create_at", "update_by", "update_at", "valid"
@@ -521,7 +523,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                 if (!existingIndexes.containsKey(indexName)) {
                     String createIndexSQL = "ALTER TABLE `" + matrix.getTableName() + "` ADD INDEX `" + indexName + "` (`" + columnName + "`);";
                     try {
-                        jdbcConnectService.executeUpdate(createIndexSQL);
+                        jdbcConnectService.executeUpdate(createIndexSQL, new HashMap<>(0));
                         // 记录成功日志
                         logChange(matrix.getId(), version, "4", "添加索引 " + indexName,
                                 createIndexSQL, columnName, "1", null);
@@ -537,7 +539,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                 if (existingIndexes.containsKey(indexName)) {
                     String dropIndexSQL = "ALTER TABLE `" + matrix.getTableName() + "` DROP INDEX `" + indexName + "`;";
                     try {
-                        jdbcConnectService.executeUpdate(dropIndexSQL);
+                        jdbcConnectService.executeUpdate(dropIndexSQL, new HashMap<>(0));
                         // 记录成功日志
                         logChange(matrix.getId(), version, "5", "删除索引 " + indexName,
                                 dropIndexSQL, columnName, "1", null);
@@ -555,7 +557,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                 if (!existingIndexes.containsKey(indexName)) {
                     String createIndexSQL = "ALTER TABLE `" + matrix.getTableName() + "` ADD UNIQUE INDEX `" + indexName + "` (`" + columnName + "`);";
                     try {
-                        jdbcConnectService.executeUpdate(createIndexSQL);
+                        jdbcConnectService.executeUpdate(createIndexSQL, new HashMap<>(0));
                         // 记录成功日志
                         logChange(matrix.getId(), version, "4", "添加唯一索引 " + indexName,
                                 createIndexSQL, columnName, "1", null);
@@ -571,7 +573,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                 if (existingIndexes.containsKey(indexName)) {
                     String dropIndexSQL = "ALTER TABLE `" + matrix.getTableName() + "` DROP INDEX `" + indexName + "`;";
                     try {
-                        jdbcConnectService.executeUpdate(dropIndexSQL);
+                        jdbcConnectService.executeUpdate(dropIndexSQL, new HashMap<>(0));
                         // 记录成功日志
                         logChange(matrix.getId(), version, "5", "删除唯一索引 " + indexName,
                                 dropIndexSQL, columnName, "1", null);
@@ -594,7 +596,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
         String sql = "SELECT INDEX_NAME, NON_UNIQUE FROM INFORMATION_SCHEMA.STATISTICS " +
                 "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "' " +
                 "AND INDEX_NAME != 'PRIMARY'";
-        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql);
+        List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql, new HashMap<>(0));
         Map<String, String> indexes = new java.util.HashMap<>();
         for (Map<String, Object> row : result) {
             String indexName = (String) row.get("INDEX_NAME");
@@ -727,13 +729,13 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                 .eq(SysMatrixChangeLog::getExecuteStatus, "1")  // 只检查成功的记录
                 .last("LIMIT 1")
                 .one();
-        
+
         // 如果已存在相同的成功DDL记录，且当前也是成功的，则不重复记录
         if (existingLog != null && "1".equals(executeStatus)) {
             log.debug("跳过重复DDL记录: matrixId={}, ddl={}", matrixId, ddlStatement);
             return;
         }
-        
+
         SysMatrixChangeLog changeLog = new SysMatrixChangeLog();
         changeLog.setMatrixId(matrixId);
         changeLog.setVersion(version);

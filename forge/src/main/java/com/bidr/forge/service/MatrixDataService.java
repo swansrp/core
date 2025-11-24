@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -76,7 +77,7 @@ public class MatrixDataService {
             sql.append(String.join(", ", values));
             sql.append(")");
 
-            return jdbcConnectService.executeUpdate(sql.toString());
+            return jdbcConnectService.update(sql.toString(), new HashMap<>());
         } finally {
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -174,7 +175,7 @@ public class MatrixDataService {
                 sql.append(String.join(" AND ", conditions));
             }
 
-            return jdbcConnectService.executeUpdate(sql.toString());
+            return jdbcConnectService.update(sql.toString(), new HashMap<>());
         } finally {
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -256,7 +257,7 @@ public class MatrixDataService {
                 sql.append(String.join(" AND ", conditions));
             }
 
-            return jdbcConnectService.executeUpdate(sql.toString());
+            return jdbcConnectService.update(sql.toString(), new HashMap<>());
         } finally {
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -337,7 +338,7 @@ public class MatrixDataService {
                 sql.append(String.join(" AND ", conditions));
             }
 
-            return jdbcConnectService.executeQueryOne(sql.toString());
+            return jdbcConnectService.queryOne(sql.toString(), new HashMap<>());
         } finally {
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -370,7 +371,7 @@ public class MatrixDataService {
 
         try {
             String sql = "SELECT * FROM `" + matrix.getTableName() + "`";
-            return jdbcConnectService.executeQuery(sql);
+            return jdbcConnectService.query(sql, new HashMap<>());
         } finally {
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -424,7 +425,7 @@ public class MatrixDataService {
                 sql.append(String.join(" AND ", conditions));
             }
 
-            return jdbcConnectService.executeQuery(sql.toString());
+            return jdbcConnectService.query(sql.toString(), new HashMap<>());
         } finally {
             if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
                 jdbcConnectService.resetToDefaultDataSource();

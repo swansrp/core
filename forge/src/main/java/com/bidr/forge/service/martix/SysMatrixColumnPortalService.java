@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -118,7 +119,7 @@ public class SysMatrixColumnPortalService extends BasePortalService<SysMatrixCol
                 // 检查字段是否有非空数据
                 String checkSql = "SELECT COUNT(*) as count FROM `" + matrix.getTableName() +
                         "` WHERE `" + column.getColumnName() + "` IS NOT NULL";
-                List<Map<String, Object>> result = jdbcConnectService.executeQuery(checkSql);
+                List<Map<String, Object>> result = jdbcConnectService.query(checkSql, new HashMap<>());
 
                 if (!result.isEmpty()) {
                     long count = ((Number) result.get(0).get("count")).longValue();

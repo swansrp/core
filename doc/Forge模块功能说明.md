@@ -485,6 +485,7 @@ SysMatrixChangeLog {
 | 5 | DROP_INDEX | 删除索引 | `ALTER TABLE ... DROP INDEX idx_age` |
 | 6 | DROP_COLUMN | 删除字段 | `ALTER TABLE ... DROP COLUMN age` |
 | 7 | MODIFY_TABLE_COMMENT | 修改表注释 | `ALTER TABLE ... COMMENT '新注释'` |
+| 7 | MODIFY_TABLE_COMMENT | 修改表注释 | `ALTER TABLE ... COMMENT '新注释'` |
 
 #### 5.3 版本管理
 
@@ -694,7 +695,93 @@ syncIndexes(matrix, columns) {
 
 ### 3. 关键技术点
 
-#### 3.1 动态DDL生成
+#### 3.1 JdbcConnectService 统一数据访问
+
+**设计原则**：
+- 所有动态表的SQL执行统一通过 [`JdbcConnectService`](file://D:\workspace\mpbe\mpbe-api\core\forge\src\main\java\com\bidr\forge\config\jdbc\JdbcConnectService.java) 进行
+- 优先使用 `NamedParameterJdbcTemplate` 实现命名参数化查询
+- 统一记录 trace 级别日志，便于SQL调试和性能分析
+- 支持多数据源动态切换
+
+**核心API**：
+
+```java
+// 查询列表
+List<Map<String, Object>> query(String sql, Map<String, Object> parameters)
+
+// 查询单条
+Map<String, Object> queryOne(String sql, Map<String, Object> parameters)
+
+// 查询单值
+<T> T queryForObject(String sql, Map<String, Object> parameters, Class<T> clazz)
+
+// 更新操作（INSERT/UPDATE/DELETE）
+int update(String sql, Map<String, Object> parameters)
+
+// 数据源切换
+void switchDataSource(String dataSourceName)
+void resetToDefaultDataSource()
+```
+
+**命名参数化SQL示例**：
+
+```java
+// 传统拼接SQL（已废弃）
+String sql = "SELECT * FROM user WHERE name = '" + name + "' AND age = " + age;
+jdbcConnectService.executeQuery(sql);  // ❌ 不推荐
+
+// 命名参数化SQL（推荐）
+String sql = "SELECT * FROM user WHERE name = :name AND age = :age";
+Map<String, Object> params = new HashMap<>();
+params.put("name", name);
+params.put("age", age);
+jdbcConnectService.query(sql, params);  // ✅ 推荐
+```
+
+**无参数SQL调用规范**：
+
+当执行由 SqlBuilder 生成的拼接SQL时，仍需传入空参数Map以保持API一致性和日志记录：
+
+```java
+// 错误用法
+String sql = sqlBuilder.buildSelectSql(req);
+List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql);  // ❌ 旧API
+
+// 正确用法
+String sql = sqlBuilder.buildSelectSql(req);
+List<Map<String, Object>> result = jdbcConnectService.query(sql, new HashMap<>());  // ✅ 新API
+```
+
+**Trace日志示例**：
+
+```log
+2025-11-24 10:23:45.123 TRACE [JdbcConnectService] ==> 查询SQL: SELECT * FROM eval_user WHERE status = :status AND score >= :minScore
+2025-11-24 10:23:45.124 TRACE [JdbcConnectService] ==> 参数: {status=1, minScore=80}
+2025-11-24 10:23:45.156 TRACE [JdbcConnectService] <== 查询结果行数: 25
+```
+
+**多数据源使用示例**：
+
+```java
+// 切换到指定数据源
+if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
+    jdbcConnectService.switchDataSource(matrix.getDataSource());
+}
+
+try {
+    // 执行数据库操作
+    String sql = "SELECT * FROM " + matrix.getTableName();
+    List<Map<String, Object>> result = jdbcConnectService.query(sql, new HashMap<>());
+    return result;
+} finally {
+    // 重置回默认数据源（重要！）
+    if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
+        jdbcConnectService.resetToDefaultDataSource();
+    }
+}
+```
+
+#### 3.2 动态DDL生成
 
 **CREATE TABLE**：
 ```java
@@ -737,7 +824,7 @@ if (index == 0) {
 }
 ```
 
-#### 3.2 审计字段过滤
+#### 3.3 审计字段过滤
 
 ```java
 // 审计字段不参与同步
@@ -753,7 +840,7 @@ List<String> existingColumns = queryColumns(tableName)
     .collect(Collectors.toList());
 ```
 
-#### 3.3 生命周期钩子
+#### 3.4 生命周期钩子
 
 **SysMatrixPortalService**：
 ```java
@@ -810,24 +897,115 @@ public void afterDelete(IdReqVO vo) {
 }
 ```
 
-#### 3.4 多数据源支持
+#### 3.5 表注释同步机制
+
+**功能描述**：当通过update接口修改矩阵的 `tableComment` 字段时，系统会自动执行DDL同步表注释到数据库。
+
+**实现原理**：
 
 ```java
-// 切换数据源
-if (matrix.getDataSource() != null) {
-    jdbcConnectService.switchDataSource(matrix.getDataSource());
-}
-
-try {
-    // 执行数据库操作
-    jdbcConnectService.executeUpdate(sql);
-} finally {
-    // 重置数据源
-    if (matrix.getDataSource() != null) {
-        jdbcConnectService.resetToDefaultDataSource();
+// SysMatrixPortalService.afterUpdate()
+@Override
+public void afterUpdate(SysMatrix sysMatrix) {
+    super.afterUpdate(sysMatrix);
+    
+    // 获取更新前的数据（从ThreadLocal）
+    SysMatrix oldMatrix = beforeUpdateMatrix.get();
+    
+    // 检查表注释是否发生变更
+    if (!Objects.equals(oldMatrix.getTableComment(), sysMatrix.getTableComment())) {
+        // 只有已创建状态的表才执行DDL
+        if (MatrixStatusDict.CREATED.getValue().equals(sysMatrix.getStatus()) ||
+            MatrixStatusDict.SYNCED.getValue().equals(sysMatrix.getStatus()) ||
+            MatrixStatusDict.PENDING_SYNC.getValue().equals(sysMatrix.getStatus())) {
+            
+            // 执行ALTER TABLE修改表注释
+            executeModifyTableComment(sysMatrix);
+        }
     }
 }
 ```
+
+**DDL语句生成**：
+
+```java
+private void executeModifyTableComment(SysMatrix matrix) {
+    // 构建DDL语句
+    String ddl = "ALTER TABLE `" + matrix.getTableName() + "` COMMENT '" + 
+                 matrix.getTableComment() + "'";
+    
+    // 切换数据源
+    if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
+        jdbcConnectService.switchDataSource(matrix.getDataSource());
+    }
+    
+    try {
+        // 执行DDL
+        jdbcConnectService.update(ddl, new HashMap<>());
+        
+        // 记录变更日志
+        logTableCommentChange(matrix, ddl);
+        
+    } finally {
+        // 重置数据源
+        if (matrix.getDataSource() != null && !matrix.getDataSource().isEmpty()) {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
+    }
+}
+```
+
+**变更日志记录**：
+
+```java
+private void logTableCommentChange(SysMatrix matrix, String ddl) {
+    // 获取当前最大版本号
+    Integer maxVersion = getCurrentMaxVersion(matrix.getId());
+    
+    // 创建变更日志
+    SysMatrixChangeLog log = new SysMatrixChangeLog();
+    log.setMatrixId(matrix.getId());
+    log.setVersion(maxVersion + 1);
+    log.setChangeType(MatrixChangeTypeDict.MODIFY_TABLE_COMMENT.getValue());  // "7"
+    log.setChangeDesc("修改表注释: " + matrix.getTableComment());
+    log.setDdlStatement(ddl);
+    log.setAffectedColumn(null);
+    log.setExecuteStatus(CommonConst.YES);  // "1"
+    log.setSort(maxVersion + 1);
+    
+    sysMatrixChangeLogService.save(log);
+}
+```
+
+**使用示例**：
+
+```java
+// 场景：更新矩阵表注释
+SysMatrix matrix = sysMatrixService.getById(matrixId);
+matrix.setTableComment("用户评分表（已优化）");  // 修改注释
+sysMatrixService.updateById(matrix);
+
+// 系统自动执行：
+// 1. 执行 DDL: ALTER TABLE `eval_user_score` COMMENT '用户评分表（已优化）'
+// 2. 记录变更日志（version递增，changeType=7）
+// 3. Trace日志输出SQL执行情况
+```
+
+**日志示例**：
+
+```log
+2025-11-24 10:30:12.456 TRACE [JdbcConnectService] ==> 更新SQL: ALTER TABLE `eval_user_score` COMMENT '用户评分表（已优化）'
+2025-11-24 10:30:12.457 TRACE [JdbcConnectService] ==> 参数: {}
+2025-11-24 10:30:12.489 TRACE [JdbcConnectService] <== 影响行数: 0
+2025-11-24 10:30:12.490 INFO  [SysMatrixPortalService] 矩阵 [eval_user_score] 表注释已同步到数据库
+```
+
+**注意事项**：
+- ✅ 只有已创建状态的表才会执行DDL同步
+- ✅ 未创建状态的表只更新配置，建表时会使用新注释
+- ✅ 每次注释修改都会生成新版本的变更日志
+- ✅ 注释中的单引号会自动转义为双单引号
+- ⚠️ 表注释长度不超过2048字符（MySQL限制）
 
 ---
 

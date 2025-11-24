@@ -66,13 +66,13 @@ public class PortalDatasetService {
         String countSql = PortalDatasetSqlUtil.buildCountSql(querySql);
 
         // 执行计数查询获取总记录数
-        Long total = jdbcConnectService.queryObject(countSql, "COUNT(*)", Long.class);
+        Long total = jdbcConnectService.queryForObject(countSql, new HashMap<>(), Long.class);
 
         // 构建分页SQL
         String paginatedSql = PortalDatasetSqlUtil.buildPaginatedSql(querySql, req.getCurrentPage(), req.getPageSize());
 
         // 执行分页查询获取数据
-        List<Map<String, Object>> records = jdbcConnectService.executeQuery(paginatedSql);
+        List<Map<String, Object>> records = jdbcConnectService.query(paginatedSql, new HashMap<>());
 
         // 创建并返回Page对象
         Page<Map<String, Object>> page = new Page<>(req.getCurrentPage(), req.getPageSize(), total);
@@ -84,7 +84,7 @@ public class PortalDatasetService {
         // 构建查询SQL（不带分页）
         String querySql = parseSql(req, tableId);
         // 查询获取数据
-        return jdbcConnectService.executeQuery(querySql);
+        return jdbcConnectService.query(querySql, new HashMap<>());
     }
 
     public Page<Map<String, Object>> advancedQuery(AdvancedQueryReq req, String tableId) {
@@ -110,7 +110,7 @@ public class PortalDatasetService {
         // 构建查询SQL（不带分页）
         String querySql = parseSql(req, tableId);
         // 查询获取数据
-        return jdbcConnectService.executeQuery(querySql);
+        return jdbcConnectService.query(querySql, new HashMap<>());
     }
 
     public Long countByGeneralReq(QueryConditionReq req, String tableId) {
@@ -118,7 +118,7 @@ public class PortalDatasetService {
         // 构建计数SQL
         String countSql = PortalDatasetSqlUtil.buildCountSql(sql);
         // 执行计数查询获取总记录数
-        return jdbcConnectService.queryObject(countSql, "COUNT(*)", Long.class);
+        return jdbcConnectService.queryForObject(countSql, new HashMap<>(), Long.class);
     }
 
     public Long countByAdvancedReq(AdvancedQueryReq req, String tableId) {
@@ -126,18 +126,18 @@ public class PortalDatasetService {
         // 构建计数SQL
         String countSql = PortalDatasetSqlUtil.buildCountSql(sql);
         // 执行计数查询获取总记录数
-        return jdbcConnectService.queryObject(countSql, "COUNT(*)", Long.class);
+        return jdbcConnectService.queryForObject(countSql, new HashMap<>(), Long.class);
     }
 
     public Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req, String tableId) {
         // 构建查询SQL（不带分页）
         String querySql = parseSql(req, tableId);
 
-        // 构建计数SQL
+        // 构建汇总SQL
         String sumSql = PortalDatasetSqlUtil.buildSumSql(querySql, req.getColumns());
 
-        // 执行计数查询获取总记录数
-        return jdbcConnectService.executeQueryOne(sumSql);
+        // 执行汇总查询
+        return jdbcConnectService.queryOne(sumSql, new HashMap<>());
     }
 
 
@@ -145,11 +145,11 @@ public class PortalDatasetService {
         // 构建查询SQL（不带分页）
         String querySql = parseSql(req, tableId);
 
-        // 构建计数SQL
+        // 构建汇总SQL
         String sumSql = PortalDatasetSqlUtil.buildSumSql(querySql, req.getColumns());
 
-        // 执行计数查询获取总记录数
-        return jdbcConnectService.executeQueryOne(sumSql);
+        // 执行汇总查询
+        return jdbcConnectService.queryOne(sumSql, new HashMap<>());
     }
 
     public List<StatisticRes> statisticByGeneralReq(GeneralStatisticReq req, String tableId) {
