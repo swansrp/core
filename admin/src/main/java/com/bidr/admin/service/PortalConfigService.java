@@ -220,7 +220,10 @@ public class PortalConfigService implements LoginFillTokenInf {
     private void cleanInvalidPortalConfig(String name) {
         SysPortal portal = sysPortalService.getByName(name, DEFAULT_CONFIG_ROLE_ID);
         if (FuncUtil.isNotEmpty(portal)) {
-            portalService.deletePortalConfig(new IdReqVO(portal.getName()));
+            // 仅删除ENTITY类型的配置，保留MATRIX和DATASET类型（动态创建的表）
+            if (FuncUtil.isEmpty(portal.getDataMode())) {
+                portalService.deletePortalConfig(new IdReqVO(portal.getName()));
+            }
         }
     }
 

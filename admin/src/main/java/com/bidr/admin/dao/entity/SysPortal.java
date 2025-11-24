@@ -6,10 +6,11 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import lombok.Data;
 
 /**
  * 后台管理表
@@ -219,4 +220,20 @@ public class SysPortal {
     @TableField(value = "default_sort")
     @ApiModelProperty(value = "默认排序字段")
     private String defaultSort;
+
+    /**
+     * 数据模式：ENTITY(实体模式)/MATRIX(矩阵模式)/DATASET(数据集模式)
+     */
+    @TableField(value = "data_mode")
+    @ApiModelProperty(value = "数据模式：ENTITY/MATRIX/DATASET")
+    @Size(max = 20, message = "数据模式最大长度要小于 20")
+    private String dataMode;
+
+    /**
+     * 关联表格ID（MATRIX模式关联SysMatrix.id或tableName，DATASET模式关联SysPortalDataset.tableId）
+     */
+    @TableField(value = "reference_id")
+    @ApiModelProperty(value = "关联表格ID")
+    @Size(max = 100, message = "关联表格ID最大长度要小于 100")
+    private String referenceId;
 }
