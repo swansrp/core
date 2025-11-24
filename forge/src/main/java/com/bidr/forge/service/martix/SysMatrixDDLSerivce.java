@@ -108,6 +108,12 @@ public class SysMatrixDDLSerivce {
             column.setIsUnique(columnInfo.getUnique() ? CommonConst.YES : CommonConst.NO);
             column.setSort(i + 1);
 
+            // 设置自增序列
+            if (columnInfo.getAutoIncrement()) {
+                column.setSequence("AUTO_INCREMENT");
+                log.info("从DDL导入时检测到字段 [{}] 设置了 AUTO_INCREMENT，已配置到 sequence 字段", columnInfo.getName());
+            }
+
             // 推断表单字段类型
             column.setFieldType(inferFieldType(columnInfo.getType()));
 
@@ -538,6 +544,11 @@ public class SysMatrixDDLSerivce {
                 info.setComment(commentMatcher.group(1));
             }
 
+            // 解析自增属性
+            if (attributes.toUpperCase().contains("AUTO_INCREMENT")) {
+                info.setAutoIncrement(true);
+            }
+
             // 设置主键标记（支持联合主键）
             if (primaryKeys.contains(info.getName())) {
                 info.setPrimaryKey(true);
@@ -568,6 +579,7 @@ public class SysMatrixDDLSerivce {
             private Boolean primaryKey = false;
             private Boolean hasIndex = false;
             private Boolean unique = false;
+            private Boolean autoIncrement = false;  // 是否自增
         }
     }
 }

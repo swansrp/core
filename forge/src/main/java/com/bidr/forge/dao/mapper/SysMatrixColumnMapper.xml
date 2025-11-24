@@ -12,10 +12,16 @@
     <result column="decimal_places" jdbcType="INTEGER" property="decimalPlaces" />
     <result column="is_nullable" jdbcType="CHAR" property="isNullable" />
     <result column="default_value" jdbcType="VARCHAR" property="defaultValue" />
+    <result column="sequence" jdbcType="VARCHAR" property="sequence" />
     <result column="is_primary_key" jdbcType="CHAR" property="isPrimaryKey" />
     <result column="is_index" jdbcType="CHAR" property="isIndex" />
     <result column="is_unique" jdbcType="CHAR" property="isUnique" />
     <result column="sort" jdbcType="INTEGER" property="sort" />
+    <result column="is_display_name_field" jdbcType="CHAR" property="isDisplayNameField" />
+    <result column="is_order_field" jdbcType="CHAR" property="isOrderField" />
+    <result column="is_pid_field" jdbcType="CHAR" property="isPidField" />
+    <result column="reference_matrix_id" jdbcType="VARCHAR" property="referenceMatrixId" />
+    <result column="reference_dict" jdbcType="VARCHAR" property="referenceDict" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
     <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
     <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
@@ -24,7 +30,8 @@
   </resultMap>
   <sql id="Base_Column_List">
     id, matrix_id, column_name, column_comment, column_type, field_type, column_length, 
-    decimal_places, is_nullable, default_value, is_primary_key, is_index, is_unique, 
-    sort, create_by, create_at, update_by, update_at, `valid`
+    decimal_places, is_nullable, default_value, sequence, is_primary_key, is_index, is_unique, 
+    sort, is_display_name_field, is_order_field, is_pid_field, reference_matrix_id, 
+    reference_dict, create_by, create_at, update_by, update_at, `valid`
   </sql>
 </mapper>

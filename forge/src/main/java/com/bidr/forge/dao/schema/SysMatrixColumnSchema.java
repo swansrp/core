@@ -36,5 +36,14 @@ public class SysMatrixColumnSchema extends BaseMybatisSchema<SysMatrixColumn> {
                 "  PRIMARY KEY (`id`),\n" +
                 "  KEY `idx_matrix_id` (`matrix_id`)\n" +
                 ") COMMENT='矩阵字段配置';");
+
+        // 添加新字段的升级脚本
+        setUpgradeDDL(1, "ALTER TABLE `sys_matrix_column` " +
+                "ADD COLUMN `is_display_name_field` char(1) DEFAULT '0' COMMENT '名称字段' AFTER `sort`, " +
+                "ADD COLUMN `is_order_field` char(1) DEFAULT '0' COMMENT '顺序字段' AFTER `is_display_name_field`, " +
+                "ADD COLUMN `is_pid_field` char(1) DEFAULT '0' COMMENT '父节点字段' AFTER `is_order_field`, " +
+                "ADD COLUMN `reference_matrix_id` varchar(50) DEFAULT NULL COMMENT '关联矩阵' AFTER `is_pid_field`, " +
+                "ADD COLUMN `reference_dict` varchar(50) DEFAULT NULL COMMENT '关联字典' AFTER `reference_matrix_id`, " +
+                "ADD COLUMN `sequence` varchar(50) DEFAULT NULL COMMENT '序列' AFTER `default_value`;");
     }
 }

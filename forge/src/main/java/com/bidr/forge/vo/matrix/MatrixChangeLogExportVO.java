@@ -148,6 +148,12 @@ public class MatrixChangeLogExportVO {
         private String defaultValue;
 
         /**
+         * 序列
+         */
+        @ApiModelProperty(value = "序列")
+        private String sequence;
+
+        /**
          * 是否主键
          */
         @ApiModelProperty(value = "是否主键")
@@ -170,5 +176,35 @@ public class MatrixChangeLogExportVO {
          */
         @ApiModelProperty(value = "排序")
         private Integer sort;
+
+        /**
+         * 名称字段
+         */
+        @ApiModelProperty(value = "名称字段")
+        private String isDisplayNameField;
+
+        /**
+         * 顺序字段
+         */
+        @ApiModelProperty(value = "顺序字段")
+        private String isOrderField;
+
+        /**
+         * 父节点字段
+         */
+        @ApiModelProperty(value = "父节点字段")
+        private String isPidField;
+
+        /**
+         * 关联矩阵
+         */
+        @ApiModelProperty(value = "关联矩阵")
+        private String referenceMatrixId;
+
+        /**
+         * 关联字典
+         */
+        @ApiModelProperty(value = "关联字典")
+        private String referenceDict;
     }
 }

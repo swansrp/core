@@ -51,6 +51,9 @@ public class SysMatrixColumnVO extends BaseVO {
     @ApiModelProperty(value = "默认值")
     private String defaultValue;
 
+    @ApiModelProperty(value = "序列")
+    private String sequence;
+
     @ApiModelProperty(value = "是否主键")
     private String isPrimaryKey;
 
@@ -63,4 +66,19 @@ public class SysMatrixColumnVO extends BaseVO {
     @PortalOrderField
     @ApiModelProperty(value = "排序")
     private Integer sort;
+
+    @ApiModelProperty(value = "名称字段")
+    private String isDisplayNameField;
+
+    @ApiModelProperty(value = "顺序字段")
+    private String isOrderField;
+
+    @ApiModelProperty(value = "父节点字段")
+    private String isPidField;
+
+    @ApiModelProperty(value = "关联矩阵")
+    private String referenceMatrixId;
+
+    @ApiModelProperty(value = "关联字典")
+    private String referenceDict;
 }

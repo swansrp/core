@@ -59,6 +59,10 @@ public class SysMatrixColumn {
     @ApiModelProperty(value = "默认值")
     private String defaultValue;
 
+    @TableField(value = "sequence")
+    @ApiModelProperty(value = "序列")
+    private String sequence;
+
     @TableField(value = "is_primary_key")
     @ApiModelProperty(value = "是否主键")
     private String isPrimaryKey;
@@ -74,6 +78,26 @@ public class SysMatrixColumn {
     @TableField(value = "sort")
     @ApiModelProperty(value = "排序")
     private Integer sort;
+
+    @TableField(value = "is_display_name_field")
+    @ApiModelProperty(value = "名称字段")
+    private String isDisplayNameField;
+
+    @TableField(value = "is_order_field")
+    @ApiModelProperty(value = "顺序字段")
+    private String isOrderField;
+
+    @TableField(value = "is_pid_field")
+    @ApiModelProperty(value = "父节点字段")
+    private String isPidField;
+
+    @TableField(value = "reference_matrix_id")
+    @ApiModelProperty(value = "关联矩阵")
+    private String referenceMatrixId;
+
+    @TableField(value = "reference_dict")
+    @ApiModelProperty(value = "关联字典")
+    private String referenceDict;
 
     @TableField(value = "create_by", fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建者")

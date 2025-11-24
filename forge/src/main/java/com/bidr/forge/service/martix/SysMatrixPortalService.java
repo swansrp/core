@@ -17,6 +17,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ import java.util.Set;
  * @author sharp
  * @since 2025-11-20
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatrixVO> {
@@ -84,6 +86,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
         idColumn.setIsPrimaryKey(CommonConst.YES);
         idColumn.setIsIndex(CommonConst.NO);
         idColumn.setIsUnique(CommonConst.NO);
+        idColumn.setSequence("AUTO_INCREMENT");  // 设置自增序列
         idColumn.setSort(0);
 
         sysMatrixColumnService.save(idColumn);
@@ -368,7 +371,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
         }
 
         try {
-            // 获取表中已存在的字段
+            // 获取表中已存在的字段（按实际顺序）
             List<String> existingColumns = getExistingColumns(matrix.getTableName());
 
             // 获取配置的字段名列表
@@ -376,35 +379,51 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
                     .map(SysMatrixColumn::getColumnName)
                     .collect(java.util.stream.Collectors.toList());
 
+            // 记录本次同步中新添加的字段，避免对新添加的字段再次调整位置
+            Set<String> newlyAddedColumns = new java.util.HashSet<>();
+
             // 处理字段：添加新字段并调整顺序
             for (int i = 0; i < columns.size(); i++) {
                 SysMatrixColumn column = columns.get(i);
                 String columnName = column.getColumnName();
 
                 if (!existingColumns.contains(columnName)) {
-                    // 新字段：添加字段
+                    // 新字段：添加字段（ADD COLUMN 已包含位置信息）
                     String addColumnDDL = buildAlterTableAddColumnDDL(matrix, column, columns, i);
                     try {
                         jdbcConnectService.executeUpdate(addColumnDDL);
                         // 记录成功日志
                         logChange(matrixId, version, "2", "添加字段 " + columnName,
                                 addColumnDDL, columnName, "1", null);
+                        // 标记为新添加的字段
+                        newlyAddedColumns.add(columnName);
                     } catch (Exception e) {
                         // 记录失败日志
                         logChange(matrixId, version, "2", "添加字段 " + columnName,
                                 addColumnDDL, columnName, "0", e.getMessage());
                     }
-                } else {
-                    // 已存在字段：调整位置
-                    String modifyColumnDDL = buildAlterTableModifyColumnDDL(matrix, column, columns, i);
-                    try {
-                        jdbcConnectService.executeUpdate(modifyColumnDDL);
-                        // 记录成功日志
-                        logChange(matrixId, version, "3", "调整字段顺序 " + columnName,
-                                modifyColumnDDL, columnName, "1", null);
-                    } catch (Exception e) {
-                        // 字段位置可能已正确，继续执行
-                        // 不记录日志，因为这是预期的失败
+                } else if (!newlyAddedColumns.contains(columnName)) {
+                    // 已存在字段且不是本次新添加的：检查位置是否需要调整
+                    // 计算期望位置：当前字段在配置中的索引 i
+                    // 计算实际位置：在 existingColumns 中的索引
+                    int actualPosition = existingColumns.indexOf(columnName);
+                    int expectedPosition = i;
+                    
+                    // 只有位置不一致时才调整
+                    if (actualPosition != expectedPosition) {
+                        String modifyColumnDDL = buildAlterTableModifyColumnDDL(matrix, column, columns, i);
+                        try {
+                            jdbcConnectService.executeUpdate(modifyColumnDDL);
+                            // 记录成功日志
+                            logChange(matrixId, version, "3", "调整字段顺序 " + columnName,
+                                    modifyColumnDDL, columnName, "1", null);
+                            // 更新 existingColumns 中的位置，以便后续字段比较
+                            existingColumns.remove(actualPosition);
+                            existingColumns.add(expectedPosition, columnName);
+                        } catch (Exception e) {
+                            // 字段位置可能已正确，继续执行
+                            // 不记录日志，因为这是预期的失败
+                        }
                     }
                 }
             }
@@ -470,7 +489,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
      * 获取表中已存在的字段列表（排除审计字段）
      */
     private List<String> getExistingColumns(String tableName) {
-        String sql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "'";
+        String sql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "' ORDER BY ORDINAL_POSITION";
         List<Map<String, Object>> result = jdbcConnectService.executeQuery(sql);
         // 定义审计字段，这些字段不参与同步
         Set<String> auditFields = new java.util.HashSet<>(java.util.Arrays.asList(
@@ -697,21 +716,35 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
     }
 
     /**
-     * 记录变更日志
+     * 记录变更日志（去重检查）
      */
     private void logChange(Long matrixId, Integer version, String changeType, String changeDesc,
                            String ddlStatement, String affectedColumn, String executeStatus, String errorMsg) {
-        SysMatrixChangeLog log = new SysMatrixChangeLog();
-        log.setMatrixId(matrixId);
-        log.setVersion(version);
-        log.setChangeType(changeType);
-        log.setChangeDesc(changeDesc);
-        log.setDdlStatement(ddlStatement);
-        log.setAffectedColumn(affectedColumn);
-        log.setExecuteStatus(executeStatus);
-        log.setErrorMsg(errorMsg);
-        log.setSort(version);
-        sysMatrixChangeLogService.save(log);
+        // 检查是否已存在相同DDL语句的成功记录
+        SysMatrixChangeLog existingLog = sysMatrixChangeLogService.lambdaQuery()
+                .eq(SysMatrixChangeLog::getMatrixId, matrixId)
+                .eq(SysMatrixChangeLog::getDdlStatement, ddlStatement)
+                .eq(SysMatrixChangeLog::getExecuteStatus, "1")  // 只检查成功的记录
+                .last("LIMIT 1")
+                .one();
+        
+        // 如果已存在相同的成功DDL记录，且当前也是成功的，则不重复记录
+        if (existingLog != null && "1".equals(executeStatus)) {
+            log.debug("跳过重复DDL记录: matrixId={}, ddl={}", matrixId, ddlStatement);
+            return;
+        }
+        
+        SysMatrixChangeLog changeLog = new SysMatrixChangeLog();
+        changeLog.setMatrixId(matrixId);
+        changeLog.setVersion(version);
+        changeLog.setChangeType(changeType);
+        changeLog.setChangeDesc(changeDesc);
+        changeLog.setDdlStatement(ddlStatement);
+        changeLog.setAffectedColumn(affectedColumn);
+        changeLog.setExecuteStatus(executeStatus);
+        changeLog.setErrorMsg(errorMsg);
+        changeLog.setSort(version);
+        sysMatrixChangeLogService.save(changeLog);
     }
 
     /**

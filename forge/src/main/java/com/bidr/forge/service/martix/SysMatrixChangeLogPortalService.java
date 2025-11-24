@@ -269,9 +269,110 @@ public class SysMatrixChangeLogPortalService extends BasePortalService<SysMatrix
                 newColumn.setMatrixId(targetMatrixId);
                 sysMatrixColumnService.save(newColumn);
             } else {
-                // 已存在字段：更新配置
-                BeanUtils.copyProperties(importCol, existingCol, "id", "matrixId", "createBy", "createAt");
-                sysMatrixColumnService.updateById(existingCol);
+                // 已存在字段：比较并更新配置
+                // 只更新有变化的字段
+                boolean hasChange = false;
+                
+                // 比较并更新字段注释
+                if (!java.util.Objects.equals(existingCol.getColumnComment(), importCol.getColumnComment())) {
+                    existingCol.setColumnComment(importCol.getColumnComment());
+                    hasChange = true;
+                }
+                
+                // 比较并更新表单字段类型
+                if (!java.util.Objects.equals(existingCol.getFieldType(), importCol.getFieldType())) {
+                    existingCol.setFieldType(importCol.getFieldType());
+                    hasChange = true;
+                }
+                
+                // 比较并更新字段长度
+                if (!java.util.Objects.equals(existingCol.getColumnLength(), importCol.getColumnLength())) {
+                    existingCol.setColumnLength(importCol.getColumnLength());
+                    hasChange = true;
+                }
+                
+                // 比较并更新小数位数
+                if (!java.util.Objects.equals(existingCol.getDecimalPlaces(), importCol.getDecimalPlaces())) {
+                    existingCol.setDecimalPlaces(importCol.getDecimalPlaces());
+                    hasChange = true;
+                }
+                
+                // 比较并更新是否可空
+                if (!java.util.Objects.equals(existingCol.getIsNullable(), importCol.getIsNullable())) {
+                    existingCol.setIsNullable(importCol.getIsNullable());
+                    hasChange = true;
+                }
+                
+                // 比较并更新默认值
+                if (!java.util.Objects.equals(existingCol.getDefaultValue(), importCol.getDefaultValue())) {
+                    existingCol.setDefaultValue(importCol.getDefaultValue());
+                    hasChange = true;
+                }
+                
+                // 比较并更新序列
+                if (!java.util.Objects.equals(existingCol.getSequence(), importCol.getSequence())) {
+                    existingCol.setSequence(importCol.getSequence());
+                    hasChange = true;
+                }
+                
+                // 比较并更新是否主键
+                if (!java.util.Objects.equals(existingCol.getIsPrimaryKey(), importCol.getIsPrimaryKey())) {
+                    existingCol.setIsPrimaryKey(importCol.getIsPrimaryKey());
+                    hasChange = true;
+                }
+                
+                // 比较并更新是否索引
+                if (!java.util.Objects.equals(existingCol.getIsIndex(), importCol.getIsIndex())) {
+                    existingCol.setIsIndex(importCol.getIsIndex());
+                    hasChange = true;
+                }
+                
+                // 比较并更新是否唯一
+                if (!java.util.Objects.equals(existingCol.getIsUnique(), importCol.getIsUnique())) {
+                    existingCol.setIsUnique(importCol.getIsUnique());
+                    hasChange = true;
+                }
+                
+                // 比较并更新排序
+                if (!java.util.Objects.equals(existingCol.getSort(), importCol.getSort())) {
+                    existingCol.setSort(importCol.getSort());
+                    hasChange = true;
+                }
+                
+                // 比较并更新名称字段
+                if (!java.util.Objects.equals(existingCol.getIsDisplayNameField(), importCol.getIsDisplayNameField())) {
+                    existingCol.setIsDisplayNameField(importCol.getIsDisplayNameField());
+                    hasChange = true;
+                }
+                
+                // 比较并更新顺序字段
+                if (!java.util.Objects.equals(existingCol.getIsOrderField(), importCol.getIsOrderField())) {
+                    existingCol.setIsOrderField(importCol.getIsOrderField());
+                    hasChange = true;
+                }
+                
+                // 比较并更新父节点字段
+                if (!java.util.Objects.equals(existingCol.getIsPidField(), importCol.getIsPidField())) {
+                    existingCol.setIsPidField(importCol.getIsPidField());
+                    hasChange = true;
+                }
+                
+                // 比较并更新关联矩阵
+                if (!java.util.Objects.equals(existingCol.getReferenceMatrixId(), importCol.getReferenceMatrixId())) {
+                    existingCol.setReferenceMatrixId(importCol.getReferenceMatrixId());
+                    hasChange = true;
+                }
+                
+                // 比较并更新关联字典
+                if (!java.util.Objects.equals(existingCol.getReferenceDict(), importCol.getReferenceDict())) {
+                    existingCol.setReferenceDict(importCol.getReferenceDict());
+                    hasChange = true;
+                }
+                
+                // 只有有变化时才更新
+                if (hasChange) {
+                    sysMatrixColumnService.updateById(existingCol);
+                }
             }
         }
 
