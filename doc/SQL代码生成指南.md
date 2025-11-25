@@ -466,9 +466,44 @@ public class SchemaModulePortalService extends BasePortalService<SchemaModule, S
     - `id()`: 返回实体ID字段的Lambda表达式
     - `order()`: 返回实体排序字段的Lambda表达式
 
-**Java代码**：
+**Java代码示例1（无排序字段）**：
 
+```java
+package com.bidr.mpbe.manage.controller.schema;
+
+import com.bidr.kernel.controller.BaseAdminController;
+import com.bidr.kernel.service.PortalCommonService;
+import com.bidr.mpbe.dao.entity.SchemaModule;
+import com.bidr.mpbe.manage.service.schema.SchemaModulePortalService;
+import com.bidr.mpbe.vo.SchemaModuleVO;
+import io.swagger.annotations.Api;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 模块管理控制器
+ *
+ * @author sharp
+ */
+@Api(tags = "生物学评价 - 模版配置 - 模块")
+@RestController
+@RequiredArgsConstructor
+@RequestMapping(path = {"/web/schema/module"})
+public class SchemaModulePortalController extends BaseAdminController<SchemaModule, SchemaModuleVO> {
+
+    private final SchemaModulePortalService schemaModulePortalService;
+
+    @Override
+    public PortalCommonService<SchemaModule, SchemaModuleVO> getPortalService() {
+        return schemaModulePortalService;
+    }
+}
 ```
+
+**Java代码示例2（有排序字段）**：
+
+```java
 package com.bidr.mpbe.manage.controller.schema;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
@@ -482,6 +517,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 模块管理控制器（支持排序）
+ *
+ * @author sharp
+ */
 @Api(tags = "生物学评价 - 模版配置 - 模块")
 @RestController
 @RequiredArgsConstructor
@@ -878,17 +918,37 @@ public class SchemaModulePortalController extends BaseAdminController<SchemaModu
 
 **关键规则**：
 
-| 字段情况                                | 继承的Controller                                | 实现的方法     | 说明                                            |
-|-------------------------------------|----------------------------------------------|-----------|-----------------------------------------------|
-| 有 `sort`/`order`/`display_order` 字段 | `BaseAdminOrderController<Entity, EntityVO>` | `order()` | 返回排序字段：`Entity::getSort` 或 `Entity::getOrder` |
-| 有 `pid` 字段（树形结构）                    | `BaseAdminTreeController<Entity, EntityVO>`  | `pid()`   | 返回父ID字段：`Entity::getPid`                      |
-| 其他情况                                | `BaseAdminController<Entity, EntityVO>`      |           |                                               |
+| 字段情况                                | 继承的Controller                                | 必须实现的方法                      | 说明                                                  |
+|-------------------------------------|----------------------------------------------|------------------------------|-----------------------------------------------------|
+| 无 `sort`/`order` 字段且无 `pid` 字段       | `BaseAdminController<Entity, EntityVO>`      | `getPortalService()`         | 基础CRUD功能，无排序无树形结构                                   |
+| 有 `sort`/`order`/`display_order` 字段 | `BaseAdminOrderController<Entity, EntityVO>` | `getPortalService()`<br>`id()`<br>`order()` | 支持排序功能，返回排序字段：`Entity::getSort` 或 `Entity::getOrder` |
+| 有 `pid` 字段（树形结构）                    | `BaseAdminTreeController<Entity, EntityVO>`  | `getPortalService()`<br>`id()`<br>`pid()`<br>`name()`<br>`order()` | 树形结构，返回父ID字段：`Entity::getPid`                        |
 
-**必填方法实现**：
+**方法实现说明**：
 
-```
+### 1. BaseAdminController（基础控制器）
+
+**必须实现的方法**：
+
+```java
 /**
- * 获取为一级业务服务
+ * 获取Portal业务服务
+ */
+@Override
+public PortalCommonService<SchemaModule, SchemaModuleVO> getPortalService() {
+    return schemaModulePortalService;
+}
+```
+
+**无需实现其他方法**。
+
+### 2. BaseAdminOrderController（排序控制器）
+
+**必须实现的方法**：
+
+```java
+/**
+ * 获取Portal业务服务
  */
 @Override
 public PortalCommonService<SchemaModule, SchemaModuleVO> getPortalService() {
@@ -896,7 +956,7 @@ public PortalCommonService<SchemaModule, SchemaModuleVO> getPortalService() {
 }
 
 /**
- * 获取实体主键
+ * 获取实体主键（用于排序功能）
  */
 @Override
 protected SFunction<SchemaModule, ?> id() {
@@ -910,9 +970,39 @@ protected SFunction<SchemaModule, ?> id() {
 protected SFunction<SchemaModule, Integer> order() {
     return SchemaModule::getSort;  // 或 getOrder / getDisplayOrder
 }
+```
+
+### 3. BaseAdminTreeController（树形控制器）
+
+**必须实现的方法**：
+
+```java
+/**
+ * 获取Portal业务服务
+ */
+@Override
+public PortalCommonService<SchemaModule, SchemaModuleVO> getPortalService() {
+    return schemaModulePortalService;
+}
 
 /**
- * 可选方法：如果是树形结构（有pid字段）需要实现
+ * 获取实体主键（继承自BaseAdminOrderController）
+ */
+@Override
+protected SFunction<SchemaModule, ?> id() {
+    return SchemaModule::getId;
+}
+
+/**
+ * 获取排序字段（继承自BaseAdminOrderController）
+ */
+@Override
+protected SFunction<SchemaModule, Integer> order() {
+    return SchemaModule::getSort;  // 或 getOrder / getDisplayOrder
+}
+
+/**
+ * 获取父ID字段（树形结构专用）
  */
 @Override
 protected SFunction<SchemaModule, ?> pid() {
@@ -920,7 +1010,7 @@ protected SFunction<SchemaModule, ?> pid() {
 }
 
 /**
- * 可选方法：用于树形结构或需要name字段的场景
+ * 获取名称字段（树形结构专用）
  * 对应字段通常是：name 或 title
  */
 @Override

@@ -428,7 +428,7 @@ Content-Type: application/json
 
 **JavaScript脚本示例**：
 
-```javascript
+```
 // 示例1：计算总分
 // conditionScript
 score1 != null && score2 != null && score3 != null

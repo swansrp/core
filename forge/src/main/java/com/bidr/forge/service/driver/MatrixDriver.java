@@ -48,7 +48,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Map<String, String> buildAliasMap(String portalName, String roleId) {
+    public Map<String, String> buildAliasMap(String portalName, Long roleId) {
         // portalName在Matrix模式下可能是tableName或matrixId
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         if (matrixColumns == null || matrixColumns.getColumns() == null) {
@@ -66,7 +66,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, String roleId) {
+    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
@@ -99,7 +99,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, String roleId) {
+    public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
@@ -127,7 +127,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, String roleId) {
+    public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, Long roleId) {
         req.setCurrentPage(1L);
         req.setPageSize(1L);
 
@@ -136,7 +136,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Long count(AdvancedQueryReq req, String portalName, String roleId) {
+    public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
@@ -159,14 +159,14 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public List<Map<String, Object>> getAllData(String portalName, String roleId) {
+    public List<Map<String, Object>> getAllData(String portalName, Long roleId) {
         AdvancedQueryReq req = new AdvancedQueryReq();
         // 添加valid=YES条件
         return queryList(req, portalName, roleId);
     }
 
     @Override
-    public int insert(Map<String, Object> data, String portalName, String roleId) {
+    public int insert(Map<String, Object> data, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
@@ -191,7 +191,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public int batchInsert(List<Map<String, Object>> dataList, String portalName, String roleId) {
+    public int batchInsert(List<Map<String, Object>> dataList, String portalName, Long roleId) {
         int totalAffected = 0;
         for (Map<String, Object> data : dataList) {
             totalAffected += insert(data, portalName, roleId);
@@ -200,7 +200,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public int update(Map<String, Object> data, String portalName, String roleId) {
+    public int update(Map<String, Object> data, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
@@ -225,7 +225,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public int batchUpdate(List<Map<String, Object>> dataList, String portalName, String roleId) {
+    public int batchUpdate(List<Map<String, Object>> dataList, String portalName, Long roleId) {
         int totalAffected = 0;
         for (Map<String, Object> data : dataList) {
             totalAffected += update(data, portalName, roleId);
@@ -234,7 +234,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public int delete(Object id, String portalName, String roleId) {
+    public int delete(Object id, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
@@ -255,7 +255,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public int batchDelete(List<Object> ids, String portalName, String roleId) {
+    public int batchDelete(List<Object> ids, String portalName, Long roleId) {
         int totalAffected = 0;
         for (Object id : ids) {
             totalAffected += delete(id, portalName, roleId);

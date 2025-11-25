@@ -1,11 +1,11 @@
 package com.bidr.forge.service.dataset;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.repository.SysDatasetTableService;
+import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
-import com.bidr.forge.dao.entity.SysPortalDataset;
-import com.bidr.forge.dao.entity.SysPortalDatasetColumn;
-import com.bidr.forge.dao.repository.SysPortalDatasetColumnService;
-import com.bidr.forge.dao.repository.SysPortalDatasetService;
 import com.bidr.forge.utils.PortalDatasetSqlUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.bo.SqlColumn;
@@ -36,26 +36,26 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PortalDatasetService {
 
-    private final SysPortalDatasetService sysPortalDatasetService;
-    private final SysPortalDatasetColumnService sysPortalDatasetColumnService;
+    private final SysDatasetTableService sysDatasetTableService;
+    private final SysDatasetColumnService sysDatasetColumnService;
     private final JdbcConnectService jdbcConnectService;
 
-    public Page<Map<String, Object>> generalQuery(QueryConditionReq req, String tableId) {
-        String querySql = parseSql(req, tableId);
+    public Page<Map<String, Object>> generalQuery(QueryConditionReq req, Long datasetId) {
+        String querySql = parseSql(req, datasetId);
         return query(querySql, req);
     }
 
-    private String parseSql(QueryConditionReq req, String tableId) {
+    private String parseSql(QueryConditionReq req, Long datasetId) {
         List<SqlColumn> columns = new ArrayList<>();
         Map<String, SqlColumn> aggregateColumns = new HashMap<>();
         Map<String, SqlColumn> notAggregateColumns = new HashMap<>();
         AdvancedQuery where = new AdvancedQuery();
         AdvancedQuery having = new AdvancedQuery();
-        List<SysPortalDataset> dataSet = sysPortalDatasetService.getByTableId(tableId);
+        List<SysDatasetTable> dataSet = sysDatasetTableService.getByDatasetId(datasetId);
         Validator.assertNotEmpty(dataSet, ErrCodeSys.PA_PARAM_NULL, "表视图");
         String fromSql = PortalDatasetSqlUtil.buildFromSql(dataSet);
-        List<SysPortalDatasetColumn> sysPortalDatasetColumns = sysPortalDatasetColumnService.getByTableId(tableId);
-        PortalDatasetSqlUtil.parseSqlColumn(sysPortalDatasetColumns, columns, aggregateColumns, notAggregateColumns);
+        List<SysDatasetColumn> sysDatasetColumns = sysDatasetColumnService.getByDatasetId(datasetId);
+        PortalDatasetSqlUtil.parseSqlColumn(sysDatasetColumns, columns, aggregateColumns, notAggregateColumns);
         PortalDatasetSqlUtil.parseCondition(aggregateColumns, req, where, having);
         return SqlBuilder.buildSql(columns, fromSql, where,
                 aggregateColumns.isEmpty() ? null : notAggregateColumns.values(), req.getSortList(), having, null);
@@ -80,58 +80,58 @@ public class PortalDatasetService {
         return page;
     }
 
-    public List<Map<String, Object>> generalSelect(QueryConditionReq req, String tableId) {
+    public List<Map<String, Object>> generalSelect(QueryConditionReq req, Long datasetId) {
         // 构建查询SQL（不带分页）
-        String querySql = parseSql(req, tableId);
+        String querySql = parseSql(req, datasetId);
         // 查询获取数据
         return jdbcConnectService.query(querySql, new HashMap<>());
     }
 
-    public Page<Map<String, Object>> advancedQuery(AdvancedQueryReq req, String tableId) {
-        String querySql = parseSql(req, tableId);
+    public Page<Map<String, Object>> advancedQuery(AdvancedQueryReq req, Long datasetId) {
+        String querySql = parseSql(req, datasetId);
         return query(querySql, req);
     }
 
-    private String parseSql(AdvancedQueryReq req, String tableId) {
+    private String parseSql(AdvancedQueryReq req, Long datasetId) {
         List<SqlColumn> columns = new ArrayList<>();
         Map<String, SqlColumn> aggregateColumns = new HashMap<>();
         Map<String, SqlColumn> notAggregateColumns = new HashMap<>();
         AdvancedQuery where = req.getCondition();
-        List<SysPortalDataset> dataSet = sysPortalDatasetService.getByTableId(tableId);
+        List<SysDatasetTable> dataSet = sysDatasetTableService.getByDatasetId(datasetId);
         Validator.assertNotEmpty(dataSet, ErrCodeSys.PA_PARAM_NULL, "表视图");
         String fromSql = PortalDatasetSqlUtil.buildFromSql(dataSet);
-        List<SysPortalDatasetColumn> sysPortalDatasetColumns = sysPortalDatasetColumnService.getByTableId(tableId);
-        PortalDatasetSqlUtil.parseSqlColumn(sysPortalDatasetColumns, columns, aggregateColumns, notAggregateColumns);
+        List<SysDatasetColumn> sysDatasetColumns = sysDatasetColumnService.getByDatasetId(datasetId);
+        PortalDatasetSqlUtil.parseSqlColumn(sysDatasetColumns, columns, aggregateColumns, notAggregateColumns);
         return SqlBuilder.buildSql(columns, fromSql, where,
                 aggregateColumns.isEmpty() ? null : notAggregateColumns.values(), req.getSortList(), null, null);
     }
 
-    public List<Map<String, Object>> advancedSelect(AdvancedQueryReq req, String tableId) {
+    public List<Map<String, Object>> advancedSelect(AdvancedQueryReq req, Long datasetId) {
         // 构建查询SQL（不带分页）
-        String querySql = parseSql(req, tableId);
+        String querySql = parseSql(req, datasetId);
         // 查询获取数据
         return jdbcConnectService.query(querySql, new HashMap<>());
     }
 
-    public Long countByGeneralReq(QueryConditionReq req, String tableId) {
-        String sql = parseSql(req, tableId);
+    public Long countByGeneralReq(QueryConditionReq req, Long datasetId) {
+        String sql = parseSql(req, datasetId);
         // 构建计数SQL
         String countSql = PortalDatasetSqlUtil.buildCountSql(sql);
         // 执行计数查询获取总记录数
         return jdbcConnectService.queryForObject(countSql, new HashMap<>(), Long.class);
     }
 
-    public Long countByAdvancedReq(AdvancedQueryReq req, String tableId) {
-        String sql = parseSql(req, tableId);
+    public Long countByAdvancedReq(AdvancedQueryReq req, Long datasetId) {
+        String sql = parseSql(req, datasetId);
         // 构建计数SQL
         String countSql = PortalDatasetSqlUtil.buildCountSql(sql);
         // 执行计数查询获取总记录数
         return jdbcConnectService.queryForObject(countSql, new HashMap<>(), Long.class);
     }
 
-    public Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req, String tableId) {
+    public Map<String, Object> summaryByGeneralReq(GeneralSummaryReq req, Long datasetId) {
         // 构建查询SQL（不带分页）
-        String querySql = parseSql(req, tableId);
+        String querySql = parseSql(req, datasetId);
 
         // 构建汇总SQL
         String sumSql = PortalDatasetSqlUtil.buildSumSql(querySql, req.getColumns());
@@ -141,9 +141,9 @@ public class PortalDatasetService {
     }
 
 
-    public Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req, String tableId) {
+    public Map<String, Object> summaryByAdvancedReq(AdvancedSummaryReq req, Long datasetId) {
         // 构建查询SQL（不带分页）
-        String querySql = parseSql(req, tableId);
+        String querySql = parseSql(req, datasetId);
 
         // 构建汇总SQL
         String sumSql = PortalDatasetSqlUtil.buildSumSql(querySql, req.getColumns());
@@ -152,27 +152,27 @@ public class PortalDatasetService {
         return jdbcConnectService.queryOne(sumSql, new HashMap<>());
     }
 
-    public List<StatisticRes> statisticByGeneralReq(GeneralStatisticReq req, String tableId) {
-        String sql = parseSql(req, tableId);
+    public List<StatisticRes> statisticByGeneralReq(GeneralStatisticReq req, Long datasetId) {
+        String sql = parseSql(req, datasetId);
         return null;
     }
 
-    public List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req, String tableId) {
-        String sql = parseSql(req, tableId);
+    public List<StatisticRes> statisticByAdvancedReq(AdvancedStatisticReq req, Long datasetId) {
+        String sql = parseSql(req, datasetId);
         return null;
     }
 
-    public void replaceConfig(String sql, String tableId) throws JSQLParserException {
-        List<SysPortalDataset> datasetList = new ArrayList<>();
-        List<SysPortalDatasetColumn> columnList = new ArrayList<>();
-        PortalDatasetSqlUtil.parseSql(sql, tableId, datasetList, columnList);
-        sysPortalDatasetService.deleteByTableId(tableId);
-        sysPortalDatasetService.insert(datasetList);
-        sysPortalDatasetColumnService.deleteByTableId(tableId);
-        sysPortalDatasetColumnService.insert(columnList);
+    public void replaceConfig(String sql, Long datasetId) throws JSQLParserException {
+        List<SysDatasetTable> tableList = new ArrayList<>();
+        List<SysDatasetColumn> columnList = new ArrayList<>();
+        PortalDatasetSqlUtil.parseSql(sql, datasetId, tableList, columnList);
+        sysDatasetTableService.deleteByDatasetId(datasetId);
+        sysDatasetTableService.insert(tableList);
+        sysDatasetColumnService.deleteByDatasetId(datasetId);
+        sysDatasetColumnService.insert(columnList);
     }
 
-    public String getSql(String tableId) {
-        return parseSql(new QueryConditionReq(), tableId);
+    public String getSql(Long datasetId) {
+        return parseSql(new QueryConditionReq(), datasetId);
     }
 }

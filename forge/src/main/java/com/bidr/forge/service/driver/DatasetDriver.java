@@ -1,11 +1,11 @@
 package com.bidr.forge.service.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.repository.SysDatasetTableService;
+import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
-import com.bidr.forge.dao.entity.SysPortalDataset;
-import com.bidr.forge.dao.entity.SysPortalDatasetColumn;
-import com.bidr.forge.dao.repository.SysPortalDatasetColumnService;
-import com.bidr.forge.dao.repository.SysPortalDatasetService;
 import com.bidr.forge.service.driver.builder.DatasetSqlBuilder;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
@@ -29,8 +29,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
 
-    private final SysPortalDatasetService sysPortalDatasetService;
-    private final SysPortalDatasetColumnService sysPortalDatasetColumnService;
+    private final SysDatasetTableService sysDatasetTableService;
+    private final SysDatasetColumnService sysDatasetColumnService;
     private final JdbcConnectService jdbcConnectService;
 
     @Override
@@ -44,13 +44,13 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Map<String, String> buildAliasMap(String portalName, String roleId) {
-        // portalName在Dataset模式下即为tableId
-        String tableId = portalName;
-        List<SysPortalDatasetColumn> columns = sysPortalDatasetColumnService.getByTableId(tableId);
+    public Map<String, String> buildAliasMap(String portalName, Long roleId) {
+        // portalName在Dataset模式下即为datasetId（需要转为Long）
+        Long datasetId = Long.parseLong(portalName);
+        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         Map<String, String> aliasMap = new LinkedHashMap<>();
-        for (SysPortalDatasetColumn column : columns) {
+        for (SysDatasetColumn column : columns) {
             if (CommonConst.YES.equals(column.getIsVisible())) {
                 String columnAlias = column.getColumnAlias();
                 String columnSql = column.getColumnSql();
@@ -65,23 +65,23 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, String roleId) {
-        String tableId = portalName;
-        List<SysPortalDataset> datasets = sysPortalDatasetService.getByTableId(tableId);
-        List<SysPortalDatasetColumn> columns = sysPortalDatasetColumnService.getByTableId(tableId);
+    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
+        Long datasetId = Long.parseLong(portalName);
+        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
+        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         if (datasets.isEmpty()) {
             return new Page<>(req.getCurrentPage(), req.getPageSize());
         }
 
         // 切换数据源
-        SysPortalDataset firstDataset = datasets.get(0);
+        SysDatasetTable firstDataset = datasets.get(0);
         if (FuncUtil.isNotEmpty(firstDataset.getDataSource())) {
             jdbcConnectService.switchDataSource(firstDataset.getDataSource());
         }
 
         try {
-            DatasetSqlBuilder builder = new DatasetSqlBuilder(tableId, datasets, columns);
+            DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
             Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
             Map<String, Object> parameters = new HashMap<>();
 
@@ -104,23 +104,23 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, String roleId) {
-        String tableId = portalName;
-        List<SysPortalDataset> datasets = sysPortalDatasetService.getByTableId(tableId);
-        List<SysPortalDatasetColumn> columns = sysPortalDatasetColumnService.getByTableId(tableId);
+    public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, Long roleId) {
+        Long datasetId = Long.parseLong(portalName);
+        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
+        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         if (datasets.isEmpty()) {
             return Collections.emptyList();
         }
 
         // 切换数据源
-        SysPortalDataset firstDataset = datasets.get(0);
+        SysDatasetTable firstDataset = datasets.get(0);
         if (FuncUtil.isNotEmpty(firstDataset.getDataSource())) {
             jdbcConnectService.switchDataSource(firstDataset.getDataSource());
         }
 
         try {
-            DatasetSqlBuilder builder = new DatasetSqlBuilder(tableId, datasets, columns);
+            DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
             Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
             Map<String, Object> parameters = new HashMap<>();
 
@@ -138,7 +138,7 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, String roleId) {
+    public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, Long roleId) {
         // 限制查询1条
         req.setCurrentPage(1L);
         req.setPageSize(1L);
@@ -148,23 +148,23 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Long count(AdvancedQueryReq req, String portalName, String roleId) {
-        String tableId = portalName;
-        List<SysPortalDataset> datasets = sysPortalDatasetService.getByTableId(tableId);
-        List<SysPortalDatasetColumn> columns = sysPortalDatasetColumnService.getByTableId(tableId);
+    public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
+        Long datasetId = Long.parseLong(portalName);
+        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
+        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         if (datasets.isEmpty()) {
             return 0L;
         }
 
         // 切换数据源
-        SysPortalDataset firstDataset = datasets.get(0);
+        SysDatasetTable firstDataset = datasets.get(0);
         if (FuncUtil.isNotEmpty(firstDataset.getDataSource())) {
             jdbcConnectService.switchDataSource(firstDataset.getDataSource());
         }
 
         try {
-            DatasetSqlBuilder builder = new DatasetSqlBuilder(tableId, datasets, columns);
+            DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
             Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
             Map<String, Object> parameters = new HashMap<>();
 
@@ -177,38 +177,38 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public List<Map<String, Object>> getAllData(String portalName, String roleId) {
+    public List<Map<String, Object>> getAllData(String portalName, Long roleId) {
         AdvancedQueryReq req = new AdvancedQueryReq();
         return queryList(req, portalName, roleId);
     }
 
     @Override
-    public int insert(Map<String, Object> data, String portalName, String roleId) {
+    public int insert(Map<String, Object> data, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持INSERT操作");
     }
 
     @Override
-    public int batchInsert(List<Map<String, Object>> dataList, String portalName, String roleId) {
+    public int batchInsert(List<Map<String, Object>> dataList, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持INSERT操作");
     }
 
     @Override
-    public int update(Map<String, Object> data, String portalName, String roleId) {
+    public int update(Map<String, Object> data, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持UPDATE操作");
     }
 
     @Override
-    public int batchUpdate(List<Map<String, Object>> dataList, String portalName, String roleId) {
+    public int batchUpdate(List<Map<String, Object>> dataList, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持UPDATE操作");
     }
 
     @Override
-    public int delete(Object id, String portalName, String roleId) {
+    public int delete(Object id, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持DELETE操作");
     }
 
     @Override
-    public int batchDelete(List<Object> ids, String portalName, String roleId) {
+    public int batchDelete(List<Object> ids, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持DELETE操作");
     }
 }

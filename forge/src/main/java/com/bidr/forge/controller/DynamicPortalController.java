@@ -3,6 +3,7 @@ package com.bidr.forge.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.forge.service.driver.DatasetDriver;
 import com.bidr.forge.service.driver.MatrixDriver;
@@ -60,12 +61,9 @@ public class DynamicPortalController {
      * 根据portalName获取对应的驱动
      */
     private PortalDataDriver<Map<String, Object>> getDriver(String portalName) {
-        Long roleId = 0L;
-        if (FuncUtil.isNotEmpty(AccountContext.getRoleIdList())) {
-            roleId = AccountContext.getRoleIdList().get(0);
-        }
 
-        SysPortal portal = sysPortalService.getByName(portalName, roleId);
+
+        SysPortal portal = sysPortalService.getByName(portalName, getRoleId());
         Validator.assertNotNull(portal, ErrCodeSys.SYS_ERR_MSG, "Portal配置不存在: " + portalName);
 
         String dataMode = portal.getDataMode();
@@ -83,8 +81,8 @@ public class DynamicPortalController {
     /**
      * 获取roleId（从ThreadLocal或Session中获取）
      */
-    private String getRoleId() {
-        return null;
+    private Long getRoleId() {
+        return PortalConfigContext.getPortalConfigRoleId();
     }
 
     // ==================== 查询接口 ====================

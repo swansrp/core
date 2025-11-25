@@ -37,7 +37,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 字段别名映射 (VO字段名 -> SQL列名/表达式)
      */
-    Map<String, String> buildAliasMap(String portalName, String roleId);
+    Map<String, String> buildAliasMap(String portalName, Long roleId);
 
     /**
      * 分页查询
@@ -47,7 +47,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 分页结果
      */
-    Page<VO> queryPage(AdvancedQueryReq req, String portalName, String roleId);
+    Page<VO> queryPage(AdvancedQueryReq req, String portalName, Long roleId);
 
     /**
      * 列表查询（不分页）
@@ -57,7 +57,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 查询结果列表
      */
-    List<VO> queryList(AdvancedQueryReq req, String portalName, String roleId);
+    List<VO> queryList(AdvancedQueryReq req, String portalName, Long roleId);
 
     /**
      * 单条查询
@@ -67,7 +67,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 单条结果
      */
-    VO queryOne(AdvancedQueryReq req, String portalName, String roleId);
+    VO queryOne(AdvancedQueryReq req, String portalName, Long roleId);
 
     /**
      * 查询总数
@@ -77,7 +77,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 总数
      */
-    Long count(AdvancedQueryReq req, String portalName, String roleId);
+    Long count(AdvancedQueryReq req, String portalName, Long roleId);
 
     /**
      * 获取所有数据（用于树结构或导出）
@@ -86,7 +86,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 所有数据列表
      */
-    List<VO> getAllData(String portalName, String roleId);
+    List<VO> getAllData(String portalName, Long roleId);
 
     /**
      * 插入数据
@@ -96,7 +96,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 影响行数
      */
-    int insert(VO data, String portalName, String roleId);
+    int insert(VO data, String portalName, Long roleId);
 
     /**
      * 批量插入数据
@@ -106,7 +106,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 影响行数
      */
-    int batchInsert(List<VO> dataList, String portalName, String roleId);
+    int batchInsert(List<VO> dataList, String portalName, Long roleId);
 
     /**
      * 更新数据
@@ -116,7 +116,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 影响行数
      */
-    int update(VO data, String portalName, String roleId);
+    int update(VO data, String portalName, Long roleId);
 
     /**
      * 批量更新数据
@@ -126,7 +126,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 影响行数
      */
-    int batchUpdate(List<VO> dataList, String portalName, String roleId);
+    int batchUpdate(List<VO> dataList, String portalName, Long roleId);
 
     /**
      * 删除数据
@@ -136,7 +136,7 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 影响行数
      */
-    int delete(Object id, String portalName, String roleId);
+    int delete(Object id, String portalName, Long roleId);
 
     /**
      * 批量删除数据
@@ -146,5 +146,5 @@ public interface PortalDataDriver<VO> {
      * @param roleId     角色ID
      * @return 影响行数
      */
-    int batchDelete(List<Object> ids, String portalName, String roleId);
+    int batchDelete(List<Object> ids, String portalName, Long roleId);
 }

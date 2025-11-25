@@ -1,7 +1,7 @@
 package com.bidr.forge.service.driver.builder;
 
-import com.bidr.forge.dao.entity.SysPortalDataset;
-import com.bidr.forge.dao.entity.SysPortalDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
@@ -21,12 +21,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DatasetSqlBuilder extends BaseSqlBuilder {
 
-    private final String tableId;
-    private final List<SysPortalDataset> datasets;
-    private final List<SysPortalDatasetColumn> columns;
+    private final Long datasetId;
+    private final List<SysDatasetTable> datasets;
+    private final List<SysDatasetColumn> columns;
 
-    public DatasetSqlBuilder(String tableId, List<SysPortalDataset> datasets, List<SysPortalDatasetColumn> columns) {
-        this.tableId = tableId;
+    public DatasetSqlBuilder(Long datasetId, List<SysDatasetTable> datasets, List<SysDatasetColumn> columns) {
+        this.datasetId = datasetId;
         this.datasets = datasets;
         this.columns = columns;
     }
@@ -124,7 +124,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
      */
     private String buildSelectColumns() {
         List<String> selectCols = new ArrayList<>();
-        for (SysPortalDatasetColumn column : columns) {
+        for (SysDatasetColumn column : columns) {
             if (CommonConst.YES.equals(column.getIsVisible())) {
                 String colSql = column.getColumnSql();
                 String colAlias = column.getColumnAlias();
@@ -142,16 +142,16 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
      * 构建FROM和JOIN子句
      */
     private String buildFromAndJoin() {
-        // 按dataset_order排序
-        List<SysPortalDataset> sortedDatasets = datasets.stream()
-                .sorted(Comparator.comparing(SysPortalDataset::getDatasetOrder))
+        // 按table_order排序
+        List<SysDatasetTable> sortedDatasets = datasets.stream()
+                .sorted(Comparator.comparing(SysDatasetTable::getTableOrder))
                 .collect(Collectors.toList());
 
         StringBuilder fromClause = new StringBuilder();
-        SysPortalDataset mainTable = null;
+        SysDatasetTable mainTable = null;
 
         // 找到主表（JOIN_TYPE为NULL）
-        for (SysPortalDataset dataset : sortedDatasets) {
+        for (SysDatasetTable dataset : sortedDatasets) {
             if (FuncUtil.isEmpty(dataset.getJoinType())) {
                 mainTable = dataset;
                 break;
@@ -164,13 +164,13 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         }
 
         if (mainTable != null) {
-            fromClause.append(mainTable.getDatasetSql());
-            if (FuncUtil.isNotEmpty(mainTable.getDatasetAlias())) {
-                fromClause.append(" AS ").append(mainTable.getDatasetAlias());
+            fromClause.append(mainTable.getTableSql());
+            if (FuncUtil.isNotEmpty(mainTable.getTableAlias())) {
+                fromClause.append(" AS ").append(mainTable.getTableAlias());
             }
 
             // 构建JOIN
-            for (SysPortalDataset dataset : sortedDatasets) {
+            for (SysDatasetTable dataset : sortedDatasets) {
                 if (dataset.getId().equals(mainTable.getId())) {
                     continue;
                 }
@@ -178,10 +178,10 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
                     fromClause.append(" ")
                             .append(dataset.getJoinType().toUpperCase())
                             .append(" JOIN ")
-                            .append(dataset.getDatasetSql());
+                            .append(dataset.getTableSql());
 
-                    if (FuncUtil.isNotEmpty(dataset.getDatasetAlias())) {
-                        fromClause.append(" AS ").append(dataset.getDatasetAlias());
+                    if (FuncUtil.isNotEmpty(dataset.getTableAlias())) {
+                        fromClause.append(" AS ").append(dataset.getTableAlias());
                     }
 
                     if (FuncUtil.isNotEmpty(dataset.getJoinCondition())) {
@@ -276,7 +276,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         List<String> groupByCols = new ArrayList<>();
         Set<String> aggregateFields = getAggregateFields();
 
-        for (SysPortalDatasetColumn column : columns) {
+        for (SysDatasetColumn column : columns) {
             if (CommonConst.YES.equals(column.getIsVisible())) {
                 // 非聚合字段需要group by
                 if (!CommonConst.YES.equals(column.getIsAggregate())) {
@@ -309,7 +309,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         // 默认按displayOrder排序
         List<String> orderCols = columns.stream()
                 .filter(col -> CommonConst.YES.equals(col.getIsVisible()))
-                .sorted(Comparator.comparing(SysPortalDatasetColumn::getDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator.comparing(SysDatasetColumn::getDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder())))
                 .limit(1)
                 .map(col -> {
                     String colAlias = col.getColumnAlias();
@@ -326,7 +326,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     private Set<String> getAggregateFields() {
         return columns.stream()
                 .filter(col -> CommonConst.YES.equals(col.getIsAggregate()))
-                .map(SysPortalDatasetColumn::getColumnAlias)
+                .map(SysDatasetColumn::getColumnAlias)
                 .filter(FuncUtil::isNotEmpty)
                 .collect(Collectors.toSet());
     }

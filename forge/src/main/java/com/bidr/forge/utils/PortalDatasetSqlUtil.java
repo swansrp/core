@@ -1,8 +1,8 @@
 package com.bidr.forge.utils;
 
 import com.bidr.forge.constant.dict.JoinTypeDict;
-import com.bidr.forge.dao.entity.SysPortalDataset;
-import com.bidr.forge.dao.entity.SysPortalDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.bo.SqlColumn;
@@ -63,21 +63,21 @@ public class PortalDatasetSqlUtil {
         return querySql + " LIMIT " + pageSize + " OFFSET " + offset;
     }
 
-    public static String buildFromSql(List<SysPortalDataset> dataSet) {
+    public static String buildFromSql(List<SysDatasetTable> dataSet) {
         StringBuilder fromSql = new StringBuilder();
         for (int i = 0; i < dataSet.size(); i++) {
-            SysPortalDataset dataset = dataSet.get(i);
+            SysDatasetTable dataset = dataSet.get(i);
             if (i == 0) {
                 // 主表
-                fromSql.append(dataset.getDatasetSql()).append(" AS ").append(dataset.getDatasetAlias());
+                fromSql.append(dataset.getTableSql()).append(" AS ").append(dataset.getTableAlias());
             } else {
                 // JOIN表
                 if (FuncUtil.isNotEmpty(dataset.getJoinType())) {
                     fromSql.append(" ").append(DictEnumUtil.getEnumByValue(dataset.getJoinType(), JoinTypeDict.class,
                             JoinTypeDict.INNER));
                 }
-                fromSql.append(" JOIN ").append(dataset.getDatasetSql()).append(" AS ")
-                        .append(dataset.getDatasetAlias());
+                fromSql.append(" JOIN ").append(dataset.getTableSql()).append(" AS ")
+                        .append(dataset.getTableAlias());
                 if (FuncUtil.isNotEmpty(dataset.getJoinCondition())) {
                     fromSql.append(" ON ").append(dataset.getJoinCondition());
                 }
@@ -86,11 +86,11 @@ public class PortalDatasetSqlUtil {
         return fromSql.toString();
     }
 
-    public static void parseSqlColumn(List<SysPortalDatasetColumn> sysPortalDatasetColumns, List<SqlColumn> columns,
+    public static void parseSqlColumn(List<SysDatasetColumn> sysDatasetColumns, List<SqlColumn> columns,
                                       Map<String, SqlColumn> aggregateColumns,
                                       Map<String, SqlColumn> notAggregateColumns) {
-        if (FuncUtil.isNotEmpty(sysPortalDatasetColumns)) {
-            for (SysPortalDatasetColumn column : sysPortalDatasetColumns) {
+        if (FuncUtil.isNotEmpty(sysDatasetColumns)) {
+            for (SysDatasetColumn column : sysDatasetColumns) {
                 SqlColumn sqlColumn = new SqlColumn(column.getColumnSql(), column.getColumnAlias());
                 columns.add(sqlColumn);
                 if (StringUtil.convertSwitch(column.getIsAggregate())) {
@@ -118,8 +118,8 @@ public class PortalDatasetSqlUtil {
     /**
      * 解析SQL，返回两个配置对象列表
      */
-    public static void parseSql(String sql, String tableId, List<SysPortalDataset> datasetList,
-                                List<SysPortalDatasetColumn> columnList) throws JSQLParserException {
+    public static void parseSql(String sql, Long datasetId, List<SysDatasetTable> tableList,
+                                List<SysDatasetColumn> columnList) throws JSQLParserException {
         Statement statement = CCJSqlParserUtil.parse(sql);
         Validator.assertTrue((statement instanceof Select), ErrCodeSys.SYS_ERR_MSG, "仅支持 SELECT SQL");
 
@@ -131,7 +131,7 @@ public class PortalDatasetSqlUtil {
 
         // === 1. 解析 FROM 主表 ===
         FromItem fromItem = plainSelect.getFromItem();
-        datasetList.add(buildDataset(fromItem, "主表", datasetOrder.getAndIncrement(), null, null, tableId));
+        tableList.add(buildDatasetTable(fromItem, "主表", datasetOrder.getAndIncrement(), null, null, datasetId));
 
         // === 2. 解析 JOIN 表 ===
         if (plainSelect.getJoins() != null) {
@@ -147,8 +147,8 @@ public class PortalDatasetSqlUtil {
                     condition = on.stream().map(Expression::toString).collect(Collectors.joining(" AND "));
                 }
 
-                datasetList.add(
-                        buildDataset(joinItem, "关联表", datasetOrder.getAndIncrement(), joinType, condition, tableId));
+                tableList.add(
+                        buildDatasetTable(joinItem, "关联表", datasetOrder.getAndIncrement(), joinType, condition, datasetId));
             }
         }
 
@@ -159,8 +159,8 @@ public class PortalDatasetSqlUtil {
                 Expression expression = exprItem.getExpression();
                 Alias alias = exprItem.getAlias();
 
-                SysPortalDatasetColumn column = new SysPortalDatasetColumn();
-                column.setTableId(tableId);
+                SysDatasetColumn column = new SysDatasetColumn();
+                column.setDatasetId(datasetId);
                 column.setColumnSql(expression.toString());
                 column.setColumnAlias(alias != null ? alias.getName() : expression.toString());
                 column.setIsAggregate(isAggregateField(expression.toString()) ? CommonConst.YES : CommonConst.NO);
@@ -172,27 +172,27 @@ public class PortalDatasetSqlUtil {
     }
 
     /**
-     * 构建 SysPortalDataset
+     * 构建 SysDatasetTable
      */
-    private static SysPortalDataset buildDataset(FromItem fromItem, String remark, int order, String joinType,
-                                                 String joinCondition, String tableId) {
-        SysPortalDataset dataset = new SysPortalDataset();
-        dataset.setTableId(tableId);
-        dataset.setDatasetOrder(order);
+    private static SysDatasetTable buildDatasetTable(FromItem fromItem, String remark, int order, String joinType,
+                                                     String joinCondition, Long datasetId) {
+        SysDatasetTable table = new SysDatasetTable();
+        table.setDatasetId(datasetId);
+        table.setTableOrder(order);
 
         if (fromItem instanceof Table) {
-            Table table = (Table) fromItem;
-            dataset.setDatasetSql(table.getFullyQualifiedName());
-            dataset.setDatasetAlias(table.getAlias() != null ? table.getAlias().getName() : table.getName());
+            Table t = (Table) fromItem;
+            table.setTableSql(t.getFullyQualifiedName());
+            table.setTableAlias(t.getAlias() != null ? t.getAlias().getName() : t.getName());
         } else {
-            dataset.setDatasetSql(fromItem.toString());
-            dataset.setDatasetAlias(fromItem.getAlias() != null ? fromItem.getAlias().getName() : null);
+            table.setTableSql(fromItem.toString());
+            table.setTableAlias(fromItem.getAlias() != null ? fromItem.getAlias().getName() : null);
         }
 
-        dataset.setJoinType(joinType);
-        dataset.setJoinCondition(joinCondition);
-        dataset.setRemark(remark);
-        return dataset;
+        table.setJoinType(joinType);
+        table.setJoinCondition(joinCondition);
+        table.setRemark(remark);
+        return table;
     }
 
     /**
