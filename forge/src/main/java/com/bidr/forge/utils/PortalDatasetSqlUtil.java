@@ -86,6 +86,43 @@ public class PortalDatasetSqlUtil {
         return fromSql.toString();
     }
 
+    /**
+     * 通过表配置和列配置构建完整的SQL查询语句
+     *
+     * @param tableList  表配置列表
+     * @param columnList 列配置列表
+     * @return 完整的SQL查询字符串
+     */
+    public static String buildQuerySql(List<SysDatasetTable> tableList, List<SysDatasetColumn> columnList) {
+        StringBuilder sql = new StringBuilder("SELECT ");
+        
+        // 构建 SELECT 子句
+        if (FuncUtil.isEmpty(columnList)) {
+            sql.append("*");
+        } else {
+            for (int i = 0; i < columnList.size(); i++) {
+                SysDatasetColumn column = columnList.get(i);
+                if (i > 0) {
+                    sql.append(", ");
+                }
+                sql.append(column.getColumnSql());
+                // 如果列SQL和别名不同，添加AS别名
+                if (FuncUtil.isNotEmpty(column.getColumnAlias()) && 
+                    !column.getColumnSql().equals(column.getColumnAlias())) {
+                    sql.append(" AS ").append(column.getColumnAlias());
+                }
+            }
+        }
+        
+        // 构建 FROM 子句
+        sql.append(" FROM ");
+        if (FuncUtil.isNotEmpty(tableList)) {
+            sql.append(buildFromSql(tableList));
+        }
+        
+        return sql.toString();
+    }
+
     public static void parseSqlColumn(List<SysDatasetColumn> sysDatasetColumns, List<SqlColumn> columns,
                                       Map<String, SqlColumn> aggregateColumns,
                                       Map<String, SqlColumn> notAggregateColumns) {

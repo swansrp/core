@@ -50,11 +50,6 @@ public class DatasetConfigService {
         // 使用工具类解析SQL（datasetId可为null，用于预览）
         PortalDatasetSqlUtil.parseSql(req.getSql(), req.getDatasetId(), tableList, columnList);
 
-        // 设置数据源
-        if (FuncUtil.isNotEmpty(req.getDataSource()) && !tableList.isEmpty()) {
-            tableList.get(0).setDataSource(req.getDataSource());
-        }
-
         DatasetConfigRes res = new DatasetConfigRes();
         res.setDatasetId(req.getDatasetId());
         res.setTables(tableList);
@@ -63,68 +58,211 @@ public class DatasetConfigService {
     }
 
     /**
-     * 解析SQL并保存配置（替换原有配置）
-     * datasetId必须存在
+     * 保存配置（智能新增/更新）
+     * - 无datasetId：创建新的数据集
+     * - 有datasetId：检测变更后智能更新
      */
     @Transactional(rollbackFor = Exception.class)
-    public DatasetConfigRes parseSqlAndSave(DatasetConfigReq req) throws JSQLParserException {
-        // 验证datasetId必须存在
-        Validator.assertNotNull(req.getDatasetId(), ErrCodeSys.SYS_ERR_MSG, "保存配置时datasetId不能为空");
-        
-        // 先解析
-        DatasetConfigRes res = parseSql(req);
-
-        // 删除旧配置
-        sysDatasetTableService.deleteByDatasetId(req.getDatasetId());
-        sysDatasetColumnService.deleteByDatasetId(req.getDatasetId());
-
-        // 保存新配置
-        if (FuncUtil.isNotEmpty(res.getTables())) {
-            sysDatasetTableService.insert(res.getTables());
-        }
-        if (FuncUtil.isNotEmpty(res.getColumns())) {
-            sysDatasetColumnService.insert(res.getColumns());
-        }
-
-        log.info("成功解析并保存Dataset配置，datasetId={}, tables={}, columns={}",
-                req.getDatasetId(), res.getTables().size(), res.getColumns().size());
-
-        return res;
-    }
-
-    /**
-     * 新增保存配置（创建新的dataset并保存解析结果）
-     * datasetId可以为空，将根据datasetName创建新的dataset
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public DatasetConfigRes parseSqlAndCreate(DatasetConfigReq req) throws JSQLParserException {
+    public DatasetConfigRes save(DatasetConfigReq req) throws JSQLParserException {
         Validator.assertTrue(FuncUtil.isNotEmpty(req.getDatasetId()) || FuncUtil.isNotEmpty(req.getDatasetName()),
-                ErrCodeSys.SYS_ERR_MSG, "新增保存时datasetName不能为空或提供datasetId");
+                ErrCodeSys.SYS_ERR_MSG, "保存时datasetId或datasetName至少需要提供一个");
 
         Long datasetId = req.getDatasetId();
-        if (FuncUtil.isEmpty(datasetId)) {
+        boolean isNewDataset = FuncUtil.isEmpty(datasetId);
+
+        if (isNewDataset) {
+            // ========== 新增模式 ==========
             SysDataset dataset = new SysDataset();
             dataset.setDatasetName(req.getDatasetName());
             dataset.setDataSource(req.getDataSource());
+            dataset.setRemark(req.getRemark());
             sysDatasetService.insert(dataset);
             datasetId = dataset.getId();
             req.setDatasetId(datasetId);
+            
+            log.info("创建新Dataset，datasetId={}, datasetName={}", datasetId, req.getDatasetName());
+        } else {
+            // ========== 更新模式 ==========
+            SysDataset existingDataset = sysDatasetService.selectById(datasetId);
+            Validator.assertNotNull(existingDataset, ErrCodeSys.SYS_ERR_MSG, "数据集不存在，datasetId=" + datasetId);
+
+            // 检测基本信息是否有变更
+            boolean datasetChanged = hasDatasetChanged(existingDataset, req);
+            if (datasetChanged) {
+                updateDatasetIfChanged(existingDataset, req);
+                sysDatasetService.updateById(existingDataset);
+                log.info("更新Dataset基本信息，datasetId={}", datasetId);
+            }
         }
 
-        DatasetConfigRes res = parseSql(req);
+        // 解析SQL生成新配置
+        DatasetConfigRes newConfig = parseSql(req);
 
-        // 保存配置（新增保存不需要删除旧配置）
-        if (FuncUtil.isNotEmpty(res.getTables())) {
-            sysDatasetTableService.insert(res.getTables());
+        // 对于更新模式，检测配置是否有变更
+        if (!isNewDataset) {
+            DatasetConfigRes existingConfig = getConfig(datasetId);
+            boolean configChanged = hasConfigChanged(existingConfig, newConfig);
+            
+            if (!configChanged) {
+                log.info("Dataset配置无变更，跳过更新，datasetId={}", datasetId);
+                return existingConfig;
+            }
+            
+            log.info("检测到Dataset配置变更，datasetId={}", datasetId);
+            // 删除旧配置
+            sysDatasetTableService.deleteByDatasetId(datasetId);
+            sysDatasetColumnService.deleteByDatasetId(datasetId);
         }
-        if (FuncUtil.isNotEmpty(res.getColumns())) {
-            sysDatasetColumnService.insert(res.getColumns());
+
+        // 保存新配置
+        if (FuncUtil.isNotEmpty(newConfig.getTables())) {
+            sysDatasetTableService.insert(newConfig.getTables());
+        }
+        if (FuncUtil.isNotEmpty(newConfig.getColumns())) {
+            sysDatasetColumnService.insert(newConfig.getColumns());
         }
 
-        log.info("成功新增并保存Dataset配置，datasetId={}, tables={}, columns={}",
-                datasetId, res.getTables().size(), res.getColumns().size());
+        log.info("成功保存Dataset配置，datasetId={}, tables={}, columns={}, mode={}",
+                datasetId, newConfig.getTables().size(), newConfig.getColumns().size(), 
+                isNewDataset ? "新增" : "更新");
 
-        return res;
+        return newConfig;
+    }
+
+    /**
+     * 检测Dataset基本信息是否有变更
+     */
+    private boolean hasDatasetChanged(SysDataset existing, DatasetConfigReq req) {
+        boolean changed = false;
+        
+        if (FuncUtil.isNotEmpty(req.getDatasetName()) && !req.getDatasetName().equals(existing.getDatasetName())) {
+            changed = true;
+        }
+        if (FuncUtil.isNotEmpty(req.getDataSource()) && !req.getDataSource().equals(existing.getDataSource())) {
+            changed = true;
+        }
+        if (FuncUtil.isNotEmpty(req.getRemark()) && !req.getRemark().equals(existing.getRemark())) {
+            changed = true;
+        }
+        
+        return changed;
+    }
+
+    /**
+     * 更新Dataset基本信息（仅更新非空字段）
+     */
+    private void updateDatasetIfChanged(SysDataset dataset, DatasetConfigReq req) {
+        if (FuncUtil.isNotEmpty(req.getDatasetName())) {
+            dataset.setDatasetName(req.getDatasetName());
+        }
+        if (FuncUtil.isNotEmpty(req.getDataSource())) {
+            dataset.setDataSource(req.getDataSource());
+        }
+        if (FuncUtil.isNotEmpty(req.getRemark())) {
+            dataset.setRemark(req.getRemark());
+        }
+    }
+
+    /**
+     * 检测表和列配置是否有变更
+     */
+    private boolean hasConfigChanged(DatasetConfigRes existing, DatasetConfigRes newConfig) {
+        // 比较表配置
+        if (!compareTableConfigs(existing.getTables(), newConfig.getTables())) {
+            return true;
+        }
+        
+        // 比较列配置
+        if (!compareColumnConfigs(existing.getColumns(), newConfig.getColumns())) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 比较表配置列表
+     */
+    private boolean compareTableConfigs(List<SysDatasetTable> existing, List<SysDatasetTable> newList) {
+        if (FuncUtil.isEmpty(existing) && FuncUtil.isEmpty(newList)) {
+            return true;
+        }
+        if (FuncUtil.isEmpty(existing) || FuncUtil.isEmpty(newList)) {
+            return false;
+        }
+        if (existing.size() != newList.size()) {
+            return false;
+        }
+        
+        for (int i = 0; i < existing.size(); i++) {
+            SysDatasetTable e = existing.get(i);
+            SysDatasetTable n = newList.get(i);
+            
+            if (!compareString(e.getTableSql(), n.getTableSql()) ||
+                !compareString(e.getTableAlias(), n.getTableAlias()) ||
+                !compareString(e.getJoinType(), n.getJoinType()) ||
+                !compareString(e.getJoinCondition(), n.getJoinCondition()) ||
+                !compareInteger(e.getTableOrder(), n.getTableOrder())) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * 比较列配置列表
+     */
+    private boolean compareColumnConfigs(List<SysDatasetColumn> existing, List<SysDatasetColumn> newList) {
+        if (FuncUtil.isEmpty(existing) && FuncUtil.isEmpty(newList)) {
+            return true;
+        }
+        if (FuncUtil.isEmpty(existing) || FuncUtil.isEmpty(newList)) {
+            return false;
+        }
+        if (existing.size() != newList.size()) {
+            return false;
+        }
+        
+        for (int i = 0; i < existing.size(); i++) {
+            SysDatasetColumn e = existing.get(i);
+            SysDatasetColumn n = newList.get(i);
+            
+            if (!compareString(e.getColumnSql(), n.getColumnSql()) ||
+                !compareString(e.getColumnAlias(), n.getColumnAlias()) ||
+                !compareString(e.getIsAggregate(), n.getIsAggregate()) ||
+                !compareInteger(e.getDisplayOrder(), n.getDisplayOrder())) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * 比较字符串（支持null值比较）
+     */
+    private boolean compareString(String s1, String s2) {
+        if (s1 == null && s2 == null) {
+            return true;
+        }
+        if (s1 == null || s2 == null) {
+            return false;
+        }
+        return s1.equals(s2);
+    }
+
+    /**
+     * 比较Integer（支持null值比较）
+     */
+    private boolean compareInteger(Integer i1, Integer i2) {
+        if (i1 == null && i2 == null) {
+            return true;
+        }
+        if (i1 == null || i2 == null) {
+            return false;
+        }
+        return i1.equals(i2);
     }
 
     /**

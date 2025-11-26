@@ -33,12 +33,6 @@ public class SysDatasetTableVO extends BaseVO {
     private Long datasetId;
 
     /**
-     * 多源数据库配置名称
-     */
-    @ApiModelProperty(value = "多源数据库配置名称")
-    private String dataSource;
-
-    /**
      * 表顺序
      */
     @PortalOrderField

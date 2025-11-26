@@ -38,13 +38,6 @@ public class SysDatasetTable {
     private Long datasetId;
 
     /**
-     * 多源数据库配置名称
-     */
-    @TableField(value = "data_source")
-    @ApiModelProperty(value = "多源数据库配置名称")
-    private String dataSource;
-
-    /**
      * 表顺序
      */
     @TableField(value = "table_order")

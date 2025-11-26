@@ -4,7 +4,6 @@
   <resultMap id="BaseResultMap" type="com.bidr.forge.dao.entity.SysDatasetTable">
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="dataset_id" jdbcType="BIGINT" property="datasetId" />
-    <result column="data_source" jdbcType="VARCHAR" property="dataSource" />
     <result column="table_order" jdbcType="INTEGER" property="tableOrder" />
     <result column="table_sql" jdbcType="LONGVARCHAR" property="tableSql" />
     <result column="table_alias" jdbcType="VARCHAR" property="tableAlias" />
@@ -17,7 +16,7 @@
     <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, dataset_id, data_source, table_order, table_sql, table_alias, join_type, join_condition, 
+    id, dataset_id, table_order, table_sql, table_alias, join_type, join_condition, 
     remark, create_by, create_at, update_by, update_at
   </sql>
 </mapper>

@@ -42,13 +42,19 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         return select(wrapper);
     }
 
-    public List<KeyValueResVO> getPortalList(String name, Long roleId) {
+    public List<KeyValueResVO> getPortalList(String name, Long roleId, String dataMode, Long referenceId) {
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper<>();
         wrapper.selectAs(SysPortal::getDisplayName, KeyValueResVO::getLabel);
         wrapper.selectAs(SysPortal::getName, KeyValueResVO::getValue);
         wrapper.eq(SysPortal::getRoleId, roleId);
-        wrapper.like(FuncUtil.isNotEmpty(name), SysPortal::getName, name);
-        wrapper.or().like(FuncUtil.isNotEmpty(name), SysPortal::getDisplayName, name);
+        wrapper.nested(FuncUtil.isNotEmpty(name), wr -> {
+            wr.like(SysPortal::getName, name);
+            wr.or().like(SysPortal::getDisplayName, name);
+        });
+        wrapper.eq(FuncUtil.isNotEmpty(dataMode), SysPortal::getDataMode, dataMode);
+        wrapper.eq(FuncUtil.isNotEmpty(referenceId), SysPortal::getReferenceId, referenceId);
+
+
         wrapper.orderByAsc(SysPortal::getDisplayName);
         return selectJoinList(KeyValueResVO.class, wrapper);
     }
@@ -99,5 +105,27 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper()
                 .eq(SysPortal::getRoleId, roleId);
         return super.delete(wrapper);
+    }
+
+    /**
+     * 根据dataMode和referenceId删除Portal配置
+     *
+     * @param dataMode    数据模式（MATRIX/DATASET）
+     * @param referenceId 关联的数据模型ID
+     * @return 删除的Portal ID列表
+     */
+    public List<Long> deleteByDataModeAndReferenceId(String dataMode, Long referenceId) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper()
+                .eq(SysPortal::getDataMode, dataMode)
+                .eq(SysPortal::getReferenceId, String.valueOf(referenceId));
+        List<SysPortal> portals = super.select(wrapper);
+        if (FuncUtil.isNotEmpty(portals)) {
+            List<Long> portalIds = portals.stream()
+                    .map(SysPortal::getId)
+                    .collect(java.util.stream.Collectors.toList());
+            super.delete(wrapper);
+            return portalIds;
+        }
+        return new java.util.ArrayList<>();
     }
 }

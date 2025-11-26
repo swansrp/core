@@ -16,10 +16,9 @@ public class SysDatasetTableSchema extends BaseMybatisSchema<SysDatasetTable> {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `sys_dataset_table` (\n" +
                 "  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',\n" +
                 "  `dataset_id` bigint(20) NOT NULL COMMENT '关联的数据集ID',\n" +
-                "  `data_source` varchar(50) DEFAULT NULL COMMENT '多源数据库配置名称',\n" +
                 "  `table_order` int(11) NOT NULL DEFAULT '0' COMMENT '表顺序',\n" +
                 "  `table_sql` text COMMENT '关联表SQL',\n" +
-                "  `table_alias` varchar(50) DEFAULT NULL COMMENT '表别名',\n" +
+                "  `table_alias` varchar(200) DEFAULT NULL COMMENT '表别名',\n" +
                 "  `join_type` varchar(20) DEFAULT NULL COMMENT 'JOIN类型（主表可为空）',\n" +
                 "  `join_condition` text COMMENT 'ON条件（主表可为空）',\n" +
                 "  `remark` text COMMENT '备注',\n" +

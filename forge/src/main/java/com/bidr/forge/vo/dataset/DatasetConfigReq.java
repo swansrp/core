@@ -23,6 +23,9 @@ public class DatasetConfigReq {
     @ApiModelProperty(value = "数据集名称（当新增保存时必填，替换保存可为空）", required = false)
     private String datasetName;
 
+    @ApiModelProperty("备注")
+    private String remark;
+
     @NotBlank(message = "SQL不能为空")
     @ApiModelProperty(value = "完整的SELECT SQL语句", required = true, example = "SELECT a.id, a.name FROM table_a a LEFT JOIN table_b b ON a.id = b.aid")
     private String sql;

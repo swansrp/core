@@ -33,10 +33,4 @@ public class GeneratePortalReq {
 
     @ApiModelProperty(value = "Portal中文显示名称")
     private String displayName;
-
-    @ApiModelProperty(value = "URL路径（默认使用portalName）")
-    private String url;
-
-    @ApiModelProperty(value = "Bean名称（默认使用portalName + PortalController）")
-    private String bean;
 }

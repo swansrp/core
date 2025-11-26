@@ -1,8 +1,12 @@
 package com.bidr.forge.service.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.admin.dao.entity.SysPortal;
+import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
@@ -29,6 +33,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
 
+    private final SysPortalService sysPortalService;
+    private final SysDatasetService sysDatasetService;
     private final SysDatasetTableService sysDatasetTableService;
     private final SysDatasetColumnService sysDatasetColumnService;
     private final JdbcConnectService jdbcConnectService;
@@ -45,8 +51,7 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
 
     @Override
     public Map<String, String> buildAliasMap(String portalName, Long roleId) {
-        // portalName在Dataset模式下即为datasetId（需要转为Long）
-        Long datasetId = Long.parseLong(portalName);
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         Map<String, String> aliasMap = new LinkedHashMap<>();
@@ -66,7 +71,7 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
 
     @Override
     public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
-        Long datasetId = Long.parseLong(portalName);
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
         List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
@@ -74,11 +79,8 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
             return new Page<>(req.getCurrentPage(), req.getPageSize());
         }
 
-        // 切换数据源
-        SysDatasetTable firstDataset = datasets.get(0);
-        if (FuncUtil.isNotEmpty(firstDataset.getDataSource())) {
-            jdbcConnectService.switchDataSource(firstDataset.getDataSource());
-        }
+        // 从SysDataset获取数据源配置并切换
+        switchToDatasetDataSource(datasetId);
 
         try {
             DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
@@ -105,7 +107,7 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
 
     @Override
     public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, Long roleId) {
-        Long datasetId = Long.parseLong(portalName);
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
         List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
@@ -113,11 +115,8 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
             return Collections.emptyList();
         }
 
-        // 切换数据源
-        SysDatasetTable firstDataset = datasets.get(0);
-        if (FuncUtil.isNotEmpty(firstDataset.getDataSource())) {
-            jdbcConnectService.switchDataSource(firstDataset.getDataSource());
-        }
+        // 从SysDataset获取数据源配置并切换
+        switchToDatasetDataSource(datasetId);
 
         try {
             DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
@@ -149,7 +148,7 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
 
     @Override
     public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
-        Long datasetId = Long.parseLong(portalName);
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
         List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
@@ -157,11 +156,8 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
             return 0L;
         }
 
-        // 切换数据源
-        SysDatasetTable firstDataset = datasets.get(0);
-        if (FuncUtil.isNotEmpty(firstDataset.getDataSource())) {
-            jdbcConnectService.switchDataSource(firstDataset.getDataSource());
-        }
+        // 从SysDataset获取数据源配置并切换
+        switchToDatasetDataSource(datasetId);
 
         try {
             DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
@@ -210,5 +206,49 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     @Override
     public int batchDelete(List<Object> ids, String portalName, Long roleId) {
         throw new UnsupportedOperationException("Dataset模式不支持DELETE操作");
+    }
+
+    /**
+     * 从SysPortal获取referenceId作为datasetId
+     *
+     * @param portalName Portal名称
+     * @param roleId     角色ID
+     * @return datasetId
+     */
+    private Long getDatasetIdFromPortal(String portalName, Long roleId) {
+        SysPortal portal = sysPortalService.getByName(portalName, roleId);
+        if (portal == null) {
+            throw new IllegalArgumentException("未找到Portal配置: " + portalName);
+        }
+
+        String referenceId = portal.getReferenceId();
+        if (FuncUtil.isEmpty(referenceId)) {
+            throw new IllegalArgumentException("Portal的referenceId为空: " + portalName);
+        }
+
+        try {
+            return Long.parseLong(referenceId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Portal的referenceId格式错误: " + referenceId, e);
+        }
+    }
+
+    /**
+     * 从SysDataset获取数据源配置并切换
+     *
+     * @param datasetId 数据集ID
+     */
+    private void switchToDatasetDataSource(Long datasetId) {
+        SysDataset dataset = sysDatasetService.selectById(datasetId);
+        if (dataset == null) {
+            log.warn("未找到Dataset配置，使用默认数据源，datasetId: {}", datasetId);
+            return;
+        }
+
+        String dataSource = dataset.getDataSource();
+        if (FuncUtil.isNotEmpty(dataSource)) {
+            jdbcConnectService.switchDataSource(dataSource);
+            log.debug("切换到数据源: {}, datasetId: {}", dataSource, datasetId);
+        }
     }
 }

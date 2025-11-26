@@ -64,7 +64,7 @@ public class PortalService {
     }
 
     public List<KeyValueResVO> getPortalList(PortalReq req) {
-        return sysPortalService.getPortalList(req.getName(), req.getRoleId());
+        return sysPortalService.getPortalList(req.getName(), req.getRoleId(), req.getDataMode(), req.getReferenceId());
     }
 
     @Transactional(rollbackFor = Exception.class)

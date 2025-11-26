@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.mapper.SysPortalColumnMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,5 +45,18 @@ public class SysPortalColumnService extends BaseSqlRepo<SysPortalColumnMapper, S
         LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper()
                 .eq(SysPortalColumn::getRoleId, roleId);
         return super.delete(wrapper);
+    }
+
+    /**
+     * 根据Portal ID列表批量删除字段配置
+     *
+     * @param portalIds Portal ID列表
+     */
+    public void deleteByPortalIds(List<Long> portalIds) {
+        if (FuncUtil.isNotEmpty(portalIds)) {
+            LambdaQueryWrapper<SysPortalColumn> wrapper = super.getQueryWrapper()
+                    .in(SysPortalColumn::getPortalId, portalIds);
+            super.delete(wrapper);
+        }
     }
 }

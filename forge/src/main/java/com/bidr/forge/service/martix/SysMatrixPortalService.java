@@ -1,6 +1,8 @@
 package com.bidr.forge.service.martix;
 
 import com.bidr.admin.constant.dict.PortalFieldDict;
+import com.bidr.admin.dao.repository.SysPortalColumnService;
+import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.forge.bo.MatrixColumns;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
@@ -11,9 +13,11 @@ import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.SysMatrixChangeLogService;
 import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.dao.repository.SysMatrixService;
+import com.bidr.forge.service.driver.PortalDataMode;
 import com.bidr.forge.vo.matrix.SysMatrixVO;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +46,8 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
     private final SysMatrixChangeLogService sysMatrixChangeLogService;
     private final JdbcConnectService jdbcConnectService;
     private final SysMatrixDDLSerivce sysMatrixDDLSerivce;
+    private final SysPortalService sysPortalService;
+    private final SysPortalColumnService sysPortalColumnService;
 
     // 用于暂存更新前的表注释
     private final ThreadLocal<String> oldTableCommentHolder = new ThreadLocal<>();
@@ -190,7 +196,7 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
     }
 
     /**
-     * 删除矩阵后删除物理表
+     * 删除矩阵后删除物理表和关联的Portal配置
      */
     @Override
     public void afterDelete(IdReqVO vo) {
@@ -199,6 +205,20 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
 
         if (matrix == null) {
             return;
+        }
+
+        // 删除关联的Portal配置
+        try {
+            List<Long> deletedPortalIds = sysPortalService.deleteByDataModeAndReferenceId(
+                    PortalDataMode.MATRIX.name(),
+                    matrix.getId()
+            );
+            if (FuncUtil.isNotEmpty(deletedPortalIds)) {
+                sysPortalColumnService.deleteByPortalIds(deletedPortalIds);
+                log.info("删除Matrix[id={}]时，同步删除了 {} 个Portal配置", matrix.getId(), deletedPortalIds.size());
+            }
+        } catch (Exception e) {
+            log.error("删除Matrix[id={}]关联的Portal配置失败", matrix.getId(), e);
         }
 
         // 只有表已创建的情况才删除物理表

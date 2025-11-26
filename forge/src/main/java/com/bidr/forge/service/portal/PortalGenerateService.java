@@ -13,6 +13,7 @@ import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.dao.repository.SysMatrixService;
+import com.bidr.forge.service.driver.PortalDataMode;
 import com.bidr.forge.vo.portal.GeneratePortalReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
@@ -45,6 +46,7 @@ public class PortalGenerateService {
     private final SysMatrixColumnService sysMatrixColumnService;
     private final SysDatasetService sysDatasetService;
     private final SysDatasetColumnService sysDatasetColumnService;
+    private final PortalConfigService portalConfigService;
 
     /**
      * 为Matrix生成Portal配置
@@ -136,8 +138,8 @@ public class PortalGenerateService {
         portal.setRoleId(PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
         portal.setName(req.getPortalName());
         portal.setDisplayName(FuncUtil.isNotEmpty(req.getDisplayName()) ? req.getDisplayName() : matrix.getTableComment());
-        portal.setUrl(FuncUtil.isNotEmpty(req.getUrl()) ? req.getUrl() : "/web/" + req.getPortalName());
-        portal.setBean(FuncUtil.isNotEmpty(req.getBean()) ? req.getBean() : req.getPortalName() + "PortalController");
+        portal.setUrl("dynamic/portal/" + req.getPortalName());
+        portal.setBean("dynamicPortalController");
 
         // 默认配置
         portal.setSize("small");
@@ -154,7 +156,7 @@ public class PortalGenerateService {
         portal.setImportAble(CommonConst.NO);
 
         // 设置数据模式为MATRIX
-        portal.setDataMode("MATRIX");
+        portal.setDataMode(PortalDataMode.MATRIX.name());
         portal.setReferenceId(String.valueOf(matrix.getId()));
 
         // 根据字段配置设置id、order、pid、name字段
@@ -171,8 +173,8 @@ public class PortalGenerateService {
         portal.setRoleId(PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
         portal.setName(req.getPortalName());
         portal.setDisplayName(FuncUtil.isNotEmpty(req.getDisplayName()) ? req.getDisplayName() : dataset.getDatasetName());
-        portal.setUrl(FuncUtil.isNotEmpty(req.getUrl()) ? req.getUrl() : "/web/" + req.getPortalName());
-        portal.setBean(FuncUtil.isNotEmpty(req.getBean()) ? req.getBean() : req.getPortalName() + "PortalController");
+        portal.setUrl("dynamic/portal/" + req.getPortalName());
+        portal.setBean("dynamicPortalController");
 
         // 默认配置
         portal.setSize("small");
@@ -189,7 +191,7 @@ public class PortalGenerateService {
         portal.setImportAble(CommonConst.NO);
 
         // 设置数据模式为DATASET
-        portal.setDataMode("DATASET");
+        portal.setDataMode(PortalDataMode.DATASET.name());
         portal.setReferenceId(String.valueOf(dataset.getId()));
 
         // Dataset不支持树形结构，不设置pid相关字段
@@ -280,25 +282,25 @@ public class PortalGenerateService {
 
             // 详情、新增、编辑配置
             portalColumn.setDetailShow(CommonConst.YES);
-            portalColumn.setDetailSize(12);
+            portalColumn.setDetailSize(1);
             portalColumn.setDetailPadding(0);
 
             // 主键字段不允许新增和编辑
             boolean isPrimaryKey = CommonConst.YES.equals(matrixColumn.getIsPrimaryKey());
             portalColumn.setAddShow(isPrimaryKey ? CommonConst.NO : CommonConst.YES);
-            portalColumn.setAddSize(12);
+            portalColumn.setAddSize(1);
             portalColumn.setAddPadding(0);
             portalColumn.setAddDisabled(CommonConst.NO);
 
             portalColumn.setEditShow(isPrimaryKey ? CommonConst.NO : CommonConst.YES);
-            portalColumn.setEditSize(12);
+            portalColumn.setEditSize(1);
             portalColumn.setEditPadding(0);
             portalColumn.setEditDisabled(isPrimaryKey ? CommonConst.YES : CommonConst.NO);
 
             // 必填配置
             portalColumn.setRequired(CommonConst.NO.equals(matrixColumn.getIsNullable()) ? CommonConst.YES : CommonConst.NO);
             portalColumn.setDefaultValue(matrixColumn.getDefaultValue());
-            portalColumn.setMobileDisplayType("01");
+            portalColumn.setMobileDisplayType("0");
 
             portalColumns.add(portalColumn);
         }
@@ -324,7 +326,12 @@ public class PortalGenerateService {
             portalColumn.setPortalId(portalId);
 
             // 使用columnAlias作为property和dbField
-            String property = StringUtil.underlineToCamel(datasetColumn.getColumnAlias());
+            String columnAlias = datasetColumn.getColumnAlias();
+            // 去除单引号包裹
+            if (columnAlias != null && columnAlias.startsWith("'") && columnAlias.endsWith("'")) {
+                columnAlias = columnAlias.substring(1, columnAlias.length() - 1);
+            }
+            String property = StringUtil.underlineToCamel(columnAlias);
             portalColumn.setProperty(property);
             portalColumn.setDbField(datasetColumn.getColumnAlias());
             portalColumn.setDisplayName(datasetColumn.getColumnAlias());
@@ -348,27 +355,128 @@ public class PortalGenerateService {
 
             // 详情配置
             portalColumn.setDetailShow(CommonConst.YES);
-            portalColumn.setDetailSize(12);
+            portalColumn.setDetailSize(1);
             portalColumn.setDetailPadding(0);
 
             // Dataset只读，不支持新增和编辑
             portalColumn.setAddShow(CommonConst.NO);
-            portalColumn.setAddSize(12);
+            portalColumn.setAddSize(1);
             portalColumn.setAddPadding(0);
             portalColumn.setAddDisabled(CommonConst.YES);
 
             portalColumn.setEditShow(CommonConst.NO);
-            portalColumn.setEditSize(12);
+            portalColumn.setEditSize(1);
             portalColumn.setEditPadding(0);
             portalColumn.setEditDisabled(CommonConst.YES);
 
             portalColumn.setRequired(CommonConst.NO);
             portalColumn.setDefaultValue(StringUtil.EMPTY);
-            portalColumn.setMobileDisplayType("01");
+            portalColumn.setMobileDisplayType("0");
 
             portalColumns.add(portalColumn);
         }
 
         return portalColumns;
+    }
+
+    /**
+     * 刷新Matrix对应的Portal配置
+     * 根据Matrix的最新字段配置重新生成Portal字段
+     *
+     * @param portalName Portal名称
+     * @param roleId 角色ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void refreshPortalForMatrix(String portalName, Long roleId) {
+        // 默认使用默认配置角色
+        if (FuncUtil.isEmpty(roleId)) {
+            roleId = PortalConfigService.DEFAULT_CONFIG_ROLE_ID;
+        }
+
+        // 查询Portal配置
+        SysPortal portal = sysPortalService.getByName(portalName, roleId);
+        Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "Portal配置");
+
+        // 检查是否为MATRIX类型
+        Validator.assertTrue(
+                PortalDataMode.MATRIX.name().equals(portal.getDataMode()),
+                ErrCodeSys.SYS_ERR_MSG,
+                "该Portal不是MATRIX类型，无法刷新"
+        );
+
+        // 获取referenceId（matrixId）
+        Long matrixId = Long.valueOf(portal.getReferenceId());
+
+        // 查询Matrix配置
+        SysMatrix matrix = sysMatrixService.getById(matrixId);
+        Validator.assertNotNull(matrix, ErrCodeSys.PA_DATA_NOT_EXIST, "关联的Matrix配置");
+
+        // 查询Matrix字段配置
+        List<SysMatrixColumn> columns = sysMatrixColumnService.lambdaQuery()
+                .eq(SysMatrixColumn::getMatrixId, matrixId)
+                .eq(SysMatrixColumn::getValid, CommonConst.YES)
+                .orderByAsc(SysMatrixColumn::getSort)
+                .list();
+
+        Validator.assertTrue(FuncUtil.isNotEmpty(columns), ErrCodeSys.SYS_ERR_MSG, "Matrix字段配置为空");
+
+        // 删除旧的Portal字段配置
+        sysPortalColumnService.deleteByPortalId(portal.getId());
+
+        // 重新创建Portal字段配置
+        List<SysPortalColumn> portalColumns = buildPortalColumnsForMatrix(portal.getId(), columns);
+        sysPortalColumnService.insert(portalColumns);
+
+        // 更新Portal的字段引用
+        setPortalFieldsForMatrix(portal, matrix);
+        sysPortalService.updateById(portal);
+
+        log.info("成功刷新Portal[{}]的Matrix配置，Matrix ID: {}", portalName, matrixId);
+    }
+
+    /**
+     * 刷新Dataset对应的Portal配置
+     * 根据Dataset的最新字段配置重新生成Portal字段
+     *
+     * @param portalName Portal名称
+     * @param roleId 角色ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void refreshPortalForDataset(String portalName, Long roleId) {
+        // 默认使用默认配置角色
+        if (FuncUtil.isEmpty(roleId)) {
+            roleId = PortalConfigService.DEFAULT_CONFIG_ROLE_ID;
+        }
+
+        // 查询Portal配置
+        SysPortal portal = sysPortalService.getByName(portalName, roleId);
+        Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "Portal配置");
+
+        // 检查是否为DATASET类型
+        Validator.assertTrue(
+                PortalDataMode.DATASET.name().equals(portal.getDataMode()),
+                ErrCodeSys.SYS_ERR_MSG,
+                "该Portal不是DATASET类型，无法刷新"
+        );
+
+        // 获取referenceId（datasetId）
+        Long datasetId = Long.valueOf(portal.getReferenceId());
+
+        // 查询Dataset配置
+        SysDataset dataset = sysDatasetService.getById(datasetId);
+        Validator.assertNotNull(dataset, ErrCodeSys.PA_DATA_NOT_EXIST, "关联的Dataset配置");
+
+        // 查询Dataset字段配置
+        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
+        Validator.assertTrue(FuncUtil.isNotEmpty(columns), ErrCodeSys.SYS_ERR_MSG, "Dataset字段配置为空");
+
+        // 删除旧的Portal字段配置
+        sysPortalColumnService.deleteByPortalId(portal.getId());
+
+        // 重新创建Portal字段配置
+        List<SysPortalColumn> portalColumns = buildPortalColumnsForDataset(portal.getId(), columns);
+        sysPortalColumnService.insert(portalColumns);
+
+        log.info("成功刷新Portal[{}]的Dataset配置，Dataset ID: {}", portalName, datasetId);
     }
 }

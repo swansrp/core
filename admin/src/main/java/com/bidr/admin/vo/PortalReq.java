@@ -20,4 +20,10 @@ public class PortalReq {
 
     @ApiModelProperty("对应角色")
     private Long roleId;
+
+    @ApiModelProperty("数据源格式")
+    private String dataMode;
+
+    @ApiModelProperty("相关动态表id")
+    private Long referenceId;
 }

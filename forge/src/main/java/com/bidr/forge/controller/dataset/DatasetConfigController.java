@@ -47,28 +47,12 @@ public class DatasetConfigController {
         }
     }
 
-    @ApiOperation("解析SQL并保存配置（替换原有配置，datasetId必须存在）")
-    @PostMapping("/replace")
-    @Transactional(rollbackFor = Exception.class)
+    @ApiOperation("解析SQL并新增保存配置（datasetId可为空，自动创建）")
+    @PostMapping("/save")
     public DatasetConfigRes parseSqlAndSave(@Validated @RequestBody DatasetConfigReq req) {
         try {
-            DatasetConfigRes res = datasetConfigService.parseSqlAndSave(req);
-            Resp.notice("解析并保存成功，共生成 " + res.getTables().size() + " 个数据集，"
-                    + res.getColumns().size() + " 个字段");
-            return res;
-        } catch (JSQLParserException e) {
-            log.error("SQL解析失败: {}", e.getMessage(), e);
-            throw new NoticeException("SQL解析失败: " + e.getMessage());
-        }
-    }
-
-    @ApiOperation("解析SQL并新增保存配置（datasetId可为空，自动创建）")
-    @PostMapping("/create")
-    @Transactional(rollbackFor = Exception.class)
-    public DatasetConfigRes parseSqlAndCreate(@Validated @RequestBody DatasetConfigReq req) {
-        try {
-            DatasetConfigRes res = datasetConfigService.parseSqlAndCreate(req);
-            Resp.notice("新增并保存成功，datasetId=" + res.getDatasetId() + "，共生成 "
+            DatasetConfigRes res = datasetConfigService.save(req);
+            Resp.notice("保存成功，共生成 "
                     + res.getTables().size() + " 个数据集，" + res.getColumns().size() + " 个字段");
             return res;
         } catch (JSQLParserException e) {
@@ -99,7 +83,6 @@ public class DatasetConfigController {
 
     @ApiOperation("新增列配置")
     @PostMapping("/column/add")
-    @Transactional(rollbackFor = Exception.class)
     public SysDatasetColumn addColumn(@Validated @RequestBody DatasetColumnReq req) {
         SysDatasetColumn column = datasetConfigService.addColumn(req);
         Resp.notice("新增列配置成功");
@@ -108,7 +91,6 @@ public class DatasetConfigController {
 
     @ApiOperation("更新列配置")
     @PostMapping("/column/update")
-    @Transactional(rollbackFor = Exception.class)
     public SysDatasetColumn updateColumn(@Validated @RequestBody DatasetColumnReq req) {
         SysDatasetColumn column = datasetConfigService.updateColumn(req);
         Resp.notice("更新列配置成功");
@@ -117,7 +99,6 @@ public class DatasetConfigController {
 
     @ApiOperation("删除列配置")
     @PostMapping("/column/delete")
-    @Transactional(rollbackFor = Exception.class)
     public void deleteColumn(@RequestBody IdReqVO req) {
         datasetConfigService.deleteColumn(Long.parseLong(req.getId()));
         Resp.notice("删除列配置成功");
