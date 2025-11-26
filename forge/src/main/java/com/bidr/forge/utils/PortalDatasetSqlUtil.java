@@ -1,8 +1,8 @@
 package com.bidr.forge.utils;
 
 import com.bidr.forge.constant.dict.JoinTypeDict;
-import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.bo.SqlColumn;
@@ -95,7 +95,7 @@ public class PortalDatasetSqlUtil {
      */
     public static String buildQuerySql(List<SysDatasetTable> tableList, List<SysDatasetColumn> columnList) {
         StringBuilder sql = new StringBuilder("SELECT ");
-        
+
         // 构建 SELECT 子句
         if (FuncUtil.isEmpty(columnList)) {
             sql.append("*");
@@ -107,19 +107,19 @@ public class PortalDatasetSqlUtil {
                 }
                 sql.append(column.getColumnSql());
                 // 如果列SQL和别名不同，添加AS别名
-                if (FuncUtil.isNotEmpty(column.getColumnAlias()) && 
-                    !column.getColumnSql().equals(column.getColumnAlias())) {
+                if (FuncUtil.isNotEmpty(column.getColumnAlias()) &&
+                        !column.getColumnSql().equals(column.getColumnAlias())) {
                     sql.append(" AS ").append(column.getColumnAlias());
                 }
             }
         }
-        
+
         // 构建 FROM 子句
         sql.append(" FROM ");
         if (FuncUtil.isNotEmpty(tableList)) {
             sql.append(buildFromSql(tableList));
         }
-        
+
         return sql.toString();
     }
 

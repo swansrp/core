@@ -48,17 +48,8 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
         // 构建FROM
         sql.append(" FROM ").append(matrix.getTableName());
 
-        // 构建WHERE
-        String whereClause = buildWhere(req, aliasMap, parameters);
-        if (FuncUtil.isNotEmpty(whereClause)) {
-            sql.append(" WHERE ").append(whereClause);
-        }
-
-        // 构建ORDER BY
-        String orderByClause = buildOrderBy(req, aliasMap);
-        if (FuncUtil.isNotEmpty(orderByClause)) {
-            sql.append(" ORDER BY ").append(orderByClause);
-        }
+        // 构建WHERE/ORDER BY（复用）
+        sql.append(buildQueryClauses(req, aliasMap, parameters, true));
 
         // 构建LIMIT（如果需要分页）
         if (FuncUtil.isNotEmpty(req.getCurrentPage()) && FuncUtil.isNotEmpty(req.getPageSize())) {
@@ -73,13 +64,62 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
     public String buildCount(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, Object> parameters) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ").append(matrix.getTableName());
 
+        // 构建WHERE（复用，不含ORDER BY）
+        sql.append(buildQueryClauses(req, aliasMap, parameters, false));
+
+        return sql.toString();
+    }
+
+    /**
+     * 构建 SELECT 列
+     */
+    @Override
+    protected String buildSelectColumns(Map<String, String> aliasMap) {
+        if (aliasMap.isEmpty()) {
+            return "*";
+        }
+
+        List<String> selectCols = new ArrayList<>();
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            String fieldName = entry.getKey();
+            String columnName = entry.getValue();
+            selectCols.add("`" + columnName + "` AS `" + fieldName + "`");
+        }
+
+        return selectCols.isEmpty() ? "*" : String.join(", ", selectCols);
+    }
+
+    /**
+     * 构建 FROM 子句
+     */
+    @Override
+    protected String buildFromClause() {
+        return " FROM " + matrix.getTableName();
+    }
+
+    /**
+     * 构建查询条件子句（WHERE/ORDER BY）
+     */
+    @Override
+    protected String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                      Map<String, Object> parameters, boolean includeOrder) {
+        StringBuilder clause = new StringBuilder();
+
         // 构建WHERE
         String whereClause = buildWhere(req, aliasMap, parameters);
         if (FuncUtil.isNotEmpty(whereClause)) {
-            sql.append(" WHERE ").append(whereClause);
+            clause.append(" WHERE ").append(whereClause);
         }
 
-        return sql.toString();
+        // 构建ORDER BY（仅 SELECT 需要）
+        if (includeOrder) {
+            String orderByClause = buildOrderBy(req, aliasMap);
+            if (FuncUtil.isNotEmpty(orderByClause)) {
+                clause.append(" ORDER BY ").append(orderByClause);
+            }
+        }
+
+        return clause.toString();
     }
 
     @Override
@@ -199,24 +239,6 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
             return "DELETE FROM " + matrix.getTableName()
                     + " WHERE " + String.join(" AND ", conditions);
         }
-    }
-
-    /**
-     * 构建SELECT列
-     */
-    private String buildSelectColumns(Map<String, String> aliasMap) {
-        if (aliasMap.isEmpty()) {
-            return "*";
-        }
-
-        List<String> selectCols = new ArrayList<>();
-        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
-            String fieldName = entry.getKey();
-            String columnName = entry.getValue();
-            selectCols.add("`" + columnName + "` AS `" + fieldName + "`");
-        }
-
-        return selectCols.isEmpty() ? "*" : String.join(", ", selectCols);
     }
 
     /**

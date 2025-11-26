@@ -9,9 +9,10 @@ import com.bidr.forge.service.driver.builder.MatrixSqlBuilder;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.ConditionVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -70,32 +71,12 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
-        // 切换数据源
-        if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
-            jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
-        }
+        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = matrixColumns.getDataSource();
 
-        try {
-            MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
-
-            // 查询总数
-            String countSql = builder.buildCount(req, aliasMap, new HashMap<>(parameters));
-            Long total = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
-
-            // 查询数据
-            String selectSql = builder.buildSelect(req, aliasMap, parameters);
-            List<Map<String, Object>> records = jdbcConnectService.query(selectSql, parameters);
-
-            Page<Map<String, Object>> page = new Page<>(req.getCurrentPage(), req.getPageSize());
-            page.setTotal(total == null ? 0 : total);
-            page.setRecords(records);
-
-            return page;
-        } finally {
-            jdbcConnectService.resetToDefaultDataSource();
-        }
+        // 使用接口默认方法（内部调用 buildSqlParts 一次解析）
+        return defaultQueryPage(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
@@ -103,36 +84,66 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
-        // 切换数据源
-        if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
-            jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
-        }
+        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = matrixColumns.getDataSource();
 
-        try {
-            MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
-
-            // 构造不分页的查询
-            AdvancedQueryReq noPagingReq = new AdvancedQueryReq();
-            ReflectionUtil.copyProperties(req, noPagingReq);
-            noPagingReq.setCurrentPage(null);
-            noPagingReq.setPageSize(null);
-
-            String selectSql = builder.buildSelect(noPagingReq, aliasMap, parameters);
-            return jdbcConnectService.query(selectSql, parameters);
-        } finally {
-            jdbcConnectService.resetToDefaultDataSource();
-        }
+        // 使用接口默认方法
+        return defaultQueryList(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
     public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, Long roleId) {
-        req.setCurrentPage(1L);
-        req.setPageSize(1L);
+        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
-        List<Map<String, Object>> list = queryList(req, portalName, roleId);
-        return list.isEmpty() ? null : list.get(0);
+        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = matrixColumns.getDataSource();
+
+        // 使用接口默认方法
+        return defaultQueryOne(req, aliasMap, builder, jdbcConnectService, dataSource);
+    }
+
+    // 新增：按主键查询单条记录
+    public Map<String, Object> selectById(Object id, String portalName, Long roleId) {
+        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
+
+        // 构建查询条件（主键 AND 连接）
+        AdvancedQueryReq req = new AdvancedQueryReq();
+        AdvancedQuery condition = new AdvancedQuery();
+        condition.setAndOr(AdvancedQuery.AND);
+
+        List<SysMatrixColumn> pkColumns = matrixColumns.getColumns().stream()
+                .filter(col -> CommonConst.YES.equals(col.getIsPrimaryKey()))
+                .collect(java.util.stream.Collectors.toList());
+        Validator.assertTrue(!pkColumns.isEmpty(), ErrCodeSys.SYS_ERR_MSG, "未定义主键，无法按ID查询");
+
+        if (pkColumns.size() == 1) {
+            // 单主键
+            String pkName = pkColumns.get(0).getColumnName();
+            condition.addCondition(new ConditionVO(pkName, id));
+        } else {
+            // 复合主键：要求传入 Map<String, Object>
+            Validator.assertTrue(id instanceof Map, ErrCodeSys.SYS_ERR_MSG, "联合主键查询需要传入Map类型ID");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> pkMap = (Map<String, Object>) id;
+            for (SysMatrixColumn pkCol : pkColumns) {
+                String pkName = pkCol.getColumnName();
+                Object pkValue = pkMap.get(pkName);
+                Validator.assertTrue(FuncUtil.isNotEmpty(pkValue), ErrCodeSys.SYS_ERR_MSG,
+                        "联合主键缺少字段: " + pkName);
+                condition.addCondition(new ConditionVO(pkName, pkValue));
+            }
+        }
+        req.setCondition(condition);
+
+        // 使用统一默认方法执行（含数据源切换、SQL构建与查询）
+        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = matrixColumns.getDataSource();
+        return defaultQueryOne(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
@@ -140,22 +151,12 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
-        // 切换数据源
-        if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
-            jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
-        }
+        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = matrixColumns.getDataSource();
 
-        try {
-            MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
-
-            String countSql = builder.buildCount(req, aliasMap, parameters);
-            Long result = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
-            return result == null ? 0L : result;
-        } finally {
-            jdbcConnectService.resetToDefaultDataSource();
-        }
+        // 使用接口默认方法
+        return defaultCount(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
@@ -268,17 +269,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
      */
     private MatrixColumns getMatrixColumns(String portalName) {
         // 尝试按tableName查询
-        MatrixColumns matrixColumns = sysMatrixService.getMatrixColumns(portalName);
-        if (matrixColumns == null) {
-            // 尝试按ID查询
-            try {
-                Long matrixId = Long.parseLong(portalName);
-                matrixColumns = sysMatrixService.getMatrixColumns(matrixId);
-            } catch (NumberFormatException e) {
-                // ignore
-            }
-        }
-        return matrixColumns;
+        return sysMatrixService.getMatrixColumnsByPortalName(portalName);
     }
 
     /**

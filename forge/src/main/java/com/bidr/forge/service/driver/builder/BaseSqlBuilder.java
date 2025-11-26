@@ -3,8 +3,10 @@ package com.bidr.forge.service.driver.builder;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
+import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +18,75 @@ import java.util.Map;
  * @since 2025-11-24
  */
 public abstract class BaseSqlBuilder implements SqlBuilder {
+
+    /**
+     * 通用的 buildSqlParts 实现（一次解析，生成 SELECT 和 COUNT）
+     * 子类只需提供差异化的部分：SELECT 列、FROM 子句、查询条件构建
+     */
+    @Override
+    public SqlParts buildSqlParts(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, Object> parameters) {
+        // 1. 构建 SELECT 列（子类实现）
+        String selectColumns = buildSelectColumns(aliasMap);
+
+        // 2. 构建 FROM 子句（子类实现）
+        String fromClause = buildFromClause();
+
+        // 3. 一次性构建 WHERE/GROUP BY/HAVING/ORDER BY（含参数填充）
+        String allClauses = buildQueryClauses(req, aliasMap, parameters, true);
+
+        // 4. 拼接 SELECT SQL（含 LIMIT）
+        StringBuilder selectSql = new StringBuilder("SELECT ").append(selectColumns).append(fromClause).append(allClauses);
+        if (FuncUtil.isNotEmpty(req.getCurrentPage()) && FuncUtil.isNotEmpty(req.getPageSize())) {
+            long offset = (req.getCurrentPage() - 1) * req.getPageSize();
+            selectSql.append(" LIMIT ").append(offset).append(", ").append(req.getPageSize());
+        }
+
+        // 5. 拼接 COUNT SQL（不含 ORDER BY）
+        String clausesWithoutOrder = buildQueryClauses(req, aliasMap, new HashMap<>(), false);
+        String countSql = buildCountSql(fromClause, clausesWithoutOrder);
+
+        return new SqlParts(selectSql.toString(), countSql);
+    }
+
+    /**
+     * 构建 SELECT 列（子类实现）
+     *
+     * @param aliasMap 字段别名映射
+     * @return SELECT 列 SQL 片段
+     */
+    protected abstract String buildSelectColumns(Map<String, String> aliasMap);
+
+    /**
+     * 构建 FROM 子句（子类实现）
+     *
+     * @return FROM 子句 SQL 片段（包括 " FROM " 前缀）
+     */
+    protected abstract String buildFromClause();
+
+    /**
+     * 构建查询条件子句（WHERE/GROUP BY/HAVING/ORDER BY）
+     * 子类可以重写以支持更复杂的逻辑（如 Dataset 的 GROUP BY/HAVING）
+     *
+     * @param req           查询请求
+     * @param aliasMap      字段别名映射
+     * @param parameters    参数Map（输出参数）
+     * @param includeOrder  是否包含 ORDER BY
+     * @return 查询条件 SQL 片段
+     */
+    protected abstract String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                                Map<String, Object> parameters, boolean includeOrder);
+
+    /**
+     * 构建 COUNT SQL（子类可以重写以支持特殊逻辑，如 Dataset 的子查询）
+     *
+     * @param fromClause          FROM 子句
+     * @param clausesWithoutOrder WHERE/GROUP BY/HAVING（不含 ORDER BY）
+     * @return COUNT SQL
+     */
+    protected String buildCountSql(String fromClause, String clausesWithoutOrder) {
+        // 默认实现：适用于 Matrix 等单表查询
+        return "SELECT COUNT(*)" + fromClause + clausesWithoutOrder;
+    }
 
     /**
      * 递归构建条件表达式

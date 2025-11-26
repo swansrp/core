@@ -46,7 +46,6 @@ public class PortalGenerateService {
     private final SysMatrixColumnService sysMatrixColumnService;
     private final SysDatasetService sysDatasetService;
     private final SysDatasetColumnService sysDatasetColumnService;
-    private final PortalConfigService portalConfigService;
 
     /**
      * 为Matrix生成Portal配置
@@ -148,9 +147,9 @@ public class PortalGenerateService {
         portal.setAdvanced(CommonConst.YES);
         portal.setTreeDrag(CommonConst.NO);
         portal.setTableDrag(CommonConst.NO);
-        portal.setAddWidth(800);
-        portal.setEditWidth(800);
-        portal.setDetailWidth(800);
+        portal.setAddWidth(80);
+        portal.setEditWidth(80);
+        portal.setDetailWidth(80);
         portal.setDescriptionCount(2);
         portal.setExportAble(CommonConst.YES);
         portal.setImportAble(CommonConst.NO);
@@ -183,9 +182,9 @@ public class PortalGenerateService {
         portal.setAdvanced(CommonConst.YES);
         portal.setTreeDrag(CommonConst.NO);
         portal.setTableDrag(CommonConst.NO);
-        portal.setAddWidth(800);
-        portal.setEditWidth(800);
-        portal.setDetailWidth(800);
+        portal.setAddWidth(80);
+        portal.setEditWidth(80);
+        portal.setDetailWidth(80);
         portal.setDescriptionCount(2);
         portal.setExportAble(CommonConst.YES);
         portal.setImportAble(CommonConst.NO);
@@ -384,7 +383,7 @@ public class PortalGenerateService {
      * 根据Matrix的最新字段配置重新生成Portal字段
      *
      * @param portalName Portal名称
-     * @param roleId 角色ID
+     * @param roleId     角色ID
      */
     @Transactional(rollbackFor = Exception.class)
     public void refreshPortalForMatrix(String portalName, Long roleId) {
@@ -439,7 +438,7 @@ public class PortalGenerateService {
      * 根据Dataset的最新字段配置重新生成Portal字段
      *
      * @param portalName Portal名称
-     * @param roleId 角色ID
+     * @param roleId     角色ID
      */
     @Transactional(rollbackFor = Exception.class)
     public void refreshPortalForDataset(String portalName, Long roleId) {

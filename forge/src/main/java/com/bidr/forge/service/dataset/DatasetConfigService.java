@@ -1,11 +1,11 @@
 package com.bidr.forge.service.dataset;
 
 import com.bidr.forge.dao.entity.SysDataset;
-import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
-import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.utils.PortalDatasetSqlUtil;
 import com.bidr.forge.vo.dataset.DatasetColumnReq;
 import com.bidr.forge.vo.dataset.DatasetConfigReq;
@@ -79,7 +79,7 @@ public class DatasetConfigService {
             sysDatasetService.insert(dataset);
             datasetId = dataset.getId();
             req.setDatasetId(datasetId);
-            
+
             log.info("创建新Dataset，datasetId={}, datasetName={}", datasetId, req.getDatasetName());
         } else {
             // ========== 更新模式 ==========
@@ -102,12 +102,12 @@ public class DatasetConfigService {
         if (!isNewDataset) {
             DatasetConfigRes existingConfig = getConfig(datasetId);
             boolean configChanged = hasConfigChanged(existingConfig, newConfig);
-            
+
             if (!configChanged) {
                 log.info("Dataset配置无变更，跳过更新，datasetId={}", datasetId);
                 return existingConfig;
             }
-            
+
             log.info("检测到Dataset配置变更，datasetId={}", datasetId);
             // 删除旧配置
             sysDatasetTableService.deleteByDatasetId(datasetId);
@@ -123,7 +123,7 @@ public class DatasetConfigService {
         }
 
         log.info("成功保存Dataset配置，datasetId={}, tables={}, columns={}, mode={}",
-                datasetId, newConfig.getTables().size(), newConfig.getColumns().size(), 
+                datasetId, newConfig.getTables().size(), newConfig.getColumns().size(),
                 isNewDataset ? "新增" : "更新");
 
         return newConfig;
@@ -134,7 +134,7 @@ public class DatasetConfigService {
      */
     private boolean hasDatasetChanged(SysDataset existing, DatasetConfigReq req) {
         boolean changed = false;
-        
+
         if (FuncUtil.isNotEmpty(req.getDatasetName()) && !req.getDatasetName().equals(existing.getDatasetName())) {
             changed = true;
         }
@@ -144,7 +144,7 @@ public class DatasetConfigService {
         if (FuncUtil.isNotEmpty(req.getRemark()) && !req.getRemark().equals(existing.getRemark())) {
             changed = true;
         }
-        
+
         return changed;
     }
 
@@ -171,12 +171,12 @@ public class DatasetConfigService {
         if (!compareTableConfigs(existing.getTables(), newConfig.getTables())) {
             return true;
         }
-        
+
         // 比较列配置
         if (!compareColumnConfigs(existing.getColumns(), newConfig.getColumns())) {
             return true;
         }
-        
+
         return false;
     }
 
@@ -193,20 +193,20 @@ public class DatasetConfigService {
         if (existing.size() != newList.size()) {
             return false;
         }
-        
+
         for (int i = 0; i < existing.size(); i++) {
             SysDatasetTable e = existing.get(i);
             SysDatasetTable n = newList.get(i);
-            
+
             if (!compareString(e.getTableSql(), n.getTableSql()) ||
-                !compareString(e.getTableAlias(), n.getTableAlias()) ||
-                !compareString(e.getJoinType(), n.getJoinType()) ||
-                !compareString(e.getJoinCondition(), n.getJoinCondition()) ||
-                !compareInteger(e.getTableOrder(), n.getTableOrder())) {
+                    !compareString(e.getTableAlias(), n.getTableAlias()) ||
+                    !compareString(e.getJoinType(), n.getJoinType()) ||
+                    !compareString(e.getJoinCondition(), n.getJoinCondition()) ||
+                    !compareInteger(e.getTableOrder(), n.getTableOrder())) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -223,19 +223,19 @@ public class DatasetConfigService {
         if (existing.size() != newList.size()) {
             return false;
         }
-        
+
         for (int i = 0; i < existing.size(); i++) {
             SysDatasetColumn e = existing.get(i);
             SysDatasetColumn n = newList.get(i);
-            
+
             if (!compareString(e.getColumnSql(), n.getColumnSql()) ||
-                !compareString(e.getColumnAlias(), n.getColumnAlias()) ||
-                !compareString(e.getIsAggregate(), n.getIsAggregate()) ||
-                !compareInteger(e.getDisplayOrder(), n.getDisplayOrder())) {
+                    !compareString(e.getColumnAlias(), n.getColumnAlias()) ||
+                    !compareString(e.getIsAggregate(), n.getIsAggregate()) ||
+                    !compareInteger(e.getDisplayOrder(), n.getDisplayOrder())) {
                 return false;
             }
         }
-        
+
         return true;
     }
 

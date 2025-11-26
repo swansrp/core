@@ -3,23 +3,25 @@ package com.bidr.forge.service.driver;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysDataset;
-import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
-import com.bidr.forge.dao.repository.SysDatasetColumnService;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.service.driver.builder.DatasetSqlBuilder;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Dataset驱动实现
@@ -79,30 +81,12 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
             return new Page<>(req.getCurrentPage(), req.getPageSize());
         }
 
-        // 从SysDataset获取数据源配置并切换
-        switchToDatasetDataSource(datasetId);
+        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = getDatasetDataSource(datasetId);
 
-        try {
-            DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
-
-            // 查询总数
-            String countSql = builder.buildCount(req, aliasMap, new HashMap<>(parameters));
-            Long total = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
-
-            // 查询数据
-            String selectSql = builder.buildSelect(req, aliasMap, parameters);
-            List<Map<String, Object>> records = jdbcConnectService.query(selectSql, parameters);
-
-            Page<Map<String, Object>> page = new Page<>(req.getCurrentPage(), req.getPageSize());
-            page.setTotal(total == null ? 0 : total);
-            page.setRecords(records);
-
-            return page;
-        } finally {
-            jdbcConnectService.resetToDefaultDataSource();
-        }
+        // 使用接口默认方法（内部调用 buildSqlParts 一次解析）
+        return defaultQueryPage(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
@@ -115,35 +99,30 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
             return Collections.emptyList();
         }
 
-        // 从SysDataset获取数据源配置并切换
-        switchToDatasetDataSource(datasetId);
+        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = getDatasetDataSource(datasetId);
 
-        try {
-            DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
-
-            // 构造不分页的查询（移除分页参数）
-            AdvancedQueryReq noPagingReq = new AdvancedQueryReq();
-            ReflectionUtil.copyProperties(req, noPagingReq);
-            noPagingReq.setCurrentPage(null);
-            noPagingReq.setPageSize(null);
-
-            String selectSql = builder.buildSelect(noPagingReq, aliasMap, parameters);
-            return jdbcConnectService.query(selectSql, parameters);
-        } finally {
-            jdbcConnectService.resetToDefaultDataSource();
-        }
+        // 使用接口默认方法
+        return defaultQueryList(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
     public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, Long roleId) {
-        // 限制查询1条
-        req.setCurrentPage(1L);
-        req.setPageSize(1L);
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
+        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
+        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
-        List<Map<String, Object>> list = queryList(req, portalName, roleId);
-        return list.isEmpty() ? null : list.get(0);
+        if (datasets.isEmpty()) {
+            return null;
+        }
+
+        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = getDatasetDataSource(datasetId);
+
+        // 使用接口默认方法
+        return defaultQueryOne(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
@@ -156,20 +135,12 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
             return 0L;
         }
 
-        // 从SysDataset获取数据源配置并切换
-        switchToDatasetDataSource(datasetId);
+        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        String dataSource = getDatasetDataSource(datasetId);
 
-        try {
-            DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
-
-            String countSql = builder.buildCount(req, aliasMap, parameters);
-            Long result = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
-            return result == null ? 0L : result;
-        } finally {
-            jdbcConnectService.resetToDefaultDataSource();
-        }
+        // 使用接口默认方法
+        return defaultCount(req, aliasMap, builder, jdbcConnectService, dataSource);
     }
 
     @Override
@@ -234,21 +205,17 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     /**
-     * 从SysDataset获取数据源配置并切换
+     * 获取Dataset的数据源配置
      *
      * @param datasetId 数据集ID
+     * @return 数据源名称
      */
-    private void switchToDatasetDataSource(Long datasetId) {
+    private String getDatasetDataSource(Long datasetId) {
         SysDataset dataset = sysDatasetService.selectById(datasetId);
         if (dataset == null) {
             log.warn("未找到Dataset配置，使用默认数据源，datasetId: {}", datasetId);
-            return;
+            return null;
         }
-
-        String dataSource = dataset.getDataSource();
-        if (FuncUtil.isNotEmpty(dataSource)) {
-            jdbcConnectService.switchDataSource(dataSource);
-            log.debug("切换到数据源: {}, datasetId: {}", dataSource, datasetId);
-        }
+        return dataset.getDataSource();
     }
 }

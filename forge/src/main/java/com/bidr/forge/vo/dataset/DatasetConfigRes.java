@@ -1,7 +1,7 @@
 package com.bidr.forge.vo.dataset;
 
-import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

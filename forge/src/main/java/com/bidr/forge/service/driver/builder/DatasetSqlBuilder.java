@@ -1,7 +1,7 @@
 package com.bidr.forge.service.driver.builder;
 
-import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
@@ -36,34 +36,13 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         StringBuilder sql = new StringBuilder("SELECT ");
 
         // 构建SELECT列
-        sql.append(buildSelectColumns());
+        sql.append(buildSelectColumns(aliasMap));
 
         // 构建FROM和JOIN
         sql.append(" FROM ").append(buildFromAndJoin());
 
-        // 构建WHERE
-        String whereClause = buildWhere(req, aliasMap, parameters);
-        if (FuncUtil.isNotEmpty(whereClause)) {
-            sql.append(" WHERE ").append(whereClause);
-        }
-
-        // 构建GROUP BY
-        String groupByClause = buildGroupBy();
-        if (FuncUtil.isNotEmpty(groupByClause)) {
-            sql.append(" GROUP BY ").append(groupByClause);
-        }
-
-        // 构建HAVING
-        String havingClause = buildHaving(req, aliasMap, parameters);
-        if (FuncUtil.isNotEmpty(havingClause)) {
-            sql.append(" HAVING ").append(havingClause);
-        }
-
-        // 构建ORDER BY
-        String orderByClause = buildOrderBy(req);
-        if (FuncUtil.isNotEmpty(orderByClause)) {
-            sql.append(" ORDER BY ").append(orderByClause);
-        }
+        // 构建WHERE/GROUP BY/HAVING/ORDER BY（复用）
+        sql.append(buildQueryClauses(req, aliasMap, parameters, true));
 
         // 构建LIMIT（如果需要分页）
         if (FuncUtil.isNotEmpty(req.getCurrentPage()) && FuncUtil.isNotEmpty(req.getPageSize())) {
@@ -81,27 +60,85 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         // 构建FROM和JOIN
         sql.append(" FROM ").append(buildFromAndJoin());
 
+        // 构建WHERE/GROUP BY/HAVING（复用，不含ORDER BY）
+        sql.append(buildQueryClauses(req, aliasMap, parameters, false));
+
+        sql.append(") AS count_table");
+
+        return sql.toString();
+    }
+
+    /**
+     * 构建 SELECT 列
+     */
+    @Override
+    protected String buildSelectColumns(Map<String, String> aliasMap) {
+        List<String> selectCols = new ArrayList<>();
+        for (SysDatasetColumn column : columns) {
+            if (CommonConst.YES.equals(column.getIsVisible())) {
+                String colSql = column.getColumnSql();
+                String colAlias = column.getColumnAlias();
+                if (FuncUtil.isNotEmpty(colAlias)) {
+                    selectCols.add(colSql + " AS `" + colAlias + "`");
+                } else {
+                    selectCols.add(colSql);
+                }
+            }
+        }
+        return selectCols.isEmpty() ? "*" : String.join(", ", selectCols);
+    }
+
+    /**
+     * 构建 FROM 子句
+     */
+    @Override
+    protected String buildFromClause() {
+        return " FROM " + buildFromAndJoin();
+    }
+
+    /**
+     * 构建查询条件子句（WHERE/GROUP BY/HAVING/ORDER BY）
+     */
+    @Override
+    protected String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                       Map<String, Object> parameters, boolean includeOrder) {
+        StringBuilder clause = new StringBuilder();
+
         // 构建WHERE
         String whereClause = buildWhere(req, aliasMap, parameters);
         if (FuncUtil.isNotEmpty(whereClause)) {
-            sql.append(" WHERE ").append(whereClause);
+            clause.append(" WHERE ").append(whereClause);
         }
 
         // 构建GROUP BY
         String groupByClause = buildGroupBy();
         if (FuncUtil.isNotEmpty(groupByClause)) {
-            sql.append(" GROUP BY ").append(groupByClause);
+            clause.append(" GROUP BY ").append(groupByClause);
         }
 
         // 构建HAVING
         String havingClause = buildHaving(req, aliasMap, parameters);
         if (FuncUtil.isNotEmpty(havingClause)) {
-            sql.append(" HAVING ").append(havingClause);
+            clause.append(" HAVING ").append(havingClause);
         }
 
-        sql.append(") AS count_table");
+        // 构建ORDER BY（仅 SELECT 需要）
+        if (includeOrder) {
+            String orderByClause = buildOrderBy(req);
+            if (FuncUtil.isNotEmpty(orderByClause)) {
+                clause.append(" ORDER BY ").append(orderByClause);
+            }
+        }
 
-        return sql.toString();
+        return clause.toString();
+    }
+
+    /**
+     * 重写 COUNT SQL 构建（Dataset 需要子查询包裹）
+     */
+    @Override
+    protected String buildCountSql(String fromClause, String clausesWithoutOrder) {
+        return "SELECT COUNT(*) FROM (SELECT 1" + fromClause + clausesWithoutOrder + ") AS count_table";
     }
 
     @Override
@@ -117,25 +154,6 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     @Override
     public String buildDelete(Object id, Map<String, Object> parameters) {
         throw new UnsupportedOperationException("Dataset模式不支持DELETE操作");
-    }
-
-    /**
-     * 构建SELECT列
-     */
-    private String buildSelectColumns() {
-        List<String> selectCols = new ArrayList<>();
-        for (SysDatasetColumn column : columns) {
-            if (CommonConst.YES.equals(column.getIsVisible())) {
-                String colSql = column.getColumnSql();
-                String colAlias = column.getColumnAlias();
-                if (FuncUtil.isNotEmpty(colAlias)) {
-                    selectCols.add(colSql + " AS `" + colAlias + "`");
-                } else {
-                    selectCols.add(colSql);
-                }
-            }
-        }
-        return selectCols.isEmpty() ? "*" : String.join(", ", selectCols);
     }
 
     /**

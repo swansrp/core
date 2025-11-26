@@ -1,8 +1,13 @@
 package com.bidr.forge.service.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.forge.service.driver.builder.SqlBuilder;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -147,4 +152,86 @@ public interface PortalDataDriver<VO> {
      * @return 影响行数
      */
     int batchDelete(List<Object> ids, String portalName, Long roleId);
+
+    // 新增：抽取公共查询流程的默认方法（供 Matrix/Dataset 复用）
+    default Page<Map<String, Object>> defaultQueryPage(AdvancedQueryReq req,
+                                                       Map<String, String> aliasMap,
+                                                       SqlBuilder builder,
+                                                       JdbcConnectService jdbcConnectService,
+                                                       String dataSource) {
+        if (FuncUtil.isNotEmpty(dataSource)) {
+            jdbcConnectService.switchDataSource(dataSource);
+        }
+        try {
+            Map<String, Object> parameters = new HashMap<>();
+            // 优化：一次解析生成 SELECT 和 COUNT
+            SqlBuilder.SqlParts sqlParts = builder.buildSqlParts(req, aliasMap, parameters);
+
+            Long total = jdbcConnectService.queryForObject(sqlParts.getCountSql(), parameters, Long.class);
+
+            Page<Map<String, Object>> page = new Page<>(req.getCurrentPage(), req.getPageSize());
+            page.setTotal(total == null ? 0 : total);
+            if (page.getTotal() > 0) {
+                List<Map<String, Object>> records = jdbcConnectService.query(sqlParts.getSelectSql(), parameters);
+                page.setRecords(records);
+            }
+            return page;
+        } finally {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
+    }
+
+    default List<Map<String, Object>> defaultQueryList(AdvancedQueryReq req,
+                                                       Map<String, String> aliasMap,
+                                                       SqlBuilder builder,
+                                                       JdbcConnectService jdbcConnectService,
+                                                       String dataSource) {
+        if (FuncUtil.isNotEmpty(dataSource)) {
+            jdbcConnectService.switchDataSource(dataSource);
+        }
+        try {
+            Map<String, Object> parameters = new HashMap<>();
+
+            // 不分页查询：复制请求并移除分页参数
+            AdvancedQueryReq noPagingReq = new AdvancedQueryReq();
+            ReflectionUtil.copyProperties(req, noPagingReq);
+            noPagingReq.setCurrentPage(null);
+            noPagingReq.setPageSize(null);
+
+            String selectSql = builder.buildSelect(noPagingReq, aliasMap, parameters);
+            return jdbcConnectService.query(selectSql, parameters);
+        } finally {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
+    }
+
+    default Map<String, Object> defaultQueryOne(AdvancedQueryReq req,
+                                                Map<String, String> aliasMap,
+                                                SqlBuilder builder,
+                                                JdbcConnectService jdbcConnectService,
+                                                String dataSource) {
+        // 限制查询 1 条
+        req.setCurrentPage(1L);
+        req.setPageSize(1L);
+        List<Map<String, Object>> list = defaultQueryList(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    default Long defaultCount(AdvancedQueryReq req,
+                              Map<String, String> aliasMap,
+                              SqlBuilder builder,
+                              JdbcConnectService jdbcConnectService,
+                              String dataSource) {
+        if (FuncUtil.isNotEmpty(dataSource)) {
+            jdbcConnectService.switchDataSource(dataSource);
+        }
+        try {
+            Map<String, Object> parameters = new HashMap<>();
+            String countSql = builder.buildCount(req, aliasMap, parameters);
+            Long result = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
+            return result == null ? 0L : result;
+        } finally {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
+    }
 }
