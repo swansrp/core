@@ -1,5 +1,6 @@
 package com.bidr.forge.service.portal;
 
+import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalColumnService;
@@ -13,7 +14,7 @@ import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.dao.repository.SysMatrixService;
-import com.bidr.forge.service.driver.PortalDataMode;
+import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.vo.portal.GeneratePortalReq;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
@@ -194,7 +195,7 @@ public class PortalGenerateService {
         portal.setReferenceId(String.valueOf(dataset.getId()));
 
         // Dataset不支持树形结构，不设置pid相关字段
-        portal.setIdColumn(StringUtil.EMPTY);
+        portal.setIdColumn("auto_uuid_row_key");
         portal.setOrderColumn(StringUtil.EMPTY);
         portal.setPidColumn(StringUtil.EMPTY);
         portal.setNameColumn(StringUtil.EMPTY);
@@ -336,7 +337,7 @@ public class PortalGenerateService {
             portalColumn.setDisplayName(datasetColumn.getColumnAlias());
 
             // Dataset字段类型默认为文本
-            portalColumn.setFieldType("01"); // 文本类型
+            portalColumn.setFieldType(PortalFieldDict.STRING.getValue());
             portalColumn.setReference(StringUtil.EMPTY);
             portalColumn.setEntityField(StringUtil.EMPTY);
             portalColumn.setDisplayOrder(displayOrder++);

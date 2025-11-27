@@ -1,4 +1,4 @@
-package com.bidr.forge.service.driver;
+package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.dao.entity.SysPortal;
@@ -10,12 +10,26 @@ import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
-import com.bidr.forge.service.driver.builder.DatasetSqlBuilder;
+import com.bidr.forge.engine.DriverCapability;
+import com.bidr.forge.engine.PortalDataMode;
+import com.bidr.forge.engine.builder.DatasetSqlBuilder;
+import com.bidr.forge.engine.builder.SqlBuilder;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.vo.common.IdPidReqVO;
+import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.kernel.vo.common.TreeDataItemVO;
+import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.StatisticRes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -33,7 +47,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
+public class DatasetDriver implements PortalDriver<Map<String, Object>> {
 
     private final SysPortalService sysPortalService;
     private final SysDatasetService sysDatasetService;
@@ -72,75 +86,68 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
+    public SqlBuilder getSqlBuilder(String portalName, Long roleId) {
         Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
         List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
+        return new DatasetSqlBuilder(datasetId, datasets, columns);
+    }
+
+    @Override
+    public JdbcConnectService getJdbcConnectService() {
+        return jdbcConnectService;
+    }
+
+    @Override
+    public String getDataSource(String portalName, Long roleId) {
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
+        SysDataset dataset = sysDatasetService.selectById(datasetId);
+        if (dataset == null) {
+            LoggerFactory.getLogger(getClass()).warn("未找到Dataset配置，使用默认数据源，datasetId: {}", datasetId);
+            return null;
+        }
+        return dataset.getDataSource();
+    }
+
+    @Override
+    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
+        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
 
         if (datasets.isEmpty()) {
             return new Page<>(req.getCurrentPage(), req.getPageSize());
         }
 
-        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = getDatasetDataSource(datasetId);
-
-        // 使用接口默认方法（内部调用 buildSqlParts 一次解析）
-        return defaultQueryPage(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return doQueryPage(req, portalName, roleId);
     }
 
     @Override
     public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, Long roleId) {
         Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
-        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         if (datasets.isEmpty()) {
             return Collections.emptyList();
         }
 
-        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = getDatasetDataSource(datasetId);
-
-        // 使用接口默认方法
-        return defaultQueryList(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return doQueryList(req, portalName, roleId);
     }
 
     @Override
     public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, Long roleId) {
         Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
-        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
 
         if (datasets.isEmpty()) {
             return null;
         }
 
-        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = getDatasetDataSource(datasetId);
-
-        // 使用接口默认方法
-        return defaultQueryOne(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return doQueryOne(req, portalName, roleId);
     }
 
     @Override
-    public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
-        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
-        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
-        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
-
-        if (datasets.isEmpty()) {
-            return 0L;
-        }
-
-        DatasetSqlBuilder builder = new DatasetSqlBuilder(datasetId, datasets, columns);
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = getDatasetDataSource(datasetId);
-
-        // 使用接口默认方法
-        return defaultCount(req, aliasMap, builder, jdbcConnectService, dataSource);
+    public Map<String, Object> selectById(Object id, String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Dataset模式不支持按主键ID查询操作");
     }
 
     @Override
@@ -179,43 +186,59 @@ public class DatasetDriver implements PortalDataDriver<Map<String, Object>> {
         throw new UnsupportedOperationException("Dataset模式不支持DELETE操作");
     }
 
-    /**
-     * 从SysPortal获取referenceId作为datasetId
-     *
-     * @param portalName Portal名称
-     * @param roleId     角色ID
-     * @return datasetId
-     */
-    private Long getDatasetIdFromPortal(String portalName, Long roleId) {
-        SysPortal portal = sysPortalService.getByName(portalName, roleId);
-        if (portal == null) {
-            throw new IllegalArgumentException("未找到Portal配置: " + portalName);
+    // ========== 统计方法（暂不支持） ==========
+
+    @Override
+    public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
+        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
+        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
+
+        if (datasets.isEmpty()) {
+            return 0L;
         }
 
-        String referenceId = portal.getReferenceId();
-        if (FuncUtil.isEmpty(referenceId)) {
-            throw new IllegalArgumentException("Portal的referenceId为空: " + portalName);
-        }
-
-        try {
-            return Long.parseLong(referenceId);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Portal的referenceId格式错误: " + referenceId, e);
-        }
+        return doCount(req, portalName, roleId);
     }
 
-    /**
-     * 获取Dataset的数据源配置
-     *
-     * @param datasetId 数据集ID
-     * @return 数据源名称
-     */
-    private String getDatasetDataSource(Long datasetId) {
-        SysDataset dataset = sysDatasetService.selectById(datasetId);
-        if (dataset == null) {
-            log.warn("未找到Dataset配置，使用默认数据源，datasetId: {}", datasetId);
-            return null;
-        }
-        return dataset.getDataSource();
+    @Override
+    public Map<String, Object> summary(AdvancedSummaryReq req, String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Dataset模式暂不支持汇总统计操作");
+    }
+
+    @Override
+    public List<StatisticRes> statistic(AdvancedStatisticReq req, String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Dataset模式暂不支持指标统计操作");
+    }
+
+    // ========== 树形结构方法（暂不支持） ==========
+
+    @Override
+    public List<TreeDataResVO> getTreeData(String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Dataset不支持树形结构");
+    }
+
+    @Override
+    public List<TreeDataResVO> getAdvancedTreeData(AdvancedQueryReq req, String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public TreeDataItemVO getParent(IdReqVO req, String portalName, Long roleId) {
+        return null;
+    }
+
+    @Override
+    public List<TreeDataItemVO> getChildren(IdReqVO req, String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<TreeDataItemVO> getBrothers(IdReqVO req, String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void updatePid(IdPidReqVO req, String portalName, Long roleId) {
+
     }
 }

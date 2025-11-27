@@ -1,26 +1,37 @@
-package com.bidr.forge.service.driver;
+package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.forge.bo.MatrixColumns;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.SysMatrixService;
-import com.bidr.forge.service.driver.builder.MatrixSqlBuilder;
+import com.bidr.forge.engine.DriverCapability;
+import com.bidr.forge.engine.PortalDataMode;
+import com.bidr.forge.engine.builder.MatrixSqlBuilder;
+import com.bidr.forge.engine.builder.SqlBuilder;
+import com.bidr.forge.engine.driver.inf.DriverTreeInf;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.common.IdPidReqVO;
+import com.bidr.kernel.vo.common.IdReqVO;
+import com.bidr.kernel.vo.common.TreeDataItemVO;
+import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.ConditionVO;
+import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.StatisticRes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -33,7 +44,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
+public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     private final SysMatrixService sysMatrixService;
     private final JdbcConnectService jdbcConnectService;
@@ -67,45 +78,39 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
+    public SqlBuilder getSqlBuilder(String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
+        return new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
+    }
 
-        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = matrixColumns.getDataSource();
+    @Override
+    public JdbcConnectService getJdbcConnectService() {
+        return jdbcConnectService;
+    }
 
-        // 使用接口默认方法（内部调用 buildSqlParts 一次解析）
-        return defaultQueryPage(req, aliasMap, builder, jdbcConnectService, dataSource);
+    @Override
+    public String getDataSource(String portalName, Long roleId) {
+        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        return matrixColumns != null ? matrixColumns.getDataSource() : null;
+    }
+
+    @Override
+    public Page<Map<String, Object>> queryPage(AdvancedQueryReq req, String portalName, Long roleId) {
+        return doQueryPage(req, portalName, roleId);
     }
 
     @Override
     public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
-        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
-
-        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = matrixColumns.getDataSource();
-
-        // 使用接口默认方法
-        return defaultQueryList(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return doQueryList(req, portalName, roleId);
     }
 
     @Override
     public Map<String, Object> queryOne(AdvancedQueryReq req, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
-        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
-
-        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = matrixColumns.getDataSource();
-
-        // 使用接口默认方法
-        return defaultQueryOne(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return doQueryOne(req, portalName, roleId);
     }
 
-    // 新增：按主键查询单条记录
+    @Override
     public Map<String, Object> selectById(Object id, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
@@ -140,23 +145,7 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
         req.setCondition(condition);
 
         // 使用统一默认方法执行（含数据源切换、SQL构建与查询）
-        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = matrixColumns.getDataSource();
-        return defaultQueryOne(req, aliasMap, builder, jdbcConnectService, dataSource);
-    }
-
-    @Override
-    public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
-        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
-
-        MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-        String dataSource = matrixColumns.getDataSource();
-
-        // 使用接口默认方法
-        return defaultCount(req, aliasMap, builder, jdbcConnectService, dataSource);
+        return doQueryOne(req, portalName, roleId);
     }
 
     @Override
@@ -264,6 +253,24 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
         return totalAffected;
     }
 
+    // ========== 统计方法（暂不支持） ==========
+
+
+    @Override
+    public Long count(AdvancedQueryReq req, String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Matrix模式暂不支持统计计数操作，请使用count方法");
+    }
+
+    @Override
+    public Map<String, Object> summary(AdvancedSummaryReq req, String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Matrix模式暂不支持汇总统计操作");
+    }
+
+    @Override
+    public List<StatisticRes> statistic(AdvancedStatisticReq req, String portalName, Long roleId) {
+        throw new UnsupportedOperationException("Matrix模式暂不支持指标统计操作");
+    }
+
     /**
      * 获取Matrix配置和列
      */
@@ -331,5 +338,35 @@ public class MatrixDriver implements PortalDataDriver<Map<String, Object>> {
                 }
             }
         }
+    }
+
+    @Override
+    public List<TreeDataResVO> getTreeData(String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<TreeDataResVO> getAdvancedTreeData(AdvancedQueryReq req, String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public TreeDataItemVO getParent(IdReqVO req, String portalName, Long roleId) {
+        return null;
+    }
+
+    @Override
+    public List<TreeDataItemVO> getChildren(IdReqVO req, String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<TreeDataItemVO> getBrothers(IdReqVO req, String portalName, Long roleId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void updatePid(IdPidReqVO req, String portalName, Long roleId) {
+
     }
 }

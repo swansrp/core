@@ -5,7 +5,7 @@ import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
-import com.bidr.forge.service.driver.PortalDataMode;
+import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.vo.dataset.SysDatasetVO;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.common.IdReqVO;

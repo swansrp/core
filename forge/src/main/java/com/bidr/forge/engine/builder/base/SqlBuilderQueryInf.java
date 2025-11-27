@@ -1,16 +1,17 @@
-package com.bidr.forge.service.driver.builder;
+package com.bidr.forge.engine.builder.base;
 
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
 import java.util.Map;
 
 /**
- * SQL构建器接口
+ * SQL构建器查询接口
+ * 定义查询SQL构建方法
  *
  * @author Sharp
- * @since 2025-11-24
+ * @since 2025-11-27
  */
-public interface SqlBuilder {
+public interface SqlBuilderQueryInf extends SqlBuilderBaseInf {
 
     /**
      * 构建SELECT查询SQL
@@ -47,35 +48,6 @@ public interface SqlBuilder {
                 buildCount(req, aliasMap, new java.util.HashMap<>(parameters))
         );
     }
-
-    /**
-     * 构建INSERT SQL
-     *
-     * @param data       数据对象
-     * @param aliasMap   字段别名映射
-     * @param parameters 参数Map（输出参数）
-     * @return INSERT SQL
-     */
-    String buildInsert(Map<String, Object> data, Map<String, String> aliasMap, Map<String, Object> parameters);
-
-    /**
-     * 构建UPDATE SQL
-     *
-     * @param data       数据对象
-     * @param aliasMap   字段别名映射
-     * @param parameters 参数Map（输出参数）
-     * @return UPDATE SQL
-     */
-    String buildUpdate(Map<String, Object> data, Map<String, String> aliasMap, Map<String, Object> parameters);
-
-    /**
-     * 构建DELETE SQL
-     *
-     * @param id         主键ID
-     * @param parameters 参数Map（输出参数）
-     * @return DELETE SQL
-     */
-    String buildDelete(Object id, Map<String, Object> parameters);
 
     /**
      * SQL片段容器（用于分页查询优化）

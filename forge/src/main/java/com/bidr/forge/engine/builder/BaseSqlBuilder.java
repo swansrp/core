@@ -1,5 +1,6 @@
-package com.bidr.forge.service.driver.builder;
+package com.bidr.forge.engine.builder;
 
+import com.bidr.forge.engine.builder.base.SqlBuilderQueryInf;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
@@ -24,7 +25,7 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
      * 子类只需提供差异化的部分：SELECT 列、FROM 子句、查询条件构建
      */
     @Override
-    public SqlParts buildSqlParts(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, Object> parameters) {
+    public SqlBuilderQueryInf.SqlParts buildSqlParts(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, Object> parameters) {
         // 1. 构建 SELECT 列（子类实现）
         String selectColumns = buildSelectColumns(aliasMap);
 
@@ -45,7 +46,7 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
         String clausesWithoutOrder = buildQueryClauses(req, aliasMap, new HashMap<>(), false);
         String countSql = buildCountSql(fromClause, clausesWithoutOrder);
 
-        return new SqlParts(selectSql.toString(), countSql);
+        return new SqlBuilderQueryInf.SqlParts(selectSql.toString(), countSql);
     }
 
     /**

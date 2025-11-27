@@ -13,7 +13,7 @@ import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.SysMatrixChangeLogService;
 import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.dao.repository.SysMatrixService;
-import com.bidr.forge.service.driver.PortalDataMode;
+import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.vo.matrix.SysMatrixVO;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
