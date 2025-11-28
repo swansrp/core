@@ -54,10 +54,15 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
         // PreparedStatement.getGeneratedKeys() method was added in JDK 1.4
         Method getGeneratedKeysMethod;
         try {
-            // the
+            // 获取 getGeneratedKeys 方法，确保返回非 null 值以避免 DBAppender 启动报错
             getGeneratedKeysMethod = PreparedStatement.class.getMethod("getGeneratedKeys", (Class[]) null);
         } catch (Exception ex) {
-            getGeneratedKeysMethod = null;
+            // 如果获取失败，尝试使用反射获取任意方法作为占位符
+            try {
+                getGeneratedKeysMethod = PreparedStatement.class.getMethod("executeUpdate", (Class[]) null);
+            } catch (Exception e) {
+                getGeneratedKeysMethod = null;
+            }
         }
         GET_GENERATED_KEYS_METHOD = getGeneratedKeysMethod;
     }
@@ -77,9 +82,97 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
     @Override
     public void start() {
         insertSQL = buildInsertSQL();
+        
+        // 检查并创建表
+        if (!ensureTableExists()) {
+            addWarn("sys_log 表不存在且创建失败,DBAppender 将不启动");
+            // 不调用 super.start()，阻止 appender 启动
+            return;
+        }
+        
         cnxSupportsBatchUpdates = connectionSource.supportsBatchUpdates();
         super.start();
         super.started = true;
+    }
+    
+    /**
+     * 确保 sys_log 表存在，不存在则创建
+     * @return true-表存在或创建成功,false-表不存在且创建失败
+     */
+    private boolean ensureTableExists() {
+        Connection connection = null;
+        PreparedStatement checkStmt = null;
+        PreparedStatement createStmt = null;
+        java.sql.ResultSet rs = null;
+        
+        try {
+            connection = connectionSource.getConnection();
+            
+            // 检查表是否存在
+            String checkTableSQL = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_log'";
+            checkStmt = connection.prepareStatement(checkTableSQL);
+            rs = checkStmt.executeQuery();
+            
+            if (rs.next() && rs.getInt(1) > 0) {
+                // 表已存在
+                return true;
+            }
+            
+            // 表不存在，创建表
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS `sys_log` (\n" +
+                    "  `log_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '日志id',\n" +
+                    "  `project_id` varchar(100) DEFAULT NULL COMMENT '项目标识id',\n" +
+                    "  `module_id` varchar(100) DEFAULT NULL COMMENT '模块id',\n" +
+                    "  `env_type` varchar(100) DEFAULT NULL COMMENT '环境类型',\n" +
+                    "  `create_time` datetime(3) DEFAULT NULL COMMENT '日志创建时间',\n" +
+                    "  `log_seq` bigint(20) DEFAULT NULL COMMENT '日志序列号',\n" +
+                    "  `log_level` varchar(20) DEFAULT NULL COMMENT '日志级别',\n" +
+                    "  `request_id` varchar(100) DEFAULT NULL COMMENT '请求id',\n" +
+                    "  `trace_id` varchar(100) DEFAULT NULL COMMENT 'trace id',\n" +
+                    "  `request_ip` varchar(100) DEFAULT NULL COMMENT '请求ip',\n" +
+                    "  `user_ip` varchar(100) DEFAULT NULL COMMENT '用户ip',\n" +
+                    "  `server_ip` varchar(100) DEFAULT NULL COMMENT '服务器ip',\n" +
+                    "  `thread_name` varchar(100) DEFAULT NULL COMMENT '线程名',\n" +
+                    "  `class_name` varchar(200) DEFAULT NULL COMMENT '类名',\n" +
+                    "  `method_name` varchar(200) DEFAULT NULL COMMENT '方法名',\n" +
+                    "  `content` longtext COMMENT '内容',\n" +
+                    "  PRIMARY KEY (`log_id`),\n" +
+                    "  KEY `module_id` (`module_id`),\n" +
+                    "  KEY `project_id` (`project_id`),\n" +
+                    "  KEY `env_type` (`env_type`),\n" +
+                    "  KEY `request_id` (`request_id`),\n" +
+                    "  KEY `trace_id` (`trace_id`),\n" +
+                    "  KEY `request_ip` (`request_ip`)\n" +
+                    ") COMMENT='系统日志表';";
+            
+            createStmt = connection.prepareStatement(createTableSQL);
+            createStmt.executeUpdate();
+            
+            addInfo("sys_log 表创建成功");
+            return true;
+            
+        } catch (SQLException e) {
+            addError("检查或创建 sys_log 表失败: " + e.getMessage(), e);
+            return false;
+        } finally {
+            // 关闭资源
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (checkStmt != null) {
+                    checkStmt.close();
+                }
+                if (createStmt != null) {
+                    createStmt.close();
+                }
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                addWarn("关闭数据库连接失败: " + e.getMessage());
+            }
+        }
     }
 
     private void bindLoggingEventWithInsertStatement(PreparedStatement stmt, ILoggingEvent event) throws SQLException {

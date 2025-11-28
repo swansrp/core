@@ -5,7 +5,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,8 +53,12 @@ public interface MybatisPlusTableInitializerInf {
             DatabaseMetaData metaData = connection.getMetaData();
             String createSql = getCreateSql();
             if (FuncUtil.isNotEmpty(createSql)) {
-                handleCreateDDL(tableName, createSql, stmt, metaData);
+                boolean isNewTable = handleCreateDDL(tableName, createSql, stmt, metaData);
                 handleUpgradeDDL(tableName, getUpgradeScripts(), stmt, metaData);
+                // 如果是新建表，执行初始化数据脚本
+                if (isNewTable) {
+                    handleInitData(tableName, getInitDataScripts(), stmt);
+                }
             }
         } catch (Exception e) {
             LoggerFactory.getLogger(getClass()).error("表 {} 检查失败", tableName, e);
@@ -80,40 +86,23 @@ public interface MybatisPlusTableInitializerInf {
      * @param createSql 创建表DDL语句
      * @param stmt      数据库连接
      * @param metaData  数据库元数据
+     * @return 是否为新建表（true-新建，false-已存在）
      * @throws SQLException 异常
      */
-    default void handleCreateDDL(String tableName, String createSql, Statement stmt,
+    default boolean handleCreateDDL(String tableName, String createSql, Statement stmt,
                                  DatabaseMetaData metaData) throws SQLException {
         if (FuncUtil.isNotEmpty(createSql)) {
-            // 确保 sys_table_version 表存在
-            ensureSysTableVersionTable(metaData, stmt);
+            // sys_table_version 表已由 MybatisPlusConfig 提前创建，这里不再重复检查
             if (!tableExists(metaData, tableName)) {
                 stmt.executeUpdate(createSql);
                 stmt.executeUpdate(
                         "INSERT INTO sys_table_version(table_name, version) VALUES ('" + tableName + "', 0) " +
                                 "ON DUPLICATE KEY UPDATE version=0");
                 LoggerFactory.getLogger(getClass()).info("表 {} 创建成功", tableName);
+                return true; // 返回 true 表示是新建的表
             }
         }
-    }
-
-    /**
-     * 初始化 sys_table_version 表
-     * @param stmt      数据库连接
-     * @param metaData  数据库元数据
-     * @throws SQLException 异常
-     */
-    default void ensureSysTableVersionTable(DatabaseMetaData metaData, Statement stmt) throws SQLException {
-        String sysTableName = "sys_table_version";
-        if (!tableExists(metaData, sysTableName)) {
-            String createSysTableSql = "CREATE TABLE IF NOT EXISTS `sys_table_version` (\n" +
-                    "              `table_name` varchar(255) NOT NULL COMMENT '表名',\n" +
-                    "              `version` int NOT NULL COMMENT '版本',\n" +
-                    "              `update_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',\n" +
-                    "              PRIMARY KEY (`table_name`)\n" +
-                    "            ) COMMENT='表版本控制';";
-            stmt.executeUpdate(createSysTableSql);
-        }
+        return false; // 表已存在
     }
 
     /**
@@ -181,6 +170,57 @@ public interface MybatisPlusTableInitializerInf {
     LinkedHashMap<Integer, String> getUpgradeScripts();
 
     /**
+     * 获取初始化数据脚本集合。
+     * <p>
+     * 仅在新建表时执行一次，已存在的表不会执行。<br>
+     * 按添加顺序执行，无需版本号。
+     * </p>
+     *
+     * @return 初始化数据 SQL 列表
+     */
+    default List<String> getInitDataScripts() {
+        return new ArrayList<>();
+    }
+
+    /**
+     * 处理初始化数据脚本
+     * <p>
+     * 仅在新建表时调用，按添加顺序执行 DML 脚本。
+     * </p>
+     *
+     * @param tableName 表名
+     * @param scripts   初始化数据脚本列表
+     * @param stmt      数据库连接
+     * @throws SQLException SQL 异常
+     */
+    default void handleInitData(String tableName, List<String> scripts,
+                                Statement stmt) throws SQLException {
+        if (scripts == null || scripts.isEmpty()) {
+            return;
+        }
+
+        LoggerFactory.getLogger(getClass()).info("开始执行表 {} 的初始化数据脚本，共 {} 条", tableName, scripts.size());
+
+        int index = 1;
+        for (String sql : scripts) {
+            try {
+                LoggerFactory.getLogger(getClass())
+                        .info("执行表 {} 初始化数据 [{}/{}]", tableName, index, scripts.size());
+                stmt.executeUpdate(sql);
+                LoggerFactory.getLogger(getClass())
+                        .info("执行表 {} 初始化数据 [{}/{}] 完成", tableName, index, scripts.size());
+            } catch (SQLException e) {
+                LoggerFactory.getLogger(getClass())
+                        .error("执行表 {} 初始化数据 [{}/{}] 失败: {}", tableName, index, scripts.size(), e.getMessage());
+                // 继续执行后续脚本，不中断整个初始化进程
+            }
+            index++;
+        }
+
+        LoggerFactory.getLogger(getClass()).info("表 {} 初始化数据执行完毕", tableName);
+    }
+
+    /**
      * 判断表是否存在
      *
      * @param metaData  数据库元数据
@@ -189,7 +229,9 @@ public interface MybatisPlusTableInitializerInf {
      * @throws SQLException SQL 异常
      */
     default boolean tableExists(DatabaseMetaData metaData, String tableName) throws SQLException {
-        try (ResultSet rs = metaData.getTables(null, null, tableName, new String[]{"TABLE"})) {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名表
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getTables(catalog, null, tableName, new String[]{"TABLE"})) {
             return rs.next();
         }
     }
@@ -305,7 +347,9 @@ public interface MybatisPlusTableInitializerInf {
      * @throws SQLException SQL 异常
      */
     default boolean columnExists(DatabaseMetaData metaData, String tableName, String columnName) throws SQLException {
-        try (ResultSet rs = metaData.getColumns(null, null, tableName, columnName)) {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名表
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getColumns(catalog, null, tableName, columnName)) {
             return rs.next();
         }
     }
@@ -322,7 +366,9 @@ public interface MybatisPlusTableInitializerInf {
      */
     default boolean shouldSkipColumn(DatabaseMetaData metaData, String table, String column,
                                      String sqlSegment) throws SQLException {
-        try (ResultSet rs = metaData.getColumns(null, null, table, column)) {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名表
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getColumns(catalog, null, table, column)) {
             if (!rs.next()) {
                 return false;
             }
@@ -352,7 +398,9 @@ public interface MybatisPlusTableInitializerInf {
      * @throws SQLException SQL 异常
      */
     default boolean indexExists(DatabaseMetaData metaData, String tableName, String indexName) throws SQLException {
-        try (ResultSet rs = metaData.getIndexInfo(null, null, tableName, false, false)) {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名表
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getIndexInfo(catalog, null, tableName, false, false)) {
             while (rs.next()) {
                 String idx = rs.getString("INDEX_NAME");
                 if (idx != null && idx.equalsIgnoreCase(indexName)) {
