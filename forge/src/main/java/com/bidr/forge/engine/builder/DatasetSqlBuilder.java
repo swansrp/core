@@ -1,8 +1,10 @@
 package com.bidr.forge.engine.builder;
 
+import com.bidr.forge.constant.dict.JoinTypeDict;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.utils.DictEnumUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -194,7 +196,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
                 }
                 if (FuncUtil.isNotEmpty(dataset.getJoinType())) {
                     fromClause.append(" ")
-                            .append(dataset.getJoinType().toUpperCase())
+                            .append(DictEnumUtil.getEnumByValue(dataset.getJoinType(), JoinTypeDict.class, JoinTypeDict.INNER))
                             .append(" JOIN ")
                             .append(dataset.getTableSql());
 

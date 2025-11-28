@@ -1,6 +1,8 @@
 package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.admin.dao.entity.SysPortalColumn;
+import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.forge.bo.MatrixColumns;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
@@ -9,7 +11,6 @@ import com.bidr.forge.engine.DriverCapability;
 import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.engine.builder.MatrixSqlBuilder;
 import com.bidr.forge.engine.builder.SqlBuilder;
-import com.bidr.forge.engine.driver.inf.DriverTreeInf;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
@@ -21,11 +22,8 @@ import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.ConditionVO;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.StatisticRes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +46,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     private final SysMatrixService sysMatrixService;
     private final JdbcConnectService jdbcConnectService;
+    private final SysPortalService sysPortalService;
 
     @Override
     public DriverCapability getCapability() {
@@ -59,21 +58,19 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         return PortalDataMode.MATRIX;
     }
 
+    /**
+     * 构建别名映射<VO字段名, 数据库列名>
+     * @param portalName Portal名称
+     * @param roleId     角色ID
+     * @return 别名映射
+     */
     @Override
     public Map<String, String> buildAliasMap(String portalName, Long roleId) {
-        // portalName在Matrix模式下可能是tableName或matrixId
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
-        if (matrixColumns == null || matrixColumns.getColumns() == null) {
-            return new LinkedHashMap<>();
-        }
-
         Map<String, String> aliasMap = new LinkedHashMap<>();
-        for (SysMatrixColumn column : matrixColumns.getColumns()) {
-            // VO字段名 -> 数据库列名
-            String columnName = column.getColumnName();
-            aliasMap.put(columnName, columnName);
+        List<SysPortalColumn> sysPortalColumnList = sysPortalService.getColumnsByPortalName(portalName, roleId);
+        for (SysPortalColumn sysPortalColumn : sysPortalColumnList) {
+            aliasMap.put(sysPortalColumn.getProperty(), sysPortalColumn.getDbField());
         }
-
         return aliasMap;
     }
 
@@ -159,9 +156,9 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
     public int insert(Map<String, Object> data, String portalName, Long roleId) {
         MatrixColumns matrixColumns = getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
-
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
         // 数据校验
-        validateInsertData(data, matrixColumns.getColumns());
+        validateInsertData(data,aliasMap, matrixColumns.getColumns());
 
         // 切换数据源
         if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
@@ -169,10 +166,8 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         }
 
         try {
-            MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-            Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
             Map<String, Object> parameters = new HashMap<>();
-
+            MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
             String insertSql = builder.buildInsert(data, aliasMap, parameters);
             return jdbcConnectService.update(insertSql, parameters);
         } finally {
@@ -279,12 +274,15 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         return sysMatrixService.getMatrixColumnsByPortalName(portalName);
     }
 
+
+
     /**
      * 校验插入数据
      */
-    private void validateInsertData(Map<String, Object> data, List<SysMatrixColumn> columns) {
+    private void validateInsertData(Map<String, Object> data,Map<String, String> aliasMap, List<SysMatrixColumn> columns) {
         for (SysMatrixColumn column : columns) {
             String columnName = column.getColumnName();
+            columnName = findVoColumnName(columnName, aliasMap);
             Object value = data.get(columnName);
 
             // 必填校验（排除主键）
@@ -368,5 +366,17 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
     @Override
     public void updatePid(IdPidReqVO req, String portalName, Long roleId) {
 
+    }
+
+    /**
+     * 根据数据库列名查找VO字段名
+     */
+    private String findVoColumnName(String columnName, Map<String, String> aliasMap) {
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            if (entry.getValue().equals(columnName)) {
+                return entry.getKey();
+            }
+        }
+        return columnName;
     }
 }

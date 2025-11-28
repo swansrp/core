@@ -128,4 +128,15 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         }
         return new java.util.ArrayList<>();
     }
+
+    public List<SysPortalColumn> getColumnsByPortalName(String portalName, Long roleId) {
+        MPJLambdaWrapper<SysPortal> wrapper = super.getMPJLambdaWrapper();
+        wrapper.selectAll(SysPortalColumn.class);
+        wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);
+        wrapper.eq(SysPortal::getName, portalName);
+        wrapper.eq(SysPortal::getRoleId, roleId);
+        wrapper.eq(SysPortalColumn::getRoleId, roleId);
+        wrapper.orderByAsc(SysPortalColumn::getDisplayOrder);
+        return super.selectJoinList(SysPortalColumn.class, wrapper);
+    }
 }
