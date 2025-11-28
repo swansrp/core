@@ -1,7 +1,6 @@
 package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.forge.bo.MatrixColumns;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
@@ -64,15 +63,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
      * @param roleId     角色ID
      * @return 别名映射
      */
-    @Override
-    public Map<String, String> buildAliasMap(String portalName, Long roleId) {
-        Map<String, String> aliasMap = new LinkedHashMap<>();
-        List<SysPortalColumn> sysPortalColumnList = sysPortalService.getColumnsByPortalName(portalName, roleId);
-        for (SysPortalColumn sysPortalColumn : sysPortalColumnList) {
-            aliasMap.put(sysPortalColumn.getProperty(), sysPortalColumn.getDbField());
-        }
-        return aliasMap;
-    }
+
 
     @Override
     public SqlBuilder getSqlBuilder(String portalName, Long roleId) {
@@ -368,15 +359,4 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     }
 
-    /**
-     * 根据数据库列名查找VO字段名
-     */
-    private String findVoColumnName(String columnName, Map<String, String> aliasMap) {
-        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
-            if (entry.getValue().equals(columnName)) {
-                return entry.getKey();
-            }
-        }
-        return columnName;
-    }
 }

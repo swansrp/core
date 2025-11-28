@@ -79,7 +79,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         for (SysDatasetColumn column : columns) {
             if (CommonConst.YES.equals(column.getIsVisible())) {
                 String colSql = column.getColumnSql();
-                String colAlias = column.getColumnAlias();
+                String colAlias = findVoColumnName(colSql,aliasMap);
                 if (FuncUtil.isNotEmpty(colAlias)) {
                     selectCols.add(colSql + " AS `" + colAlias + "`");
                 } else {

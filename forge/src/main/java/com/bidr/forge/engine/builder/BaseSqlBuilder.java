@@ -247,4 +247,13 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
     protected Object getFirstValue(List<?> value) {
         return FuncUtil.isNotEmpty(value) ? value.get(0) : null;
     }
+
+    public String findVoColumnName(String columnName, Map<String, String> aliasMap) {
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            if (entry.getValue().equals(columnName)) {
+                return entry.getKey();
+            }
+        }
+        return columnName;
+    }
 }

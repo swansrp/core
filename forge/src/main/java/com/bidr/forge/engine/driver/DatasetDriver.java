@@ -66,26 +66,6 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
     }
 
     @Override
-    public Map<String, String> buildAliasMap(String portalName, Long roleId) {
-        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
-        List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
-
-        Map<String, String> aliasMap = new LinkedHashMap<>();
-        for (SysDatasetColumn column : columns) {
-            if (CommonConst.YES.equals(column.getIsVisible())) {
-                String columnAlias = column.getColumnAlias();
-                String columnSql = column.getColumnSql();
-                if (FuncUtil.isNotEmpty(columnAlias)) {
-                    // VO字段名 -> SQL表达式
-                    aliasMap.put(columnAlias, columnSql);
-                }
-            }
-        }
-
-        return aliasMap;
-    }
-
-    @Override
     public SqlBuilder getSqlBuilder(String portalName, Long roleId) {
         Long datasetId = getDatasetIdFromPortal(portalName, roleId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);

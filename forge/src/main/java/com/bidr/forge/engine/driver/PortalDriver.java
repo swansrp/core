@@ -1,6 +1,7 @@
 package com.bidr.forge.engine.driver;
 
 import com.bidr.admin.dao.entity.SysPortal;
+import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.repository.SysDatasetService;
@@ -11,6 +12,10 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Portal数据驱动统合接口（最顶层接口）
@@ -118,5 +123,26 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Portal的referenceId格式错误: " + referenceId, e);
         }
+    }
+
+    default Map<String, String> buildAliasMap(String portalName, Long roleId) {
+        Map<String, String> aliasMap = new LinkedHashMap<>();
+        List<SysPortalColumn> sysPortalColumnList = getSysPortalService().getColumnsByPortalName(portalName, roleId);
+        for (SysPortalColumn sysPortalColumn : sysPortalColumnList) {
+            aliasMap.put(sysPortalColumn.getProperty(), sysPortalColumn.getDbField());
+        }
+        return aliasMap;
+    }
+
+    /**
+     * 根据数据库列名查找VO字段名
+     */
+    default String findVoColumnName(String columnName, Map<String, String> aliasMap) {
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            if (entry.getValue().equals(columnName)) {
+                return entry.getKey();
+            }
+        }
+        return columnName;
     }
 }
