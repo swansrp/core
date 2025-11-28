@@ -21,6 +21,7 @@
  */
 package com.bidr.wechat.sdk;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 
@@ -47,6 +48,7 @@ import java.util.Random;
  * 	<li>如果安装了JDK，将两个jar文件放到%JDK_HOME%\jre\lib\security目录下覆盖原来文件</li>
  * </ol>
  */
+@Slf4j
 public class WxBizMsgCrypt {
     static Charset CHARSET = StandardCharsets.UTF_8;
     Base64 base64 = new Base64();
@@ -257,6 +259,7 @@ public class WxBizMsgCrypt {
 
         // appid不相同的情况
         if (!from_appid.equals(appId)) {
+            log.error("解密后得到的appid与传入的appid不匹配，appid=" + from_appid + "，传入appid=" + appId);
             throw new AesException(AesException.ValidateAppidError);
         }
         return xmlContent;
