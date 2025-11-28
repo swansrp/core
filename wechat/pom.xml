@@ -10,14 +10,59 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>wechat</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>${jarVersion}</version>
     <packaging>jar</packaging>
+
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>${jarVersion}</kernel.version>
+                <platform.version>${jarVersion}</platform.version>
+                <redis.version>${jarVersion}</redis.version>
+                <authorization.version>${jarVersion}</authorization.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>20251117160209-141</kernel.version>
+                <platform.version>20250822140059-44</platform.version>
+                <redis.version>20250416171510-30</redis.version>
+                <authorization.version>20250902154432-59</authorization.version>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>redis</artifactId>
+            <version>${redis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
             <artifactId>authorization</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${authorization.version}</version>
         </dependency>
     </dependencies>
 
