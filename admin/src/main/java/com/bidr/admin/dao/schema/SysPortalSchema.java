@@ -52,5 +52,19 @@ public class SysPortalSchema extends BaseMybatisSchema<SysPortal> {
                 "ADD COLUMN `reference_id` VARCHAR(50) COMMENT '关联表格ID' AFTER `data_mode`, " +
                 "ADD INDEX `idx_portal_datamode` (`data_mode`), " +
                 "ADD INDEX `idx_portal_referenceid` (`reference_id`);");
+
+        // 初始化基础Portal数据
+        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
+                "(1, 0, 'AcUser', '系统-用户信息表', 'portal/user', 'adminUserController', 'small', '0', '0', 'userId', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '1');");
+        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
+                "(2, 0, 'AcDept', '系统-部门表', 'portal/department', 'adminDeptController', 'small', '0', '0', 'deptId', 'pid', '1', 'name', 'showOrder', '0', 60, 60, 60, 2, '1', '0');");
+        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
+                "(3, 0, 'SaObjectStorage', '系统-对象存储记录(默认)', 'SaObjectStorage', 'ossController', 'small', '0', '0', NULL, '', '1', NULL, NULL, '0', 60, 60, 60, 2, '1', '0');");
+        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
+                "(4, 0, 'SysConfig', '系统-参数配置表', 'config/admin', 'adminConfigController', 'small', '0', '0', 'configId', '', '1', 'configName', NULL, '0', 60, 60, 60, 2, '1', '0');");
+        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
+                "(5, 0, 'SysDict', '系统-字典数据表', 'dict/item/admin', 'adminDictController', 'small', '0', '0', 'dictId', '', '1', 'dictItem', NULL, '0', 60, 60, 60, 2, '1', '0');");
+        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
+                "(6, 0, 'SysDictType', '系统-字典类型表', 'dict/admin', 'adminDictTypeController', 'small', '0', '0', 'dictName', '', '1', 'dictTitle', NULL, '0', 60, 60, 60, 2, '1', '0');");
     }
 }

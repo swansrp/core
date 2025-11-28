@@ -1,44 +1,16 @@
 package com.bidr.kernel.mybatis.repository;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.baomidou.mybatisplus.core.toolkit.StringPool;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.mybatis.anno.EnableTruncate;
-import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
-import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
-import com.bidr.kernel.utils.*;
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
-import com.github.yulichang.toolkit.LambdaUtils;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-import javax.annotation.Resource;
-import java.io.Serializable;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Title:
@@ -49,15 +21,19 @@ import java.util.stream.Collectors;
  */
 @SuppressWarnings("unchecked")
 public abstract class BaseMybatisSchema<T> implements MybatisPlusTableInitializerInf {
-    protected Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
     /**
      * 建表语句
      */
     protected static final Map<String, String> DDL_SQL = new ConcurrentHashMap<>();
     /**
-     * 版本升级语句
+     * DDL版本升级语句
      */
     protected static final Map<String, LinkedHashMap<Integer, String>> UPGRADE_SCRIPTS = new ConcurrentHashMap<>();
+    /**
+     * DML数据初始化脚本（仅在新建表时执行一次）
+     */
+    protected static final Map<String, List<String>> INIT_DATA_SCRIPTS = new ConcurrentHashMap<>();
+    protected Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
 
     protected static void setCreateDDL(String createSql) {
         StackTraceElement[] stack = Thread.currentThread().getStackTrace();
@@ -71,14 +47,41 @@ public abstract class BaseMybatisSchema<T> implements MybatisPlusTableInitialize
         UPGRADE_SCRIPTS.computeIfAbsent(callerClassName, k -> new LinkedHashMap<>()).put(version, sql);
     }
 
+    /**
+     * 设置初始化数据脚本（DML）
+     * <p>
+     * 注意：
+     * <ul>
+     *     <li>仅在新建表时执行，已存在的表不会重复执行</li>
+     *     <li>按添加顺序执行，无需版本号</li>
+     *     <li>建议使用 INSERT IGNORE 或 INSERT ... ON DUPLICATE KEY UPDATE 避免重复数据</li>
+     * </ul>
+     * </p>
+     *
+     * @param sql DML SQL语句
+     */
+    protected static void setInitData(String sql) {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        String callerClassName = stack[2].getClassName();
+        INIT_DATA_SCRIPTS.computeIfAbsent(callerClassName, k -> new ArrayList<>()).add(sql);
+    }
+
+    @Override
     public String getCreateSql() {
         return DDL_SQL.get(getClass().getName());
     }
 
+    @Override
     public LinkedHashMap<Integer, String> getUpgradeScripts() {
         return UPGRADE_SCRIPTS.getOrDefault(getClass().getName(), new LinkedHashMap<>());
     }
 
+    @Override
+    public List<String> getInitDataScripts() {
+        return INIT_DATA_SCRIPTS.getOrDefault(getClass().getName(), new ArrayList<>());
+    }
+
+    @Override
     public String getTableName() {
         TableName annotation = entityClass.getAnnotation(TableName.class);
         Validator.assertNotNull(annotation, ErrCodeSys.PA_DATA_NOT_EXIST, "表名");
