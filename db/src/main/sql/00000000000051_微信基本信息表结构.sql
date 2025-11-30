@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `mm_openid_map` (
   `nick_name` varchar(50) DEFAULT NULL COMMENT '昵称',
   `avatar` varchar(200) DEFAULT NULL COMMENT '头像地址',
   PRIMARY KEY (`open_id`,`union_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信公众号账号对应关系'
+) COMMENT='微信公众号账号对应关系'
 /
 
 -- 数据导出被取消选择。
@@ -26,5 +26,5 @@ CREATE TABLE IF NOT EXISTS `mm_role_tag_map` (
   `tag_name` varchar(50) DEFAULT NULL COMMENT '标签名',
   `menu_id` varchar(20) DEFAULT NULL COMMENT '个性菜单id',
   PRIMARY KEY (`role_id`,`tag_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户标签角色关系'
+) COMMENT='用户标签角色关系'
 /

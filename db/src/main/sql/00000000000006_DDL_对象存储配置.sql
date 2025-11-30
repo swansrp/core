@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `sa_object_storage` (
   `valid` varchar(1) NOT NULL DEFAULT '0' COMMENT '有效性',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uri` (`uri`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='对象存储记录'
+) COMMENT='对象存储记录'
 /
 INSERT INTO `sys_config` (`config_name`, `config_key`, `config_value`, `config_type`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
  ('对象服务器类型', 'OSS_SERVER_TYPE', '1', '0', NULL, '2024-02-26 09:35:11', NULL, '2024-02-26 09:35:11', 'Local Minio Ali'),

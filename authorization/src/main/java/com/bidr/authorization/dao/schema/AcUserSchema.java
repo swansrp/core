@@ -48,6 +48,9 @@ public class AcUserSchema extends BaseMybatisSchema<AcUser> {
                 "  KEY `phonenumber` (`phone_number`) USING BTREE\n" +
                 ") COMMENT='用户信息表';");
 
-        setInitData("INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`, `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, `create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', 'a49a1ea1612f58a29968025b73ba2653274711c198c79465', 0, NULL, 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
+        setInitData("INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`," +
+                " `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, " +
+                "`create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', " +
+                "'a49a1ea1612f58a29968025b73ba2653274711c198c79465', 0, NOW(), 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
     }
 }

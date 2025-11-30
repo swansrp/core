@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `sa_sms_send` (
   `response_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '服务商返回代码',
   PRIMARY KEY (`send_id`),
   KEY `template_code` (`template_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='短信发送记录'
+) COMMENT='短信发送记录'
 /
 
 -- 数据导出被取消选择。
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `sa_sms_template` (
   UNIQUE KEY `send_sms_type` (`sms_type`) USING BTREE,
   UNIQUE KEY `template_id` (`template_code`) USING BTREE,
   KEY `platform` (`platform`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='短信模板表'
+) COMMENT='短信模板表'
 /
 
 -- 数据导出被取消选择。
