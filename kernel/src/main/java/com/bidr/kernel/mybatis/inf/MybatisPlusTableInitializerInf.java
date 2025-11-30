@@ -82,27 +82,48 @@ public interface MybatisPlusTableInitializerInf {
     /**
      * 处理建表语句
      *
-     * @param tableName 表名
-     * @param createSql 创建表DDL语句
+     * @param tableName 表名（或函数名、视图名等数据库对象名）
+     * @param createSql 创建DDL语句（可以是表、函数、视图、存储过程等）
      * @param stmt      数据库连接
      * @param metaData  数据库元数据
-     * @return 是否为新建表（true-新建，false-已存在）
+     * @return 是否为新建对象（true-新建，false-已存在）
      * @throws SQLException 异常
      */
     default boolean handleCreateDDL(String tableName, String createSql, Statement stmt,
                                  DatabaseMetaData metaData) throws SQLException {
         if (FuncUtil.isNotEmpty(createSql)) {
-            // sys_table_version 表已由 MybatisPlusConfig 提前创建，这里不再重复检查
-            if (!tableExists(metaData, tableName)) {
+            String upperSql = createSql.trim().toUpperCase();
+            boolean objectExists = false;
+            boolean isTable = false;
+            
+            // 判断对象类型和是否存在
+            if (upperSql.startsWith("CREATE TABLE")) {
+                objectExists = tableExists(metaData, tableName);
+                isTable = true;
+            } else if (upperSql.startsWith("CREATE FUNCTION")) {
+                objectExists = functionExists(metaData, tableName);
+            } else if (upperSql.startsWith("CREATE PROCEDURE")) {
+                objectExists = procedureExists(metaData, tableName);
+            } else if (upperSql.startsWith("CREATE VIEW")) {
+                objectExists = viewExists(metaData, tableName);
+            }
+
+            // 如果对象不存在，则创建
+            if (!objectExists) {
                 stmt.executeUpdate(createSql);
-                stmt.executeUpdate(
-                        "INSERT INTO sys_table_version(table_name, version) VALUES ('" + tableName + "', 0) " +
-                                "ON DUPLICATE KEY UPDATE version=0");
-                LoggerFactory.getLogger(getClass()).info("表 {} 创建成功", tableName);
-                return true; // 返回 true 表示是新建的表
+                // 只有创建表时才记录版本
+                if (isTable) {
+                    stmt.executeUpdate(
+                            "INSERT INTO sys_table_version(table_name, version) VALUES ('" + tableName + "', 0) " +
+                                    "ON DUPLICATE KEY UPDATE version=0");
+                    LoggerFactory.getLogger(getClass()).info("表 {} 创建成功", tableName);
+                    return true;
+                } else {
+                    LoggerFactory.getLogger(getClass()).info("数据库对象 {} 创建成功", tableName);
+                }
             }
         }
-        return false; // 表已存在
+        return false;
     }
 
     /**
@@ -236,6 +257,54 @@ public interface MybatisPlusTableInitializerInf {
         }
     }
 
+    /**
+     * 判断存储过程或函数是否存在
+     *
+     * @param metaData      数据库元数据
+     * @param procedureName 存储过程或函数名称
+     * @return 如果存储过程或函数存在返回 true，否则返回 false
+     * @throws SQLException SQL 异常
+     */
+    default boolean procedureExists(DatabaseMetaData metaData, String procedureName) throws SQLException {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名存储过程/函数
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getProcedures(catalog, null, procedureName)) {
+            return rs.next();
+        }
+    }
+
+    /**
+     * 判断函数是否存在
+     *
+     * @param metaData     数据库元数据
+     * @param functionName 函数名称
+     * @return 如果函数存在返回 true，否则返回 false
+     * @throws SQLException SQL 异常
+     */
+    default boolean functionExists(DatabaseMetaData metaData, String functionName) throws SQLException {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名函数
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getFunctions(catalog, null, functionName)) {
+            return rs.next();
+        }
+    }
+
+    /**
+     * 判断视图是否存在
+     *
+     * @param metaData 数据库元数据
+     * @param viewName 视图名称
+     * @return 如果视图存在返回 true，否则返回 false
+     * @throws SQLException SQL 异常
+     */
+    default boolean viewExists(DatabaseMetaData metaData, String viewName) throws SQLException {
+        // 获取当前连接的数据库名(catalog),避免误判其他数据库中的同名视图
+        String catalog = metaData.getConnection().getCatalog();
+        try (ResultSet rs = metaData.getTables(catalog, null, viewName, new String[]{"VIEW"})) {
+            return rs.next();
+        }
+    }
+
     /** ----------------- 列/索引/表判断 ----------------- */
 
     /**
@@ -324,6 +393,72 @@ public interface MybatisPlusTableInitializerInf {
             }
             String table = sql.split("\\s+")[2];
             return !tableExists(metaData, table);
+        }
+
+        // CREATE PROCEDURE
+        if (sql.startsWith("CREATE PROCEDURE")) {
+            String procedure = sql.split("\\s+")[2];
+            // 移除可能的括号和参数
+            if (procedure.contains("(")) {
+                procedure = procedure.substring(0, procedure.indexOf("("));
+            }
+            return procedureExists(metaData, procedure);
+        }
+
+        // DROP PROCEDURE
+        if (sql.startsWith("DROP PROCEDURE")) {
+            if (sql.contains("IF EXISTS")) {
+                // 交给数据库自己处理，不跳过
+                return false;
+            }
+            String procedure = sql.split("\\s+")[2];
+            return !procedureExists(metaData, procedure);
+        }
+
+        // CREATE FUNCTION
+        if (sql.startsWith("CREATE FUNCTION")) {
+            String function = sql.split("\\s+")[2];
+            // 移除可能的括号和参数
+            if (function.contains("(")) {
+                function = function.substring(0, function.indexOf("("));
+            }
+            return functionExists(metaData, function);
+        }
+
+        // DROP FUNCTION
+        if (sql.startsWith("DROP FUNCTION")) {
+            if (sql.contains("IF EXISTS")) {
+                // 交给数据库自己处理，不跳过
+                return false;
+            }
+            String function = sql.split("\\s+")[2];
+            return !functionExists(metaData, function);
+        }
+
+        // CREATE VIEW
+        if (sql.startsWith("CREATE VIEW")) {
+            // CREATE OR REPLACE VIEW 不跳过，因为可能是更新视图定义
+            if (sql.startsWith("CREATE OR REPLACE VIEW")) {
+                return false;
+            }
+            // 普通 CREATE VIEW 如果已存在则跳过
+            String[] parts = sql.split("\\s+");
+            String view = parts[2];
+            // 移除可能的反引号
+            view = view.replace("`", "");
+            return viewExists(metaData, view);
+        }
+
+        // DROP VIEW
+        if (sql.startsWith("DROP VIEW")) {
+            if (sql.contains("IF EXISTS")) {
+                // 交给数据库自己处理，不跳过
+                return false;
+            }
+            String view = sql.split("\\s+")[2];
+            // 移除可能的反引号
+            view = view.replace("`", "");
+            return !viewExists(metaData, view);
         }
 
         // CREATE INDEX

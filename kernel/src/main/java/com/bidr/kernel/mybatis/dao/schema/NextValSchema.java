@@ -12,11 +12,7 @@ import org.springframework.stereotype.Service;
 public class NextValSchema extends BaseMybatisSchema<Object> {
     static {
         // 先删除旧函数，再创建新函数（分两步执行）
-        setCreateDDL("DROP FUNCTION IF EXISTS `f_nextval`");
-        
-        // 创建函数（移除 DELIMITER 命令）
-        setUpgradeDDL(1, 
-                "CREATE FUNCTION `f_nextval`(`SEQ_NAME` VARCHAR(128)) RETURNS varchar(50) CHARSET utf8mb4 " +
+        setCreateDDL("CREATE FUNCTION `f_nextval`(`SEQ_NAME` VARCHAR(128)) RETURNS varchar(50) " +
                 "    SQL SECURITY INVOKER " +
                 "    COMMENT '获取流水号' " +
                 "BEGIN " +
