@@ -39,7 +39,9 @@ public enum AccountParam implements Param {
     ACCOUNT_LOCK_INTERVAL("密码错误锁定时间","14000", "密码错误锁定时间"),
     EMAIL_SET_PWD_TITLE("设置密码邮件标题", "SHARP系统用户密码设置验证", "设置密码邮件标题"),
     EMAIL_SET_PWD_TEXT_FORMAT("设置密码邮件正文","请您点击下方地址完成账户密码设置\r\n%s", "设置密码邮件正文"),
-    EMAIL_SET_PWD_CONFIRM_URL("邮件确认地址", "https://***/#/changePwd?userId=%s&token=%s", "邮件确认地址");
+    EMAIL_SET_PWD_CONFIRM_URL("邮件确认地址", "https://***/#/changePwd?userId=%s&token=%s", "邮件确认地址"),
+
+    PASSWORD_EXPIRED("密码有效期","365", "密码有效期(天)");
 
     private final String title;
     private final String defaultValue;

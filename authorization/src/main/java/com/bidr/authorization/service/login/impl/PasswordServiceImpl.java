@@ -14,6 +14,7 @@ import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.email.service.EmailService;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.DateUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.Md5Util;
 import com.bidr.kernel.validate.Validator;
@@ -48,6 +49,7 @@ public class PasswordServiceImpl implements PasswordService {
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         user.setPassword(null);
+        user.setPasswordLastTime(new Date(0L));
         user.setPasswordErrorTime(0);
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         acUserService.updateById(user, false);
@@ -74,7 +76,18 @@ public class PasswordServiceImpl implements PasswordService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(ChangePasswordReq req) {
-        AcUser user = acUserService.getByCustomerNumber(AccountContext.getOperator());
+        AcUser user;
+        if (FuncUtil.isNotEmpty(req.getLoginId())) {
+            user = acUserService.getUserByUserName(req.getLoginId());
+            if (user == null) {
+                user = acUserService.getUserByPhoneNumber(req.getLoginId());
+            }
+            if (user == null) {
+                user = acUserService.getUserByEmail(req.getLoginId());
+            }
+        } else {
+            user = acUserService.getByCustomerNumber(AccountContext.getOperator());
+        }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);

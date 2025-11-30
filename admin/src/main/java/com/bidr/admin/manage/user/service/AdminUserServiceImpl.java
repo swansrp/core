@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 /**
  * Title: AdminUserServiceImpl
  * Description: Copyright: Copyright (c) 2023
@@ -42,6 +44,7 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
         }
         user.setCustomerNumber(customerNumber);
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
+        user.setPasswordLastTime(new Date(0L));
     }
 
     @Override

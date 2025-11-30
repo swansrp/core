@@ -9,8 +9,6 @@ import lombok.Data;
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
  *
  * @author Sharp
- * @description Project Name: Mall
- * @Package: com.srct.service.account.vo.login
  * @since 2020/4/18 11:30
  */
 @Data

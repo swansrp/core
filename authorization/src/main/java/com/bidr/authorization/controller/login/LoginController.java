@@ -12,11 +12,14 @@ import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.login.MsgRegReq;
+import com.bidr.authorization.vo.login.pwd.ChangePasswordReq;
 import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -78,6 +81,17 @@ public class LoginController {
     @CaptchaVerify("INIT_PASSWORD_CAPTCHA")
     public LoginRes initPassword(@Validated InitPasswordReq req) {
         passwordService.initPassword(req);
+        LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
+        afterLogin(res);
+        return res;
+    }
+
+    @Auth(AuthToken.class)
+    @ApiOperation("变更密码")
+    @CaptchaVerify("PASSWORD_CHANGE_CAPTCHA")
+    @RequestMapping(value = "/password/change", method = RequestMethod.POST)
+    public LoginRes changePassword(@Validated ChangePasswordReq req) {
+        passwordService.changePassword(req);
         LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
         afterLogin(res);
         return res;

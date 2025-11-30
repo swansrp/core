@@ -1,5 +1,7 @@
 package com.bidr.authorization.controller.login;
 
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.service.login.PasswordService;
 import com.bidr.authorization.vo.login.pwd.ChangePasswordReq;
 import com.bidr.authorization.vo.login.pwd.ResetPasswordReq;

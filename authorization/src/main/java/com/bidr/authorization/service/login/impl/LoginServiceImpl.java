@@ -25,10 +25,7 @@ import com.bidr.authorization.vo.login.SsoLoginReq;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.HttpUtil;
-import com.bidr.kernel.utils.Md5Util;
-import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
@@ -77,12 +74,17 @@ public class LoginServiceImpl implements LoginService {
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
+        int expiredDays = frameCacheService.getParamInt(AccountParam.PASSWORD_EXPIRED);
+        if(expiredDays > 0) {
+            Date expiredTime = new Date(user.getPasswordLastTime().getTime() + expiredDays * 24 * 60 * 60 * 1000L);
+            Validator.assertTrue(DateUtil.dayDiff(expiredTime, new Date()) > 0, AccountErrCode.AC_PASSWORD_EXPIRED);
+        }
+        Validator.assertFalse(user.getPasswordLastTime().getTime() == 0L, AccountErrCode.AC_PASSWORD_NOT_EXISTED);
         verifyPassword(user, user.getPassword(), password);
         return login(user);
     }
 
     private void verifyPassword(AcUser user, String passwordMd5, String password) {
-        Validator.assertNotBlank(user.getPassword(), AccountErrCode.AC_PASSWORD_NOT_EXISTED);
         boolean verify = false;
         try {
             verify = Md5Util.verify(password, passwordMd5);
