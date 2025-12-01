@@ -17,6 +17,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.DateUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.Md5Util;
+import com.bidr.kernel.utils.RandomUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
@@ -45,14 +46,16 @@ public class PasswordServiceImpl implements PasswordService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void resetPassword(String customerNumber) {
+    public String resetPassword(String customerNumber) {
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
-        user.setPassword(null);
+        String newPassword = RandomUtil.getStringWithNumber(8);
+        user.setPassword(Md5Util.generate(Md5Util.MD5(newPassword)));
         user.setPasswordLastTime(new Date(0L));
         user.setPasswordErrorTime(0);
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         acUserService.updateById(user, false);
+        return newPassword;
     }
 
     @Override

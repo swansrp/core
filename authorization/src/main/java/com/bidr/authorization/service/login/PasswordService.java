@@ -17,7 +17,7 @@ public interface PasswordService {
      *
      * @param customerNumber 账户号
      */
-    void resetPassword(String customerNumber);
+    String resetPassword(String customerNumber);
 
     /**
      * 初始化密码

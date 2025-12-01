@@ -74,13 +74,19 @@ public class LoginServiceImpl implements LoginService {
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
+        // 新建用户 直接重置密码
+        if(FuncUtil.isNotEmpty(user.getPassword())) {
+            verifyPassword(user, user.getPassword(), password);
+        }
+        // 老系统初始化无密码更新时间 直接重置密码
+        Validator.assertNotNull(user.getPasswordLastTime(), AccountErrCode.AC_PASSWORD_EXPIRED);
         int expiredDays = frameCacheService.getParamInt(AccountParam.PASSWORD_EXPIRED);
         if(expiredDays > 0) {
             Date expiredTime = new Date(user.getPasswordLastTime().getTime() + expiredDays * 24 * 60 * 60 * 1000L);
             Validator.assertTrue(DateUtil.dayDiff(expiredTime, new Date()) > 0, AccountErrCode.AC_PASSWORD_EXPIRED);
         }
+        // 重置密码 特征
         Validator.assertFalse(user.getPasswordLastTime().getTime() == 0L, AccountErrCode.AC_PASSWORD_NOT_EXISTED);
-        verifyPassword(user, user.getPassword(), password);
         return login(user);
     }
 

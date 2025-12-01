@@ -33,9 +33,8 @@ public class PasswordController {
 
     @ApiOperation("重置密码")
     @RequestMapping(value = "/reset", method = RequestMethod.POST)
-    public void resetPassword(@Validated @RequestBody ResetPasswordReq req) {
-        passwordService.resetPassword(req.getCustomerNumber());
-        Resp.notice("密码已重置");
+    public String resetPassword(@Validated @RequestBody ResetPasswordReq req) {
+        return passwordService.resetPassword(req.getCustomerNumber());
     }
 
     @ApiOperation("变更密码")
