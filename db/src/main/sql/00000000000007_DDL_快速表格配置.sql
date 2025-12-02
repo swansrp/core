@@ -34,12 +34,12 @@ CREATE TABLE IF NOT EXISTS `sys_portal` (
 DELETE FROM `sys_portal`
 /
 INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES
-	(1, 0, 'AcUser', '系统-用户信息表', 'portal/user', 'com.bidr.admin.manage.user.controller.AdminUserController', 'small', '0', '0', 'userId', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '1'),
-	(2, 0, 'AcDept', '系统-部门表', 'portal/department', 'com.bidr.authorization.controller.admin.AdminDeptController', 'small', '0', '0', 'deptId', 'pid', '1', 'name', 'showOrder', '0', 60, 60, 60, 2, '1', '0'),
-	(3, 0, 'SaObjectStorage', '系统-对象存储记录(默认)', 'SaObjectStorage', 'com.bidr.oss.controller.OssController', 'small', '0', '0', NULL, '', '1', NULL, NULL, '0', 60, 60, 60, 2, '1', '0'),
-	(4, 0, 'SysConfig', '系统-参数配置表', 'config/admin', 'com.bidr.platform.controller.admin.AdminConfigController', 'small', '0', '0', 'configId', '', '1', 'configName', NULL, '0', 60, 60, 60, 2, '1', '0'),
-	(5, 0, 'SysDict', '系统-字典数据表', 'dict/item/admin', 'com.bidr.platform.controller.admin.AdminDictController', 'small', '0', '0', 'dictId', '', '1', 'dictItem', NULL, '0', 60, 60, 60, 2, '1', '0'),
-	(6, 0, 'SysDictType', '系统-字典类型表', 'dict/admin', 'com.bidr.platform.controller.admin.AdminDictTypeController', 'small', '0', '0', 'dictName', '', '1', 'dictTitle', NULL, '0', 60, 60, 60, 2, '1', '0')
+	(1, 0, 'AcUser', '系统-用户信息表', 'portal/user', 'adminUserController', 'small', '0', '0', 'userId', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '1'),
+	(2, 0, 'AcDept', '系统-部门表', 'portal/department', 'adminDeptController', 'small', '0', '0', 'deptId', 'pid', '1', 'name', 'showOrder', '0', 60, 60, 60, 2, '1', '0'),
+	(3, 0, 'SaObjectStorage', '系统-对象存储记录(默认)', 'ossController', 'small', '0', '0', NULL, '', '1', NULL, NULL, '0', 60, 60, 60, 2, '1', '0'),
+	(4, 0, 'SysConfig', '系统-参数配置表', 'config/admin', 'adminConfigController', 'small', '0', '0', 'configId', '', '1', 'configName', NULL, '0', 60, 60, 60, 2, '1', '0'),
+	(5, 0, 'SysDict', '系统-字典数据表', 'dict/item/admin', 'adminDictController', 'small', '0', '0', 'dictId', '', '1', 'dictItem', NULL, '0', 60, 60, 60, 2, '1', '0'),
+	(6, 0, 'SysDictType', '系统-字典类型表', 'dict/admin', 'adminDictTypeController', 'small', '0', '0', 'dictName', '', '1', 'dictTitle', NULL, '0', 60, 60, 60, 2, '1', '0')
 /
 
 -- 导出  表 tanya.sys_portal_column 结构

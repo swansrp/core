@@ -3,7 +3,9 @@ package com.bidr.kernel.config.db;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
+import com.bidr.kernel.mybatis.log.MybatisLog;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.logging.LogFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +24,11 @@ import java.util.Map;
 @Slf4j
 @Configuration
 public class MybatisPlusConfig {
+    
+    static {
+        // 在类加载时就设置自定义日志实现，确保 MyBatis 使用我们的 Log
+        LogFactory.useCustomLogging(MybatisLog.class);
+    }
     @Resource
     private AppProperties appProperties;
     @Resource

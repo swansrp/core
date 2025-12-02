@@ -1,6 +1,7 @@
 package com.bidr.forge.config.jdbc;
 
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
+import com.bidr.kernel.mybatis.log.MybatisLogFormatter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -8,8 +9,10 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Title: JdbcConnectService
@@ -62,16 +65,19 @@ public class JdbcConnectService {
      * @return 查询结果
      */
     public <T> T queryObject(String sql, Map<String, Object> parameters, String column, Class<T> clazz) {
-        log.trace("==> 查询SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         try {
             Map<String, Object> row = namedParameterJdbcTemplate.queryForMap(sql, parameters);
+            if (row != null && !row.isEmpty()) {
+                printQueryResult(completeSql, row);
+            }
             @SuppressWarnings("unchecked")
             T result = (T) row.get(column);
-            log.trace("<== 查询结果: {}", result);
             return result;
         } catch (Exception e) {
-            log.trace("<== 查询结果: null ({})", e.getMessage());
+            printQueryResult(completeSql, null);
             return null;
         }
     }
@@ -84,14 +90,15 @@ public class JdbcConnectService {
      * @return 查询结果
      */
     public Map<String, Object> executeQueryOne(String sql, Map<String, Object> parameters) {
-        log.trace("==> 查询SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         try {
             Map<String, Object> row = namedParameterJdbcTemplate.queryForMap(sql, parameters);
-            log.trace("<== 查询单行结果: {}", row);
+            printQueryResult(completeSql, row);
             return row;
         } catch (Exception e) {
-            log.trace("<== 查询单行结果: null ({})", e.getMessage());
+            printQueryResult(completeSql, null);
             return null;
         }
     }
@@ -104,10 +111,11 @@ public class JdbcConnectService {
      * @return 查询结果列表
      */
     public List<Map<String, Object>> executeQuery(String sql, Map<String, Object> parameters) {
-        log.trace("==> 查询SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         List<Map<String, Object>> result = namedParameterJdbcTemplate.queryForList(sql, parameters);
-        log.trace("<== 查询结果行数: {}", result.size());
+        printQueryListResult(completeSql, result);
         return result;
     }
 
@@ -119,10 +127,11 @@ public class JdbcConnectService {
      * @return 影响的行数
      */
     public int executeUpdate(String sql, Map<String, Object> parameters) {
-        log.trace("==> 更新SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         int affectedRows = namedParameterJdbcTemplate.update(sql, parameters);
-        log.trace("<== 影响行数: {}", affectedRows);
+        printUpdateResult(completeSql, affectedRows);
         return affectedRows;
     }
 
@@ -136,7 +145,6 @@ public class JdbcConnectService {
      */
     @Deprecated
     public ResultSet executeQueryResultSet(String sql) {
-        log.trace("==> 查询SQL: {}", sql);
         try {
             Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql);
@@ -196,8 +204,6 @@ public class JdbcConnectService {
      */
     @Deprecated
     public int[] executeBatch(List<String> sqlList) {
-        log.trace("==> 批量SQL, 总数: {}", sqlList.size());
-        sqlList.forEach(sql -> log.trace("  批量SQL: {}", sql));
         try (Connection conn = beginTransaction();
              Statement stmt = conn.createStatement()) {
             for (String sql : sqlList) {
@@ -209,7 +215,7 @@ public class JdbcConnectService {
             for (int affected : result) {
                 totalAffected += affected;
             }
-            log.trace("<== 批量执行完成, 总影响行数: {}", totalAffected);
+            printBatchUpdateResult(sqlList, totalAffected);
             return result;
         } catch (SQLException e) {
             throw new RuntimeException("执行批量SQL失败", e);
@@ -251,10 +257,11 @@ public class JdbcConnectService {
      * @return 查询结果列表
      */
     public List<Map<String, Object>> query(String sql, Map<String, Object> parameters) {
-        log.trace("==> 查询SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         List<Map<String, Object>> result = namedParameterJdbcTemplate.queryForList(sql, parameters);
-        log.trace("<== 查询结果行数: {}", result.size());
+        printQueryListResult(completeSql, result);
         return result;
     }
 
@@ -266,14 +273,15 @@ public class JdbcConnectService {
      * @return 查询结果（单行）
      */
     public Map<String, Object> queryOne(String sql, Map<String, Object> parameters) {
-        log.trace("==> 查询SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         try {
             Map<String, Object> row = namedParameterJdbcTemplate.queryForMap(sql, parameters);
-            log.trace("<== 查询单行结果: {}", row);
+            printQueryResult(completeSql, row);
             return row;
         } catch (Exception e) {
-            log.trace("<== 查询单行结果: null ({})", e.getMessage());
+            printQueryResult(completeSql, null);
             return null;
         }
     }
@@ -287,14 +295,15 @@ public class JdbcConnectService {
      * @return 查询结果
      */
     public <T> T queryForObject(String sql, Map<String, Object> parameters, Class<T> clazz) {
-        log.trace("==> 查询SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         try {
             T result = namedParameterJdbcTemplate.queryForObject(sql, parameters, clazz);
-            log.trace("<== 查询结果: {}", result);
+            printSimpleResult(completeSql, result != null ? 1 : 0);
             return result;
         } catch (Exception e) {
-            log.trace("<== 查询结果: null ({})", e.getMessage());
+            printSimpleResult(completeSql, 0);
             return null;
         }
     }
@@ -307,10 +316,11 @@ public class JdbcConnectService {
      * @return 影响的行数
      */
     public int update(String sql, Map<String, Object> parameters) {
-        log.trace("==> 更新SQL: {}", sql);
-        log.trace("==> 参数: {}", parameters);
+        String paramStr = formatParameters(parameters);
+        String completeSql = buildCompleteSql(sql, paramStr);
+        
         int affectedRows = namedParameterJdbcTemplate.update(sql, parameters);
-        log.trace("<== 影响行数: {}", affectedRows);
+        printUpdateResult(completeSql, affectedRows);
         return affectedRows;
     }
 
@@ -322,8 +332,6 @@ public class JdbcConnectService {
      * @return 每条SQL影响的行数
      */
     public int[] batchUpdate(String sql, List<Map<String, Object>> parametersList) {
-        log.trace("==> 批量更新SQL: {}", sql);
-        log.trace("==> 批量数量: {}", parametersList.size());
         @SuppressWarnings("unchecked")
         Map<String, Object>[] batchValues = parametersList.toArray(new Map[0]);
         int[] result = namedParameterJdbcTemplate.batchUpdate(sql, batchValues);
@@ -331,7 +339,141 @@ public class JdbcConnectService {
         for (int affected : result) {
             totalAffected += affected;
         }
-        log.trace("<== 批量执行完成, 总影响行数: {}", totalAffected);
+        printBatchNamedUpdateResult(sql, parametersList, totalAffected);
         return result;
+    }
+
+    // ==================== 日志输出辅助方法 ====================
+
+    /**
+     * 格式化参数为字符串
+     */
+    private String formatParameters(Map<String, Object> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return "";
+        }
+        return parameters.values().stream()
+            .map(v -> v + "(" + (v != null ? v.getClass().getSimpleName() : "null") + ")")
+            .collect(Collectors.joining(", "));
+    }
+
+    /**
+     * 构建完整的可执行 SQL
+     */
+    private String buildCompleteSql(String sql, String paramStr) {
+        if (paramStr == null || paramStr.isEmpty()) {
+            return sql;
+        }
+        // 使用 MybatisLogFormatter 构建 SQL
+        return MybatisLogFormatter.buildSql(sql.replaceAll(":\\w+", "?"), paramStr);
+    }
+
+    /**
+     * 打印查询结果（单行）
+     */
+    private void printQueryResult(String completeSql, Map<String, Object> row) {
+        StringBuilder output = new StringBuilder();
+        output.append("### 🔹 Complete SQL\n```sql\n");
+        output.append(completeSql);
+        output.append("\n```");
+
+        if (row != null && !row.isEmpty()) {
+            List<String> cols = new ArrayList<>(row.keySet());
+            List<List<String>> rows = new ArrayList<>();
+            List<String> rowValues = cols.stream()
+                .map(col -> String.valueOf(row.get(col)))
+                .collect(Collectors.toList());
+            rows.add(rowValues);
+            
+            String tableOutput = MybatisLogFormatter.formatMarkdown(cols, rows);
+            output.append("\n### 📋 Query Result (1 row)\n");
+            output.append(tableOutput);
+        } else {
+            output.append("\n### 📋 Query Result (0 rows)");
+        }
+        System.out.println(output);
+    }
+
+    /**
+     * 打印查询结果（多行）
+     */
+    private void printQueryListResult(String completeSql, List<Map<String, Object>> result) {
+        StringBuilder output = new StringBuilder();
+        output.append("### 🔹 Complete SQL\n```sql\n");
+        output.append(completeSql);
+        output.append("\n```");
+
+        if (!result.isEmpty()) {
+            List<String> cols = new ArrayList<>(result.get(0).keySet());
+            List<List<String>> rows = new ArrayList<>();
+            for (Map<String, Object> row : result) {
+                List<String> rowValues = cols.stream()
+                    .map(col -> String.valueOf(row.get(col)))
+                    .collect(Collectors.toList());
+                rows.add(rowValues);
+            }
+            
+            String tableOutput = MybatisLogFormatter.formatMarkdown(cols, rows);
+            output.append("\n### 📋 Query Result (").append(result.size()).append(" row")
+                .append(result.size() > 1 ? "s" : "").append(")\n");
+            output.append(tableOutput);
+        } else {
+            output.append("\n### 📋 Query Result (0 rows)");
+        }
+        System.out.println(output);
+    }
+
+    /**
+     * 打印更新结果
+     */
+    private void printUpdateResult(String completeSql, int affectedRows) {
+        StringBuilder output = new StringBuilder();
+        output.append("### 🔹 Complete SQL\n```sql\n");
+        output.append(completeSql);
+        output.append("\n```");
+        output.append("\n### ✅ Update Result: ").append(affectedRows).append(" row(s) affected");
+        System.out.println(output);
+    }
+
+    /**
+     * 打印简单结果（只有行数）
+     */
+    private void printSimpleResult(String completeSql, int count) {
+        StringBuilder output = new StringBuilder();
+        output.append("### 🔹 Complete SQL\n```sql\n");
+        output.append(completeSql);
+        output.append("\n```");
+        output.append("\n### 📋 Result: ").append(count).append(" row(s)");
+        System.out.println(output);
+    }
+
+    /**
+     * 打印批量更新结果（不带参数）
+     */
+    private void printBatchUpdateResult(List<String> sqlList, int totalAffected) {
+        StringBuilder output = new StringBuilder();
+        output.append("### 🔹 Complete SQL (Batch: ").append(sqlList.size()).append(" statements)\n```sql");
+        for (String sql : sqlList) {
+            output.append("\n").append(sql).append(";");
+        }
+        output.append("\n```");
+        output.append("\n### ✅ Batch Update Result: ").append(totalAffected).append(" row(s) affected");
+        System.out.println(output);
+    }
+
+    /**
+     * 打印批量命名参数更新结果
+     */
+    private void printBatchNamedUpdateResult(String sql, List<Map<String, Object>> parametersList, int totalAffected) {
+        StringBuilder output = new StringBuilder();
+        output.append("### 🔹 Complete SQL (Batch: ").append(parametersList.size()).append(" statements)\n```sql");
+        for (Map<String, Object> params : parametersList) {
+            String paramStr = formatParameters(params);
+            String completeSql = buildCompleteSql(sql, paramStr);
+            output.append("\n").append(completeSql).append(";");
+        }
+        output.append("\n```");
+        output.append("\n### ✅ Batch Update Result: ").append(totalAffected).append(" row(s) affected");
+        System.out.println(output);
     }
 }

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `ac_account` (
   KEY `mobile` (`mobile`),
   KEY `user_name` (`user_name`),
   KEY `department` (`department`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+) COMMENT='用户表';
 
 -- 正在导出表  aicxtek.ac_account 的数据：~0 rows (大约)
 DELETE FROM `ac_account`;
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS `ac_dept` (
   PRIMARY KEY (`dept_id`),
   KEY `pid` (`pid`),
   KEY `grand_id` (`grand_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门表';
+) COMMENT='部门表';
 
 -- 正在导出表  aicxtek.ac_dept 的数据：~0 rows (大约)
 DELETE FROM `ac_dept`;
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS `ac_group` (
   `display_order` int(11) NOT NULL DEFAULT '0' COMMENT '显示顺序',
   PRIMARY KEY (`id`),
   KEY `type` (`type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户逻辑组群';
+) COMMENT='用户逻辑组群';
 
 -- 正在导出表  aicxtek.ac_group 的数据：~0 rows (大约)
 DELETE FROM `ac_group`;
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS `ac_group_type` (
   `id` varchar(50) NOT NULL DEFAULT '' COMMENT '用户组类别id',
   `name` varchar(50) NOT NULL COMMENT '用户组类别名称',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='组类型';
+) COMMENT='组类型';
 
 -- 正在导出表  aicxtek.ac_group_type 的数据：~0 rows (大约)
 DELETE FROM `ac_group_type`;
@@ -119,38 +119,38 @@ CREATE TABLE IF NOT EXISTS `ac_menu` (
   KEY `pid` (`pid`),
   KEY `grand_id` (`grand_id`),
   KEY `key` (`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COMMENT='菜单权限表';
+) COMMENT='菜单权限表';
 
 -- 正在导出表  aicxtek.ac_menu 的数据：~14 rows (大约)
 DELETE FROM `ac_menu`;
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(1, NULL, NULL, 1, '#', '0', '系统管理', 0, 'SystemManage', 'SystemManage', '', '0', '0', 0, '1', '1', NULL, 'RightSquareOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-01-15 09:35:23.418', '系统管理目录');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(2, NULL, 1, 2, '#', '0', '权限管理', 5, 'permit', '', '', '0', '0', 1, '1', '1', NULL, 'UsergroupAddOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-03-06 14:17:46.508', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(3, 2, 1, 3, '#', '0', '菜单管理', 0, 'MenuMaintenance', '/framework/views/MainContent/SystemManage/PermissionMaintenance/MenuMaintenance', '', '0', '1', 1, '1', '1', NULL, 'ClusterOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-03-06 15:34:33.739', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(4, 2, 1, 4, '#', '0', '人员-角色管理', 2, 'UserRoleMaintenance', '/framework/views/MainContent/SystemManage/PermissionMaintenance/UserRoleMaintenance', '', '0', '0', 1, '1', '1', NULL, 'ApiOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-03-06 15:34:33.740', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(5, 2, 1, 5, '#', '0', '角色-权限管理', 1, 'RolePermissionMaintenance', '/framework/views/MainContent/SystemManage/PermissionMaintenance/RolePermissionMaintenance', '', '0', '0', 1, '1', '1', NULL, 'BlockOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-03-06 15:34:33.740', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(6, NULL, 1, 6, '#', '0', '字典维护', 1, 'DictionaryMaintenance', '/framework/views/MainContent/Portal/dict', '', '0', '0', 1, '1', '1', NULL, 'ProfileOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-03-06 14:17:39.532', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(7, NULL, 1, 7, '#', '0', '用户组管理', 4, 'UserGroupMaintenance', '/framework/views/MainContent/SystemManage/UserGroupMaintenance', '', '0', '0', 1, '1', '1', NULL, 'TeamOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-03-06 14:17:46.508', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(8, NULL, 1, 8, '#', '0', '参数管理', 0, 'ParamsManage', '/framework/views/MainContent/Portal/parameter', '', '0', '0', 1, '1', '1', NULL, 'SettingOutlined', '1', '2023-12-14 21:36:01.207', '000001', '2024-02-26 13:39:51.456', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(9, NULL, 1, 9, '#', '0', '表格配置', 6, 'portalConfig', '/framework/views/MainContent/PortalConfig', '', '0', '0', 1, '1', '1', NULL, 'InsertRowAboveOutlined', '000001', '2023-12-28 20:45:14.901', '000001', '2024-03-06 14:17:44.652', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(10, 2, 1, 10, '#', '0', '权限切换', 3, 'PermissionSwitch', '/framework/views/MainContent/SystemManage/PermissionMaintenance/PermissionSwitch', '', '0', '0', 1, '1', '1', NULL, 'UserSwitchOutlined', '000001', '2023-12-28 20:47:53.465', '000001', '2024-03-06 15:34:33.740', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(12, NULL, 1, 12, '#', '0', '部门管理', 3, 'department', '/framework/views/MainContent/Portal/department', '', '0', '0', 1, '1', '1', NULL, 'BankOutlined', '000001', '2023-12-29 09:58:35.956', '000001', '2024-03-06 14:17:39.532', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(13, NULL, 1, 13, '#', '0', '账号管理', 2, 'account', '/framework/views/MainContent/Portal/user', '', '0', '0', 1, '1', '1', NULL, 'UserOutlined', '000001', '2023-12-29 09:58:59.868', '000001', '2024-03-06 14:17:39.532', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(26, NULL, 1, 26, '#', '0', '对象存储管理', 7, 'SaObjectStorage', '/framework/views/MainContent/Portal', '', '0', '0', 1, '1', '1', NULL, 'SettingOutlined', '000001', '2024-02-26 13:39:47.329', '000001', '2024-03-06 14:17:37.987', '');
-INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`) VALUES
-	(27, NULL, 1, 27, '#', '0', '日志', 10, 'log', '/framework/views/MainContent/Log/index.vue', '', '0', '0', 1, '1', '1', NULL, 'SettingOutlined', '000001', '2025-06-04 11:46:47.270', '000001', '2025-06-04 11:47:17.972', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(1, NULL, NULL, 1, '#', '0', '系统管理', 0, 'SystemManage', 'SystemManage', '', '0', '0', 0, '1', '1', NULL, 'RightSquareOutlined', '000001', '000001', '系统管理目录');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(2, NULL, 1, 2, '#', '0', '权限管理', 5, 'permit', '', '', '0', '0', 1, '1', '1', NULL, 'UsergroupAddOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(3, 2, 1, 3, '#', '0', '菜单管理', 0, 'MenuMaintenance', '/framework/views/MainContent/SystemManage/PermissionMaintenance/MenuMaintenance', '', '0', '1', 1, '1', '1', NULL, 'ClusterOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(4, 2, 1, 4, '#', '0', '人员-角色管理', 2, 'UserRoleMaintenance', '/framework/views/MainContent/SystemManage/PermissionMaintenance/UserRoleMaintenance', '', '0', '0', 1, '1', '1', NULL, 'ApiOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(5, 2, 1, 5, '#', '0', '角色-权限管理', 1, 'RolePermissionMaintenance', '/framework/views/MainContent/SystemManage/PermissionMaintenance/RolePermissionMaintenance', '', '0', '0', 1, '1', '1', NULL, 'BlockOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(6, NULL, 1, 6, '#', '0', '字典维护', 1, 'DictionaryMaintenance', '/framework/views/MainContent/Portal/dict', '', '0', '0', 1, '1', '1', NULL, 'ProfileOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(7, NULL, 1, 7, '#', '0', '用户组管理', 4, 'UserGroupMaintenance', '/framework/views/MainContent/SystemManage/UserGroupMaintenance', '', '0', '0', 1, '1', '1', NULL, 'TeamOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(8, NULL, 1, 8, '#', '0', '参数管理', 0, 'ParamsManage', '/framework/views/MainContent/Portal/parameter', '', '0', '0', 1, '1', '1', NULL, 'SettingOutlined', '1', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(9, NULL, 1, 9, '#', '0', '表格配置', 6, 'portalConfig', '/framework/views/MainContent/PortalConfig', '', '0', '0', 1, '1', '1', NULL, 'InsertRowAboveOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(10, 2, 1, 10, '#', '0', '权限切换', 3, 'PermissionSwitch', '/framework/views/MainContent/SystemManage/PermissionMaintenance/PermissionSwitch', '', '0', '0', 1, '1', '1', NULL, 'UserSwitchOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(12, NULL, 1, 12, '#', '0', '部门管理', 3, 'department', '/framework/views/MainContent/Portal/department', '', '0', '0', 1, '1', '1', NULL, 'BankOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(13, NULL, 1, 13, '#', '0', '账号管理', 2, 'account', '/framework/views/MainContent/Portal/user', '', '0', '0', 1, '1', '1', NULL, 'UserOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(26, NULL, 1, 26, '#', '0', '对象存储管理', 7, 'SaObjectStorage', '/framework/views/MainContent/Portal', '', '0', '0', 1, '1', '1', NULL, 'SettingOutlined', '000001', '000001', '');
+INSERT INTO `ac_menu` (`menu_id`, `pid`, `grand_id`, `key`, `ancestors`, `client_type`, `title`, `show_order`, `path`, `component`, `query`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `update_by`, `remark`) VALUES
+	(27, NULL, 1, 27, '#', '0', '日志', 10, 'log', '/framework/views/MainContent/Log/index.vue', '', '0', '0', 1, '1', '1', NULL, 'SettingOutlined', '000001', '000001', '');
 
 -- 导出  表 aicxtek.ac_role 结构
 DROP TABLE IF EXISTS `ac_role`;
@@ -167,14 +167,14 @@ CREATE TABLE IF NOT EXISTS `ac_role` (
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   `valid` char(1) DEFAULT '1' COMMENT '有效性',
   PRIMARY KEY (`role_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COMMENT='角色信息表';
+) COMMENT='角色信息表';
 
 -- 正在导出表  aicxtek.ac_role 的数据：~2 rows (大约)
 DELETE FROM `ac_role`;
-INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`, `valid`) VALUES
-	(1, '超级管理员', 'admin', 1, 1, 1, '2025-06-04 09:48:51.433', 1, '2025-06-04 09:48:51.433', '超级管理员', '1');
-INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`, `valid`) VALUES
-	(2, '普通角色', 'common', 1, 2, 1, '2025-06-04 09:48:51.433', 1, '2025-06-04 09:48:51.433', '普通角色', '1');
+INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `update_by`, `remark`, `valid`) VALUES
+	(1, '超级管理员', 'admin', 1, 1, 1, 1, '超级管理员', '1');
+INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `update_by`, `remark`, `valid`) VALUES
+	(2, '普通角色', 'common', 1, 2, 1, 1, '普通角色', '1');
 
 -- 导出  表 aicxtek.ac_role_menu 结构
 DROP TABLE IF EXISTS `ac_role_menu`;
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS `ac_role_menu` (
   `role_id` bigint(20) NOT NULL COMMENT '角色ID',
   `menu_id` bigint(20) NOT NULL COMMENT '菜单ID',
   PRIMARY KEY (`role_id`,`menu_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色和菜单关联表';
+) COMMENT='角色和菜单关联表';
 
 -- 正在导出表  aicxtek.ac_role_menu 的数据：~10 rows (大约)
 DELETE FROM `ac_role_menu`;
@@ -245,12 +245,12 @@ CREATE TABLE IF NOT EXISTS `ac_user` (
   KEY `dept_id` (`dept_id`),
   KEY `customer_number` (`customer_number`),
   KEY `phonenumber` (`phone_number`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COMMENT='用户信息表';
+) COMMENT='用户信息表';
 
 -- 正在导出表  aicxtek.ac_user 的数据：~1 rows (大约)
 DELETE FROM `ac_user`;
-INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`, `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, `create_by`, `create_at`, `update_by`, `update_at`, `remark`, `valid`) VALUES
-	(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', 'f1898b71cd8df3f02027be28f9a413119a0bd9f06f324d0a', 0, NULL, 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, '2025-06-04 09:48:51.332', NULL, '2025-06-04 11:44:52.616', NULL, '1');
+INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`, `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, `create_by`, `update_by`, `remark`, `valid`) VALUES
+	(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', 'a49a1ea1612f58a29968025b73ba2653274711c198c79465', 0, NULL, 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');
 
 -- 导出  表 aicxtek.ac_user_dept 结构
 DROP TABLE IF EXISTS `ac_user_dept`;
@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS `ac_user_dept` (
   PRIMARY KEY (`user_id`,`dept_id`) USING BTREE,
   KEY `dept_id` (`dept_id`),
   KEY `user_id` (`user_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户组织结构表';
+) COMMENT='用户组织结构表';
 
 -- 正在导出表  aicxtek.ac_user_dept 的数据：~0 rows (大约)
 DELETE FROM `ac_user_dept`;
@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS `ac_user_group` (
   PRIMARY KEY (`user_id`,`group_id`) USING BTREE,
   KEY `group_id` (`group_id`),
   KEY `user_id` (`user_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户组群关系';
+) COMMENT='用户组群关系';
 
 -- 正在导出表  aicxtek.ac_user_group 的数据：~0 rows (大约)
 DELETE FROM `ac_user_group`;
@@ -286,7 +286,7 @@ CREATE TABLE IF NOT EXISTS `ac_user_role` (
   `user_id` bigint(20) NOT NULL COMMENT '用户ID',
   `role_id` bigint(20) NOT NULL COMMENT '角色ID',
   PRIMARY KEY (`user_id`,`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户和角色关联表';
+) COMMENT='用户和角色关联表';
 
 -- 正在导出表  aicxtek.ac_user_role 的数据：~1 rows (大约)
 DELETE FROM `ac_user_role`;
@@ -301,7 +301,7 @@ CREATE TABLE IF NOT EXISTS `changelog` (
   `applied_by` varchar(100) NOT NULL COMMENT '修改用户',
   `description` varchar(500) NOT NULL COMMENT '修改文件',
   PRIMARY KEY (`change_number`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据库变更记录表';
+) COMMENT='数据库变更记录表';
 
 -- 正在导出表  aicxtek.changelog 的数据：~0 rows (大约)
 DELETE FROM `changelog`;
@@ -461,7 +461,7 @@ CREATE TABLE IF NOT EXISTS `sys_config` (
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`config_id`),
   UNIQUE KEY `config_key` (`config_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='参数配置表';
+) COMMENT='参数配置表';
 
 -- 导出  表 aicxtek.sys_dict 结构
 DROP TABLE IF EXISTS `sys_dict`;
@@ -486,7 +486,7 @@ CREATE TABLE IF NOT EXISTS `sys_dict` (
   PRIMARY KEY (`dict_id`) USING BTREE,
   UNIQUE KEY `dict_value_dict_name` (`dict_value`,`dict_name`),
   KEY `dict_pid` (`dict_pid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典数据表';
+) COMMENT='字典数据表';
 
 -- 导出  表 aicxtek.sys_dict_type 结构
 DROP TABLE IF EXISTS `sys_dict_type`;
@@ -496,7 +496,7 @@ CREATE TABLE IF NOT EXISTS `sys_dict_type` (
   `read_only` varchar(1) NOT NULL DEFAULT '0' COMMENT '只读',
   `expired` int(11) NOT NULL DEFAULT '1440' COMMENT '更新时间',
   PRIMARY KEY (`dict_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典类型表';
+) COMMENT='字典类型表';
 
 -- 导出  表 aicxtek.sys_log 结构
 DROP TABLE IF EXISTS `sys_log`;
@@ -524,7 +524,7 @@ CREATE TABLE IF NOT EXISTS `sys_log` (
   KEY `request_id` (`request_id`),
   KEY `trace_id` (`trace_id`),
   KEY `request_ip` (`request_ip`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) COMMENT='系统日志表';
 
 -- 正在导出表  aicxtek.sys_log 的数据：~0 rows (大约)
 DELETE FROM `sys_log`;
