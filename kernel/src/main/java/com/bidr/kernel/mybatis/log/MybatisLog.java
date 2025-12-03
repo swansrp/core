@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.github.yulichang.base.JoinService;
 import org.apache.ibatis.logging.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,6 +120,7 @@ public class MybatisLog implements Log {
             // 获取调用者信息（调用 BaseSqlRepo 的位置）
             String callerInfo = getCallerInfo();
             if (FuncUtil.isNotEmpty(callerInfo)) {
+                log.trace(callerInfo);
                 resultOutput.append(" `").append(callerInfo).append("`");
             }
             
@@ -175,7 +177,7 @@ public class MybatisLog implements Log {
                 int lineNumber = element.getLineNumber();
                 return simpleClassName + ".java:" + lineNumber + " " + methodName;
             }
-            if (className.equals(BaseSqlRepo.class.getName())) {
+            if (className.equals(BaseSqlRepo.class.getName()) || className.equals(JoinService.class.getName())) {
                 findBaseSqlRepo = true;
             }
         }

@@ -11,6 +11,7 @@ import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
 import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.Md5Util;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,7 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
         user.setCustomerNumber(customerNumber);
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         user.setPasswordLastTime(new Date(0L));
+        user.setPassword(Md5Util.generate(Md5Util.MD5(user.getUserName())));
     }
 
     @Override
