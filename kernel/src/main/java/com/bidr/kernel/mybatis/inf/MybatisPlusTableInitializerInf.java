@@ -52,16 +52,45 @@ public interface MybatisPlusTableInitializerInf {
         try (Connection connection = dataSource.getConnection(); Statement stmt = connection.createStatement()) {
             DatabaseMetaData metaData = connection.getMetaData();
             String createSql = getCreateSql();
+            boolean isNewRecord = false;
+
             if (FuncUtil.isNotEmpty(createSql)) {
-                boolean isNewTable = handleCreateDDL(tableName, createSql, stmt, metaData);
+                // 有建表语句时，执行建表和升级逻辑
+                isNewRecord = handleCreateDDL(tableName, createSql, stmt, metaData);
                 handleUpgradeDDL(tableName, getUpgradeScripts(), stmt, metaData);
-                // 如果是新建表，执行初始化数据脚本
-                if (isNewTable) {
-                    handleInitData(tableName, getInitDataScripts(), stmt);
+            } else {
+                // 无建表语句时，通过版本表判断是否首次初始化（用于纯数据初始化场景）
+                isNewRecord = !versionRecordExists(stmt, tableName);
+                if (isNewRecord) {
+                    // 插入版本记录，标记已初始化
+                    stmt.executeUpdate(
+                            "INSERT INTO sys_table_version(table_name, version) VALUES ('" + tableName + "', 0) " +
+                                    "ON DUPLICATE KEY UPDATE version=version");
+                    LoggerFactory.getLogger(getClass()).info("数据初始化标记 {} 创建成功", tableName);
                 }
+            }
+
+            // 如果是新建表或首次初始化，执行初始化数据脚本
+            if (isNewRecord) {
+                handleInitData(tableName, getInitDataScripts(), stmt);
             }
         } catch (Exception e) {
             LoggerFactory.getLogger(getClass()).error("表 {} 检查失败", tableName, e);
+        }
+    }
+
+    /**
+     * 检查版本表中是否存在指定表名的记录
+     *
+     * @param stmt      数据库连接
+     * @param tableName 表名（或初始化标记名）
+     * @return 如果记录存在返回 true，否则返回 false
+     * @throws SQLException SQL 异常
+     */
+    default boolean versionRecordExists(Statement stmt, String tableName) throws SQLException {
+        try (ResultSet rs = stmt.executeQuery(
+                "SELECT 1 FROM sys_table_version WHERE table_name='" + tableName + "'")) {
+            return rs.next();
         }
     }
 
