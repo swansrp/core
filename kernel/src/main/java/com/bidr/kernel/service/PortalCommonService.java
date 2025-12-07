@@ -58,6 +58,16 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
+     * 添加后处理
+     *
+     * @param entity 添加参数
+     * @param vo     传入参数
+     */
+    default void afterAdd(ENTITY entity, VO vo) {
+
+    }
+
+    /**
      * 管理员-编辑前处理
      *
      * @param entity 编辑参数
@@ -81,6 +91,16 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
      * @param entity 编辑参数
      */
     default void afterUpdate(ENTITY entity) {
+
+    }
+
+    /**
+     * 编辑后处理
+     *
+     * @param entity 编辑参数
+     * @param vo     传入参数
+     */
+    default void afterUpdate(ENTITY entity, VO vo) {
 
     }
 

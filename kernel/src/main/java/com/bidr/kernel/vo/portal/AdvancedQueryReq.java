@@ -24,6 +24,10 @@ public class AdvancedQueryReq extends QueryReqVO {
     private AdvancedQuery condition;
     @ApiModelProperty("排序")
     private List<SortVO> sortList;
+    @ApiModelProperty("返回字段列表")
+    private List<String> selectColumnList;
+    @ApiModelProperty("去重")
+    private String distinct;
 
     public AdvancedQueryReq() {
         super();

@@ -51,6 +51,17 @@ public interface AdminBaseInsertControllerInf<ENTITY, VO> extends AdminBaseInf<E
         }
     }
 
+    /**
+     * 添加后操作
+     *
+     * @param entity 添加数据
+     */
+    default void afterAdd(ENTITY entity, VO vo) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().afterAdd(entity, vo);
+        }
+    }
+
     default void insertEntity(VO vo) {
         ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
         if (isAdmin()) {
@@ -63,5 +74,6 @@ public interface AdminBaseInsertControllerInf<ENTITY, VO> extends AdminBaseInf<E
         Boolean result = getRepo().insert(entity);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");
         afterAdd(entity);
+        afterAdd(entity, vo);
     }
 }

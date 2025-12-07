@@ -28,8 +28,14 @@ import java.util.Map;
 public class QueryConditionReq extends QueryReqVO {
     @ApiModelProperty("动态字段逻辑")
     private Map<String, Object> selectColumnCondition;
+    @ApiModelProperty("查询条件")
     private List<ConditionVO> conditionList;
+    @ApiModelProperty("排序")
     private List<SortVO> sortList;
+    @ApiModelProperty("返回字段列表")
+    private List<String> selectColumnList;
+    @ApiModelProperty("去重")
+    private String distinct;
 
     public <T, R> void addCondition(GetFunc<T, R> field, Object obj) {
         if (FuncUtil.isEmpty(conditionList)) {

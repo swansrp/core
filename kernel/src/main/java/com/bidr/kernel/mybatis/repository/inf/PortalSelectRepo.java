@@ -647,4 +647,36 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
         }
         return wrapper;
     }
+
+    /**
+     * 过滤查询字段
+     *
+     * @param selectColumns 指定查询字段
+     * @param wrapper 查询条件
+     */
+    default void filterSelectColumn(Set<String> selectColumns, Boolean distinct, MPJLambdaWrapper<T> wrapper) {
+        if (distinct) {
+            wrapper.distinct();
+        }
+        if (FuncUtil.isNotEmpty(selectColumns)) {
+            wrapper.getSelectColumns().removeIf(selectColumn -> {
+                String column = selectColumn.getColumn();
+                String columnToCheck = column;
+                // 如果包含 AS，提取别名部分
+                if (column.contains(" AS ")) {
+                    String[] parts = column.split(" AS ");
+                    if (parts.length > 1) {
+                        // 提取单引号或双引号中的内容
+                        String alias = parts[1].trim();
+                        if ((alias.startsWith("'") && alias.endsWith("'")) ||  (alias.startsWith("\"") && alias.endsWith("\""))) {
+                            columnToCheck = alias.substring(1, alias.length() - 1);
+                        } else {
+                            columnToCheck = alias;
+                        }
+                    }
+                }
+                return !selectColumns.contains(columnToCheck);
+            });
+        }
+    }
 }

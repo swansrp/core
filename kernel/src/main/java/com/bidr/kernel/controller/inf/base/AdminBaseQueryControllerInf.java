@@ -62,6 +62,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             selectApplyMap = null;
             havingFields = null;
         }
+        filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
         boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), havingFields);
@@ -190,6 +191,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             selectApplyMap = null;
             havingFields = null;
         }
+        filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
         boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         boolean conditionHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);

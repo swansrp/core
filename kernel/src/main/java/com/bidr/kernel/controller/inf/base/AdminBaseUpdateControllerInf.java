@@ -55,6 +55,18 @@ public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseInf<E
     }
 
     /**
+     * 更新后操作
+     *
+     * @param entity 修改数据
+     * @param vo     传入参数
+     */
+    default void afterUpdate(ENTITY entity, VO vo) {
+        if (FuncUtil.isNotEmpty(getPortalService())) {
+            getPortalService().afterUpdate(entity, vo);
+        }
+    }
+
+    /**
      * 更新指定字段
      *
      * @param vo       id
@@ -105,5 +117,6 @@ public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseInf<E
         Boolean result = getRepo().updateById(entity, !strict);
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
         afterUpdate(entity);
+        afterUpdate(entity, vo);
     }
 }
