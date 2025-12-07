@@ -4,14 +4,17 @@ import com.bidr.admin.manage.user.vo.UserAdminRes;
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
 import com.bidr.kernel.utils.DbUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.Md5Util;
+import com.bidr.kernel.validate.Validator;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,7 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes> {
 
+    private final AcUserService acUserService;
     private final CreateUserService createUserService;
     private final SaSequenceService sequenceService;
     @Autowired(required = false)
@@ -37,6 +41,18 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
 
     @Override
     public void beforeAdd(AcUser user) {
+        if (FuncUtil.isEmpty(user.getUserName())) {
+            Validator.assertNull(acUserService.getUserByUserName(user.getUserName()), ErrCodeSys.SYS_ERR_MSG, "该账号已存在");
+        }
+        if (FuncUtil.isEmpty(user.getIdNumber())) {
+            Validator.assertNull(acUserService.getUserByIdCardNumber(user.getIdNumber()), ErrCodeSys.SYS_ERR_MSG, "身份证信息已存在");
+        }
+        if (FuncUtil.isEmpty(user.getPhoneNumber())) {
+            Validator.assertNull(acUserService.getUserByPhoneNumber(user.getPhoneNumber()), ErrCodeSys.SYS_ERR_MSG, "手机号码已存在");
+        }
+        if (FuncUtil.isEmpty(user.getEmail())) {
+            Validator.assertNull(acUserService.getUserByEmail(user.getEmail()), ErrCodeSys.SYS_ERR_MSG, "邮箱信息已存在");
+        }
         String customerNumber;
         if (FuncUtil.isNotEmpty(customerNumberHandler)) {
             customerNumber = customerNumberHandler.getCustomerNumber(user);
