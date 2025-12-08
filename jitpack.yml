@@ -1,0 +1,6 @@
+# 指定 JDK 版本
+jdk: openjdk8
+
+# 自定义 Maven 构建命令
+install:
+  - mvn clean install -Pdevelopment -DskipTests
