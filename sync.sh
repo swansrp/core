@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-# 定义远程仓库
 REMOTE_ORIGIN="origin"
 REMOTE_GITEE="gitee"
 
@@ -25,9 +24,32 @@ if [[ -n "$(git status --porcelain)" ]]; then
   STASHED=true
 fi
 
-# 循环同步每个分支
+######################################
+# 先同步 tags（双向）
+######################################
+echo ""
+echo "🔁 同步所有 Git Tags..."
+echo "----------------------------------"
+
+# 从 origin 拉取 tags
+git fetch $REMOTE_ORIGIN --tags
+
+# 推送到 gitee
+git push $REMOTE_GITEE --tags || true
+
+# 从 gitee 拉取 tags
+git fetch $REMOTE_GITEE --tags
+
+# 推送到 origin（确保双向同步）
+git push $REMOTE_ORIGIN --tags || true
+
+echo "✅ Tags 已同步完成"
+echo ""
+
+######################################
+# 再同步各分支
+######################################
 for BRANCH in "${BRANCHES[@]}"; do
-  echo ""
   echo "🔁 同步分支: $BRANCH"
   echo "-----------------------------"
 
@@ -35,64 +57,47 @@ for BRANCH in "${BRANCHES[@]}"; do
   if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
     git checkout "$BRANCH"
   else
-    echo "本地无 $BRANCH 分支，尝试从 $REMOTE_ORIGIN 拉取..."
+    echo "本地无 $BRANCH 分支，从 origin 拉取..."
     git fetch "$REMOTE_ORIGIN" "$BRANCH":"$BRANCH" || {
-      echo "❌ 从 $REMOTE_ORIGIN 拉取 $BRANCH 失败，跳过..."
+      echo "❌ 无法获取 $BRANCH，跳过..."
       continue
     }
     git checkout "$BRANCH"
   fi
 
-  # 更新 origin -> 本地
-  echo "⬇️ 从 $REMOTE_ORIGIN 拉取最新代码..."
+  echo "⬇️ 从 origin 拉取最新分支..."
   git fetch "$REMOTE_ORIGIN" "$BRANCH"
   git rebase "$REMOTE_ORIGIN/$BRANCH" || git rebase --abort
 
-  # 推送到 gitee
-  echo "⬆️ 推送到 $REMOTE_GITEE..."
-  if ! git push "$REMOTE_GITEE" "$BRANCH"; then
-    echo "⚠️ 推送被拒绝，尝试拉取后重推..."
+  echo "⬆️ 推送到 gitee..."
+  git push "$REMOTE_GITEE" "$BRANCH" || {
+    echo "⚠️ 推送失败，尝试 rebase 后重推..."
     git pull "$REMOTE_GITEE" "$BRANCH" --rebase || true
-    git push "$REMOTE_GITEE" "$BRANCH" || echo "⚠️ Gitee 推送失败（可能分支冲突）"
-  fi
+    git push "$REMOTE_GITEE" "$BRANCH" || echo "⚠️ 依然失败"
+  }
 
-  # 再同步 Gitee -> Origin
-  echo "⬇️ 从 $REMOTE_GITEE 拉取最新代码..."
+  echo "⬇️ 从 gitee 拉取最新分支..."
   git fetch "$REMOTE_GITEE" "$BRANCH"
   git rebase "$REMOTE_GITEE/$BRANCH" || git rebase --abort
 
-  echo "⬆️ 推送到 $REMOTE_ORIGIN..."
-  if ! git push "$REMOTE_ORIGIN" "$BRANCH"; then
-    echo "⚠️ 推送被拒绝，尝试拉取后重推..."
+  echo "⬆️ 推送回 origin..."
+  git push "$REMOTE_ORIGIN" "$BRANCH" || {
+    echo "⚠️ 推送失败，尝试 rebase 后重推..."
     git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase || true
-    git push "$REMOTE_ORIGIN" "$BRANCH" || echo "⚠️ Origin 推送失败（可能分支冲突）"
-  fi
+    git push "$REMOTE_ORIGIN" "$BRANCH" || echo "⚠️ 依然失败"
+  }
 
   echo "✅ 分支 $BRANCH 同步完成"
 done
 
-####  ⭐⭐⭐ 同步 TAG（新增部分） ⭐⭐⭐ ####
-echo ""
-echo "🔖 开始同步 Tags ..."
-echo "-----------------------------"
-
-# 同步远程 tags 到本地
-git fetch "$REMOTE_ORIGIN" --tags
-git fetch "$REMOTE_GITEE" --tags
-
-# 推送本地所有 tags → 两端
-git push "$REMOTE_ORIGIN" --tags
-git push "$REMOTE_GITEE" --tags
-
-echo "✅ Tags 同步完成"
-###########################################
-
+######################################
 # 恢复 stash
+######################################
 if [ "$STASHED" = true ]; then
   echo ""
-  echo "恢复本地改动..."
-  git stash pop || echo "⚠️ 恢复 stash 可能有冲突，请手动处理"
+  echo "恢复本地更改..."
+  git stash pop || echo "⚠️ 恢复 stash 有冲突，请手动处理"
 fi
 
 echo ""
-echo "🎉 所有分支与 Tags 已同步完成！"
+echo "🎉 所有分支 + Tags 已同步完成！"
