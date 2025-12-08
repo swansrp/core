@@ -71,6 +71,22 @@ for BRANCH in "${BRANCHES[@]}"; do
   echo "✅ 分支 $BRANCH 同步完成"
 done
 
+####  ⭐⭐⭐ 同步 TAG（新增部分） ⭐⭐⭐ ####
+echo ""
+echo "🔖 开始同步 Tags ..."
+echo "-----------------------------"
+
+# 同步远程 tags 到本地
+git fetch "$REMOTE_ORIGIN" --tags
+git fetch "$REMOTE_GITEE" --tags
+
+# 推送本地所有 tags → 两端
+git push "$REMOTE_ORIGIN" --tags
+git push "$REMOTE_GITEE" --tags
+
+echo "✅ Tags 同步完成"
+###########################################
+
 # 恢复 stash
 if [ "$STASHED" = true ]; then
   echo ""
@@ -79,4 +95,4 @@ if [ "$STASHED" = true ]; then
 fi
 
 echo ""
-echo "🎉 所有分支同步完成！"
+echo "🎉 所有分支与 Tags 已同步完成！"
