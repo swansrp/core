@@ -38,31 +38,35 @@ stages:
         artifacts:
           - name: BUILD_ARTIFACT
             path:
-              - ./target
+              - ./kernel/target
         settings: []
         caches:
           - ~/.m2
         notify: []
         strategy:
           retry: '0'
+      - step: publish@general_artifacts
+        name: publish_general_artifacts
+        displayName: 上传制品
+        dependArtifact: BUILD_ARTIFACT
+        artifactName: output
+        notify: []
+        strategy:
+          retry: '0'
+        dependsOn: build_maven
   - name: stage-5e3e666f
-    displayName: 上传制品
+    displayName: 发布
     strategy: naturally
     trigger: auto
     executor:
       - swansrp
     steps:
-      - step: release@gitee
-        name: release_gitee
-        displayName: Gitee Release
-        releaseName: null
-        description: kernel
-        tagName: kernel
-        upstreamArtifact:
-          - BUILD_ARTIFACT
-        assertFiles: null
-        prerelease: false
-        allowUpdate: true
+      - step: publish@release_artifacts
+        name: publish_release_artifacts
+        displayName: 发布
+        dependArtifact: output
+        version: 1.0.0.0
+        autoIncrement: true
         notify: []
         strategy:
           retry: '0'
