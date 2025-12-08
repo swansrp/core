@@ -3,25 +3,25 @@ jdk: openjdk8
 
 # 自定义 Maven 构建命令
 install:
-  - echo "Building all modules for version $JITPACK_VERSION"
+  - echo "Building all modules for version ${JITPACK_VERSION}"
   - mvn clean install -DskipTests -P development
   - echo "Installing all modules to JitPack repository with correct groupId"
-  - mvn install:install-file -Dfile=kernel/target/kernel-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=kernel -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=platform/target/platform-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=platform -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=xxl-job/target/xxl-job-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=xxl-job -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=email/target/email-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=email -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=redis/target/redis-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=redis -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=authorization/target/authorization-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=authorization -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=sms/target/sms-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=sms -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=mqtt/target/mqtt-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=mqtt -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=neo4j/target/neo4j-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=neo4j -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=admin/target/admin-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=admin -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=oss/target/oss-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=oss -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=wechat/target/wechat-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=wechat -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=ocr/target/ocr-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=ocr -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=qichacha/target/qichacha-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=qichacha -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=mongo/target/mongo-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=mongo -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=socket-io/target/socket-io-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=socket-io -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=mcp/target/mcp-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=mcp -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=elasticsearch/target/elasticsearch-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=elasticsearch -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
-  - mvn install:install-file -Dfile=forge/target/forge-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=forge -Dversion=$JITPACK_VERSION -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=kernel/target/kernel-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=kernel -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=platform/target/platform-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=platform -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=xxl-job/target/xxl-job-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=xxl-job -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=email/target/email-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=email -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=redis/target/redis-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=redis -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=authorization/target/authorization-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=authorization -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=sms/target/sms-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=sms -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=mqtt/target/mqtt-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=mqtt -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=neo4j/target/neo4j-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=neo4j -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=admin/target/admin-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=admin -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=oss/target/oss-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=oss -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=wechat/target/wechat-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=wechat -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=ocr/target/ocr-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=ocr -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=qichacha/target/qichacha-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=qichacha -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=mongo/target/mongo-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=mongo -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=socket-io/target/socket-io-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=socket-io -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=mcp/target/mcp-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=mcp -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=elasticsearch/target/elasticsearch-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=elasticsearch -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
+  - mvn install:install-file -Dfile=forge/target/forge-0.0.1-SNAPSHOT.jar -DgroupId=com.github.swansrp.core -DartifactId=forge -Dversion=${JITPACK_VERSION} -Dpackaging=jar -DgeneratePom=true
