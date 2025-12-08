@@ -20,6 +20,7 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <platform.version>${jarVersion}</platform.version>
                 <redis.version>${jarVersion}</redis.version>
