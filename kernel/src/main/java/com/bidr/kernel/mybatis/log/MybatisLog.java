@@ -2,6 +2,7 @@ package com.bidr.kernel.mybatis.log;
 
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
@@ -177,7 +178,7 @@ public class MybatisLog implements Log {
                 int lineNumber = element.getLineNumber();
                 return simpleClassName + ".java:" + lineNumber + " " + methodName;
             }
-            if (className.equals(BaseSqlRepo.class.getName()) || className.equals(JoinService.class.getName())) {
+            if (className.equals(BaseSqlRepo.class.getName()) || className.equals(JoinService.class.getName()) || className.equals(IService.class.getName())) {
                 findBaseSqlRepo = true;
             }
         }
