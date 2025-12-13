@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.oss.dao.mapper.SaWikiPageMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.oss.dao.entity.SaWikiPage">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="content" jdbcType="LONGVARCHAR" property="content" />
+    <result column="content_html" jdbcType="LONGVARCHAR" property="contentHtml" />
+    <result column="parent_id" jdbcType="BIGINT" property="parentId" />
+    <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
+    <result column="author_id" jdbcType="VARCHAR" property="authorId" />
+    <result column="modify_at" jdbcType="TIMESTAMP" property="modifyAt" />
+    <result column="status" jdbcType="CHAR" property="status" />
+    <result column="is_public" jdbcType="CHAR" property="isPublic" />
+    <result column="view_count" jdbcType="BIGINT" property="viewCount" />
+    <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+    <result column="valid" jdbcType="CHAR" property="valid" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, title, content, content_html, parent_id, sort_order, author_id, modify_at,
+    `status`, is_public, view_count, version, create_by, create_at, update_by, update_at, `valid`
+  </sql>
+</mapper>

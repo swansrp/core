@@ -29,6 +29,7 @@
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <platform.version>${jarVersion}</platform.version>
+                <authorization.version>${jarVersion}</authorization.version>
             </properties>
         </profile>
         <profile>
@@ -42,6 +43,7 @@
                 <java.version>1.8</java.version>
                 <kernel.version>20251117160209-141</kernel.version>
                 <platform.version>20250822140059-44</platform.version>
+                <authorization.version>20250902154432-59</authorization.version>
             </properties>
         </profile>
     </profiles>
@@ -57,6 +59,11 @@
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization</artifactId>
+            <version>${authorization.version}</version>
+        </dependency>
         <!-- minio -->
         <dependency>
             <groupId>io.minio</groupId>
@@ -69,7 +76,6 @@
             <artifactId>aliyun-sdk-oss</artifactId>
             <version>3.5.0</version>
         </dependency>
-
     </dependencies>
 
 </project>
