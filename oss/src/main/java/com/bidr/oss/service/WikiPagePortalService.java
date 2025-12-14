@@ -41,9 +41,7 @@ public class WikiPagePortalService {
      * @param keyword 搜索关键词
      * @return 树形节点列表
      */
-    public List<OssWikiPageVO> getPageTree(String keyword) {
-        // 只显示公开的页面和当前用户有权限的页面
-        String currentUserId = AccountContext.getOperator();
+    public List<OssWikiPageVO> getPageTree(String keyword, String currentUserId) {
         return wikiPageService.get(currentUserId, keyword);
     }
 
@@ -89,6 +87,7 @@ public class WikiPagePortalService {
 
         SaWikiPage page;
         if (vo.getId() == null) {
+            Long count = wikiPageService.countByPid(vo.getParentId());
             // 新增
             page = new SaWikiPage();
             page.setAuthorId(currentUserId);
@@ -97,8 +96,9 @@ public class WikiPagePortalService {
             // 默认公开
             page.setIsPublic("1");
             page.setViewCount(0L);
+            page.setSortOrder(count.intValue() + 1);
             page.setVersion(1);
-            page.setValid("1");
+            page.setValid(CommonConst.YES);
         } else {
             // 更新
             page = wikiPageService.getById(vo.getId());
@@ -112,7 +112,7 @@ public class WikiPagePortalService {
             if (!canEdit) {
                 throw new RuntimeException("无权编辑此页面");
             }
-
+            page.setSortOrder(vo.getSortOrder() != null ? vo.getSortOrder() : 0);
             page.setVersion(page.getVersion() + 1);
         }
 
@@ -120,7 +120,6 @@ public class WikiPagePortalService {
         page.setContent(vo.getContent());
         page.setContentHtml(vo.getContentHtml());
         page.setParentId(vo.getParentId());
-        page.setSortOrder(vo.getSortOrder() != null ? vo.getSortOrder() : 0);
 
         if (vo.getIsPublic() != null) {
             page.setIsPublic(vo.getIsPublic());
@@ -187,8 +186,7 @@ public class WikiPagePortalService {
      * @param keyword 关键词
      * @return 页面列表
      */
-    public List<OssWikiPageVO> searchPages(String keyword) {
-        String currentUserId = AccountContext.getOperator();
+    public List<OssWikiPageVO> searchPages(String keyword, String currentUserId) {
         return wikiPageService.get(currentUserId, keyword);
     }
 

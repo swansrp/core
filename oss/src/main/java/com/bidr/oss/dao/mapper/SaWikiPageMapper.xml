@@ -4,6 +4,7 @@
   <resultMap id="BaseResultMap" type="com.bidr.oss.dao.entity.SaWikiPage">
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="mode" jdbcType="VARCHAR" property="mode" />
     <result column="content" jdbcType="LONGVARCHAR" property="content" />
     <result column="content_html" jdbcType="LONGVARCHAR" property="contentHtml" />
     <result column="parent_id" jdbcType="BIGINT" property="parentId" />
@@ -21,7 +22,7 @@
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, title, content, content_html, parent_id, sort_order, author_id, modify_at,
+    id, title, mode, content, content_html, parent_id, sort_order, author_id, modify_at,
     `status`, is_public, view_count, version, create_by, create_at, update_by, update_at, `valid`
   </sql>
 </mapper>

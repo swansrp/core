@@ -32,6 +32,10 @@ public class SaWikiPage {
     @ApiModelProperty(value = "页面标题")
     private String title;
 
+    @TableField(value = "mode")
+    @ApiModelProperty(value = "模式:0,富文本;1,markdown")
+    private String mode;
+
     @TableField(value = "content")
     @ApiModelProperty(value = "页面内容(JSON格式)")
     private String content;

@@ -33,6 +33,12 @@ public class OssWikiPageVO {
     private String title;
 
     /**
+     * 模式
+     */
+    @ApiModelProperty(value = "模式:0,富文本;1,markdown")
+    private String mode;
+
+    /**
      * 页面内容(JSON格式)
      */
     @ApiModelProperty(value = "页面内容(JSON格式)")

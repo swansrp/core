@@ -31,6 +31,7 @@ public class SaWikiPageService extends BaseSqlRepo<SaWikiPageMapper, SaWikiPage>
         wrapper.selectAs(SaWikiPage::getId, OssWikiPageVO::getId);
         wrapper.selectAs(SaWikiPage::getParentId, OssWikiPageVO::getParentId);
         wrapper.selectAs(SaWikiPage::getTitle, OssWikiPageVO::getTitle);
+        wrapper.selectAs(SaWikiPage::getMode, OssWikiPageVO::getMode);
         wrapper.selectAs(AcUser::getName, OssWikiPageVO::getAuthorName);
         wrapper.selectAs(SaWikiPage::getModifyAt, OssWikiPageVO::getModifyAt);
         wrapper.leftJoin(SaWikiCollaborator.class, SaWikiCollaborator::getPageId, SaWikiPage::getId);
@@ -38,10 +39,21 @@ public class SaWikiPageService extends BaseSqlRepo<SaWikiPageMapper, SaWikiPage>
         wrapper.and(FuncUtil.isNotEmpty(searchName), w -> w.like(SaWikiPage::getTitle, searchName)
                 .or()
                 .like(SaWikiPage::getContentHtml, searchName));
+        if (FuncUtil.isNotEmpty(operator)) {
+            wrapper.and(w -> w.eq(SaWikiPage::getIsPublic, CommonConst.YES).or().eq(SaWikiPage::getAuthorId, operator)
+                    .or(r -> r.eq(SaWikiCollaborator::getUserId, operator).eq(SaWikiCollaborator::getStatus, CommonConst.YES)));
+        } else {
+            wrapper.eq(SaWikiPage::getIsPublic, CommonConst.YES);
+        }
 
-        wrapper.and(w->w.eq(SaWikiPage::getIsPublic, CommonConst.YES).or().eq(SaWikiPage::getAuthorId, operator)
-                .or(r -> r.eq(SaWikiCollaborator::getUserId, operator).eq(SaWikiCollaborator::getStatus, CommonConst.YES)));
         wrapper.orderByAsc(SaWikiPage::getSortOrder);
         return super.selectJoinList(OssWikiPageVO.class, wrapper);
+    }
+
+    public Long countByPid(Long parentId) {
+        return super.count(new MPJLambdaWrapper<SaWikiPage>()
+                .eq(FuncUtil.isNotEmpty(parentId), SaWikiPage::getParentId, parentId)
+                .isNull(FuncUtil.isEmpty(parentId), SaWikiPage::getParentId)
+                .eq(SaWikiPage::getValid, CommonConst.YES));
     }
 }

@@ -42,7 +42,7 @@ public class WikiController {
     @GetMapping("/tree")
     public List<OssWikiPageVO> getTree(
             @ApiParam("搜索关键词") @RequestParam(required = false) String keyword) {
-        return wikiPagePortalService.getPageTree(keyword);
+        return wikiPagePortalService.getPageTree(keyword, AccountContext.getOperator());
     }
 
     /**
@@ -110,7 +110,7 @@ public class WikiController {
     @GetMapping("/search")
     public List<OssWikiPageVO> searchPages(
             @ApiParam("搜索关键词") @RequestParam String keyword) {
-        return wikiPagePortalService.searchPages(keyword);
+        return wikiPagePortalService.searchPages(keyword, AccountContext.getOperator());
     }
 
     /**
@@ -122,6 +122,29 @@ public class WikiController {
     public OssWikiPageVO getPublicPage(@PathVariable Long id) {
         return wikiPagePortalService.getPageDetail(id,  null);
     }
+
+    /**
+     * 公开预览页面树（无需登录）
+     */
+    @Auth(AuthNone.class)
+    @ApiOperation("公开预览Wiki页面树")
+    @GetMapping("/public/tree")
+    public List<OssWikiPageVO> getPublicTree(
+            @ApiParam("搜索关键词") @RequestParam(required = false) String keyword) {
+        return wikiPagePortalService.getPageTree(keyword, null);
+    }
+
+    /**
+     * 搜索Wiki页面
+     */
+    @Auth(AuthNone.class)
+    @ApiOperation("搜索公开Wiki页面")
+    @GetMapping("/public/search")
+    public List<OssWikiPageVO> searchPublicPages(
+            @ApiParam("搜索关键词") @RequestParam String keyword) {
+        return wikiPagePortalService.searchPages(keyword, null);
+    }
+
 
     // ========== 协作者相关接口 ==========
 

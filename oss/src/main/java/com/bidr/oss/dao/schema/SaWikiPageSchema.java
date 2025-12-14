@@ -39,5 +39,7 @@ public class SaWikiPageSchema extends BaseMybatisSchema<SaWikiPage> {
                 " CHANGE COLUMN `update_at` `update_at` DATETIME(3) NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '更新时间' AFTER `update_by`;");
         setUpgradeDDL(2, "ALTER TABLE `sa_wiki_page`\n" +
                 " ADD COLUMN `modify_at` DATETIME(3) NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '内容更新时间' AFTER `author_id`;");
+        setUpgradeDDL(3, "ALTER TABLE `sa_wiki_page`\n" +
+                " ADD COLUMN `mode` varchar(1) NOT NULL DEFAULT '0' COMMENT '模式:0,富文本;1,markdown' AFTER `title`;");
     }
 }
