@@ -8,6 +8,7 @@ import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.oss.service.WikiCollaboratorPortalService;
 import com.bidr.oss.service.WikiPagePortalService;
 import com.bidr.oss.vo.OssWikiCollaboratorVO;
+import com.bidr.oss.vo.OssWikiPageShareVO;
 import com.bidr.oss.vo.OssWikiPageVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -148,16 +149,37 @@ public class WikiController {
 
     // ========== 协作者相关接口 ==========
 
+
+    /**
+     * 获取权限分享码
+     */
+    @ApiOperation("获取只读权限分享码")
+    @GetMapping("/collaborator/share")
+    public OssWikiPageShareVO getPermissionKey(Long pageId, String permission, String password, Integer expiredSeconds) {
+        return collaboratorPortalService.getPermissionKey(pageId, permission, password, expiredSeconds);
+    }
+
+    /**
+     * 解析分享码获取权限
+     */
+    @ApiOperation("解析分享码获取权限")
+    @PostMapping("/collaborator/share")
+    public void parsePermission(String shareCode, String password) {
+        collaboratorPortalService.parsePermission(shareCode, password);
+        Resp.notice("已获取相关页面权限");
+    }
+
     /**
      * 申请编辑权限
      */
     @ApiOperation("申请编辑权限")
     @PostMapping("/collaborator/request")
-    public boolean requestAccess(@RequestBody Map<String, Object> params) {
+    public void requestAccess(@RequestBody Map<String, Object> params) {
         Long pageId = Long.valueOf(params.get("pageId").toString());
         String permission = params.get("permission") != null ? params.get("permission").toString() : "2";
         String requestMsg = params.get("requestMsg") != null ? params.get("requestMsg").toString() : null;
-        return collaboratorPortalService.requestAccess(pageId, permission, requestMsg);
+        collaboratorPortalService.requestAccess(pageId, permission, requestMsg);
+        Resp.notice("申请成功，请等待审批");
     }
 
     /**
