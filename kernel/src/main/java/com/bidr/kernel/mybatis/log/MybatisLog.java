@@ -45,7 +45,7 @@ public class MybatisLog implements Log {
     @Override
     public void trace(String msg) {
         if (log.isTraceEnabled()) {
-            log.trace(msg);
+            // log.trace(msg);
             process(msg);
         }
     }
@@ -152,7 +152,7 @@ public class MybatisLog implements Log {
             resultOutput.append(tableOutput);
         }
         if (!LogSuppressor.isLoggingSuppressed()) {
-            System.out.println(resultOutput);
+            log.trace(resultOutput.toString());
         }
     }
 
