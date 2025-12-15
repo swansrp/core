@@ -3,6 +3,7 @@ package com.bidr.oss.controller;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.kernel.config.log.LogSilent;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.oss.service.WikiCollaboratorPortalService;
@@ -49,6 +50,7 @@ public class WikiController {
     /**
      * 获取Wiki页面详情
      */
+    @LogSilent
     @ApiOperation("获取Wiki页面详情")
     @GetMapping("/page/{id}")
     public OssWikiPageVO getPage(@PathVariable Long id) {
@@ -117,6 +119,7 @@ public class WikiController {
     /**
      * 公开预览页面（无需登录）
      */
+    @LogSilent
     @Auth(AuthNone.class)
     @ApiOperation("公开预览Wiki页面")
     @GetMapping("/public/{id}")
