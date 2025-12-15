@@ -1,7 +1,6 @@
 package com.bidr.kernel.mybatis.log;
 
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bidr.kernel.config.log.LogSuppressor;
@@ -122,10 +121,9 @@ public class MybatisLog implements Log {
             // 获取调用者信息（调用 BaseSqlRepo 的位置）
             String callerInfo = getCallerInfo();
             if (FuncUtil.isNotEmpty(callerInfo)) {
-                log.trace(callerInfo);
                 resultOutput.append(" `").append(callerInfo).append("`");
             }
-            
+
             // 如果是批量操作（多组参数）
             if (parametersList.size() > 1) {
                 resultOutput.append("\n### \ud83d\udd39 Complete SQL (Batch: ").append(parametersList.size()).append(" statements)");
