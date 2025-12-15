@@ -11,6 +11,7 @@ import com.bidr.oss.service.WikiPagePortalService;
 import com.bidr.oss.vo.OssWikiCollaboratorVO;
 import com.bidr.oss.vo.OssWikiPageShareVO;
 import com.bidr.oss.vo.OssWikiPageVO;
+import com.bidr.platform.config.anno.ApiTrace;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -51,6 +52,7 @@ public class WikiController {
      * 获取Wiki页面详情
      */
     @LogSilent
+    @ApiTrace(response = false)
     @ApiOperation("获取Wiki页面详情")
     @GetMapping("/page/{id}")
     public OssWikiPageVO getPage(@PathVariable Long id) {
@@ -120,6 +122,7 @@ public class WikiController {
      * 公开预览页面（无需登录）
      */
     @LogSilent
+    @ApiTrace(response = false)
     @Auth(AuthNone.class)
     @ApiOperation("公开预览Wiki页面")
     @GetMapping("/public/{id}")

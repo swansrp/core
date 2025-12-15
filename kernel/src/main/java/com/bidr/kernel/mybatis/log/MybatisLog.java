@@ -4,6 +4,7 @@ package com.bidr.kernel.mybatis.log;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.bidr.kernel.config.log.LogSuppressor;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.github.yulichang.base.JoinService;
@@ -150,7 +151,9 @@ public class MybatisLog implements Log {
             resultOutput.append("\n### \ud83d\udccb Query Result (").append(rows.size()).append(" row").append(rows.size() > 1 ? "s" : "").append(")\n");
             resultOutput.append(tableOutput);
         }
-        System.out.println(resultOutput);
+        if (!LogSuppressor.isLoggingSuppressed()) {
+            System.out.println(resultOutput);
+        }
     }
 
     /**
