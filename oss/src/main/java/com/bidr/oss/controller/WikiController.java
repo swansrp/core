@@ -28,6 +28,7 @@ import java.util.Map;
  * @since 2025-12-12
  */
 @Api(tags = "Wiki管理 - Wiki页面")
+@LogSilent
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/wiki"})
@@ -51,7 +52,6 @@ public class WikiController {
     /**
      * 获取Wiki页面详情
      */
-    @LogSilent
     @ApiTrace(response = false)
     @ApiOperation("获取Wiki页面详情")
     @GetMapping("/page/{id}")
@@ -62,6 +62,7 @@ public class WikiController {
     /**
      * 新增Wiki页面
      */
+    @ApiTrace(response = false)
     @ApiOperation("新增Wiki页面")
     @PostMapping("/page")
     public OssWikiPageVO addPage(@RequestBody OssWikiPageVO vo) {
@@ -72,6 +73,7 @@ public class WikiController {
     /**
      * 更新Wiki页面
      */
+    @ApiTrace(response = false)
     @ApiOperation("更新Wiki页面")
     @PostMapping("/page/{id}")
     public OssWikiPageVO updatePage(@PathVariable Long id, @RequestBody OssWikiPageVO vo) {
@@ -121,13 +123,12 @@ public class WikiController {
     /**
      * 公开预览页面（无需登录）
      */
-    @LogSilent
     @ApiTrace(response = false)
     @Auth(AuthNone.class)
     @ApiOperation("公开预览Wiki页面")
     @GetMapping("/public/{id}")
     public OssWikiPageVO getPublicPage(@PathVariable Long id) {
-        return wikiPagePortalService.getPageDetail(id,  null);
+        return wikiPagePortalService.getPageDetail(id, null);
     }
 
     /**
