@@ -24,6 +24,24 @@ import java.util.List;
 public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
 
     /**
+     * 预处理
+     *
+     * @param items 处理数据列表
+     */
+    default void prepare(List<T> items) {
+
+    }
+
+    /**
+     * 批量处理完成
+     *
+     * @param items 处理数据列表(有效数据)
+     */
+    default void afterAll(List<T> items) {
+
+    }
+
+    /**
      * 异步处理
      *
      * @param items 处理数据列表
@@ -34,6 +52,7 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
             if (FuncUtil.isNotEmpty(items)) {
                 startUploadProgress(items.size());
                 startValidateRecord(items.size());
+                prepare(items);
                 List<T> entityList = new ArrayList<>();
                 int i = 1;
                 for (T item : items) {
@@ -52,6 +71,7 @@ public interface AsyncProcessInf<T> extends PortalExcelUploadProgressInf {
                         getTransactionManager().commit(status);
                         addUploadProgress(i++);
                     }
+                    afterAll(entityList);
                     uploadProgressFinish();
                 } catch (Exception e) {
                     if (status != null) {
