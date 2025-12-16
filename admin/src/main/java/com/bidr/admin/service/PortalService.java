@@ -73,7 +73,7 @@ public class PortalService {
         if (FuncUtil.isEmpty(req.getPidColumn())) {
             portal.setPidColumn(StringUtil.EMPTY);
         }
-        sysPortalService.updateById(portal);
+        sysPortalService.updateById(portal, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
