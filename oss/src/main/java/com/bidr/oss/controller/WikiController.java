@@ -27,8 +27,8 @@ import java.util.Map;
  * @author sharp
  * @since 2025-12-12
  */
-@Api(tags = "Wiki管理 - Wiki页面")
 @LogSilent
+@Api(tags = "系统 - Wiki管理 - Wiki页面")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/wiki"})
