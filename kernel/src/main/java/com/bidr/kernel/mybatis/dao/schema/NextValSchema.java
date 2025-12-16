@@ -13,7 +13,7 @@ public class NextValSchema extends BaseMybatisSchema<Object> {
     static {
         // 先删除旧函数，再创建新函数（分两步执行）
         setCreateDDL("CREATE FUNCTION `f_nextval`(`SEQ_NAME` VARCHAR(128)) RETURNS varchar(50) " +
-                "    SQL SECURITY INVOKER " +
+                "    SQL SECURITY INVOKER DETERMINISTIC READS SQL DATA MODIFIES SQL DATA " +
                 "    COMMENT '获取流水号' " +
                 "BEGIN " +
                 "  declare exsited int default 0; " +
