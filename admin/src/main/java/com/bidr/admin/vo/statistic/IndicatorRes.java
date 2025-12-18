@@ -18,6 +18,7 @@ public class IndicatorRes {
     private String key;
     private String pid;
     private String title;
+    private Integer displayOrder;
     private List<IndicatorItem> items;
     private List<IndicatorRes> children = new ArrayList<>();
 }
