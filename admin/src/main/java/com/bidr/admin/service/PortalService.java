@@ -32,11 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: PortalService
@@ -156,10 +152,10 @@ public class PortalService {
         Validator.assertNotNull(sourcePortal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         PortalWithColumnsRes sourcePortalWithColumn = Resp.convert(sourcePortal, PortalWithColumnsRes.class);
         List<IndicatorRes> indicatorResList = sysPortalIndicatorGroupService.getIndicator(sourcePortal.getName());
-        
+
         // 清理目标portal的现有indicatorGroup和indicator数据
         cleanExistingIndicators(req.getTargetName());
-        
+
         Collection<Long> bindRoleIdList = portalConfigService.getBindRoleIdList();
         for (Long roleId : bindRoleIdList) {
             SysPortal targetPortal = ReflectionUtil.copy(sourcePortal, SysPortal.class);
@@ -187,6 +183,7 @@ public class PortalService {
 
     /**
      * 清理目标portal的现有indicatorGroup和indicator数据
+     *
      * @param targetPortalName 目标portal名称
      */
     private void cleanExistingIndicators(String targetPortalName) {
@@ -194,20 +191,20 @@ public class PortalService {
         LambdaQueryWrapper<SysPortalIndicatorGroup> groupWrapper = new LambdaQueryWrapper<>();
         groupWrapper.eq(SysPortalIndicatorGroup::getPortalName, targetPortalName);
         List<SysPortalIndicatorGroup> existingGroups = sysPortalIndicatorGroupService.select(groupWrapper);
-        
+
         if (FuncUtil.isNotEmpty(existingGroups)) {
             // 收集所有group的ID
             List<Long> groupIds = existingGroups.stream()
                     .map(SysPortalIndicatorGroup::getId)
                     .collect(java.util.stream.Collectors.toList());
-            
+
             // 删除所有关联的indicator
             if (FuncUtil.isNotEmpty(groupIds)) {
                 LambdaQueryWrapper<SysPortalIndicator> indicatorWrapper = new LambdaQueryWrapper<>();
                 indicatorWrapper.in(SysPortalIndicator::getGroupId, groupIds);
                 sysPortalIndicatorService.delete(indicatorWrapper);
             }
-            
+
             // 删除所有indicatorGroup
             sysPortalIndicatorGroupService.delete(groupWrapper);
         }
@@ -215,7 +212,8 @@ public class PortalService {
 
     /**
      * 复制indicatorGroup树形结构和indicator数据
-     * @param indicatorResList 源indicator列表（已经是树形结构）
+     *
+     * @param indicatorResList 源indicator列表（扫平列表，包含pid信息）
      * @param sourcePortalName 源portal名称
      * @param targetPortalName 目标portal名称
      */
@@ -226,100 +224,26 @@ public class PortalService {
 
         // 使用Map保存旧ID到新实体的映射关系
         Map<String, SysPortalIndicatorGroup> oldToNewGroupMap = new HashMap<>();
-        
-        // 递归复制树形结构的indicatorGroup，从根节点开始，null表示根节点没有父节点
-        copyIndicatorGroupTree(indicatorResList, null, targetPortalName, oldToNewGroupMap);
 
-        // 收集所有indicator并批量插入
-        List<SysPortalIndicator> newIndicators = new ArrayList<>();
-        collectIndicators(indicatorResList, oldToNewGroupMap, newIndicators);
-        
-        if (FuncUtil.isNotEmpty(newIndicators)) {
-            sysPortalIndicatorService.insert(newIndicators);
-        }
-    }
+        // 第一步：按照pid分组，分层次插入
+        // 先找出所有根节点（pid为null或空）
+        List<IndicatorRes> rootNodes = new ArrayList<>();
+        Map<String, List<IndicatorRes>> childrenMap = new HashMap<>();
 
-    /**
-     * 递归复制indicatorGroup树形结构
-     * @param indicatorResList indicator列表
-     * @param parentId 父节点ID（null表示根节点）
-     * @param targetPortalName 目标portal名称
-     * @param oldToNewGroupMap 旧ID到新实体的映射
-     */
-    private void copyIndicatorGroupTree(List<IndicatorRes> indicatorResList, Long parentId,
-                                       String targetPortalName,
-                                       Map<String, SysPortalIndicatorGroup> oldToNewGroupMap) {
-        if (FuncUtil.isEmpty(indicatorResList)) {
-            return;
-        }
-
-        // 当前层级的所有节点
-        List<SysPortalIndicatorGroup> currentLevelGroups = new ArrayList<>();
-        
         for (IndicatorRes res : indicatorResList) {
-            SysPortalIndicatorGroup newGroup = new SysPortalIndicatorGroup();
-            newGroup.setPortalName(targetPortalName);
-            newGroup.setName(res.getTitle());
-            newGroup.setDisplayOrder(res.getDisplayOrder() != null ? res.getDisplayOrder() : 0);
-            
-            // 根据原有的pid关系设置新的pid
-            // 如果原来的pid为null或空，说明是根节点，新的pid也设为null
-            // 否则，从映射中找到对应的新父节点ID
             if (FuncUtil.isEmpty(res.getPid()) || "null".equals(res.getPid())) {
-                newGroup.setPid(null);
+                rootNodes.add(res);
             } else {
-                // 从映射中查找父节点的新ID
-                SysPortalIndicatorGroup parentGroup = oldToNewGroupMap.get(res.getPid());
-                if (parentGroup != null) {
-                    newGroup.setPid(parentGroup.getId());
-                } else {
-                    // 如果找不到父节点，设为null（理论上不应该发生）
-                    newGroup.setPid(null);
-                }
+                childrenMap.computeIfAbsent(res.getPid(), k -> new ArrayList<>()).add(res);
             }
-            
-            currentLevelGroups.add(newGroup);
-        }
-        
-        // 批量插入当前层级的节点
-        if (FuncUtil.isNotEmpty(currentLevelGroups)) {
-            sysPortalIndicatorGroupService.insert(currentLevelGroups);
-            
-            // 更新映射关系
-            int index = 0;
-            for (IndicatorRes res : indicatorResList) {
-                if (index < currentLevelGroups.size()) {
-                    oldToNewGroupMap.put(res.getId(), currentLevelGroups.get(index));
-                    index++;
-                }
-            }
-        }
-        
-        // 递归处理子节点
-        for (int i = 0; i < indicatorResList.size(); i++) {
-            IndicatorRes res = indicatorResList.get(i);
-            if (FuncUtil.isNotEmpty(res.getChildren())) {
-                // 递归处理子节点，不需要传入parentId，因为在子节点的pid中已经包含了
-                copyIndicatorGroupTree(res.getChildren(), null, targetPortalName, oldToNewGroupMap);
-            }
-        }
-    }
-
-    /**
-     * 收集所有indicator
-     * @param indicatorResList indicator列表
-     * @param oldToNewGroupMap 旧ID到新实体的映射
-     * @param result 结果集合
-     */
-    private void collectIndicators(List<IndicatorRes> indicatorResList, 
-                                  Map<String, SysPortalIndicatorGroup> oldToNewGroupMap,
-                                  List<SysPortalIndicator> result) {
-        if (FuncUtil.isEmpty(indicatorResList)) {
-            return;
         }
 
+        // 递归插入节点，保持层级关系
+        insertIndicatorGroupsByLevel(rootNodes, null, targetPortalName, oldToNewGroupMap, childrenMap);
+
+        // 第二步：收集所有indicator并批量插入
+        List<SysPortalIndicator> newIndicators = new ArrayList<>();
         for (IndicatorRes res : indicatorResList) {
-            // 获取新的group ID
             SysPortalIndicatorGroup newGroup = oldToNewGroupMap.get(res.getId());
             if (newGroup != null && FuncUtil.isNotEmpty(res.getItems())) {
                 Long newGroupId = newGroup.getId();
@@ -333,13 +257,64 @@ public class PortalService {
                     indicator.setDynamicColumn(item.getDynamicColumns());
                     indicator.setDisplayOrder(order++);
                     indicator.setValid(CommonConst.YES);
-                    result.add(indicator);
+                    newIndicators.add(indicator);
                 }
             }
-            
-            // 递归处理子节点
-            if (FuncUtil.isNotEmpty(res.getChildren())) {
-                collectIndicators(res.getChildren(), oldToNewGroupMap, result);
+        }
+
+        if (FuncUtil.isNotEmpty(newIndicators)) {
+            sysPortalIndicatorService.insert(newIndicators);
+        }
+    }
+
+    /**
+     * 按层级递归插入indicatorGroup
+     *
+     * @param nodes            当前层级的节点列表
+     * @param parentId         父节点ID
+     * @param targetPortalName 目标portal名称
+     * @param oldToNewGroupMap 旧ID到新实体的映射
+     * @param childrenMap      父ID到子节点列表的映射
+     */
+    private void insertIndicatorGroupsByLevel(List<IndicatorRes> nodes, Long parentId,
+                                              String targetPortalName,
+                                              Map<String, SysPortalIndicatorGroup> oldToNewGroupMap,
+                                              Map<String, List<IndicatorRes>> childrenMap) {
+        if (FuncUtil.isEmpty(nodes)) {
+            return;
+        }
+
+        // 创建当前层级的所有节点
+        List<SysPortalIndicatorGroup> currentLevelGroups = new ArrayList<>();
+        for (IndicatorRes res : nodes) {
+            SysPortalIndicatorGroup newGroup = new SysPortalIndicatorGroup();
+            newGroup.setPortalName(targetPortalName);
+            newGroup.setName(res.getTitle());
+            newGroup.setDisplayOrder(res.getDisplayOrder() != null ? res.getDisplayOrder() : 0);
+            newGroup.setPid(parentId);
+            currentLevelGroups.add(newGroup);
+        }
+
+        // 批量插入当前层级
+        if (FuncUtil.isNotEmpty(currentLevelGroups)) {
+            sysPortalIndicatorGroupService.insert(currentLevelGroups);
+
+            // 更新映射关系
+            for (int i = 0; i < nodes.size(); i++) {
+                oldToNewGroupMap.put(nodes.get(i).getId(), currentLevelGroups.get(i));
+            }
+        }
+
+        // 递归处理每个节点的子节点
+        for (IndicatorRes node : nodes) {
+            List<IndicatorRes> children = childrenMap.get(node.getId());
+            if (FuncUtil.isNotEmpty(children)) {
+                // 递归插入子节点，使用新插入节点的ID作为父ID
+                insertIndicatorGroupsByLevel(children,
+                        oldToNewGroupMap.getOrDefault(node.getId(), new SysPortalIndicatorGroup()).getId(),
+                        targetPortalName,
+                        oldToNewGroupMap,
+                        childrenMap);
             }
         }
     }

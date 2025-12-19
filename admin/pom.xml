@@ -43,7 +43,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <kernel.version>20251216092854-143</kernel.version>
-                <platform.version>20250822140059-44</platform.version>
+                <platform.version>20251119175309-45</platform.version>
                 <redis.version>20250416171510-30</redis.version>
                 <authorization.version>20250902154432-59</authorization.version>
             </properties>
