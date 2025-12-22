@@ -3,8 +3,10 @@ package com.bidr.kernel.config.db;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.dao.repository.SaSequenceService;
 import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.validate.Validator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -51,6 +53,7 @@ public class SequenceKey implements IdentifierGenerator {
             }
         }
         String seqName = tableName + "_" + columnName + "_SEQ";
+        Validator.assertTrue(sequenceService.existedById(seqName), ErrCodeSys.PA_DATA_NOT_EXIST, "序列名称");
         return sequenceService.getSeq(seqName.toUpperCase());
     }
 
