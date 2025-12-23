@@ -21,6 +21,7 @@ import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.TreeDataItemVO;
 import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
@@ -103,13 +104,6 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public List<Map<String, Object>> queryList(AdvancedQueryReq req, String portalName, Long roleId) {
-        Long datasetId = getDatasetIdFromPortal(portalName, roleId);
-        List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
-
-        if (datasets.isEmpty()) {
-            return Collections.emptyList();
-        }
-
         return doQueryList(req, portalName, roleId);
     }
 
