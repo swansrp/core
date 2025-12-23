@@ -11,10 +11,20 @@ package com.bidr.kernel.utils;
 public class PrivacyUtil {
 
     public static String idCardPrivacy(String idCard) {
-        return idCard.substring(0, 6) + ("********") + idCard.substring(idCard.length() - 4);
+        if (FuncUtil.isEmpty(idCard)) {
+            if (idCard.length() > 6) {
+                return idCard.substring(0, 6) + ("********") + idCard.substring(idCard.length() - 4);
+            }
+        }
+        return idCard;
     }
 
     public static String phoneNumber(String phoneNumber) {
-        return phoneNumber.substring(0, 3) + ("****") + phoneNumber.substring(phoneNumber.length() - 4);
+        if (FuncUtil.isEmpty(phoneNumber)) {
+            if (phoneNumber.length() > 4) {
+                return phoneNumber.substring(0, 3) + ("****") + phoneNumber.substring(phoneNumber.length() - 4);
+            }
+        }
+        return phoneNumber;
     }
 }
