@@ -36,6 +36,12 @@ public class DashboardStatisticVO {
     @ApiModelProperty(value = "显示名称")
     private String title;
 
+    @ApiModelProperty(value = "副标题")
+    private String subTitle;
+
+    @ApiModelProperty(value = "描述")
+    private String description;
+
     @BindField(entity = AcUser.class, field = "name", condition = "this.customerNumber = customer_number")
     @ApiModelProperty(value = "所属人")
     private String customerNumber;

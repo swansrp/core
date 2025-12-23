@@ -44,6 +44,20 @@ public class SysPortalDashboardStatistic {
     private String title;
 
     /**
+     * 副标题
+     */
+    @TableField(value = "sub_title")
+    @ApiModelProperty(value = "副标题")
+    private String subTitle;
+
+    /**
+     * 描述
+     */
+    @TableField(value = "description")
+    @ApiModelProperty(value = "描述")
+    private String description;
+
+    /**
      * 所属人
      */
     @TableField(value = "customer_number")

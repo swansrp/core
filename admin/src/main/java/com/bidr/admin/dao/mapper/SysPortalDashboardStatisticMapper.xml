@@ -8,6 +8,8 @@
         <result column="pid" jdbcType="BIGINT" property="pid"/>
         <result column="table_id" jdbcType="VARCHAR" property="tableId"/>
         <result column="title" jdbcType="VARCHAR" property="title"/>
+        <result column="subTitle" jdbcType="VARCHAR" property="subTitle"/>
+        <result column="description" jdbcType="VARCHAR" property="description"/>
         <result column="customer_number" jdbcType="VARCHAR" property="customerNumber"/>
         <result column="order" jdbcType="INTEGER" property="order"/>
         <result column="indicator" jdbcType="LONGVARCHAR" property="indicator"/>
@@ -16,6 +18,6 @@
     </resultMap>
     <sql id="Base_Column_List">
         <!--@mbg.generated-->
-        id, pid, table_id, title, customer_number, `order`, `indicator`, default_x_grid, default_y_grid
+        id, pid, table_id, title, sub_title, description, customer_number, `order`, `indicator`, default_x_grid, default_y_grid
     </sql>
 </mapper>

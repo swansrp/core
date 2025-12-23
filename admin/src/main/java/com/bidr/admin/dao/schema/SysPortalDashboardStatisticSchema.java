@@ -33,5 +33,9 @@ public class SysPortalDashboardStatisticSchema extends BaseMybatisSchema<SysPort
                 "ALTER TABLE `sys_portal_dashboard_statistic` \n" +
                         "ADD COLUMN `default_x_grid` INT DEFAULT 2 COMMENT '默认宽度',\n" +
                         "ADD COLUMN `default_y_grid` INT DEFAULT 2 COMMENT '默认高度';");
+        setUpgradeDDL(3,
+                "ALTER TABLE `sys_portal_dashboard_statistic` \n" +
+                        " ADD COLUMN `sub_title` varchar(20) DEFAULT NULL COMMENT '副标题' after `title`,\n" +
+                        " ADD COLUMN `description` varchar(50) DEFAULT NULL COMMENT '描述' after `sub_title`;");
     }
 }

@@ -33,6 +33,14 @@ public class DashboardVO {
     @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "title")
     private String title;
 
+    @ApiModelProperty(value = "副标题")
+    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "subTitle")
+    private String subTitle;
+
+    @ApiModelProperty(value = "描述")
+    @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "description")
+    private String description;
+
     @ApiModelProperty(value = "图表指标")
     @PortalEntityField(entity = SysPortalDashboardStatistic.class, alias = "sys_portal_dashboard_statistic", field = "indicator")
     private String indicator;
