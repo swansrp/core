@@ -2,9 +2,8 @@
 set -e
 
 # ===============================
-# 多前缀 TAG 计数器（旗舰增强版）
-# 支持新增前缀（模块）
-# 支持 prefix-X.Y.Z 的 tag 规范
+# 多前缀 TAG 计数器（去 - 版本）
+# tag 规范：prefix_X.Y.Z
 # ===============================
 
 ALL_TAGS=$(git tag)
@@ -18,7 +17,7 @@ PREFIXES=""
 
 if [ -n "$ALL_TAGS" ]; then
   PREFIXES=$(echo "$ALL_TAGS" \
-    | sed -E 's/-[0-9]+\.[0-9]+\.[0-9]+$//' \
+    | sed -E 's/_[0-9]+\.[0-9]+\.[0-9]+$//' \
     | sort | uniq)
 fi
 
@@ -53,7 +52,7 @@ if [ "$choice" == "$ADD_PREFIX_OPTION" ]; then
   fi
 
   PREFIX=$NEW_PREFIX
-  LAST_TAG="${PREFIX}-0.0.0"
+  LAST_TAG="${PREFIX}_0.0.0"
   echo ""
   echo "新增模块：$PREFIX"
   echo "将从 $LAST_TAG 开始计数。"
@@ -65,16 +64,16 @@ else
   fi
 
   # 获取该前缀历史 tag
-  MODULE_TAGS=$(echo "$ALL_TAGS" | grep "^${PREFIX}-" || true)
+  MODULE_TAGS=$(echo "$ALL_TAGS" | grep "^${PREFIX}_" || true)
 
   if [ -z "$MODULE_TAGS" ]; then
-    LAST_TAG="${PREFIX}-0.0.0"
+    LAST_TAG="${PREFIX}_0.0.0"
   else
     LAST_TAG=$(echo "$MODULE_TAGS" \
-      | sed -E "s/${PREFIX}-//" \
+      | sed -E "s/^${PREFIX}_//" \
       | sort -t. -k1,1n -k2,2n -k3,3n \
       | tail -n 1)
-    LAST_TAG="${PREFIX}-${LAST_TAG}"
+    LAST_TAG="${PREFIX}_${LAST_TAG}"
   fi
 fi
 
@@ -91,7 +90,7 @@ read -p "请输入 1 或 2: " op
 # 生成新tag
 # ===============================
 if [ "$op" == "1" ]; then
-  NUM=$(echo "$LAST_TAG" | sed -E "s/${PREFIX}-//")
+  NUM=$(echo "$LAST_TAG" | sed -E "s/^${PREFIX}_//")
   IFS='.' read -r A B C <<< "$NUM"
 
   C=$((C+1))
@@ -104,7 +103,7 @@ if [ "$op" == "1" ]; then
     A=$((A+1))
   fi
 
-  NEW_TAG="${PREFIX}-${A}.${B}.${C}"
+  NEW_TAG="${PREFIX}_${A}.${B}.${C}"
 
   echo ""
   echo "创建新 tag：$NEW_TAG"
@@ -131,4 +130,3 @@ else
   echo "非法输入"
   exit 1
 fi
-
