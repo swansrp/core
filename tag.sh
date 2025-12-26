@@ -84,7 +84,8 @@ echo ""
 echo "请选择操作："
 echo "  1) 新 tag（自动自增）"
 echo "  2) 重置当前 tag（删除 → 同名重建）"
-read -p "请输入 1 或 2: " op
+echo "  3) 删除当前 tag "
+read -p "请输入 1 或 2 或 3: " op
 
 # ===============================
 # 生成新tag
@@ -125,6 +126,15 @@ elif [ "$op" == "2" ]; then
   git push origin "$LAST_TAG"
 
   echo "重置完成：$LAST_TAG"
+
+elif [ "$op" == "3" ]; then
+  echo ""
+  echo "删除 tag：$LAST_TAG"
+
+  git tag -d "$LAST_TAG" || true
+  git push origin ":refs/tags/$LAST_TAG" || true
+
+  echo "删除完成：$LAST_TAG"
 
 else
   echo "非法输入"
