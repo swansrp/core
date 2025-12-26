@@ -1,8 +1,7 @@
 package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.admin.dao.entity.SysPortal;
-import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.forge.bo.DatasetColumns;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
@@ -14,19 +13,16 @@ import com.bidr.forge.engine.DriverCapability;
 import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.engine.builder.DatasetSqlBuilder;
 import com.bidr.forge.engine.builder.SqlBuilder;
-import com.bidr.kernel.constant.CommonConst;
+import com.bidr.forge.service.statistic.DatasetStatisticQueryContext;
+import com.bidr.forge.service.statistic.DriverStatisticSupportService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.common.IdPidReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.TreeDataItemVO;
 import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.Query;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.StatisticRes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,11 +45,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DatasetDriver implements PortalDriver<Map<String, Object>> {
 
-    private final SysPortalService sysPortalService;
     private final SysDatasetService sysDatasetService;
     private final SysDatasetTableService sysDatasetTableService;
     private final SysDatasetColumnService sysDatasetColumnService;
     private final JdbcConnectService jdbcConnectService;
+    private final DriverStatisticSupportService driverStatisticSupportService;
 
     @Override
     public DriverCapability getCapability() {
@@ -181,7 +176,40 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public List<StatisticRes> statistic(AdvancedStatisticReq req, String portalName, Long roleId) {
-        throw new UnsupportedOperationException("Dataset模式暂不支持指标统计操作");
+        DatasetColumns datasetColumns = driverStatisticSupportService.getDatasetColumns(portalName);
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+
+        // 保存当前线程进入本方法前的数据源（可能为空=默认），用于后续精确恢复
+        String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
+        log.info("DatasetDriver.statistic 切换数据源前，当前数据源：{}", prevDataSource);
+
+        // 1) 先在“进入方法前的数据源”里读取 Dataset 配置表（这些表一定在 ERP/默认库）
+        //    避免因为后续切到 Doris 等统计源导致 MyBatis 去 Doris 查询 sys_dataset_* 从而出现 No database selected。
+        List<SysDatasetTable> datasets;
+        List<SysDatasetColumn> columns;
+        if (FuncUtil.isNotEmpty(prevDataSource)) {
+            try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(prevDataSource)) {
+                datasets = sysDatasetTableService.getByDatasetId(datasetColumns.getId());
+                columns = sysDatasetColumnService.getByDatasetId(datasetColumns.getId());
+            }
+        } else {
+            datasets = sysDatasetTableService.getByDatasetId(datasetColumns.getId());
+            columns = sysDatasetColumnService.getByDatasetId(datasetColumns.getId());
+        }
+
+        // 2) 在 Dataset 指定的数据源中执行统计 SQL（真正访问业务表/维表的阶段）
+        if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            return driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
+        }
+
+        try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            return driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
+        } finally {
+            // 双保险：确保离开本方法时恢复到进入本方法前的数据源
+            jdbcConnectService.restoreDataSource(prevDataSource);
+        }
     }
 
     // ========== 树形结构方法（暂不支持） ==========

@@ -19,12 +19,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class SysMatrixService extends BaseSqlRepo<SysMatrixMapper, SysMatrix> {
 
+    private static final String MATRIX = "MATRIX";
+
     public MatrixColumns getMatrixColumnsByPortalName(String portalName) {
         MPJLambdaWrapper<SysMatrix> wrapper = getMPJLambdaWrapper();
         wrapper.selectCollection(SysMatrixColumn.class, MatrixColumns::getColumns);
         wrapper.leftJoin(SysMatrixColumn.class, SysMatrixColumn::getMatrixId, SysMatrix::getId);
         wrapper.leftJoin(SysPortal.class, SysPortal::getReferenceId, SysMatrix::getId);
         wrapper.eq(SysPortal::getName, portalName);
+        wrapper.eq(SysPortal::getDataMode, MATRIX);
         wrapper.eq(SysMatrix::getValid, CommonConst.YES);
         wrapper.eq(SysMatrixColumn::getValid, CommonConst.YES);
         wrapper.orderByAsc(SysMatrixColumn::getSort);

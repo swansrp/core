@@ -2,6 +2,7 @@ package com.bidr.forge.config.jdbc;
 
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import com.bidr.kernel.mybatis.log.MybatisLogFormatter;
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -30,28 +31,74 @@ public class JdbcConnectService {
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     /**
-     * 切换数据源
-     *
-     * @param dataSourceName 数据源名称
+     * 切换数据源（push 进栈）。
+     * 注意：DynamicDataSourceContextHolder 是一个栈结构，切换后务必在 finally/close 中恢复，
+     * 否则会污染当前线程后续的 MyBatis / JDBC 调用。
      */
     public void switchDataSource(String dataSourceName) {
         DynamicDataSourceContextHolder.push(dataSourceName);
     }
 
     /**
-     * 获取当前数据源名称
-     *
-     * @return 当前数据源名称
+     * 获取当前数据源名称。(栈顶位置相当于)
      */
     public String getCurrentDataSourceName() {
         return DynamicDataSourceContextHolder.peek();
     }
 
     /**
-     * 重置为默认数据源
+     * 重置为上一个数据源（poll 一次）。
+     * 更推荐使用 {@link #switchDataSourceScope(String)}，它会精确恢复到切换前的值。
      */
     public void resetToDefaultDataSource() {
         DynamicDataSourceContextHolder.poll();
+    }
+
+    /**
+     * 在一个作用域内切换数据源，作用域结束后精确恢复到切换前的数据源。
+     * 用法：
+     * try (var ignored = jdbcConnectService.switchDataSourceScope("DORIS")) {
+     *     // do query...
+     * }
+     */
+    public DataSourceScope switchDataSourceScope(String dataSourceName) {
+        String prev = getCurrentDataSourceName();
+        switchDataSource(dataSourceName);
+        return new DataSourceScope(prev);
+    }
+
+    /**
+     * 恢复到指定的数据源（用于 finally 精确恢复）。
+     * 说明：dynamic-datasource 的上下文是栈结构，这里通过清栈+必要时 push 的方式，
+     * 确保最终数据源等于 prev（允许 prev 为 null，表示清空回默认）。
+     */
+    public void restoreDataSource(String prev) {
+        // 清空当前线程的 DS 栈
+        while (DynamicDataSourceContextHolder.peek() != null) {
+            DynamicDataSourceContextHolder.poll();
+        }
+        // 恢复到切换前的 DS（null 表示回默认数据源）
+        if (FuncUtil.isNotEmpty(prev)) {
+            DynamicDataSourceContextHolder.push(prev);
+        }
+    }
+
+    public class DataSourceScope implements AutoCloseable {
+        private final String prev;
+        private boolean closed;
+
+        private DataSourceScope(String prev) {
+            this.prev = prev;
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            restoreDataSource(prev);
+        }
     }
 
     /**
@@ -67,7 +114,7 @@ public class JdbcConnectService {
     public <T> T queryObject(String sql, Map<String, Object> parameters, String column, Class<T> clazz) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         try {
             Map<String, Object> row = namedParameterJdbcTemplate.queryForMap(sql, parameters);
             if (row != null && !row.isEmpty()) {
@@ -92,7 +139,7 @@ public class JdbcConnectService {
     public Map<String, Object> executeQueryOne(String sql, Map<String, Object> parameters) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         try {
             Map<String, Object> row = namedParameterJdbcTemplate.queryForMap(sql, parameters);
             printQueryResult(completeSql, row);
@@ -113,7 +160,7 @@ public class JdbcConnectService {
     public List<Map<String, Object>> executeQuery(String sql, Map<String, Object> parameters) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         List<Map<String, Object>> result = namedParameterJdbcTemplate.queryForList(sql, parameters);
         printQueryListResult(completeSql, result);
         return result;
@@ -129,7 +176,7 @@ public class JdbcConnectService {
     public int executeUpdate(String sql, Map<String, Object> parameters) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         int affectedRows = namedParameterJdbcTemplate.update(sql, parameters);
         printUpdateResult(completeSql, affectedRows);
         return affectedRows;
@@ -259,7 +306,7 @@ public class JdbcConnectService {
     public List<Map<String, Object>> query(String sql, Map<String, Object> parameters) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         List<Map<String, Object>> result = namedParameterJdbcTemplate.queryForList(sql, parameters);
         printQueryListResult(completeSql, result);
         return result;
@@ -275,7 +322,7 @@ public class JdbcConnectService {
     public Map<String, Object> queryOne(String sql, Map<String, Object> parameters) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         try {
             Map<String, Object> row = namedParameterJdbcTemplate.queryForMap(sql, parameters);
             printQueryResult(completeSql, row);
@@ -297,7 +344,7 @@ public class JdbcConnectService {
     public <T> T queryForObject(String sql, Map<String, Object> parameters, Class<T> clazz) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         try {
             T result = namedParameterJdbcTemplate.queryForObject(sql, parameters, clazz);
             printSimpleResult(completeSql, result != null ? 1 : 0);
@@ -318,7 +365,7 @@ public class JdbcConnectService {
     public int update(String sql, Map<String, Object> parameters) {
         String paramStr = formatParameters(parameters);
         String completeSql = buildCompleteSql(sql, paramStr);
-        
+
         int affectedRows = namedParameterJdbcTemplate.update(sql, parameters);
         printUpdateResult(completeSql, affectedRows);
         return affectedRows;
@@ -384,7 +431,7 @@ public class JdbcConnectService {
                 .map(col -> String.valueOf(row.get(col)))
                 .collect(Collectors.toList());
             rows.add(rowValues);
-            
+
             String tableOutput = MybatisLogFormatter.formatMarkdown(cols, rows);
             output.append("\n### 📋 Query Result (1 row)\n");
             output.append(tableOutput);
@@ -412,7 +459,7 @@ public class JdbcConnectService {
                     .collect(Collectors.toList());
                 rows.add(rowValues);
             }
-            
+
             String tableOutput = MybatisLogFormatter.formatMarkdown(cols, rows);
             output.append("\n### 📋 Query Result (").append(result.size()).append(" row")
                 .append(result.size() > 1 ? "s" : "").append(")\n");

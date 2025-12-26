@@ -71,6 +71,26 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     }
 
     /**
+     * 清洗输出列别名：去掉两侧的反引号/单引号，避免生成 AS `'age'` 之类的非法别名。
+     */
+    private static String sanitizeSelectAlias(String alias) {
+        if (alias == null) {
+            return null;
+        }
+        String a = alias.trim();
+        // 支持 `age`、'age'、`'age'` 等历史脏数据
+        boolean changed = true;
+        while (changed && a.length() >= 2) {
+            changed = false;
+            if ((a.startsWith("`") && a.endsWith("`")) || (a.startsWith("'") && a.endsWith("'"))) {
+                a = a.substring(1, a.length() - 1).trim();
+                changed = true;
+            }
+        }
+        return a;
+    }
+
+    /**
      * 构建 SELECT 列
      */
     @Override
@@ -79,9 +99,21 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         for (SysDatasetColumn column : columns) {
             if (CommonConst.YES.equals(column.getIsVisible())) {
                 String colSql = column.getColumnSql();
-                String colAlias = findVoColumnName(colSql,aliasMap);
-                if (FuncUtil.isNotEmpty(colAlias)) {
-                    selectCols.add(colSql + " AS `" + colAlias + "`");
+                String colAlias = column.getColumnAlias();
+
+                // Dataset列的“数据库字段标识”应以 columnAlias 为准（columnSql 可能是复杂表达式，无法用于映射）
+                String voFieldName = FuncUtil.isNotEmpty(colAlias) ? findVoColumnName(colAlias, aliasMap) : null;
+
+                // 清洗 alias，避免出现 AS `'age'`
+                String safeVoFieldName = sanitizeSelectAlias(voFieldName);
+                String safeColAlias = sanitizeSelectAlias(colAlias);
+
+                // 1) 有portal字段映射：用VO字段名作为返回key
+                // 2) 无映射但本身有alias：直接用alias作为返回key（避免返回表达式字符串）
+                if (FuncUtil.isNotEmpty(safeVoFieldName)) {
+                    selectCols.add(colSql + " AS `" + safeVoFieldName + "`");
+                } else if (FuncUtil.isNotEmpty(safeColAlias)) {
+                    selectCols.add(colSql + " AS `" + safeColAlias + "`");
                 } else {
                     selectCols.add(colSql);
                 }
