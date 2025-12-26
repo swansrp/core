@@ -92,6 +92,8 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
         SqlBuilder builder = getSqlBuilder(portalName, roleId);
         JdbcConnectService jdbcConnectService = getJdbcConnectService();
         String dataSource = getDataSource(portalName, roleId);
+
+        String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
         if (FuncUtil.isNotEmpty(dataSource)) {
             jdbcConnectService.switchDataSource(dataSource);
         }
@@ -110,7 +112,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             }
             return page;
         } finally {
-            jdbcConnectService.resetToDefaultDataSource();
+            jdbcConnectService.restoreDataSource(prevDataSource);
         }
     }
 
@@ -135,6 +137,8 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
         SqlBuilder builder = getSqlBuilder(portalName, roleId);
         JdbcConnectService jdbcConnectService = getJdbcConnectService();
         String dataSource = getDataSource(portalName, roleId);
+
+        String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
         if (FuncUtil.isNotEmpty(dataSource)) {
             jdbcConnectService.switchDataSource(dataSource);
         }
@@ -150,7 +154,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             String selectSql = builder.buildSelect(noPagingReq, aliasMap, parameters);
             return jdbcConnectService.query(selectSql, parameters);
         } finally {
-            jdbcConnectService.resetToDefaultDataSource();
+            jdbcConnectService.restoreDataSource(prevDataSource);
         }
     }
 
@@ -196,6 +200,8 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
         SqlBuilder builder = getSqlBuilder(portalName, roleId);
         JdbcConnectService jdbcConnectService = getJdbcConnectService();
         String dataSource = getDataSource(portalName, roleId);
+
+        String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
         if (FuncUtil.isNotEmpty(dataSource)) {
             jdbcConnectService.switchDataSource(dataSource);
         }
@@ -205,7 +211,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             Long result = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
             return result == null ? 0L : result;
         } finally {
-            jdbcConnectService.resetToDefaultDataSource();
+            jdbcConnectService.restoreDataSource(prevDataSource);
         }
     }
 }

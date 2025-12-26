@@ -126,7 +126,7 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
             return "";
         }
 
-        String operator = FuncUtil.isEmpty(query.getAndOr()) ? "AND" : 
+        String operator = FuncUtil.isEmpty(query.getAndOr()) ? "AND" :
                           (AdvancedQuery.OR.equals(query.getAndOr()) ? "OR" : "AND");
         return String.join(" " + operator + " ", conditions);
     }
@@ -255,5 +255,12 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
             }
         }
         return columnName;
+    }
+
+    /**
+     * 构建 WHERE 条件（参数化），对外公开以便 Driver 在统计/自定义SQL 时复用统一的条件解析逻辑。
+     */
+    public String buildWhereCondition(AdvancedQuery query, Map<String, String> aliasMap, Map<String, Object> parameters) {
+        return buildCondition(query, aliasMap, parameters);
     }
 }

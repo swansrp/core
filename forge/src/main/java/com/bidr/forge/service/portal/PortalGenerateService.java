@@ -334,7 +334,11 @@ public class PortalGenerateService {
             String property = StringUtil.underlineToCamel(columnAlias);
             portalColumn.setProperty(property);
             portalColumn.setDbField(datasetColumn.getColumnAlias());
-            portalColumn.setDisplayName(datasetColumn.getColumnAlias());
+            if (FuncUtil.isNotEmpty(datasetColumn.getRemark())) {
+                portalColumn.setDisplayName(datasetColumn.getRemark());
+            } else {
+                portalColumn.setDisplayName(datasetColumn.getColumnAlias());
+            }
 
             // Dataset字段类型默认为文本
             portalColumn.setFieldType(PortalFieldDict.STRING.getValue());

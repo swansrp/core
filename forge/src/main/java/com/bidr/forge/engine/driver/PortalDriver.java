@@ -3,15 +3,11 @@ package com.bidr.forge.engine.driver;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
-import com.bidr.forge.dao.entity.SysDataset;
-import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.engine.driver.inf.DriverCrudInf;
 import com.bidr.forge.engine.driver.inf.DriverQueryOnlyInf;
 import com.bidr.forge.engine.driver.inf.DriverTreeInf;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,7 +16,7 @@ import java.util.Map;
 /**
  * Portal数据驱动统合接口（最顶层接口）
  * <p>继承所有层级接口，提供完整的数据操作能力</p>
- * 
+ *
  * <h3>接口层次：</h3>
  * <pre>
  * DriverQueryOnlyInf（第1层 - 只读）
@@ -28,7 +24,7 @@ import java.util.Map;
  *         └── DriverTreeInf（第3层 - 树形结构）
  *               └── PortalDriver（统合接口）⬅ 当前接口
  * </pre>
- * 
+ *
  * <h3>完整能力清单：</h3>
  * <ul>
  *   <li><b>查询能力</b>（来自DriverQueryOnlyInf）：
@@ -66,13 +62,13 @@ import java.util.Map;
  *     </ul>
  *   </li>
  * </ul>
- * 
+ *
  * <h3>实现说明：</h3>
  * <ul>
  *   <li><b>Matrix驱动</b>：实现所有方法（完整功能）</li>
  *   <li><b>Dataset驱动</b>：只实现查询和统计方法，其他方法抛UnsupportedOperationException</li>
  * </ul>
- * 
+ *
  * <h3>选择合适的接口：</h3>
  * <ul>
  *   <li>只需查询 → 使用 {@link DriverQueryOnlyInf}</li>
@@ -91,7 +87,8 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
 
     /**
      * 获取SysPortalService
-     * @return
+     *
+     * @return SysPortalService bean
      */
     default SysPortalService getSysPortalService() {
         SysPortalService bean = BeanUtil.getBean(SysPortalService.class);
@@ -100,6 +97,7 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
         }
         return bean;
     }
+
     /**
      * 从SysPortal获取referenceId作为datasetId
      *

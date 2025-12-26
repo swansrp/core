@@ -1,15 +1,15 @@
 package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.forge.bo.MatrixColumns;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
-import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.forge.engine.DriverCapability;
 import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.engine.builder.MatrixSqlBuilder;
 import com.bidr.forge.engine.builder.SqlBuilder;
+import com.bidr.forge.service.statistic.DriverStatisticSupportService;
+import com.bidr.forge.service.statistic.MatrixStatisticQueryContext;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
@@ -28,7 +28,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -43,9 +46,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
-    private final SysMatrixService sysMatrixService;
     private final JdbcConnectService jdbcConnectService;
-    private final SysPortalService sysPortalService;
+    private final DriverStatisticSupportService driverStatisticSupportService;
 
     @Override
     public DriverCapability getCapability() {
@@ -59,6 +61,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     /**
      * 构建别名映射<VO字段名, 数据库列名>
+     *
      * @param portalName Portal名称
      * @param roleId     角色ID
      * @return 别名映射
@@ -67,7 +70,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public SqlBuilder getSqlBuilder(String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
         return new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
     }
@@ -79,7 +82,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public String getDataSource(String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         return matrixColumns != null ? matrixColumns.getDataSource() : null;
     }
 
@@ -100,7 +103,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public Map<String, Object> selectById(Object id, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
         // 构建查询条件（主键 AND 连接）
@@ -145,11 +148,11 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public int insert(Map<String, Object> data, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
         Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
         // 数据校验
-        validateInsertData(data,aliasMap, matrixColumns.getColumns());
+        validateInsertData(data, aliasMap, matrixColumns.getColumns());
 
         // 切换数据源
         if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
@@ -177,7 +180,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public int update(Map<String, Object> data, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
         // 数据校验
@@ -211,7 +214,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public int delete(Object id, String portalName, Long roleId) {
-        MatrixColumns matrixColumns = getMatrixColumns(portalName);
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
 
         // 切换数据源
@@ -254,23 +257,30 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public List<StatisticRes> statistic(AdvancedStatisticReq req, String portalName, Long roleId) {
-        throw new UnsupportedOperationException("Matrix模式暂不支持指标统计操作");
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
+        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
+        Validator.assertNotEmpty(req.getStatisticColumn(), ErrCodeSys.PA_DATA_NOT_EXIST, "统计数据");
+
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+
+        // 切换数据源
+        if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
+            jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
+        }
+
+        try {
+            // 统一由 DriverStatisticSupportService 按 req.metricCondition 自动选择分支
+            return driverStatisticSupportService.statistic(jdbcConnectService, req,
+                    new MatrixStatisticQueryContext(matrixColumns), aliasMap);
+        } finally {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
     }
-
-    /**
-     * 获取Matrix配置和列
-     */
-    private MatrixColumns getMatrixColumns(String portalName) {
-        // 尝试按tableName查询
-        return sysMatrixService.getMatrixColumnsByPortalName(portalName);
-    }
-
-
 
     /**
      * 校验插入数据
      */
-    private void validateInsertData(Map<String, Object> data,Map<String, String> aliasMap, List<SysMatrixColumn> columns) {
+    private void validateInsertData(Map<String, Object> data, Map<String, String> aliasMap, List<SysMatrixColumn> columns) {
         for (SysMatrixColumn column : columns) {
             String columnName = column.getColumnName();
             columnName = findVoColumnName(columnName, aliasMap);
@@ -358,5 +368,4 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
     public void updatePid(IdPidReqVO req, String portalName, Long roleId) {
 
     }
-
 }
