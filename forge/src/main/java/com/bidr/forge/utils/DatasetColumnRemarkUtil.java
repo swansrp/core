@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
 public class DatasetColumnRemarkUtil {
 
     // 简单的别名捕获正则（用于从单个 select 项提取 alias）
-    private static final Pattern ALIAS_PATTERN = Pattern.compile("(?i)\\s+AS\\s+([`\"]?\\w+[`\"]?)\\s*$");
+    // 兼容 AS 'alias' / AS `alias` / AS "alias" / AS alias
+    private static final Pattern ALIAS_PATTERN = Pattern.compile("(?i)\\s+AS\\s+((?:'[^']+'|`[^`]+`|\"[^\"]+\"|\\w+))\\s*$");
 
     private DatasetColumnRemarkUtil() {
     }
@@ -235,23 +236,23 @@ public class DatasetColumnRemarkUtil {
         return null;
     }
 
-    // 从一个 select 项文本中提取 alias（去反引号）或返回整个表达式
+    // 从一个 select 项文本中提取 alias（去外层引号）或返回整个表达式
     private static String extractAliasOrExpr(String expr) {
         if (FuncUtil.isEmpty(expr)) return null;
         // 先试着找 AS alias
         Matcher m = ALIAS_PATTERN.matcher(expr);
         if (m.find()) {
             String a = m.group(1);
-            return stripQuotes(a);
+            return sanitizeIdentifierToken(a);
         }
         // 否则尝试以最后的标识符作为别名（例如: `col alias`）
         String trimmed = expr.trim();
         String[] parts = trimmed.split("\\s+");
         if (parts.length > 1) {
             String last = parts[parts.length - 1];
-            // 如果最后一部分看起来像标识符，则返回
-            if (last.matches("[`\"]?\\w+[`\"]?")) {
-                return stripQuotes(last);
+            // 如果最后一部分看起来像标识符（可带引号），则返回
+            if (last.matches("(?:'[^']+'|`[^`]+`|\"[^\"]+\"|\\w+)") ) {
+                return sanitizeIdentifierToken(last);
             }
         }
         // 最后返回整个表达式
@@ -260,11 +261,11 @@ public class DatasetColumnRemarkUtil {
 
     private static String stripQuotes(String s) {
         if (FuncUtil.isEmpty(s)) return s;
-        s = s.trim();
-        if ((s.startsWith("`") && s.endsWith("`")) || (s.startsWith("\"") && s.endsWith("\""))) {
-            return s.substring(1, s.length() - 1);
-        }
-        return s;
+        return SqlIdentifierUtil.sanitizeQuotedIdentifier(s);
+    }
+
+    private static String sanitizeIdentifierToken(String token) {
+        return SqlIdentifierUtil.sanitizeQuotedIdentifier(token);
     }
 
     private static String extractSelectPart(String sql) {
