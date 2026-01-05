@@ -6,6 +6,7 @@ import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.DictEnumUtil;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,13 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         this.datasetId = datasetId;
         this.datasets = datasets;
         this.columns = columns;
+    }
+
+    /**
+     * 清洗输出列别名：去掉两侧的反引号/单引号，避免生成 AS `'age'` 之类的非法别名。
+     */
+    private static String sanitizeSelectAlias(String alias) {
+        return SqlIdentifierUtil.sanitizeQuotedIdentifier(alias);
     }
 
     @Override
@@ -71,26 +79,6 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     }
 
     /**
-     * 清洗输出列别名：去掉两侧的反引号/单引号，避免生成 AS `'age'` 之类的非法别名。
-     */
-    private static String sanitizeSelectAlias(String alias) {
-        if (alias == null) {
-            return null;
-        }
-        String a = alias.trim();
-        // 支持 `age`、'age'、`'age'` 等历史脏数据
-        boolean changed = true;
-        while (changed && a.length() >= 2) {
-            changed = false;
-            if ((a.startsWith("`") && a.endsWith("`")) || (a.startsWith("'") && a.endsWith("'"))) {
-                a = a.substring(1, a.length() - 1).trim();
-                changed = true;
-            }
-        }
-        return a;
-    }
-
-    /**
      * 构建 SELECT 列
      */
     @Override
@@ -101,19 +89,12 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
                 String colSql = column.getColumnSql();
                 String colAlias = column.getColumnAlias();
 
-                // Dataset列的“数据库字段标识”应以 columnAlias 为准（columnSql 可能是复杂表达式，无法用于映射）
-                String voFieldName = FuncUtil.isNotEmpty(colAlias) ? findVoColumnName(colAlias, aliasMap) : null;
+                // Dataset：SELECT 输出别名永远以 columnAlias 为准（保留驼峰）。
+                // aliasMap 的职责是“条件/排序字段映射到真实列”，不参与 SELECT 别名决策。
+                String outName = FuncUtil.isNotEmpty(colAlias) ? sanitizeSelectAlias(colAlias) : null;
 
-                // 清洗 alias，避免出现 AS `'age'`
-                String safeVoFieldName = sanitizeSelectAlias(voFieldName);
-                String safeColAlias = sanitizeSelectAlias(colAlias);
-
-                // 1) 有portal字段映射：用VO字段名作为返回key
-                // 2) 无映射但本身有alias：直接用alias作为返回key（避免返回表达式字符串）
-                if (FuncUtil.isNotEmpty(safeVoFieldName)) {
-                    selectCols.add(colSql + " AS `" + safeVoFieldName + "`");
-                } else if (FuncUtil.isNotEmpty(safeColAlias)) {
-                    selectCols.add(colSql + " AS `" + safeColAlias + "`");
+                if (FuncUtil.isNotEmpty(outName)) {
+                    selectCols.add(colSql + " AS `" + outName + "`");
                 } else {
                     selectCols.add(colSql);
                 }
@@ -134,8 +115,8 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
      * 构建查询条件子句（WHERE/GROUP BY/HAVING/ORDER BY）
      */
     @Override
-    protected String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
-                                       Map<String, Object> parameters, boolean includeOrder) {
+    public String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                    Map<String, Object> parameters, boolean includeOrder) {
         StringBuilder clause = new StringBuilder();
 
         // 构建WHERE
@@ -158,7 +139,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
 
         // 构建ORDER BY（仅 SELECT 需要）
         if (includeOrder) {
-            String orderByClause = buildOrderBy(req);
+            String orderByClause = buildOrderBy(req, aliasMap);
             if (FuncUtil.isNotEmpty(orderByClause)) {
                 clause.append(" ORDER BY ").append(orderByClause);
             }
@@ -346,26 +327,41 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     /**
      * 构建ORDER BY子句
      */
-    private String buildOrderBy(AdvancedQueryReq req) {
+    private String buildOrderBy(AdvancedQueryReq req, Map<String, String> aliasMap) {
         // 优先使用请求中的排序
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             return req.getSortList().stream()
                     .map(sort -> {
                         String field = sort.getProperty();
+                        // 清洗，避免出现 ORDER BY 'dy'
+                        field = SqlIdentifierUtil.sanitizeQuotedIdentifier(field);
+
+                        // Dataset: 排序字段也需要从“前端字段名”映射到“真实字段/表达式”
+                        String mapped = FuncUtil.isNotEmpty(aliasMap) ? aliasMap.getOrDefault(field, field) : field;
+                        mapped = SqlIdentifierUtil.sanitizeQuotedIdentifier(mapped);
+
                         String direction = sort.getType() != null && sort.getType() == 2 ? "DESC" : "ASC";
-                        return field + " " + direction;
+                        return mapped + " " + direction;
                     })
                     .collect(Collectors.joining(", "));
         }
 
-        // 默认按displayOrder排序
+        // 默认按displayOrder排序：优先用 columnAlias 映射到真实字段，否则用 columnSql
         List<String> orderCols = columns.stream()
                 .filter(col -> CommonConst.YES.equals(col.getIsVisible()))
                 .sorted(Comparator.comparing(SysDatasetColumn::getDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder())))
                 .limit(1)
                 .map(col -> {
                     String colAlias = col.getColumnAlias();
-                    return FuncUtil.isNotEmpty(colAlias) ? colAlias : col.getColumnSql();
+                    String key = FuncUtil.isNotEmpty(colAlias) ? SqlIdentifierUtil.sanitizeQuotedIdentifier(colAlias) : null;
+                    if (FuncUtil.isNotEmpty(key) && FuncUtil.isNotEmpty(aliasMap)) {
+                        String mapped = aliasMap.get(key);
+                        if (FuncUtil.isNotEmpty(mapped)) {
+                            return SqlIdentifierUtil.sanitizeQuotedIdentifier(mapped);
+                        }
+                    }
+                    String s = FuncUtil.isNotEmpty(colAlias) ? colAlias : col.getColumnSql();
+                    return SqlIdentifierUtil.sanitizeQuotedIdentifier(s);
                 })
                 .collect(Collectors.toList());
 

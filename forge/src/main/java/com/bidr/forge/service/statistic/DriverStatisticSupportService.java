@@ -13,10 +13,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
-import com.bidr.kernel.vo.portal.statistic.Metric;
-import com.bidr.kernel.vo.portal.statistic.MetricCondition;
-import com.bidr.kernel.vo.portal.statistic.StatisticRes;
+import com.bidr.kernel.vo.portal.statistic.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -37,33 +34,6 @@ public class DriverStatisticSupportService {
 
     private final SysMatrixService sysMatrixService;
     private final SysDatasetService sysDatasetService;
-
-    /**
-     * 通用统计入口：根据 req.metricCondition 是否为空自动选择统计策略。
-     */
-    public List<StatisticRes> statistic(JdbcConnectService jdbc,
-                                        AdvancedStatisticReq req,
-                                        StatisticQueryContext ctx,
-                                        Map<String, String> aliasMap) {
-        if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
-            return statisticByMetricCondition(jdbc, req, ctx, aliasMap);
-        }
-        return statisticByMetricGroup(jdbc, req, ctx, aliasMap);
-    }
-
-    /**
-     * 获取Matrix配置和列
-     */
-    public MatrixColumns getMatrixColumns(String portalName) {
-        return sysMatrixService.getMatrixColumnsByPortalName(portalName);
-    }
-
-    /**
-     * 获取Dataset配置和列
-     */
-    public DatasetColumns getDatasetColumns(String portalName) {
-        return sysDatasetService.getDatasetColumnsByPortalName(portalName);
-    }
 
     /**
      * 生成 case when 表达式（参数化）：case when {condition} then {then} else {else} end
@@ -98,6 +68,170 @@ public class DriverStatisticSupportService {
 
         // 3: 返回最终的 CASE WHEN 表达式字符串
         return "case when " + conditionSql + " then " + thenStr + " else " + elseStr + " end";
+    }
+
+    /**
+     * 通用统计入口：根据 req.metricCondition 是否为空自动选择统计策略。
+     */
+    public List<StatisticRes> statistic(JdbcConnectService jdbc,
+                                        AdvancedStatisticReq req,
+                                        StatisticQueryContext ctx,
+                                        Map<String, String> aliasMap) {
+        if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
+            return statisticByMetricCondition(jdbc, req, ctx, aliasMap);
+        }
+        return statisticByMetricGroup(jdbc, req, ctx, aliasMap);
+    }
+
+    /**
+     * 汇总统计
+     */
+    public Map<String, Object> summary(JdbcConnectService jdbc,
+                                       AdvancedSummaryReq req,
+                                       StatisticQueryContext ctx,
+                                       Map<String, String> aliasMap) {
+        if (ctx instanceof DatasetStatisticQueryContext) {
+            return summary(jdbc, req, (DatasetStatisticQueryContext) ctx, aliasMap);
+        }
+
+        // 1. 构建 SELECT 部分
+        List<String> columns = req.getColumns();
+        if (FuncUtil.isEmpty(columns)) {
+            return Collections.emptyMap();
+        }
+
+        List<String> innerSelectParts = new ArrayList<>();
+        List<String> outerSelectParts = new ArrayList<>();
+
+        for (String column : columns) {
+            innerSelectParts.add(column + " AS " + column);
+            outerSelectParts.add("SUM(" + column + ") AS " + column);
+        }
+        String innerSelectSql = String.join(", ", innerSelectParts);
+        String outerSelectSql = String.join(", ", outerSelectParts);
+
+        // 2. 构建 FROM 和 WHERE 部分
+        Map<String, Object> parameters = new HashMap<>();
+        BaseSqlBuilder builder = ctx.getConditionBuilder();
+        // 使用 buildQueryClauses 获取 WHERE/GROUP BY/HAVING，不包含 ORDER BY
+        String whereSql = builder.buildQueryClauses(req, aliasMap, parameters, false);
+
+        StringBuilder sql = new StringBuilder();
+        // 构造嵌套查询：SELECT SUM(col) FROM (SELECT expr AS col FROM table WHERE ...) tt
+        sql.append("SELECT ").append(outerSelectSql);
+        sql.append(" FROM (SELECT ").append(innerSelectSql);
+        sql.append(" FROM ").append(ctx.getFromSql());
+        sql.append(whereSql);
+        sql.append(") tt");
+
+        // 3. 执行查询
+        List<Map<String, Object>> result = jdbc.executeQuery(sql.toString(), parameters);
+        if (FuncUtil.isEmpty(result)) {
+            return Collections.emptyMap();
+        }
+        return result.get(0);
+    }
+
+    /**
+     * Dataset 汇总统计：
+     * - 有条件查询（req.condition 非空）：使用 Dataset 预览 SQL 作为子查询，并在外层用“输出列别名”做过滤（例如 projectName）；
+     * - 无条件查询：直接复用 ctx.getFromSql()，保留 Dataset 默认 ORDER BY（行为与原来一致）。
+     */
+    public Map<String, Object> summary(JdbcConnectService jdbc,
+                                       AdvancedSummaryReq req,
+                                       DatasetStatisticQueryContext ctx,
+                                       Map<String, String> aliasMap) {
+        // 1. 构建 SELECT 部分
+        List<String> columns = req.getColumns();
+        if (FuncUtil.isEmpty(columns)) {
+            return Collections.emptyMap();
+        }
+
+        List<String> innerSelectParts = new ArrayList<>();
+        List<String> outerSelectParts = new ArrayList<>();
+        for (String column : columns) {
+            innerSelectParts.add(column + " AS " + column);
+            outerSelectParts.add("SUM(" + column + ") AS " + column);
+        }
+        String innerSelectSql = String.join(", ", innerSelectParts);
+        String outerSelectSql = String.join(", ", outerSelectParts);
+
+        BaseSqlBuilder builder = ctx.getConditionBuilder();
+        Map<String, Object> parameters = new HashMap<>();
+
+        // 2. 无条件：直接用 ctx.getFromSql()（保留 Dataset 默认 ORDER BY）
+        if (FuncUtil.isEmpty(req.getCondition())) {
+            StringBuilder sql = new StringBuilder();
+            sql.append("SELECT ").append(outerSelectSql)
+                    .append(" FROM (SELECT ").append(innerSelectSql)
+                    .append(" FROM ").append(ctx.getFromSql())
+                    .append(") tt");
+
+            List<Map<String, Object>> result = jdbc.executeQuery(sql.toString(), parameters);
+            if (FuncUtil.isEmpty(result)) {
+                return Collections.emptyMap();
+            }
+            return result.get(0);
+        }
+
+        // 3. 有条件：把 where/group/having 下推到 preview SQL 内层（从而可以用 t.project_name 这种物理列做过滤）
+        String clausesWithoutOrder = builder.buildQueryClauses(req, aliasMap, parameters, false);
+
+        // ctx.getFromSql() 返回 (previewSql-noLimit) AS t，其中 previewSql 默认带 ORDER BY。
+        // 我们要的结构是：在 previewSql 内部（dw_dws.xxx t 这一层）先 where，再 order by。
+        // 由于 ctx.getFromSql() 已经把 previewSql 包起来了，这里重新构造一层：
+        // FROM ( (previewSql_noLimit_noOrder + clausesWithoutOrder + orderByClause) ) AS t
+
+        // 1) 先拿一份无 LIMIT 的 preview SQL（维持 dataset 默认 order by 字段逻辑），并拆出 ORDER BY
+        // ctx.getFromSql() 形如：(SELECT ... ORDER BY ...) AS t
+        // 这里为了最小改动，直接把 where 追加到这个子查询内部：
+        // (SELECT ... FROM ... WHERE ... ORDER BY ...) AS t
+        // 做法：插入到最后一个 " ORDER BY " 之前；若没有 ORDER BY，则直接追加到末尾。
+        String fromSql = ctx.getFromSql();
+        if (fromSql.startsWith("(") && fromSql.endsWith("AS t")) {
+            int orderIdx = fromSql.toUpperCase(Locale.ROOT).lastIndexOf(" ORDER BY ");
+            if (orderIdx > 0) {
+                // 在 ORDER BY 前插入 where/group/having
+                fromSql = fromSql.substring(0, orderIdx) + clausesWithoutOrder + fromSql.substring(orderIdx);
+            } else {
+                // 没有 ORDER BY，直接追加
+                int asIdx = fromSql.toUpperCase(Locale.ROOT).lastIndexOf(") AS T");
+                if (asIdx > 0) {
+                    fromSql = fromSql.substring(0, asIdx) + clausesWithoutOrder + fromSql.substring(asIdx);
+                } else {
+                    fromSql = fromSql + clausesWithoutOrder;
+                }
+            }
+        } else {
+            // 兜底：直接拼到 fromSql 后面
+            fromSql = fromSql + clausesWithoutOrder;
+        }
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ").append(outerSelectSql)
+                .append(" FROM (SELECT ").append(innerSelectSql)
+                .append(" FROM ").append(fromSql)
+                .append(") tt");
+
+        List<Map<String, Object>> result = jdbc.executeQuery(sql.toString(), parameters);
+        if (FuncUtil.isEmpty(result)) {
+            return Collections.emptyMap();
+        }
+        return result.get(0);
+    }
+
+    /**
+     * 获取Matrix配置和列
+     */
+    public MatrixColumns getMatrixColumns(String portalName) {
+        return sysMatrixService.getMatrixColumnsByPortalName(portalName);
+    }
+
+    /**
+     * 获取Dataset配置和列
+     */
+    public DatasetColumns getDatasetColumns(String portalName) {
+        return sysDatasetService.getDatasetColumnsByPortalName(portalName);
     }
 
     // 简要：指标为主时的结果组装
@@ -177,7 +311,7 @@ public class DriverStatisticSupportService {
 
                 StatisticRes conditionNode = conditionMap.get(conditionValue);
                 if (FuncUtil.isEmpty(conditionNode)) {
-                    continue; // 如果找不到对应的 condition，则跳过
+                    continue;
                 }
 
                 // 2.4 把统计值作为叶子节点加入，并累加 condition 的统计汇总
@@ -408,9 +542,9 @@ public class DriverStatisticSupportService {
 
     // 简要：构建 WHERE SQL（利用 MatrixSqlBuilder）
     private String buildWhereSql(AdvancedQueryReq req,
-                                StatisticQueryContext ctx,
-                                Map<String, String> aliasMap,
-                                Map<String, Object> parameters) {
+                                 StatisticQueryContext ctx,
+                                 Map<String, String> aliasMap,
+                                 Map<String, Object> parameters) {
         // 1: 如果没有条件，返回空字符串（调用方在组装 SQL 时判断是否追加 WHERE）
         if (FuncUtil.isEmpty(req.getCondition())) {
             return "";

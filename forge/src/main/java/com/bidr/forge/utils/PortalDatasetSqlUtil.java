@@ -94,24 +94,49 @@ public class PortalDatasetSqlUtil {
      * @return 完整的SQL查询字符串
      */
     public static String buildQuerySql(List<SysDatasetTable> tableList, List<SysDatasetColumn> columnList) {
+        return buildQuerySql(tableList, columnList, false);
+    }
+
+    /**
+     * 通过表配置和列配置构建完整的SQL查询语句（可选择输出列备注为行内注释）
+     */
+    public static String buildQuerySql(List<SysDatasetTable> tableList, List<SysDatasetColumn> columnList, boolean includeRemarksAsLineComment) {
         StringBuilder sql = new StringBuilder("SELECT ");
 
         // 构建 SELECT 子句
         if (FuncUtil.isEmpty(columnList)) {
             sql.append("*");
         } else {
+            // 为了让 -- 行注释不影响后续列：每列独占一行，且逗号放在注释之前
             for (int i = 0; i < columnList.size(); i++) {
                 SysDatasetColumn column = columnList.get(i);
-                if (i > 0) {
-                    sql.append(", ");
-                }
-                sql.append(column.getColumnSql());
-                // 如果列SQL和别名不同，添加AS别名
+
+                StringBuilder one = new StringBuilder();
+                one.append(column.getColumnSql());
                 if (FuncUtil.isNotEmpty(column.getColumnAlias()) &&
                         !column.getColumnSql().equals(column.getColumnAlias())) {
-                    sql.append(" AS ").append(column.getColumnAlias());
+                    one.append(" AS ").append(column.getColumnAlias());
+                }
+
+                // 逗号：只能出现在注释之前，否则会被 -- 注释吞掉
+                if (i < columnList.size() - 1) {
+                    one.append(",");
+                }
+
+                if (includeRemarksAsLineComment && FuncUtil.isNotEmpty(column.getRemark())) {
+                    String remark = column.getRemark().replaceAll("[\\r\\n]+", " ").trim();
+                    if (FuncUtil.isNotEmpty(remark)) {
+                        one.append(" -- ").append(remark);
+                    }
+                }
+
+                if (i == 0) {
+                    sql.append("\n  ").append(one);
+                } else {
+                    sql.append("\n  ").append(one);
                 }
             }
+            sql.append("\n");
         }
 
         // 构建 FROM 子句
@@ -166,6 +191,9 @@ public class PortalDatasetSqlUtil {
         AtomicInteger datasetOrder = new AtomicInteger(1);
         AtomicInteger columnOrder = new AtomicInteger(1);
 
+        // 预解析：SELECT 列的行内备注（-- / #）
+        Map<String, String> remarkMap = DatasetColumnRemarkUtil.parseSelectColumnRemarks(sql);
+
         // === 1. 解析 FROM 主表 ===
         FromItem fromItem = plainSelect.getFromItem();
         tableList.add(buildDatasetTable(fromItem, "主表", datasetOrder.getAndIncrement(), null, null, datasetId));
@@ -199,10 +227,29 @@ public class PortalDatasetSqlUtil {
                 SysDatasetColumn column = new SysDatasetColumn();
                 column.setDatasetId(datasetId);
                 column.setColumnSql(expression.toString());
-                column.setColumnAlias(alias != null ? alias.getName() : expression.toString());
+                // 这里就把 alias 清洗掉，避免落库成 'managerAppointStatus'
+                String rawAlias = alias != null ? alias.getName() : expression.toString();
+                String sanitizedAlias = SqlIdentifierUtil.sanitizeQuotedIdentifier(rawAlias);
+                column.setColumnAlias(sanitizedAlias);
                 column.setIsAggregate(isAggregateField(expression.toString()) ? CommonConst.YES : CommonConst.NO);
                 column.setDisplayOrder(columnOrder.getAndIncrement());
                 column.setIsVisible(CommonConst.YES);
+
+                // remark：优先使用 SQL 注释；无注释则统一生成英文备注兜底
+                String remark = null;
+                if (FuncUtil.isNotEmpty(remarkMap)) {
+                    if (FuncUtil.isNotEmpty(sanitizedAlias)) {
+                        remark = remarkMap.get(sanitizedAlias);
+                    }
+                    if (FuncUtil.isEmpty(remark)) {
+                        remark = remarkMap.get(expression.toString());
+                    }
+                }
+                if (FuncUtil.isEmpty(remark)) {
+                    remark = DatasetColumnRemarkUtil.generateEnglishRemark(sanitizedAlias);
+                }
+                column.setRemark(remark);
+
                 columnList.add(column);
             }
         }

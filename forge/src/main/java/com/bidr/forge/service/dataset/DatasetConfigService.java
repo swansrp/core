@@ -6,7 +6,9 @@ import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
+import com.bidr.forge.utils.DatasetColumnRemarkUtil;
 import com.bidr.forge.utils.PortalDatasetSqlUtil;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.forge.vo.dataset.DatasetColumnReq;
 import com.bidr.forge.vo.dataset.DatasetConfigReq;
 import com.bidr.forge.vo.dataset.DatasetConfigRes;
@@ -23,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Dataset配置管理服务
@@ -101,17 +106,26 @@ public class DatasetConfigService {
         // 对于更新模式，检测配置是否有变更
         if (!isNewDataset) {
             DatasetConfigRes existingConfig = getConfig(datasetId);
+
+            // 关键：合并备注（不重置旧备注；SQL 注释可覆盖；新列生成默认备注）
+            mergeColumnRemarks(existingConfig, newConfig);
+
             boolean configChanged = hasConfigChanged(existingConfig, newConfig);
 
             if (!configChanged) {
                 log.info("Dataset配置无变更，跳过更新，datasetId={}", datasetId);
-                return existingConfig;
+                // 但如果用户只是改了 SQL 注释（备注），也需要把备注更新到列配置表
+                persistColumnRemarksIfOnlyRemarksChanged(existingConfig, newConfig);
+                return getConfig(datasetId);
             }
 
             log.info("检测到Dataset配置变更，datasetId={}", datasetId);
             // 删除旧配置
             sysDatasetTableService.deleteByDatasetId(datasetId);
             sysDatasetColumnService.deleteByDatasetId(datasetId);
+        } else {
+            // 新增模式：给没有注释的列生成默认备注
+            ensureDefaultRemarksForNewColumns(newConfig);
         }
 
         // 保存新配置
@@ -123,7 +137,9 @@ public class DatasetConfigService {
         }
 
         log.info("成功保存Dataset配置，datasetId={}, tables={}, columns={}, mode={}",
-                datasetId, newConfig.getTables().size(), newConfig.getColumns().size(),
+                datasetId,
+                FuncUtil.isEmpty(newConfig.getTables()) ? 0 : newConfig.getTables().size(),
+                FuncUtil.isEmpty(newConfig.getColumns()) ? 0 : newConfig.getColumns().size(),
                 isNewDataset ? "新增" : "更新");
 
         return newConfig;
@@ -300,6 +316,7 @@ public class DatasetConfigService {
     public SysDatasetColumn addColumn(DatasetColumnReq req) {
         SysDatasetColumn column = new SysDatasetColumn();
         ReflectionUtil.copyProperties(req, column);
+        column.setColumnAlias(SqlIdentifierUtil.sanitizeQuotedIdentifier(column.getColumnAlias()));
         sysDatasetColumnService.insert(column);
         log.info("新增Dataset列配置成功，id={}, datasetId={}, columnAlias={}",
                 column.getId(), column.getDatasetId(), column.getColumnAlias());
@@ -317,6 +334,7 @@ public class DatasetConfigService {
         Validator.assertNotNull(column, ErrCodeSys.SYS_ERR_MSG, "列配置不存在");
 
         ReflectionUtil.copyProperties(req, column);
+        column.setColumnAlias(SqlIdentifierUtil.sanitizeQuotedIdentifier(column.getColumnAlias()));
         sysDatasetColumnService.updateById(column);
         log.info("更新Dataset列配置成功，id={}, datasetId={}, columnAlias={}",
                 column.getId(), column.getDatasetId(), column.getColumnAlias());
@@ -348,5 +366,112 @@ public class DatasetConfigService {
                 }
             }
         }
+    }
+
+    /**
+     * 合并列备注规则：
+     * 1) 如果新解析出来的备注是中文（通常来自 SQL 注释），则使用新备注（覆盖旧值）
+     * 2) 否则如果旧备注存在，则保留旧备注（避免字段增删/重解析导致重置）
+     * 3) 否则：无注释统一英文兜底
+     */
+    private void mergeColumnRemarks(DatasetConfigRes existingConfig, DatasetConfigRes newConfig) {
+        if (newConfig == null || FuncUtil.isEmpty(newConfig.getColumns())) {
+            return;
+        }
+
+        Map<String, SysDatasetColumn> oldByAlias = existingConfig == null || FuncUtil.isEmpty(existingConfig.getColumns())
+                ? new java.util.HashMap<>()
+                : existingConfig.getColumns().stream()
+                .filter(c -> FuncUtil.isNotEmpty(c.getColumnAlias()))
+                .collect(Collectors.toMap(SysDatasetColumn::getColumnAlias, Function.identity(), (a, b) -> a));
+
+        for (SysDatasetColumn n : newConfig.getColumns()) {
+            if (FuncUtil.isEmpty(n.getColumnAlias())) {
+                continue;
+            }
+
+            String newRemark = n.getRemark();
+            SysDatasetColumn old = oldByAlias.get(n.getColumnAlias());
+
+            // SQL 注释（通常为中文）视为显式输入，允许覆盖
+            if (FuncUtil.isNotEmpty(newRemark) && containsChinese(newRemark)) {
+                continue;
+            }
+
+            // 否则优先保留旧备注（避免重置）
+            if (old != null && FuncUtil.isNotEmpty(old.getRemark())) {
+                n.setRemark(old.getRemark());
+                continue;
+            }
+
+            // 最后兜底：无注释统一英文
+            if (FuncUtil.isEmpty(newRemark) || isEnglishLike(newRemark)) {
+                n.setRemark(com.bidr.forge.utils.DatasetColumnRemarkUtil.generateEnglishRemark(n.getColumnAlias()));
+            }
+        }
+    }
+
+    private void ensureDefaultRemarksForNewColumns(DatasetConfigRes newConfig) {
+        if (newConfig == null || FuncUtil.isEmpty(newConfig.getColumns())) {
+            return;
+        }
+        for (SysDatasetColumn c : newConfig.getColumns()) {
+            // 有中文备注（来自 SQL 注释）则保留
+            if (FuncUtil.isNotEmpty(c.getRemark()) && containsChinese(c.getRemark())) {
+                continue;
+            }
+            // 无注释统一英文
+            c.setRemark(DatasetColumnRemarkUtil.generateEnglishRemark(c.getColumnAlias()));
+        }
+    }
+
+    /**
+     * 当 SQL 解析出来的表/字段结构没变，但备注变了（仅改注释）时：
+     * compareColumnConfigs 不比较 remark，所以会被判定为无变更并直接 return。
+     * 这里单独把 remark 按 alias 回写到数据库。
+     */
+    private void persistColumnRemarksIfOnlyRemarksChanged(DatasetConfigRes existingConfig, DatasetConfigRes newConfig) {
+        if (existingConfig == null || newConfig == null
+                || FuncUtil.isEmpty(existingConfig.getColumns())
+                || FuncUtil.isEmpty(newConfig.getColumns())) {
+            return;
+        }
+
+        Map<String, SysDatasetColumn> oldByAlias = existingConfig.getColumns().stream()
+                .filter(c -> FuncUtil.isNotEmpty(c.getColumnAlias()))
+                .collect(Collectors.toMap(SysDatasetColumn::getColumnAlias, Function.identity(), (a, b) -> a));
+
+        for (SysDatasetColumn n : newConfig.getColumns()) {
+            if (FuncUtil.isEmpty(n.getColumnAlias()) || FuncUtil.isEmpty(n.getRemark())) {
+                continue;
+            }
+            SysDatasetColumn old = oldByAlias.get(n.getColumnAlias());
+            if (old == null) {
+                continue;
+            }
+            // 仅当新备注是中文/显式备注，并且与旧值不同才更新
+            if (containsChinese(n.getRemark()) && !n.getRemark().equals(old.getRemark())) {
+                SysDatasetColumn upd = new SysDatasetColumn();
+                upd.setId(old.getId());
+                upd.setRemark(n.getRemark());
+                sysDatasetColumnService.updateById(upd);
+            }
+        }
+    }
+
+    public String buildDatasetSql(Long datasetId, boolean includeRemarks) {
+        Validator.assertNotNull(datasetId, ErrCodeSys.SYS_ERR_MSG, "datasetId不能为空");
+        DatasetConfigRes cfg = getConfig(datasetId);
+        return PortalDatasetSqlUtil.buildQuerySql(cfg.getTables(), cfg.getColumns(), includeRemarks);
+    }
+
+    private boolean containsChinese(String s) {
+        if (s == null) return false;
+        return s.matches(".*[\\u4e00-\\u9fa5].*");
+    }
+
+    private boolean isEnglishLike(String s) {
+        if (s == null) return false;
+        return s.matches("[A-Za-z0-9 _\\-]+") && s.matches(".*[A-Za-z].*");
     }
 }

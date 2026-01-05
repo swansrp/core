@@ -5,14 +5,11 @@ import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.engine.builder.BaseSqlBuilder;
 import com.bidr.forge.engine.builder.DatasetSqlBuilder;
+import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Dataset 统计上下文适配器。
@@ -47,22 +44,6 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
         };
     }
 
-    private static String sanitizeAliasToken(String alias) {
-        if (alias == null) {
-            return null;
-        }
-        String a = alias.trim();
-        boolean changed = true;
-        while (changed && a.length() >= 2) {
-            changed = false;
-            if ((a.startsWith("`") && a.endsWith("`")) || (a.startsWith("'") && a.endsWith("'"))) {
-                a = a.substring(1, a.length() - 1).trim();
-                changed = true;
-            }
-        }
-        return a;
-    }
-
     private static Set<String> resolveSelectAliases(List<SysDatasetColumn> columns) {
         if (columns == null || columns.isEmpty()) {
             return Collections.emptySet();
@@ -72,9 +53,9 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
             if (c == null) {
                 continue;
             }
-            if (com.bidr.kernel.utils.FuncUtil.isNotEmpty(c.getColumnAlias())) {
-                String cleaned = sanitizeAliasToken(c.getColumnAlias());
-                if (com.bidr.kernel.utils.FuncUtil.isNotEmpty(cleaned)) {
+            if (FuncUtil.isNotEmpty(c.getColumnAlias())) {
+                String cleaned = SqlIdentifierUtil.sanitizeQuotedIdentifier(c.getColumnAlias());
+                if (FuncUtil.isNotEmpty(cleaned)) {
                     aliases.add(cleaned);
                 }
             }
@@ -88,17 +69,17 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
         }
         // 优先取 joinType 为空的主表别名
         for (SysDatasetTable t : datasets) {
-            if (t != null && com.bidr.kernel.utils.FuncUtil.isEmpty(t.getJoinType())
-                    && com.bidr.kernel.utils.FuncUtil.isNotEmpty(t.getTableAlias())) {
+            if (t != null && FuncUtil.isEmpty(t.getJoinType())
+                    && FuncUtil.isNotEmpty(t.getTableAlias())) {
                 return t.getTableAlias();
             }
         }
         // 兜底：取 tableOrder 最小的表别名
         SysDatasetTable first = datasets.stream()
-                .filter(java.util.Objects::nonNull)
-                .min(java.util.Comparator.comparing(SysDatasetTable::getTableOrder, java.util.Comparator.nullsLast(Integer::compareTo)))
+                .filter(Objects::nonNull)
+                .min(Comparator.comparing(SysDatasetTable::getTableOrder, Comparator.nullsLast(Integer::compareTo)))
                 .orElse(null);
-        if (first != null && com.bidr.kernel.utils.FuncUtil.isNotEmpty(first.getTableAlias())) {
+        if (first != null && FuncUtil.isNotEmpty(first.getTableAlias())) {
             return first.getTableAlias();
         }
         return null;
@@ -131,7 +112,7 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
         // 但统计配置里也可能直接写 dy 这种“裸列名”，在多表 JOIN 时会触发 Column 'dy' is ambiguous。
         // 另外，统计还可能引用 Dataset SELECT 输出列别名（例如 age），这种场景应保留为裸列名，
         // 由外层 FROM (subquery) t 暴露出来，不应补成 t.age。
-        if (com.bidr.kernel.utils.FuncUtil.isEmpty(dbColumnOrAlias)) {
+        if (FuncUtil.isEmpty(dbColumnOrAlias)) {
             return dbColumnOrAlias;
         }
         String expr = dbColumnOrAlias.trim();
@@ -140,9 +121,9 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
             expr = expr.substring(1, expr.length() - 1);
         }
         // 兼容历史脏数据：`'age'`/`age`/ 'age'
-        expr = sanitizeAliasToken(expr);
+        expr = SqlIdentifierUtil.sanitizeQuotedIdentifier(expr);
 
-        // 如果是 Dataset SELECT 输出列别名（如 age/dy/userno...），直接返回，让外层引用子查询列
+        // 如果是 Dataset SELECT 输出列别名（如 projectName/dy/...），必须保留为裸列名
         if (selectAliases != null && selectAliases.contains(expr)) {
             return expr;
         }
@@ -153,7 +134,7 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
         }
 
         // 兜底：如果没有默认表别名，就直接返回裸列名
-        if (com.bidr.kernel.utils.FuncUtil.isEmpty(defaultTableAlias)) {
+        if (FuncUtil.isEmpty(defaultTableAlias)) {
             return expr;
         }
 
