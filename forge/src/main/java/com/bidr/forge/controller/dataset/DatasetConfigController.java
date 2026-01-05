@@ -5,6 +5,7 @@ import com.bidr.forge.service.dataset.DatasetConfigService;
 import com.bidr.forge.vo.dataset.DatasetColumnReq;
 import com.bidr.forge.vo.dataset.DatasetConfigReq;
 import com.bidr.forge.vo.dataset.DatasetConfigRes;
+import com.bidr.forge.vo.dataset.DatasetSqlRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
@@ -65,6 +66,16 @@ public class DatasetConfigController {
     @GetMapping("")
     public DatasetConfigRes getConfig(@RequestParam Long datasetId) {
         return datasetConfigService.getConfig(datasetId);
+    }
+
+    @ApiOperation("获取指定datasetId的SQL（基于已保存的表/列配置拼装，可选择包含列备注注释）")
+    @GetMapping("/sql")
+    public DatasetSqlRes getSql(@RequestParam Long datasetId,
+                                @RequestParam(required = false, defaultValue = "false") boolean includeRemarks) {
+        DatasetSqlRes res = new DatasetSqlRes();
+        res.setDatasetId(datasetId);
+        res.setSql(datasetConfigService.buildDatasetSql(datasetId, includeRemarks));
+        return res;
     }
 
     // ==================== 列配置管理 ====================

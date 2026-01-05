@@ -252,7 +252,22 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public Map<String, Object> summary(AdvancedSummaryReq req, String portalName, Long roleId) {
-        throw new UnsupportedOperationException("Matrix模式暂不支持汇总统计操作");
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
+        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
+
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+
+        // 切换数据源
+        if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
+            jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
+        }
+
+        try {
+            return driverStatisticSupportService.summary(jdbcConnectService, req,
+                    new MatrixStatisticQueryContext(matrixColumns), aliasMap);
+        } finally {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
     }
 
     @Override

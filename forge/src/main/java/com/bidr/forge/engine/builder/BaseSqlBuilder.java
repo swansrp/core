@@ -68,14 +68,14 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
      * 构建查询条件子句（WHERE/GROUP BY/HAVING/ORDER BY）
      * 子类可以重写以支持更复杂的逻辑（如 Dataset 的 GROUP BY/HAVING）
      *
-     * @param req           查询请求
-     * @param aliasMap      字段别名映射
-     * @param parameters    参数Map（输出参数）
-     * @param includeOrder  是否包含 ORDER BY
+     * @param req          查询请求
+     * @param aliasMap     字段别名映射
+     * @param parameters   参数Map（输出参数）
+     * @param includeOrder 是否包含 ORDER BY
      * @return 查询条件 SQL 片段
      */
-    protected abstract String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
-                                                Map<String, Object> parameters, boolean includeOrder);
+    public abstract String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                             Map<String, Object> parameters, boolean includeOrder);
 
     /**
      * 构建 COUNT SQL（子类可以重写以支持特殊逻辑，如 Dataset 的子查询）
@@ -127,7 +127,7 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
         }
 
         String operator = FuncUtil.isEmpty(query.getAndOr()) ? "AND" :
-                          (AdvancedQuery.OR.equals(query.getAndOr()) ? "OR" : "AND");
+                (AdvancedQuery.OR.equals(query.getAndOr()) ? "OR" : "AND");
         return String.join(" " + operator + " ", conditions);
     }
 

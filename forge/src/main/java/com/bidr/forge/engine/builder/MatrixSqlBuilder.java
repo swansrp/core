@@ -101,8 +101,8 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
      * 构建查询条件子句（WHERE/ORDER BY）
      */
     @Override
-    protected String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
-                                      Map<String, Object> parameters, boolean includeOrder) {
+    public String buildQueryClauses(AdvancedQueryReq req, Map<String, String> aliasMap,
+                                    Map<String, Object> parameters, boolean includeOrder) {
         StringBuilder clause = new StringBuilder();
 
         // 构建WHERE

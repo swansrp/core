@@ -325,13 +325,18 @@ public class PortalGenerateService {
             portalColumn.setRoleId(PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
             portalColumn.setPortalId(portalId);
 
-            // 使用columnAlias作为property和dbField
+            // 使用columnAlias作为property
             String columnAlias = datasetColumn.getColumnAlias();
             // 去除单引号包裹
             if (columnAlias != null && columnAlias.startsWith("'") && columnAlias.endsWith("'")) {
                 columnAlias = columnAlias.substring(1, columnAlias.length() - 1);
             }
-            String property = StringUtil.underlineToCamel(columnAlias);
+
+            // 使用firstLowerCamelCase处理：
+            // 1. 如果有下划线，转为驼峰 (project_lead_dept -> projectLeadDept)
+            // 2. 如果无下划线，首字母小写，保留后续大小写 (TodayTime -> todayTime, projectLeadDept -> projectLeadDept)
+            String property = StringUtil.firstLowerCamelCase(columnAlias);
+
             portalColumn.setProperty(property);
             portalColumn.setDbField(datasetColumn.getColumnAlias());
             if (FuncUtil.isNotEmpty(datasetColumn.getRemark())) {

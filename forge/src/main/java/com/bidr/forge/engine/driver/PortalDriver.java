@@ -3,11 +3,17 @@ package com.bidr.forge.engine.driver;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.repository.SysPortalService;
+import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysMatrixColumn;
+import com.bidr.forge.dao.repository.SysDatasetColumnService;
+import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.engine.driver.inf.DriverCrudInf;
 import com.bidr.forge.engine.driver.inf.DriverQueryOnlyInf;
 import com.bidr.forge.engine.driver.inf.DriverTreeInf;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.StringUtil;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -125,10 +131,74 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
 
     default Map<String, String> buildAliasMap(String portalName, Long roleId) {
         Map<String, String> aliasMap = new LinkedHashMap<>();
-        List<SysPortalColumn> sysPortalColumnList = getSysPortalService().getColumnsByPortalName(portalName, roleId);
-        for (SysPortalColumn sysPortalColumn : sysPortalColumnList) {
-            aliasMap.put(sysPortalColumn.getProperty(), sysPortalColumn.getDbField());
+        SysPortal sysPortal = getSysPortalService().getByName(portalName, roleId);
+        if (sysPortal == null) {
+            throw new IllegalArgumentException("未找到Portal配置: " + portalName);
         }
+
+        final String referenceId = sysPortal.getReferenceId();
+        final String dataMode = sysPortal.getDataMode();
+        if (FuncUtil.isEmpty(referenceId) || FuncUtil.isEmpty(dataMode)) {
+            return aliasMap;
+        }
+
+        final Long refId;
+        try {
+            refId = Long.parseLong(referenceId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Portal的referenceId格式错误: " + referenceId, e);
+        }
+
+        if ("DATASET".equalsIgnoreCase(dataMode)) {
+            SysDatasetColumnService datasetColumnService = BeanUtil.getBean(SysDatasetColumnService.class);
+            if (datasetColumnService == null) {
+                throw new IllegalArgumentException("未找到SysDatasetColumnService");
+            }
+            List<SysDatasetColumn> cols = datasetColumnService.getByDatasetId(refId);
+            for (SysDatasetColumn c : cols) {
+                // Dataset: 返回字段名以 columnAlias 为准（通常已是驼峰）；如果是下划线形式则转驼峰
+                String alias = SqlIdentifierUtil.sanitizeQuotedIdentifier(c.getColumnAlias());
+                if (FuncUtil.isEmpty(alias)) {
+                    continue;
+                }
+                String fieldName = alias.contains("_") ? StringUtil.underlineToCamel(alias) : alias;
+
+                // value: 真实 SQL 列/表达式（用于 WHERE/ORDER BY 等条件落到真实字段）
+                String sqlExpr = SqlIdentifierUtil.sanitizeQuotedIdentifier(c.getColumnSql());
+                if (FuncUtil.isEmpty(sqlExpr)) {
+                    sqlExpr = fieldName;
+                }
+
+                aliasMap.put(fieldName, sqlExpr);
+            }
+        } else if ("MATRIX".equalsIgnoreCase(dataMode)) {
+            SysMatrixColumnService matrixColumnService = BeanUtil.getBean(SysMatrixColumnService.class);
+            if (matrixColumnService == null) {
+                throw new IllegalArgumentException("未找到SysMatrixColumnService");
+            }
+            List<SysMatrixColumn> cols = matrixColumnService.getByMatrixId(refId);
+            for (SysMatrixColumn c : cols) {
+                // Matrix: 统一别名策略：key=VO字段名(驼峰), value=数据库列名
+                String columnName = SqlIdentifierUtil.sanitizeQuotedIdentifier(c.getColumnName());
+                if (FuncUtil.isEmpty(columnName)) {
+                    continue;
+                }
+
+                String fieldName = StringUtil.underlineToCamel(columnName);
+                aliasMap.put(fieldName, columnName);
+            }
+        } else {
+            // 兜底：如果 dataMode 不识别，回退到原 portal 列配置（如历史数据仍配置在 sys_portal_column）
+            List<SysPortalColumn> sysPortalColumnList = getSysPortalService().getColumnsByPortalName(portalName, roleId);
+            for (SysPortalColumn sysPortalColumn : sysPortalColumnList) {
+                String prop = SqlIdentifierUtil.sanitizeQuotedIdentifier(sysPortalColumn.getProperty());
+                String dbField = SqlIdentifierUtil.sanitizeQuotedIdentifier(sysPortalColumn.getDbField());
+                if (FuncUtil.isNotEmpty(prop) && FuncUtil.isNotEmpty(dbField)) {
+                    aliasMap.put(prop, dbField);
+                }
+            }
+        }
+
         return aliasMap;
     }
 

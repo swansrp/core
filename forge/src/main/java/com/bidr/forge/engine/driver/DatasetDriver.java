@@ -171,7 +171,38 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
 
     @Override
     public Map<String, Object> summary(AdvancedSummaryReq req, String portalName, Long roleId) {
-        throw new UnsupportedOperationException("Dataset模式暂不支持汇总统计操作");
+        DatasetColumns datasetColumns = driverStatisticSupportService.getDatasetColumns(portalName);
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+
+        // 保存当前线程进入本方法前的数据源（可能为空=默认），用于后续精确恢复
+        String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
+
+        // 1) 先在“进入方法前的数据源”里读取 Dataset 配置表
+        List<SysDatasetTable> datasets;
+        List<SysDatasetColumn> columns;
+        if (FuncUtil.isNotEmpty(prevDataSource)) {
+            try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(prevDataSource)) {
+                datasets = sysDatasetTableService.getByDatasetId(datasetColumns.getId());
+                columns = sysDatasetColumnService.getByDatasetId(datasetColumns.getId());
+            }
+        } else {
+            datasets = sysDatasetTableService.getByDatasetId(datasetColumns.getId());
+            columns = sysDatasetColumnService.getByDatasetId(datasetColumns.getId());
+        }
+
+        // 2) 在 Dataset 指定的数据源中执行统计 SQL
+        if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            return driverStatisticSupportService.summary(jdbcConnectService, req, ctx, aliasMap);
+        }
+
+        try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            return driverStatisticSupportService.summary(jdbcConnectService, req, ctx, aliasMap);
+        } finally {
+            // 双保险：确保离开本方法时恢复到进入本方法前的数据源
+            jdbcConnectService.restoreDataSource(prevDataSource);
+        }
     }
 
     @Override

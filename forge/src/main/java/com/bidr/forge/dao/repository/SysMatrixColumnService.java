@@ -13,4 +13,14 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class SysMatrixColumnService extends BaseSqlRepo<SysMatrixColumnMapper, SysMatrixColumn> {
+
+    /**
+     * 根据矩阵ID查询所有列配置
+     */
+    public java.util.List<SysMatrixColumn> getByMatrixId(Long matrixId) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysMatrixColumn> wrapper = getQueryWrapper();
+        wrapper.eq(SysMatrixColumn::getMatrixId, matrixId);
+        wrapper.orderByAsc(SysMatrixColumn::getSort);
+        return super.select(wrapper);
+    }
 }
