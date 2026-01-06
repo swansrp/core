@@ -581,6 +581,7 @@ public class PortalConfigService implements LoginFillTokenInf {
             portalWithColumns.setName(portal.getName());
             portalWithColumns.setDisplayName(portal.getDisplayName());
         }
+        portalWithColumns.setReferenceId(portal.getReferenceId());
         portalWithColumns.setUrl(portal.getUrl());
         portalWithColumns.setBean(portal.getBean());
         sysPortalService.updateById(portalWithColumns);

@@ -126,14 +126,16 @@ public class PortalService {
 
         List<PortalWithColumnsRes> portalWithColumnsResList = Resp.convert(portalList, PortalWithColumnsRes.class);
         for (PortalWithColumnsRes portalWithColumns : portalWithColumnsResList) {
-            AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(portalWithColumns.getBean());
-            Class<?> voClass = bean.getVoClass();
-            for (SysPortalColumn column : portalWithColumns.getColumns()) {
-                Field field = ReflectionUtil.getField(voClass, column.getProperty());
-                SysPortalColumn sysPortalColumn = portalConfigService.buildSysPortalColumn(portalWithColumns,
-                        column.getDisplayOrder(), field, column.getRoleId());
-                ReflectionUtil.merge(sysPortalColumn, column, true);
-                sysPortalColumnService.updateById(column);
+            if (!portalWithColumns.getBean().equals("dynamicPortalController")) {
+                AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(portalWithColumns.getBean());
+                Class<?> voClass = bean.getVoClass();
+                for (SysPortalColumn column : portalWithColumns.getColumns()) {
+                    Field field = ReflectionUtil.getField(voClass, column.getProperty());
+                    SysPortalColumn sysPortalColumn = portalConfigService.buildSysPortalColumn(portalWithColumns,
+                            column.getDisplayOrder(), field, column.getRoleId());
+                    ReflectionUtil.merge(sysPortalColumn, column, true);
+                    sysPortalColumnService.updateById(column);
+                }
             }
             sysPortalService.updateById(portalWithColumns);
         }
