@@ -10,10 +10,10 @@ import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.engine.driver.inf.DriverCrudInf;
 import com.bidr.forge.engine.driver.inf.DriverQueryOnlyInf;
 import com.bidr.forge.engine.driver.inf.DriverTreeInf;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.StringUtil;
-import com.bidr.forge.utils.SqlIdentifierUtil;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -212,5 +212,27 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
             }
         }
         return columnName;
+    }
+
+    /**
+     * 为统计查询构建别名映射：key=columnAlias(如userStatus)，value=columnAlias(如userStatus)
+     * 在统计查询中，需要引用子查询中定义的列别名，而不是原始数据库列名
+     */
+    default Map<String, String> buildStatisticAliasMap(List<SysDatasetColumn> columns) {
+        Map<String, String> aliasMap = new LinkedHashMap<>();
+        if (FuncUtil.isEmpty(columns)) {
+            return aliasMap;
+        }
+
+        for (SysDatasetColumn column : columns) {
+            if (FuncUtil.isNotEmpty(column.getColumnAlias())) {
+                String alias = SqlIdentifierUtil.sanitizeQuotedIdentifier(column.getColumnAlias());
+                if (FuncUtil.isNotEmpty(alias)) {
+                    // 在统计查询中，字段名映射到其在子查询中使用的别名
+                    aliasMap.put(alias, alias);
+                }
+            }
+        }
+        return aliasMap;
     }
 }
