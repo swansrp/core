@@ -30,7 +30,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@Api(tags = "Dataset配置管理")
+@Api(tags = "系统基础 - 数据集配置 - Dataset配置管理")
 @RequestMapping("/web/dataset/config")
 @RequiredArgsConstructor
 public class DatasetConfigController {

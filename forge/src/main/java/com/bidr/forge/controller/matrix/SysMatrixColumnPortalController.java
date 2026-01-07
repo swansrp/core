@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author sharp
  * @since 2025-11-20
  */
-@Api(tags = "动态配置 - 矩阵字段管理")
+@Api(tags = "系统基础 - 动态表格 - 矩阵字段管理")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/forge/matrix-column"})

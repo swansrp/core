@@ -19,7 +19,7 @@ import java.util.Map;
  * @author sharp
  * @since 2025-11-20
  */
-@Api(tags = "动态配置 - 表单联动配置")
+@Api(tags = "系统基础 - 动态表单 - 表单联动配置")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/forge/form-linkage"})

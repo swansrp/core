@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  * @author sharp
  * @since 2025-11-21
  */
-@Api(tags = "动态配置 - 矩阵表结构变更日志")
+@Api(tags = "系统基础 - 动态表格 - 矩阵表结构变更日志")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/forge/matrix-change-log"})

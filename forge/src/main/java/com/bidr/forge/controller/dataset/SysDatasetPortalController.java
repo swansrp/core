@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author sharp
  * @since 2025-11-25
  */
-@Api(tags = "Forge - 数据集配置 - 数据集主表")
+@Api(tags = "系统基础 - 数据集配置 - 数据集主表")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/dataset"})

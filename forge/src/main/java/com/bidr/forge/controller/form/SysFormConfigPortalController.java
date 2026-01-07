@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author sharp
  * @since 2025-11-20
  */
-@Api(tags = "动态配置 - 动态表单配置")
+@Api(tags = "系统基础 - 动态表单 - 配置")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/forge/form-config"})

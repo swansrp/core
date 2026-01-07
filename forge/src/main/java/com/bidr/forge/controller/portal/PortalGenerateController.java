@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@Api(tags = "Portal配置生成")
+@Api(tags = "系统基础 - 快速后台管理 - 动态表格配置")
 @RequestMapping("/web/portal/generate")
 @RequiredArgsConstructor
 public class PortalGenerateController {
