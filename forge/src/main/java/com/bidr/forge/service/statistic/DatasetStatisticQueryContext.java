@@ -125,7 +125,7 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
 
         // 如果是 Dataset SELECT 输出列别名（如 projectName/dy/...），必须保留为裸列名
         if (selectAliases != null && selectAliases.contains(expr)) {
-            return expr;
+            return SUBQUERY_ALIAS + "." + expr;
         }
 
         // 已经是 table.col / 函数/表达式/带空格/带括号 的，不处理
@@ -135,10 +135,12 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
 
         // 兜底：如果没有默认表别名，就直接返回裸列名
         if (FuncUtil.isEmpty(defaultTableAlias)) {
-            return expr;
+            // 在统计查询中，应该使用子查询别名访问字段
+            return SUBQUERY_ALIAS + "." + expr;
         }
 
         // 简单标识符：补齐主表别名（用于解决多表 join 的歧义）
-        return defaultTableAlias + "." + expr;
+        // 在统计查询中，应该使用子查询别名访问字段
+        return SUBQUERY_ALIAS + "." + expr;
     }
 }
