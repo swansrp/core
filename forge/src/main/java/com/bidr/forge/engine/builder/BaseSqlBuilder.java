@@ -190,10 +190,27 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
                 parameters.put(paramKey, "%" + getFirstValue(value) + "%");
                 return formattedColumn + " NOT LIKE :" + paramKey;
             case IN:
-            case CONTAIN:
                 if (FuncUtil.isNotEmpty(value)) {
                     parameters.put(paramKey, value);
                     return formattedColumn + " IN (:" + paramKey + ")";
+                }
+                break;
+            case CONTAIN:
+            case CONTAIN_IN_OR:
+            case CONTAIN_IN_AND:
+                if (FuncUtil.isNotEmpty(value)) {
+                    List<String> parts = new ArrayList<>();
+                    String join = (conditionDict == PortalConditionDict.CONTAIN_IN_AND) ? " AND " : " OR ";
+                    int idx = 0;
+                    for (Object v : value) {
+                        String pk = paramKey + "_" + (idx++);
+                        parameters.put(pk, v);
+                        parts.add("FIND_IN_SET(:" + pk + ", " + formattedColumn + ") > 0");
+                    }
+                    if (parts.size() == 1) {
+                        return parts.get(0);
+                    }
+                    return "(" + String.join(join, parts) + ")";
                 }
                 break;
             case NOT_IN:
