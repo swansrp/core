@@ -1,49 +1,39 @@
 package com.bidr.forge.controller.dynamic;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.admin.dao.entity.SysPortal;
-import com.bidr.admin.dao.repository.SysPortalService;
-import com.bidr.admin.holder.PortalConfigContext;
-import com.bidr.forge.engine.driver.DatasetDriver;
-import com.bidr.forge.engine.driver.MatrixDriver;
 import com.bidr.forge.engine.driver.PortalDriver;
-import com.bidr.forge.engine.PortalDataMode;
-import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.exception.NoticeException;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.ConditionVO;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.portal.statistic.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
-import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 动态Portal查询Controller（第1层 - 只读层）
  * <p>只提供查询和统计功能，不提供增删改功能</p>
- * 
+ *
  * <h3>Controller层次：</h3>
  * <pre>
  * DynamicQueryController（第1层 - 只读）⬅ 当前类
  *   └── DynamicCrudController（第2层 - 增删改）
  *         └── DynamicTreeController（第3层 - 树形结构）
  * </pre>
- * 
+ *
  * <h3>提供能力：</h3>
  * <ul>
  *   <li>查询：queryById、generalQuery、generalSelect、advancedQuery、advancedSelect</li>
  *   <li>统计：generalCount、advancedCount、generalSummary、advancedSummary、generalStatistic、advancedStatistic</li>
  * </ul>
- * 
+ *
  * <h3>适用场景：</h3>
  * <ul>
  *   <li>Dataset数据源（只读）</li>

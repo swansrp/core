@@ -172,7 +172,7 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
     @Override
     public Map<String, Object> summary(AdvancedSummaryReq req, String portalName, Long roleId) {
         DatasetColumns datasetColumns = driverStatisticSupportService.getDatasetColumns(portalName);
-
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
         // 保存当前线程进入本方法前的数据源（可能为空=默认），用于后续精确恢复
         String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
 
@@ -190,7 +190,7 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
         }
 
         // 为统计查询构建特殊的别名映射，使用Dataset中定义的columnAlias作为键值
-        Map<String, String> aliasMap = buildStatisticAliasMap(columns);
+//        Map<String, String> aliasMap = buildStatisticAliasMap(columns);
 
         // 2) 在 Dataset 指定的数据源中执行统计 SQL
         if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
@@ -210,6 +210,7 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
     @Override
     public List<StatisticRes> statistic(AdvancedStatisticReq req, String portalName, Long roleId) {
         DatasetColumns datasetColumns = driverStatisticSupportService.getDatasetColumns(portalName);
+//        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
 
         // 保存当前线程进入本方法前的数据源（可能为空=默认），用于后续精确恢复
         String prevDataSource = jdbcConnectService.getCurrentDataSourceName();

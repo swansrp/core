@@ -96,9 +96,14 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
 
         // 去除 LIMIT（如果存在）
         int limitIdx = upper.lastIndexOf(" LIMIT ");
-        String noLimitSql = limitIdx >= 0 ? previewSql.substring(0, limitIdx).trim() : previewSql.trim();
 
-        return "(" + noLimitSql + ") AS " + SUBQUERY_ALIAS;
+        String noLimitNoOrderSql = limitIdx >= 0 ? previewSql.substring(0, limitIdx).trim() : previewSql.trim();
+        int orderIdx = noLimitNoOrderSql.toUpperCase(Locale.ROOT).lastIndexOf(" ORDER BY ");
+        if (orderIdx >= 0) {
+            noLimitNoOrderSql = noLimitNoOrderSql.substring(0, orderIdx).trim();
+        }
+
+        return "(" + noLimitNoOrderSql + ") AS " + SUBQUERY_ALIAS;
     }
 
     @Override
