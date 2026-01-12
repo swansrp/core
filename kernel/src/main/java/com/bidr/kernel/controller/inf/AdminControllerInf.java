@@ -36,6 +36,13 @@ public interface AdminControllerInf<ENTITY, VO> extends AdminBaseInsertControlle
     void add(@RequestBody VO vo);
 
     /**
+     * 添加数据列表
+     *
+     * @param voList 数据列表
+     */
+    void add(@RequestBody List<VO> voList);
+
+    /**
      * 删除数据
      *
      * @param vo 数据

@@ -60,6 +60,19 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiOperation("添加数据")
+    @RequestMapping(value = "/insert/list", method = RequestMethod.POST)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
+    public void add(@RequestBody List<VO> voList) {
+        if (FuncUtil.isNotEmpty(voList)) {
+            for (VO vo : voList) {
+                insertEntity(vo);
+            }
+        }
+        Resp.notice("新增成功");
+    }
+
+    @Override
     @ApiOperation("删除数据")
     @RequestMapping(value = "/delete", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)

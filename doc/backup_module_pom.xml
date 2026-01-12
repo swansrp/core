@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.bidr</groupId>
+        <artifactId>project_name</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>module_name</artifactId>
+
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <maven.compiler.source>8</maven.compiler.source>
+                <maven.compiler.target>8</maven.compiler.target>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <core.verison>0.0.1-SNAPSHOT</core.verison>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.bidr</groupId>
+                    <artifactId>kernel</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.bidr</groupId>
+                    <artifactId>platform</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.bidr</groupId>
+                    <artifactId>authorization</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.bidr</groupId>
+                    <artifactId>admin</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.bidr</groupId>
+                    <artifactId>forge</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.bidr</groupId>
+                    <artifactId>oss</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <maven.compiler.source>8</maven.compiler.source>
+                <maven.compiler.target>8</maven.compiler.target>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <core.verison>das_0.0.1</core.verison>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>kernel</artifactId>
+                    <version>${core.verison}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>platform</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除 platform 内部的 kernel 依赖,避免版本冲突 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>authorization</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 platform -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>platform</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 redis -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>redis</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 email -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>email</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>redis</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除传递依赖的 kernel 和 platform,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>platform</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>email</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>oss</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 platform -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>platform</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 redis -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>redis</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 email -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>email</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 email -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>authorization</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>admin</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 platform -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>platform</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 redis -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>redis</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 authorization -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>authorization</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 email -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>email</artifactId>
+                        </exclusion>
+                    </exclusions>
+                <dependency>
+                    <groupId>com.github.swansrp.core</groupId>
+                    <artifactId>forge</artifactId>
+                    <version>${core.verison}</version>
+                    <exclusions>
+                        <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>kernel</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 platform -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>platform</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 redis -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>redis</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 authorization -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>authorization</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 email -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>email</artifactId>
+                        </exclusion>
+                        <!-- 排除传递依赖的 admin -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>admin</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
+</project>
