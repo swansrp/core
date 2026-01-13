@@ -18,38 +18,38 @@
                 <maven.compiler.source>8</maven.compiler.source>
                 <maven.compiler.target>8</maven.compiler.target>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <core.verison>0.0.1-SNAPSHOT</core.verison>
+                <core.version>0.0.1-SNAPSHOT</core.version>
             </properties>
             <dependencies>
                 <dependency>
                     <groupId>com.bidr</groupId>
                     <artifactId>kernel</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${core.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.bidr</groupId>
                     <artifactId>platform</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${core.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.bidr</groupId>
                     <artifactId>authorization</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${core.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.bidr</groupId>
                     <artifactId>admin</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${core.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.bidr</groupId>
                     <artifactId>forge</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${core.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.bidr</groupId>
                     <artifactId>oss</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${core.version}</version>
                 </dependency>
             </dependencies>
         </profile>
@@ -62,18 +62,26 @@
                 <maven.compiler.source>8</maven.compiler.source>
                 <maven.compiler.target>8</maven.compiler.target>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <core.verison>das_0.0.1</core.verison>
+                <core.version>base_0.0.1</core.version>
+                <kernel.version>${core.version}</kernel.version>
+                <platform.version>${core.version}</platform.version>
+                <authorization.version>${core.version}</authorization.version>
+                <redis.version>${core.version}</redis.version>
+                <email.version>${core.version}</email.version>
+                <oss.version>${core.version}</oss.version>
+                <admin.version>${core.version}</admin.version>
+                <forge.version>${core.version}</forge.version>
             </properties>
             <dependencies>
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>kernel</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${kernel.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>platform</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${platform.version}</version>
                     <exclusions>
                         <!-- 排除 platform 内部的 kernel 依赖,避免版本冲突 -->
                         <exclusion>
@@ -85,7 +93,7 @@
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>authorization</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${authorization.version}</version>
                     <exclusions>
                         <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
                         <exclusion>
@@ -112,7 +120,7 @@
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>redis</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${redis.version}</version>
                     <exclusions>
                         <!-- 排除传递依赖的 kernel 和 platform,统一使用项目指定版本 -->
                         <exclusion>
@@ -128,7 +136,7 @@
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>email</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${email.version}</version>
                     <exclusions>
                         <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
                         <exclusion>
@@ -140,7 +148,7 @@
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>oss</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${oss.version}</version>
                     <exclusions>
                         <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
                         <exclusion>
@@ -172,7 +180,7 @@
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>admin</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${admin.version}</version>
                     <exclusions>
                         <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
                         <exclusion>
@@ -200,10 +208,11 @@
                             <artifactId>email</artifactId>
                         </exclusion>
                     </exclusions>
+                </dependency>
                 <dependency>
                     <groupId>com.github.swansrp.core</groupId>
                     <artifactId>forge</artifactId>
-                    <version>${core.verison}</version>
+                    <version>${forge.version}</version>
                     <exclusions>
                         <!-- 排除传递依赖的 kernel,统一使用项目指定版本 -->
                         <exclusion>
