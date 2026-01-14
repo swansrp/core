@@ -3,10 +3,10 @@ package com.bidr.platform.controller;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.service.dict.BizDictService;
 import com.bidr.platform.vo.dict.BizDictVO;
+import com.bidr.platform.vo.dict.BizDictValueReq;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +54,7 @@ public class SystemBizDictController {
      * @param dictCode 字典编码（必填）
      * @return 字典列表
      */
-    @ApiOperation("通过字典编码获取业务字典（业务优先覆盖系统）")
+    @ApiOperation("通过字典编码获取业务字典")
     @GetMapping("/code")
     public List<BizDictVO> getEnterpriseDictByCode(
             @RequestParam String bizId,
@@ -65,13 +65,13 @@ public class SystemBizDictController {
     /**
      * 获取字典项详情
      *
-     * @param id 字典项ID
+     * @param req 字典/字典项
      * @return 字典项详情
      */
     @ApiOperation("获取字典项详情")
-    @GetMapping("/id")
-    public BizDictVO getDictById(@RequestParam Long id) {
-        return bizDictService.getById(id);
+    @PostMapping("/value")
+    public BizDictVO getDictByValue(@RequestBody BizDictValueReq req) {
+        return bizDictService.getDictByCode(req.getDictName(), req.getValue());
     }
 
     /**
