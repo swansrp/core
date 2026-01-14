@@ -55,7 +55,7 @@ public class SystemBizDictController {
      * @return 字典列表
      */
     @ApiOperation("通过字典编码获取业务字典（业务优先覆盖系统）")
-    @GetMapping("/")
+    @GetMapping("/code")
     public List<BizDictVO> getEnterpriseDictByCode(
             @RequestParam String bizId,
             @RequestParam String dictCode) {
