@@ -22,10 +22,10 @@ import java.util.List;
  * @since 2026/1/13 23:47
  */
 
-@Api(tags = "业务字典配置")
+@Api(tags = "系统基础 - 业务字典配置")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = {"/web/system/biz/dict"})
+@RequestMapping(path = {"/web/biz/dict"})
 public class SystemBizDictController {
 
     private final BizDictService bizDictService;
@@ -34,15 +34,15 @@ public class SystemBizDictController {
      * 获取字典列表
      *
      * @param bizId 业务ID
-     * @param name  字典编码（可选）
+     * @param code  字典编码（可选）
      * @return 字典列表
      */
     @ApiOperation("获取业务字典列表")
     @GetMapping("/list")
     public List<KeyValueResVO> getDictList(
             @RequestParam(required = false) String bizId,
-            @RequestParam(required = false) String name) {
-        return bizDictService.getDictList(bizId, name);
+            @RequestParam(required = false) String code) {
+        return bizDictService.getDictList(bizId, code);
     }
 
     /**
@@ -60,6 +60,14 @@ public class SystemBizDictController {
             @RequestParam String bizId,
             @RequestParam String dictCode) {
         return bizDictService.getDict(bizId, dictCode);
+    }
+
+
+    @ApiOperation("变更指定字典编码的字典名称")
+    @PostMapping("/name")
+    public void updateDictName(@RequestBody KeyValueResVO req) {
+        bizDictService.updateDictName(req);
+        Resp.notice("变更字典名成功");
     }
 
     /**

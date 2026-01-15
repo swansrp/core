@@ -135,4 +135,8 @@ public class BizDictService {
     public BizDictVO getDictByCode(String dictName, String value) {
         return Resp.convert(sysBizDictService.getDictByCode(dictName, value), BizDictVO.class);
     }
+
+    public void updateDictName(KeyValueResVO req) {
+        sysBizDictService.updateDictName(req.getValue(), req.getLabel());
+    }
 }

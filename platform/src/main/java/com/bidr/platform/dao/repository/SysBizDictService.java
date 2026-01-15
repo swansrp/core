@@ -22,5 +22,14 @@ public class SysBizDictService extends BaseSqlRepo<SysBizDictDao, SysBizDict> {
         wrapper.eq(SysBizDict::getValid, CommonConst.YES);
         return super.getOne(wrapper);
     }
+
+    public void updateDictName(String dictCode, String dictName) {
+        LambdaQueryWrapper<SysBizDict> wrapper = super.getQueryWrapper();
+        wrapper.eq(SysBizDict::getDictCode, dictCode);
+
+        SysBizDict entity = new SysBizDict();
+        entity.setDictName(dictName);
+        super.update(entity, wrapper);
+    }
     // 仅包含业务逻辑方法
 }

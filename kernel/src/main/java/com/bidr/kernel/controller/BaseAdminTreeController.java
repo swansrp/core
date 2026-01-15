@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.exception.NoImplementsException;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.FuncUtil;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.bidr.kernel.constant.db.SqlConstant.VALID_FIELD;
 
 /**
  * Title: BaseAdminTreeController
@@ -107,6 +110,9 @@ public abstract class BaseAdminTreeController<ENTITY, VO> extends BaseAdminOrder
                 return getPortalService().getAllData();
             } catch (NoImplementsException e) {
                 LambdaQueryWrapper<ENTITY> wrapper = getRepo().getQueryWrapper();
+                if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+                    wrapper.apply(VALID_FIELD + " = '1'");
+                }
                 wrapper.orderByAsc(order());
                 return getRepo().select(wrapper);
             }
