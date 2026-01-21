@@ -908,7 +908,6 @@ EOF
                 <configuration>
                     <!-- 指定该Main Class为全局的唯一入口 -->
                     <mainClass>${BASE_PACKAGE}.${CAPITALIZED_CODE}Application</mainClass>
-                    <layout>ZIP</layout>
                     <classifier>exec</classifier>
                 </configuration>
                 <executions>
