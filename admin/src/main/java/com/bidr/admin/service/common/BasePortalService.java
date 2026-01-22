@@ -334,7 +334,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
         if (FuncUtil.isNotEmpty(portalEntityField) && !getSelectApplyMap().containsKey(field.getName())) {
             if (!portalEntityField.select()) {
-                return true;
+                return false;
             }
             String alias = portalEntityField.alias();
             String sqlFieldName = portalEntityField.field();
