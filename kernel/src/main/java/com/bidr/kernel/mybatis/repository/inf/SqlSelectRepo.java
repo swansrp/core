@@ -70,4 +70,6 @@ public interface SqlSelectRepo<T> {
     T selectById(Serializable id);
 
     <VO> VO selectById(Serializable id, MPJLambdaWrapper<T> wrapper, Class<VO> voClass);
+
+    List<T> selectAll();
 }

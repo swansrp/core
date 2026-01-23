@@ -52,13 +52,13 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
 
     @Override
     public boolean existed(Wrapper<T> wrapper) {
-        return super.page(new Page<>(1, 1, false), wrapper).getRecords().size() != 0;
+        return !super.page(new Page<>(1, 1, false), wrapper).getRecords().isEmpty();
     }
 
     @Override
     public boolean existed(Map<String, Object> propertyMap) {
         Wrapper<T> wrapper = super.getQueryWrapperByMap(propertyMap);
-        return super.page(new Page<>(1, 1, false), wrapper).getRecords().size() != 0;
+        return !super.page(new Page<>(1, 1, false), wrapper).getRecords().isEmpty();
     }
 
     @Override
@@ -239,6 +239,15 @@ public class BaseSqlRepo<K extends MyBaseMapper<T>, T> extends BaseMybatisRepo<K
     public <VO> VO selectById(Serializable id, MPJLambdaWrapper<T> wrapper, Class<VO> voClass) {
         wrapper.eq(super.getIdField(), id);
         return super.selectJoinOne(voClass, wrapper);
+    }
+
+    @Override
+    public List<T> selectAll() {
+        if (ReflectionUtil.existedField(getEntityClass(), VALID_FIELD)) {
+            QueryWrapper<T> wrapper = super.getQueryWrapper(VALID_FIELD, CommonConst.YES);
+            return super.list(wrapper);
+        }
+        return super.list();
     }
 
     @Override
