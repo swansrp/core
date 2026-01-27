@@ -38,7 +38,7 @@ public class MinioTemplate {
     @Value("${oss.bucket}")
     private String bucketName;
     
-    private MinioClient minioClient;
+    protected MinioClient minioClient;
 
     public MinioClient getClient() {
         if (FuncUtil.isEmpty(minioClient)) {
