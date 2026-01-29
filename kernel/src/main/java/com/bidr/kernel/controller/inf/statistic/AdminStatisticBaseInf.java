@@ -43,6 +43,7 @@ public interface AdminStatisticBaseInf<ENTITY, VO> extends AdminBaseInf<ENTITY, 
                 getRepo().parseQuery(query, newAliasMap, null, from);
             } else {
                 getPortalService().getJoinWrapper(from);
+                from = getPortalService().getDynamicJoinWrapper(from, query.getSelectColumnCondition());
                 getRepo().parseQuery(query, selectAliasMap, getPortalService().getHavingFields(), from);
             }
         }

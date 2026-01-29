@@ -56,6 +56,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            wrapper = getPortalService().getDynamicJoinWrapper(wrapper, query.getSelectColumnCondition());
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
         } else {
@@ -93,6 +94,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         wrapper.from(from -> {
             if (FuncUtil.isNotEmpty(getPortalService())) {
                 getPortalService().getJoinWrapper(from);
+                from = getPortalService().getDynamicJoinWrapper(from, query.getSelectColumnCondition());
             }
             for (String value : extractSelectAliases(from).values()) {
                 newAliasMap.put(value, value);
@@ -129,6 +131,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            wrapper = getPortalService().getDynamicJoinWrapper(wrapper, query.getSelectColumnCondition());
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
         } else {
@@ -185,6 +188,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         if (FuncUtil.isNotEmpty(getPortalService())) {
             aliasMap = getPortalService().getAliasMap();
             wrapper = getPortalService().getJoinWrapper();
+            wrapper = getPortalService().getDynamicJoinWrapper(wrapper, query.getSelectColumnCondition());
             havingFields = getPortalService().getHavingFields();
             selectApplyMap = getPortalService().getSelectApplyMap();
         } else {

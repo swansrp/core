@@ -8,10 +8,7 @@ import com.bidr.kernel.constant.db.SqlConstant;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.mybatis.bo.DynamicColumn;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.JsonUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.kernel.utils.StringUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.vo.portal.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
@@ -472,7 +469,7 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                 for (Map.Entry<String, Object> entry : selectColumnCondition.entrySet()) {
                     ScriptableObject.putProperty(scope, entry.getKey(), entry.getValue());
                 }
-                buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, context, scope);
+                buildSelectWrapper(wrapper, deepCloneAliasMap, selectApplyMap, selectColumnCondition, context, scope);
             } finally {
                 Context.exit();
             }
@@ -482,7 +479,7 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
     }
 
     default void buildSelectWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap, Map<String, List<DynamicColumn>> selectApplyMap,
-                                    Context context, Scriptable scope) {
+                                    Map<String, Object> selectColumnCondition, Context context, Scriptable scope) {
         if (FuncUtil.isNotEmpty(selectApplyMap)) {
             String complexScriptFormat = "function func() {%s} func();";
             String simpleScriptFormat = "function func() {return '%s';} func();";
@@ -494,7 +491,7 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                             if (Context.toBoolean(context.evaluateString(scope, column.getCondition(), "", 1, null))) {
                                 String format = column.isComplex() ? complexScriptFormat : simpleScriptFormat;
                                 String scriptStr = column.isComplex() ? column.getScript() : column.getScript().replace("'", "\\'");
-                                String script = String.format(format, scriptStr);
+                                String script = TemplateUtil.parse(String.format(format, scriptStr), selectColumnCondition);
                                 String s = Context.toString(context.evaluateString(scope, script, "", 1, null));
                                 if (FuncUtil.isNotEmpty(s)) {
                                     select.append(column.getPrefix()).append(s).append(column.getSuffix());

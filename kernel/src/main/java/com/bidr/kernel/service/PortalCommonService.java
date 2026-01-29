@@ -331,6 +331,17 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
         return wrapper;
     }
 
+    /**
+     * 生成需要动态拼接的联表wrapper
+     *
+     * @param wrapper 静态wrapper
+     * @param selectColumnCondition 动态字段
+     * @return 动态拼接的wrapper
+     */
+    default MPJLambdaWrapper<ENTITY> getDynamicJoinWrapper(MPJLambdaWrapper<ENTITY> wrapper, Map<String, Object> selectColumnCondition) {
+        return wrapper;
+    }
+
     @Override
     default Class<VO> getVoClass() {
         return (Class<VO>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
