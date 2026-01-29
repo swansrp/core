@@ -149,7 +149,7 @@ cat > "$PROJECT_DIR/pom.xml" << EOF
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.bidr</groupId>
-        <artifactId>${PROJECT_CODE}-api</artifactId>
+        <artifactId>${PROJECT_CODE}</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
@@ -418,11 +418,11 @@ else
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.bidr</groupId>
-    <artifactId>${PROJECT_CODE}-api</artifactId>
+    <artifactId>${PROJECT_CODE}</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>${PROJECT_CODE}-api</name>
+    <name>${PROJECT_CODE}</name>
     <description>${PROJECT_NAME}</description>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -884,7 +884,7 @@ EOF
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.bidr</groupId>
-        <artifactId>${PROJECT_CODE}-api</artifactId>
+        <artifactId>${PROJECT_CODE}</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
@@ -946,7 +946,7 @@ EOF
     cat > "$SERVER_DIR/src/main/resources/config/application.yml" << EOFAPP
 my:
   project:
-    name: ${PROJECT_CODE}-api
+    name: ${PROJECT_CODE}
   chat:
     server:
       port: 29092
