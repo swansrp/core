@@ -28,10 +28,20 @@ echo ""
 # 1. 解析命令行参数
 FORCE_MODE=false
 PROJECT_CODE=""
+CHANGE_PORT_MODE=false
+NEW_PORT=""
 
 # 解析所有参数
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --change-port)
+            CHANGE_PORT_MODE=true
+            if [ -n "$2" ] && [[ $2 != -* ]]; then
+                NEW_PORT="$2"
+                shift
+            fi
+            shift
+            ;;
         --force|-f)
             FORCE_MODE=true
             print_info "启用强制覆盖模式"
@@ -40,11 +50,14 @@ while [[ $# -gt 0 ]]; do
         --help|-h)
             echo "用法: $0 [选项] [项目编码]"
             echo "选项:"
-            echo "  --force, -f    强制覆盖已存在的文件和目录"
-            echo "  --help, -h     显示帮助信息"
+            echo "  --force, -f              强制覆盖已存在的文件和目录"
+            echo "  --change-port [PORT]     修改已生成文件的端口号"
+            echo "  --help, -h               显示帮助信息"
             echo "示例:"
-            echo "  $0 stp              # 创建stp项目"
-            echo "  $0 --force stp      # 强制覆盖已存在的stp项目"
+            echo "  $0 stp                   # 创建stp项目"
+            echo "  $0 --force stp           # 强制覆盖已存在的stp项目"
+            echo "  $0 --change-port         # 交互式修改端口号"
+            echo "  $0 --change-port 8080    # 直接修改端口号为8080"
             exit 0
             ;;
         *)
@@ -55,6 +68,103 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# 如果是修改端口号模式
+if [ "$CHANGE_PORT_MODE" = true ]; then
+    print_info "================================================"
+    print_info "        统一修改端口号"
+    print_info "================================================"
+    echo ""
+    
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    CORE_DIR="$(dirname "$SCRIPT_DIR")"
+    ROOT_DIR="$(dirname "$CORE_DIR")"
+    
+    # 如果没有指定端口号，则交互式输入
+    if [ -z "$NEW_PORT" ]; then
+        read -p "请输入新的端口号: " NEW_PORT
+    fi
+    
+    if [ -z "$NEW_PORT" ]; then
+        print_error "端口号不能为空"
+        exit 1
+    fi
+    
+    # 验证端口号格式
+    if ! [[ "$NEW_PORT" =~ ^[0-9]+$ ]] || [ "$NEW_PORT" -lt 1 ] || [ "$NEW_PORT" -gt 65535 ]; then
+        print_error "无效的端口号: $NEW_PORT，请输入1-65535之间的数字"
+        exit 1
+    fi
+    
+    print_info "开始修改端口号为: $NEW_PORT"
+    echo ""
+    
+    # 查找并修改文件
+    FILES_TO_UPDATE=(
+        "$ROOT_DIR/Dockerfile"
+        "$ROOT_DIR/docker-compose.yml"
+        "$ROOT_DIR/docker-start.sh"
+        "$ROOT_DIR/start.sh"
+    )
+    
+    UPDATED_COUNT=0
+    for file in "${FILES_TO_UPDATE[@]}"; do
+        if [ -f "$file" ]; then
+            # 备份原文件
+            cp "$file" "${file}.bak"
+            
+            # 根据不同文件类型修改
+            filename=$(basename "$file")
+            if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+                # macOS/Linux
+                case $filename in
+                    "Dockerfile")
+                        sed -i "s/^EXPOSE [0-9]\+/EXPOSE ${NEW_PORT}/g" "$file"
+                        ;;
+                    "docker-compose.yml")
+                        sed -i "s/127\.0\.0\.1:[0-9]\+:/127.0.0.1:${NEW_PORT}:/g" "$file"
+                        sed -i "s/SERVER_PORT: [0-9]\+/SERVER_PORT: ${NEW_PORT}/g" "$file"
+                        ;;
+                    "docker-start.sh")
+                        sed -i "s/^APP_PORT=[0-9]\+/APP_PORT=${NEW_PORT}/g" "$file"
+                        ;;
+                    "start.sh")
+                        sed -i "s/^SERVER_PORT=[0-9]\+/SERVER_PORT=${NEW_PORT}/g" "$file"
+                        ;;
+                esac
+            else
+                # Windows/Git Bash
+                case $filename in
+                    "Dockerfile")
+                        sed -i'' -e "s/^EXPOSE [0-9]\+/EXPOSE ${NEW_PORT}/g" "$file"
+                        ;;
+                    "docker-compose.yml")
+                        sed -i'' -e "s/127\.0\.0\.1:[0-9]\+:/127.0.0.1:${NEW_PORT}:/g" "$file"
+                        sed -i'' -e "s/SERVER_PORT: [0-9]\+/SERVER_PORT: ${NEW_PORT}/g" "$file"
+                        ;;
+                    "docker-start.sh")
+                        sed -i'' -e "s/^APP_PORT=[0-9]\+/APP_PORT=${NEW_PORT}/g" "$file"
+                        ;;
+                    "start.sh")
+                        sed -i'' -e "s/^SERVER_PORT=[0-9]\+/SERVER_PORT=${NEW_PORT}/g" "$file"
+                        ;;
+                esac
+            fi
+            
+            print_info "✓ 已更新: $file"
+            UPDATED_COUNT=$((UPDATED_COUNT + 1))
+        else
+            print_warn "✗ 文件不存在: $file"
+        fi
+    done
+    
+    echo ""
+    print_info "================================================"
+    print_info "端口号修改完成！共更新 $UPDATED_COUNT 个文件"
+    print_info "备份文件已保存为 .bak 后缀"
+    print_info "================================================"
+    exit 0
+fi
 
 # 如果没有通过参数提供项目编码，则交互式输入
 if [ -z "$PROJECT_CODE" ]; then
@@ -68,6 +178,14 @@ if [ -z "$PROJECT_CODE" ]; then
     exit 1
 fi
 
+# 询问端口号
+read -p "请输入应用端口号(默认:58080): " SERVER_PORT
+if [ -z "$SERVER_PORT" ]; then
+    SERVER_PORT=58080
+fi
+
+print_info "应用端口号: $SERVER_PORT"
+
 # 自动生成其他信息
 PROJECT_NAME="${PROJECT_CODE}项目"
 BASE_PACKAGE="com.bidr.${PROJECT_CODE}"
@@ -79,7 +197,7 @@ echo ""
 
 # 2. 判断当前目录结构
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CORE_DIR="$SCRIPT_DIR"
+CORE_DIR="$(dirname "$SCRIPT_DIR")"
 PARENT_DIR="$(dirname "$CORE_DIR")"
 PARENT_NAME="$(basename "$PARENT_DIR")"
 
@@ -980,7 +1098,412 @@ EOFAPP
 
 fi
 
-# 11. 打印完成信息
+# 11. 生成 Docker 相关文件
+print_info "生成 Docker 部署文件..."
+
+# 生成 Dockerfile
+cat > "$ROOT_DIR/Dockerfile" << EOF
+FROM eclipse-temurin:8-jdk
+
+WORKDIR /app
+
+COPY app.jar app.jar
+
+EXPOSE ${SERVER_PORT}
+
+ENTRYPOINT ["java",
+  "-Xms512m",
+  "-Xmx1024m",
+  "-XX:+HeapDumpOnOutOfMemoryError",
+  "-XX:HeapDumpPath=/app",
+  "-jar", "/app/app.jar"
+]
+EOF
+
+# 生成 docker-compose.yml
+cat > "$ROOT_DIR/docker-compose.yml" << EOF
+services:
+  ${PROJECT_CODE}-portal:
+    image: eclipse-temurin:8-jdk
+    container_name: ${PROJECT_CODE}-server
+    restart: always
+
+    ports:
+      - "127.0.0.1:${SERVER_PORT}:${SERVER_PORT}"
+
+    working_dir: /app
+
+    environment:
+      SPRING_REDIS_HOST: 172.17.0.1
+      SPRING_PROFILES_ACTIVE: pre
+      SERVER_PORT: ${SERVER_PORT}
+      DB_CONFIG_DAS_MANAGE_PASSWORD: Adm!n123
+      SPRING_REDIS_PASSWORD: Adm!n123
+      TZ: Asia/Shanghai
+
+    volumes:
+      - ./app.jar:/app/app.jar
+      - ./logs:/data/log
+      - ./dump:/app
+      - /etc/localtime:/etc/localtime:ro
+
+    command: >
+      java
+      -Xms512m
+      -Xmx1024m
+      -XX:+HeapDumpOnOutOfMemoryError
+      -XX:HeapDumpPath=/app
+      -jar /app/app.jar
+EOF
+
+# 生成 docker-start.sh
+cat > "$ROOT_DIR/docker-start.sh" << 'EOF'
+#!/bin/bash
+# 端口配置
+APP_PORT=SERVER_PORT_PLACEHOLDER
+
+APP_NAME=PROJECT_CODE_PLACEHOLDER-portal
+IMAGE_NAME=${PROJECT_CODE}-portal:latest
+CONTAINER_NAME=${PROJECT_CODE}-server
+APP_DIR=$(cd "$(dirname "$0")"; pwd)
+
+case $1 in
+start)
+  echo "===> docker compose up"
+  docker compose up -d
+  ;;
+stop)
+  echo "===> docker compose stop"
+  docker compose stop
+  ;;
+restart)
+  echo "===> docker compose restart"
+  docker compose down
+  docker compose up -d
+  ;;
+status)
+  docker ps | grep \${CONTAINER_NAME}
+  ;;
+log)
+  docker logs -f --tail=1000 \${CONTAINER_NAME}
+  ;;
+build)
+  docker build -t \${IMAGE_NAME} .
+  ;;
+*)
+  echo "Usage: $0 {start|stop|restart|status|log|build}"
+  exit 1
+esac
+EOF
+
+# 替换占位符
+if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+    sed -i "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/docker-start.sh"
+    sed -i "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/docker-start.sh"
+    sed -i "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/start.sh"
+    sed -i "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/start.sh"
+else
+    # Windows/Git Bash
+    sed -i'' -e "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/docker-start.sh"
+    sed -i'' -e "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/docker-start.sh"
+    sed -i'' -e "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/start.sh"
+    sed -i'' -e "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/start.sh"
+fi
+chmod +x "$ROOT_DIR/docker-start.sh"
+chmod +x "$ROOT_DIR/start.sh"
+
+# 生成 deploy.sh
+cat > "$ROOT_DIR/deploy.sh" << 'EOF'
+basepath=$(cd "$(dirname "$0")"; pwd)
+
+#======================= 部署模式配置 ============================
+# 部署模式: jar 或 docker
+# jar: 传统JAR包部署方式，使用start.sh启动
+# docker: Docker容器部署方式，使用docker-compose
+DEPLOY_MODE=("jar" "jar" "jar" "jar" "jar")
+#======================= 修改这里 ============================
+
+# JAR部署相关配置
+RestartCmd='start.sh restart'
+StatusCmd='start.sh status'
+TraceCmd='tail -f -n 1000'
+APICmd='tail -f -n 1000'
+ServerNum=5
+
+remoteJarName='app.jar'
+remoteLogName='spring.log'
+
+#======================= 修改这里 ============================
+localModuleDir='PROJECT_CODE_PLACEHOLDER-server'
+localJarName='*-exec.jar'
+remoteModuleDir='PROJECT_CODE_PLACEHOLDER-server'
+remoteLogDir="PROJECT_CODE_PLACEHOLDER-server"
+
+DevSSH=
+StgSSH=
+TestSSH=
+PRD1SSH=
+PRD2SSH=
+
+# Docker相关配置
+DOCKER_COMPOSE_FILE='docker-compose.yml'
+DOCKER_START_SCRIPT='docker-start.sh'
+DOCKER_CONTAINER_NAME='PROJECT_CODE_PLACEHOLDER-server'
+#======================= 修改这里 ============================
+
+localJarPath=$basepath/$localModuleDir/target/$localJarName
+DevTargetPath="~/$remoteModuleDir"
+StgTargetPath="~/$remoteModuleDir"
+TestTargetPath="~/$remoteModuleDir"
+PRD1TargetPath="~/$remoteModuleDir"
+PRD2TargetPath="~/$remoteModuleDir"
+
+DevLogPath="~/$remoteLogDir"
+StgLogPath="~/$remoteLogDir"
+TestLogPath="~/$remoteLogDir"
+PRD1LogPath="~/$remoteLogDir"
+PRD2LogPath="~/$remoteLogDir"
+
+ServerSSH=("$DevSSH" "$StgSSH" "$TestSSH" "$PRD1SSH" "$PRD2SSH")
+ServerTargetPath=("$DevTargetPath" "$StgTargetPath" "$TestTargetPath" "$PRD1TargetPath" "$PRD2TargetPath")
+ServerLogPath=("$DevLogPath" "$StgLogPath" "$TestLogPath" "$PRD1LogPath" "$PRD2LogPath")
+
+#======================= 功能函数 ============================
+
+# 获取部署模式
+get_deploy_mode() {
+    mode="${DEPLOY_MODE[$1]}"
+    if [ "$mode" = "jar" ]; then
+        echo "  jar "
+    else
+        echo "docker"
+    fi
+}
+
+# JAR部署相关函数
+upload(){
+    scp ${localJarPath} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/$remoteJarName
+	return 0
+}
+
+# Docker部署相关函数
+upload_docker(){
+    echo "Uploading Docker deployment files to ${ServerSSH[$1]}..."
+    # 上传jar包
+    scp ${localJarPath} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/$remoteJarName
+    # 上传docker-compose.yml
+    scp ${basepath}/${DOCKER_COMPOSE_FILE} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/
+    # 上传docker-start.sh
+    scp ${basepath}/${DOCKER_START_SCRIPT} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/
+    # 上传Dockerfile
+    scp ${basepath}/Dockerfile ${ServerSSH[$1]}:${ServerTargetPath[$1]}/
+    # 确保脚本有执行权限
+    ssh ${ServerSSH[$1]} "chmod +x ${ServerTargetPath[$1]}/${DOCKER_START_SCRIPT}"
+	return 0
+}
+enter() {
+	ssh ${ServerSSH[$1]}
+	return 0
+}
+
+restart() {
+    mode=$(get_deploy_mode $1)
+    if [ "$mode" = "docker" ]; then
+        echo "Restarting Docker container on ${ServerSSH[$1]}..."
+        ssh ${ServerSSH[$1]} "cd ${ServerTargetPath[$1]} && sh ${DOCKER_START_SCRIPT} restart"
+    else
+        echo "Restarting JAR application on ${ServerSSH[$1]}..."
+        ssh ${ServerSSH[$1]} sh ${ServerTargetPath[$1]}/$RestartCmd
+    fi
+    if test -z $2
+    then
+        trace $1
+    fi
+    return 0
+}
+
+trace() {
+    mode=$(get_deploy_mode $1)
+    if [ "$mode" = "docker" ]; then
+        echo "Viewing Docker container logs on ${ServerSSH[$1]}..."
+        ssh ${ServerSSH[$1]} "cd ${ServerTargetPath[$1]} && sh ${DOCKER_START_SCRIPT} log"
+    else
+        ssh ${ServerSSH[$1]} $TraceCmd ${ServerLogPath[$1]}/$remoteLogName
+    fi
+    return 0
+}
+
+deploy() {
+    mode=$(get_deploy_mode $1)
+    echo "Deploy mode: $mode"
+    if [ "$mode" = "docker" ]; then
+        upload_docker $1
+    else
+        upload $1
+    fi
+    restart $1 $2
+    return 0
+}
+
+status() {
+    mode=$(get_deploy_mode $1)
+    if [ "$mode" = "docker" ]; then
+        echo "Checking Docker container status on ${ServerSSH[$1]}..."
+        ssh ${ServerSSH[$1]} "cd ${ServerTargetPath[$1]} && sh ${DOCKER_START_SCRIPT} status"
+    else
+        ssh ${ServerSSH[$1]} sh ${ServerLogPath[$1]}/$StatusCmd
+    fi
+    return 0
+}
+allstatus() {
+	echo ---------------------------
+	for((i=0;i<$ServerNum;i++));
+	do
+	if [ -n "${ServerSSH[$i]}" ]; 
+	then
+		echo ${ServerSSH[$i]} 
+		status i;
+		echo ---------------------------
+	fi
+	done
+	return 0
+}
+log() {
+    mode=$(get_deploy_mode $1)
+    if [ ! -d "$basepath/log$1" ]; then
+        mkdir "$basepath/log$1"
+    fi
+    if [ "$mode" = "docker" ]; then
+        echo "Downloading Docker container logs from ${ServerSSH[$1]}..."
+        # 下载实际的文件日志
+        scp -r ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/PROJECT_CODE_PLACEHOLDER/*.log "$basepath/log$1/" 2>/dev/null || echo "No log files found"
+    else
+        scp ${ServerSSH[$1]}:${ServerLogPath[$1]}/$remoteLogName "$basepath/log$1/$remoteLogName"
+    fi
+}
+
+allLog() {
+    mode=$(get_deploy_mode $1)
+    if [ ! -d "$basepath/log$1" ]; then
+        mkdir "$basepath/log$1"
+    fi
+    if [ "$mode" = "docker" ]; then
+        echo "Downloading all Docker container logs from ${ServerSSH[$1]}..."
+        # 下载所有日志文件（包括历史日志）
+        scp -r ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/PROJECT_CODE_PLACEHOLDER/ "$basepath/log$1/" 2>/dev/null || echo "No log files found"
+        # 额外下载docker logs输出
+        echo "Downloading container stdout logs..."
+        ssh ${ServerSSH[$1]} "docker logs ${DOCKER_CONTAINER_NAME} > ${ServerTargetPath[$1]}/logs/docker-stdout.log 2>&1"
+        scp ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/docker-stdout.log "$basepath/log$1/docker-stdout.log" 2>/dev/null
+    else
+        scp -r ${ServerSSH[$1]}:${ServerLogPath[$1]}/log/ "$basepath/log$1/"
+    fi
+}
+
+deployAll() {
+	for((i=1;i<$ServerNum;i++));
+	do
+		if [ -n "${ServerSSH[$i]}" ]; 
+		then
+			echo "===== Start  to deploy: " ${ServerSSH[$i]} ...  ======
+			deploy i "noTrace";
+			echo "===== Finish to deploy: " ${ServerSSH[$i]} ...  ======
+		fi
+	done
+	allstatus
+	return 0
+}
+
+serverName=$1
+option=$2
+if [ -z "$serverName" -a -z "$option" ]
+then
+
+
+echo "┌------------------------------┐"
+echo "|----0. DEV Server ($(get_deploy_mode 0))----|" 
+if [ -n "$StgSSH" ];
+then
+echo "|----1. STG Server ($(get_deploy_mode 1))----|" 
+fi
+if [ -n "$TestSSH" ];
+then
+echo "|----2. TEST Server ($(get_deploy_mode 2))---|" 
+fi
+if [ -n "$PRD1SSH" ];
+then
+echo "|----3. PRD1 Server ($(get_deploy_mode 3))---|" 
+fi
+if [ -n "$PRD2SSH" ];
+then
+echo "|----4. PRD2 Server ($(get_deploy_mode 4))---|" 
+fi
+echo "|----5. All deploy-------------|" 
+echo "|----6. Status-----------------|" 
+echo "└------------------------------┘" 
+echo "" 
+echo "input your option: " 
+read serverName
+
+if test $serverName -eq 5
+then
+deployAll
+elif test $serverName -eq 6
+then 
+allstatus
+else
+
+echo "┌-----------------------┐" 
+echo "|----1. Deploy----------|" 
+echo "|----2. Trace log-------|" 
+echo "|----3. Restart---------|" 
+echo "|----4. Enter-----------|" 
+echo "|----5. Get Log---------|" 
+echo "|----6. All Log---------|" 
+echo "└-----------------------┘" 
+echo "" 
+echo "input your operation" 
+read option
+fi
+else
+noTrace="noTrace"
+fi
+
+case $option in
+1)
+	deploy $serverName $noTrace
+    ;;
+2)
+	trace $serverName
+    ;;
+3)
+	restart $serverName
+    ;;
+4)
+	enter $serverName
+    ;;
+5)
+	log $serverName
+	;;
+6)
+	allLog $serverName
+	;;
+esac
+
+EOF
+
+# 替换 deploy.sh 中的占位符
+if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+    sed -i "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/deploy.sh"
+else
+    # Windows/Git Bash
+    sed -i'' -e "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/deploy.sh"
+fi
+chmod +x "$ROOT_DIR/deploy.sh"
+
+print_info "Docker 部署文件生成完成"
+
+# 12. 打印完成信息
 echo ""
 print_info "================================================"
 print_info "        项目初始化完成！"
@@ -1002,6 +1525,11 @@ print_info "  ✓ 项目文档 (doc/)"
 print_info "  ✓ 配置文件 (application*.yml)"
 print_info "  ✓ ${PROJECT_CODE}-server 模块"
 print_info "  ✓ ${CAPITALIZED_CODE}Application.java"
+print_info "  ✓ Dockerfile"
+print_info "  ✓ docker-compose.yml"
+print_info "  ✓ docker-start.sh"
+print_info "  ✓ start.sh"
+print_info "  ✓ deploy.sh"
 echo ""
 print_info "下一步操作:"
 print_info "  1. 如果根目录pom.xml已存在，请手动添加模块:"
