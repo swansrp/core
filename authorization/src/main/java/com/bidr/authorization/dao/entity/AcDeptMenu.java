@@ -8,23 +8,14 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 /**
- * Title: AcRoleDept
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * 部门和菜单关联表
  *
- * @author Sharp
- * @since 2023/03/17 10:02
+ * @author sharp
  */
-@ApiModel(value = "角色和部门关联表")
+@ApiModel(description = "部门和菜单关联表")
 @Data
-@TableName(value = "ac_role_dept")
-public class AcRoleDept {
-    /**
-     * 角色ID
-     */
-    @MppMultiId
-    @TableField(value = "role_id")
-    @ApiModelProperty(value = "角色ID")
-    private Long roleId;
+@TableName(value = "ac_dept_menu")
+public class AcDeptMenu {
     /**
      * 部门ID
      */
@@ -32,4 +23,12 @@ public class AcRoleDept {
     @TableField(value = "dept_id")
     @ApiModelProperty(value = "部门ID")
     private Long deptId;
+
+    /**
+     * 菜单ID
+     */
+    @MppMultiId
+    @TableField(value = "menu_id")
+    @ApiModelProperty(value = "菜单ID")
+    private Long menuId;
 }

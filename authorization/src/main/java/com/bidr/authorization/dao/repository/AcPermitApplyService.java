@@ -1,0 +1,51 @@
+package com.bidr.authorization.dao.repository;
+
+import com.bidr.authorization.dao.entity.AcPermitApply;
+import com.bidr.authorization.dao.mapper.AcPermitApplyDao;
+import com.bidr.kernel.constant.dict.common.ApprovalDict;
+import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import java.util.Date;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 权限申请表Service
+ *
+ * @author sharp
+ */
+@Service
+@RequiredArgsConstructor
+public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermitApply> {
+
+    private final AcPermitUserService acPermitUserService;
+
+    /**
+     * 审批申请
+     *
+     * @param id 申请ID
+     * @param pass 是否通过
+     * @param remark 审批备注
+     * @param auditor 审批人
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void audit(Long id, boolean pass, String remark, String auditor) {
+        AcPermitApply apply = super.getById(id);
+        if (apply == null) {
+            return;
+        }
+
+        if (pass) {
+            apply.setStatus(ApprovalDict.APPROVAL.getValue());
+            // 审批通过，自动绑定权限
+            acPermitUserService.bind(apply.getUserId(), apply.getMenuId());
+        } else {
+            apply.setStatus(ApprovalDict.REJECT.getValue());
+        }
+
+        apply.setAuditRemark(remark);
+        apply.setAuditBy(auditor);
+        apply.setAuditAt(new Date());
+        super.updateById(apply);
+    }
+}

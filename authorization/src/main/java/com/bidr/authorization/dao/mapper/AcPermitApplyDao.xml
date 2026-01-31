@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.authorization.dao.mapper.AcPermitApplyDao">
+  <resultMap id="BaseResultMap" type="com.bidr.authorization.dao.entity.AcPermitApply">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="user_id" jdbcType="BIGINT" property="userId" />
+    <result column="menu_id" jdbcType="BIGINT" property="menuId" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="reason" jdbcType="VARCHAR" property="reason" />
+    <result column="audit_remark" jdbcType="VARCHAR" property="auditRemark" />
+    <result column="audit_by" jdbcType="VARCHAR" property="auditBy" />
+    <result column="audit_at" jdbcType="TIMESTAMP" property="auditAt" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+    <result column="valid" jdbcType="CHAR" property="valid" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, user_id, menu_id, status, reason, audit_remark, audit_by, audit_at, 
+    create_by, create_at, update_by, update_at, `valid`
+  </sql>
+</mapper>
