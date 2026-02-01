@@ -44,4 +44,6 @@ public class AdminDeptController extends BaseAdminTreeController<AcDept, Departm
     protected SFunction<AcDept, String> name() {
         return AcDept::getName;
     }
+
+
 }

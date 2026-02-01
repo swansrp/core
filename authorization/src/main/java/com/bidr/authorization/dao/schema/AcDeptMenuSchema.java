@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 public class AcDeptMenuSchema extends BaseMybatisSchema<AcDeptMenu> {
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `ac_dept_menu` (\n" +
-                "  `dept_id` bigint(20) NOT NULL COMMENT '部门ID',\n" +
+                "  `dept_id` varchar(20) NOT NULL COMMENT '部门ID',\n" +
                 "  `menu_id` bigint(20) NOT NULL COMMENT '菜单ID',\n" +
                 "  PRIMARY KEY (`dept_id`,`menu_id`),\n" +
                 "  KEY `dept_id` (`dept_id`),\n" +

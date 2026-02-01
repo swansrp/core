@@ -2,6 +2,7 @@ package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.mapper.AcUserDao;
 import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.vo.user.UserExistedReq;
@@ -11,6 +12,7 @@ import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -53,8 +55,15 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
 
     public List<AcUser> getUserByDeptAndName(List<String> deptIdList, String name) {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper();
-        wrapper.in(FuncUtil.isNotEmpty(deptIdList), AcUser::getDeptId, deptIdList)
-                .like(FuncUtil.isNotEmpty(name), AcUser::getName, name).or(w -> w.eq(AcUser::getUserName, name));
+        wrapper.in(FuncUtil.isNotEmpty(deptIdList), AcUser::getDeptId, deptIdList);
+        if (FuncUtil.isNotEmpty(name)) {
+            String[] nameArray = name.split(",");
+            wrapper.nested(w -> {
+                for (String n : nameArray) {
+                    w.like(AcUser::getName, n).or().like(AcUser::getUserName, n);
+                }
+            });
+        }
         if (FuncUtil.isEmpty(deptIdList)) {
             return super.select(wrapper, 1, 50, false).getRecords();
         } else {
@@ -133,6 +142,14 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getIdNumber, idNumber)
                 .eq(AcUser::getValid, CommonConst.YES);
         return selectOne(wrapper);
+    }
+
+    public List<AcUser> getUserByDeptId(String deptId) {
+        MPJLambdaWrapper<AcUser> wrapper = super.getMPJLambdaWrapper();
+        wrapper.leftJoin(AcUserDept.class, AcUserDept::getUserId, AcUser::getUserId);
+        wrapper.eq(AcUserDept::getDeptId, deptId);
+        wrapper.eq(AcUser::getValid, CommonConst.YES);
+        return selectJoinList(AcUser.class, wrapper);
     }
 }
 

@@ -1,6 +1,7 @@
 package com.bidr.authorization.controller;
 
 import com.bidr.authorization.service.department.DepartmentService;
+import com.bidr.authorization.vo.admin.UserRes;
 import com.bidr.authorization.vo.department.DepartmentTreeRes;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -33,4 +34,9 @@ public class DepartmentController {
     }
 
 
+    @ApiOperation(value = "组织结构成员", notes = "登录后准入")
+    @RequestMapping(value = "/members", method = RequestMethod.GET)
+    public List<UserRes> getDepartmentMembers(String deptId) {
+        return departmentService.getDeptMembers(deptId);
+    }
 }

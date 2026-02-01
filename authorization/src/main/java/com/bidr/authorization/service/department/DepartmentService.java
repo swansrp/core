@@ -2,6 +2,9 @@ package com.bidr.authorization.service.department;
 
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.repository.AcDeptService;
+import com.bidr.authorization.dao.repository.AcUserDeptService;
+import com.bidr.authorization.dao.repository.AcUserService;
+import com.bidr.authorization.vo.admin.UserRes;
 import com.bidr.authorization.vo.department.DepartmentItem;
 import com.bidr.authorization.vo.department.DepartmentTreeRes;
 import com.bidr.kernel.config.response.Resp;
@@ -24,6 +27,7 @@ import java.util.List;
 public class DepartmentService {
 
     private final AcDeptService acDeptService;
+    private final AcUserService acUserService;
 
 
     public List<DepartmentTreeRes> getDeptTree() {
@@ -31,5 +35,9 @@ public class DepartmentService {
         List<DepartmentItem> items = Resp.convert(res, DepartmentItem.class);
         return ReflectionUtil.buildTree(DepartmentTreeRes::setChildren, items, DepartmentItem::getValue,
                 DepartmentItem::getPid, null);
+    }
+
+    public List<UserRes> getDeptMembers(String deptId) {
+        return Resp.convert(acUserService.getUserByDeptId(deptId), UserRes.class);
     }
 }

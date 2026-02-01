@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermitApply> {
 
-    private final AcPermitUserService acPermitUserService;
+    private final AcUserMenuService acUserMenuService;
 
     /**
      * 审批申请
@@ -38,7 +38,7 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
         if (pass) {
             apply.setStatus(ApprovalDict.APPROVAL.getValue());
             // 审批通过，自动绑定权限
-            acPermitUserService.bind(apply.getUserId(), apply.getMenuId());
+            acUserMenuService.bind(apply.getUserId(), apply.getMenuId());
         } else {
             apply.setStatus(ApprovalDict.REJECT.getValue());
         }

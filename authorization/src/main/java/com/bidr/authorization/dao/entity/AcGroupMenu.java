@@ -8,21 +8,21 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 /**
- * 部门和菜单关联表
+ * 用户组和菜单关联表
  *
  * @author sharp
  */
-@ApiModel(description = "部门和菜单关联表")
+@ApiModel(description = "用户组和菜单关联表")
 @Data
-@TableName(value = "ac_dept_menu")
-public class AcDeptMenu {
+@TableName(value = "ac_group_menu")
+public class AcGroupMenu {
     /**
-     * 部门ID
+     * 用户组ID
      */
     @MppMultiId
-    @TableField(value = "dept_id")
-    @ApiModelProperty(value = "部门ID")
-    private String deptId;
+    @TableField(value = "group_id")
+    @ApiModelProperty(value = "用户组ID")
+    private Long groupId;
 
     /**
      * 菜单ID

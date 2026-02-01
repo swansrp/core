@@ -28,9 +28,13 @@ public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
         return super.select(wrapper);
     }
 
-    public List<AcMenu> getAllMenu() {
+    public List<AcMenu> getAllMenu(boolean isAdmin) {
         LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper().eq(AcMenu::getStatus, CommonConst.YES)
                 .eq(AcMenu::getVisible, CommonConst.YES).orderByAsc(AcMenu::getShowOrder);
+        if (!isAdmin) {
+            wrapper.ne(AcMenu::getMenuId, 1);
+            wrapper.or(or -> or.ne(AcMenu::getGrandId, 1).isNull(AcMenu::getGrandId));
+        }
         return super.select(wrapper);
     }
 

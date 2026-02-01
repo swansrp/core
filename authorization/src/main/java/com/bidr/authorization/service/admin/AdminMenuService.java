@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
 import com.bidr.authorization.dao.repository.AcMenuService;
 import com.bidr.authorization.dao.repository.AcRoleMenuService;
+import com.bidr.authorization.service.permit.PermitService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.constant.CommonConst;
@@ -35,6 +36,8 @@ public class AdminMenuService {
     private AcRoleMenuService acRoleMenuService;
     @Resource
     private SysConfigCacheService sysConfigCacheService;
+    @Resource
+    private PermitService permitService;
 
     @Transactional(rollbackFor = Exception.class)
     public void addMenu(AcMenu entity, MenuTypeDict menuType) {
@@ -56,7 +59,7 @@ public class AdminMenuService {
     }
 
     public List<MenuTreeRes> getMenuTree() {
-        List<AcMenu> menuList = acMenuService.getAllMenu();
+        List<AcMenu> menuList = acMenuService.getAllMenu(permitService.isAdmin());
         for (AcMenu acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
