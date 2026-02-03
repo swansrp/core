@@ -1,3 +1,7 @@
 qichacha:
-  app-key: 76e62a8895b14ef1857051f6c3776ea4
-  app-secret: 44DB5F0E443C18CD498E2260854C65CF
+  proxy:
+    enable: false
+    host:
+    port:
+  app-key:
+  app-secret:

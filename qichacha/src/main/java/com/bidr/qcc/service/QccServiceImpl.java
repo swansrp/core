@@ -1,6 +1,7 @@
 package com.bidr.qcc.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
@@ -11,10 +12,8 @@ import com.bidr.qcc.dto.QccReq;
 import com.bidr.qcc.dto.QccRes;
 import com.bidr.qcc.dto.credit.CreditCodeReq;
 import com.bidr.qcc.dto.credit.CreditCodeRes;
-import com.bidr.qcc.dto.enterprise.EnterpriseAdvancedReq;
-import com.bidr.qcc.dto.enterprise.EnterpriseAdvancedRes;
-import com.bidr.qcc.dto.enterprise.EnterpriseReq;
-import com.bidr.qcc.dto.enterprise.EnterpriseRes;
+import com.bidr.qcc.dto.enterprise.*;
+import com.bidr.qcc.dto.name.NameItem;
 import com.bidr.qcc.dto.name.NameSearchReq;
 import com.bidr.qcc.dto.name.NameSearchRes;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -58,11 +58,16 @@ public class QccServiceImpl implements QccService {
     @Resource
     private RestTemplate restTemplate;
 
-    protected <T> T get(String url, QccReq req, Class<T> clazz) {
+    protected <T> Page<T> getPage(String url, QccReq req, Class<T> clazz) {
         HttpHeaders header = buildHttpHeaders(req);
-        QccRes<T> res = restService.get(getRestTemplate(), url, header, req, QccRes.class, clazz);
+        QccRes<List<T>> res = restService.get(getRestTemplate(), url, header, req, QccRes.class, List.class);
         handleError(res);
-        return res.getResult();
+        Page<T> result = new Page<>(res.getPaging().getPageIndex(), res.getPaging().getPageSize(),
+                res.getPaging().getTotalRecords());
+        if (FuncUtil.isNotEmpty(res.getResult())) {
+            result.setRecords(JsonUtil.readJson(res.getResult(), List.class, clazz));
+        }
+        return result;
     }
 
     @NotNull
@@ -76,16 +81,16 @@ public class QccServiceImpl implements QccService {
         return header;
     }
 
-    protected <T> Page<T> getPage(String url, QccReq req, Class<T> clazz) {
-        HttpHeaders header = buildHttpHeaders(req);
-        QccRes<List<T>> res = restService.get(getRestTemplate(), url, header, req, QccRes.class, List.class);
-        handleError(res);
-        Page<T> result = new Page<>(res.getPaging().getPageIndex(), res.getPaging().getPageSize(),
-                res.getPaging().getTotalRecords());
-        if (FuncUtil.isNotEmpty(res.getResult())) {
-            result.setRecords(JsonUtil.readJson(res.getResult(), List.class, clazz));
+    public RestTemplate getRestTemplate() {
+        RestTemplate restTemp = restService.getNoProxyRestTemplate();
+        if (proxyEnable) {
+            HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+            HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+            httpRequestFactory.setHttpClient(HttpClients.custom().setProxy(proxy).build());
+            restTemp.setRequestFactory(httpRequestFactory);
+            return restTemp;
         }
-        return result;
+        return restTemp;
     }
 
     private void handleError(QccRes<?> res) {
@@ -101,8 +106,30 @@ public class QccServiceImpl implements QccService {
     @Override
     @Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public NameSearchRes enterpriseSearch(NameSearchReq req) {
-        return get(QiChaChaUrl.NAME_SEARCH_URL + "?searchName=" + req.getSearchName(), new QccReq(),
-                NameSearchRes.class);
+        List<EnterpriseRes> res = get(QiChaChaUrl.ENTERPRISE_INFO_URL + "?searchKey=" + req.getSearchName(),
+                new QccReq(),
+                List.class);
+        NameSearchRes result = new NameSearchRes();
+        result.setData(new ArrayList<>());
+        if (FuncUtil.isNotEmpty(res)) {
+            List<EnterpriseRes> enterpriseRes = JsonUtil.readJson(res, List.class, EnterpriseRes.class);
+            result.setVerifyResult(Integer.valueOf(CommonConst.YES));
+            for (EnterpriseRes enterprise : enterpriseRes) {
+                NameItem nameItem = new NameItem();
+                nameItem.setName(enterprise.getName());
+                result.getData().add(nameItem);
+            }
+        } else {
+            result.setVerifyResult(Integer.valueOf(CommonConst.NO));
+        }
+        return result;
+    }
+
+    protected <T> T get(String url, QccReq req, Class<T> clazz) {
+        HttpHeaders header = buildHttpHeaders(req);
+        QccRes<T> res = restService.get(getRestTemplate(), url, header, req, QccRes.class, clazz);
+        handleError(res);
+        return res.getResult();
     }
 
     @Override
@@ -110,7 +137,13 @@ public class QccServiceImpl implements QccService {
     public EnterpriseRes getEnterpriseInfo(EnterpriseReq req) {
         String searchKey = req.getSearchKey();
         req.setSearchKey(null);
-        return get(QiChaChaUrl.ENTERPRISE_INFO_URL + "?searchKey=" + searchKey, req, EnterpriseRes.class);
+        List<EnterpriseRes> res = get(QiChaChaUrl.ENTERPRISE_INFO_URL + "?searchKey=" + searchKey, req,
+                List.class);
+        try {
+            return JsonUtil.readJson(res.get(0), EnterpriseRes.class);
+        } catch (Exception e) {
+            return new EnterpriseRes();
+        }
     }
 
     @Override
@@ -124,17 +157,5 @@ public class QccServiceImpl implements QccService {
     @Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public CreditCodeRes getCreditCode(CreditCodeReq req) {
         return get(QiChaChaUrl.CREDIT_INFO_URL + "?keyWord=" + req.getKeyWord(), new QccReq(), CreditCodeRes.class);
-    }
-
-    public RestTemplate getRestTemplate() {
-        RestTemplate restTemp = restService.getNoProxyRestTemplate();
-        if (proxyEnable) {
-            HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
-            HttpHost proxy = new HttpHost(proxyHost, proxyPort);
-            httpRequestFactory.setHttpClient(HttpClients.custom().setProxy(proxy).build());
-            restTemp.setRequestFactory(httpRequestFactory);
-            return restTemp;
-        }
-        return restTemp;
     }
 }

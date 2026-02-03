@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@Api(tags = "系统管理 - 角色管理")
+@Api(tags = "系统管理 - 访问记录")
 @AdminPortal
 @RequestMapping(value = "/web/admin/partner/history")
 public class AcPartnerHistoryPortalController extends BaseAdminController<AcPartnerHistory, AcPartnerHistoryVO> {
