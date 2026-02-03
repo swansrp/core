@@ -19,9 +19,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class AcRoleService extends BaseSqlRepo<AcRoleDao, AcRole> {
 
-    public Page<AcRole> queryRole(QueryRoleReq req) {
+    public Page<AcRole> queryRole(QueryRoleReq req, boolean isAdmin) {
         LambdaQueryWrapper<AcRole> wrapper = super.getQueryWrapper()
                 .like(FuncUtil.isNotEmpty(req.getName()), AcRole::getRoleName, req.getName());
+        wrapper.ne(!isAdmin, AcRole::getRoleId, 1L);
         return super.select(wrapper, req);
     }
 }

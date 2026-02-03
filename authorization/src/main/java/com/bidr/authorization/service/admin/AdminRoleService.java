@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.repository.AcRoleService;
 import com.bidr.authorization.dao.repository.AcUserRoleService;
+import com.bidr.authorization.service.permit.PermitService;
 import com.bidr.authorization.vo.admin.QueryRoleReq;
 import com.bidr.authorization.vo.admin.RoleReq;
 import com.bidr.authorization.vo.admin.RoleRes;
@@ -30,9 +31,10 @@ public class AdminRoleService {
 
     private final AcRoleService acRoleService;
     private final AcUserRoleService acUserRoleService;
+    private final PermitService permitService;
 
     public Page<RoleRes> queryRole(QueryRoleReq req) {
-        Page<AcRole> res = acRoleService.queryRole(req);
+        Page<AcRole> res = acRoleService.queryRole(req, permitService.isAdmin());
         return Resp.convert(res, RoleRes.class);
     }
 
