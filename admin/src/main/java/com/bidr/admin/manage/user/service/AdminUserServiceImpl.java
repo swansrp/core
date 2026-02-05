@@ -41,16 +41,16 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
 
     @Override
     public void beforeAdd(AcUser user) {
-        if (FuncUtil.isEmpty(user.getUserName())) {
+        if (FuncUtil.isNotEmpty(user.getUserName())) {
             Validator.assertNull(acUserService.getUserByUserName(user.getUserName()), ErrCodeSys.SYS_ERR_MSG, "该账号已存在");
         }
-        if (FuncUtil.isEmpty(user.getIdNumber())) {
+        if (FuncUtil.isNotEmpty(user.getIdNumber())) {
             Validator.assertNull(acUserService.getUserByIdCardNumber(user.getIdNumber()), ErrCodeSys.SYS_ERR_MSG, "身份证信息已存在");
         }
-        if (FuncUtil.isEmpty(user.getPhoneNumber())) {
+        if (FuncUtil.isNotEmpty(user.getPhoneNumber())) {
             Validator.assertNull(acUserService.getUserByPhoneNumber(user.getPhoneNumber()), ErrCodeSys.SYS_ERR_MSG, "手机号码已存在");
         }
-        if (FuncUtil.isEmpty(user.getEmail())) {
+        if (FuncUtil.isNotEmpty(user.getEmail())) {
             Validator.assertNull(acUserService.getUserByEmail(user.getEmail()), ErrCodeSys.SYS_ERR_MSG, "邮箱信息已存在");
         }
         String customerNumber;
@@ -82,5 +82,6 @@ public class AdminUserServiceImpl extends BasePortalService<AcUser, UserAdminRes
         super.getJoinWrapper(wrapper);
         wrapper.leftJoin(AcDept.class, DbUtil.getTableName(AcDept.class), AcDept::getDeptId, AcUser::getDeptId);
         wrapper.eq(AcUser::getValid, CommonConst.YES);
+        wrapper.orderByDesc(AcUser::getUserId);
     }
 }
