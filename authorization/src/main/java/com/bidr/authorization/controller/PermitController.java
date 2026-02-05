@@ -1,13 +1,18 @@
 package com.bidr.authorization.controller;
 
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.permit.MenuService;
+import com.bidr.authorization.service.permit.PermitSourceService;
 import com.bidr.authorization.vo.menu.MenuTreeItem;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
+import com.bidr.authorization.vo.permit.UserPermitRes;
+import com.bidr.kernel.utils.FuncUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
@@ -26,6 +31,8 @@ import java.util.List;
 public class PermitController {
     @Resource
     private MenuService menuService;
+    @Resource
+    private PermitSourceService permitSourceService;
 
     @ApiOperation(value = "获取主菜单树", notes = "登录后准入")
     @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
@@ -73,6 +80,15 @@ public class PermitController {
     @RequestMapping(value = "/list", method = RequestMethod.GET)
     public List<MenuTreeItem> getPermitList() {
         return menuService.getMenuList();
+    }
+
+    @ApiOperation(value = "获取用户权限来源")
+    @RequestMapping(value = "/user/permit", method = RequestMethod.GET)
+    public List<UserPermitRes> getUserPermit(Long menuId, @RequestParam(required = false) String customerNumber) {
+        if(FuncUtil.isNotEmpty(customerNumber)) {
+            customerNumber = AccountContext.getOperator();
+        }
+        return permitSourceService.getUserPermit(menuId, customerNumber);
     }
 
 }
