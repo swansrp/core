@@ -66,6 +66,22 @@ public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
         wrapper.isNull(FuncUtil.isEmpty(grandId), AcMenu::getPid);
         return new Long(super.count(wrapper)).intValue();
     }
+
+    /**
+     * 根据路径和父ID查询菜单
+     *
+     * @param path 路径片段
+     * @param pid  父菜单ID，可为null
+     * @return 匹配的菜单项，未找到返回null
+     */
+    public AcMenu findByPathAndPid(String path, Long pid) {
+        LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper();
+        wrapper.eq(FuncUtil.isNotEmpty(pid), AcMenu::getPid, pid);
+        wrapper.isNull(FuncUtil.isEmpty(pid), AcMenu::getPid);
+        wrapper.eq(AcMenu::getPath, path);
+        wrapper.eq(AcMenu::getStatus, CommonConst.YES);
+        return super.selectOne(wrapper);
+    }
 }
 
 

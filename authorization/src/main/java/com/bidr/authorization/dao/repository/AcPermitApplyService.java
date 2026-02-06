@@ -1,13 +1,15 @@
 package com.bidr.authorization.dao.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcPermitApply;
 import com.bidr.authorization.dao.mapper.AcPermitApplyDao;
 import com.bidr.kernel.constant.dict.common.ApprovalDict;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
 
 /**
  * 权限申请表Service
@@ -23,9 +25,9 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
     /**
      * 审批申请
      *
-     * @param id 申请ID
-     * @param pass 是否通过
-     * @param remark 审批备注
+     * @param id      申请ID
+     * @param pass    是否通过
+     * @param remark  审批备注
      * @param auditor 审批人
      */
     @Transactional(rollbackFor = Exception.class)
@@ -47,5 +49,20 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
         apply.setAuditBy(auditor);
         apply.setAuditAt(new Date());
         super.updateById(apply);
+    }
+
+    public void applyUserPermit(String operator, Long menuId) {
+        AcPermitApply apply = new AcPermitApply();
+        apply.setCustomerNumber(operator);
+        apply.setMenuId(menuId);
+        apply.setStatus(ApprovalDict.APPLY.getValue());
+        super.save(apply);
+    }
+
+    public AcPermitApply getUserPermitApply(String operator, Long menuId) {
+        LambdaQueryWrapper<AcPermitApply> wrapper = super.getQueryWrapper();
+        wrapper.eq(AcPermitApply::getCustomerNumber, operator)
+                .eq(AcPermitApply::getMenuId, menuId);
+        return super.selectOne(wrapper);
     }
 }
