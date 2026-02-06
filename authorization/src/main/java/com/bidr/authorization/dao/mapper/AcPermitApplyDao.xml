@@ -3,7 +3,7 @@
 <mapper namespace="com.bidr.authorization.dao.mapper.AcPermitApplyDao">
   <resultMap id="BaseResultMap" type="com.bidr.authorization.dao.entity.AcPermitApply">
     <id column="id" jdbcType="BIGINT" property="id" />
-    <result column="user_id" jdbcType="BIGINT" property="userId" />
+    <result column="customer_number" jdbcType="VARCHAR" property="customerNumber" />
     <result column="menu_id" jdbcType="BIGINT" property="menuId" />
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="reason" jdbcType="VARCHAR" property="reason" />
@@ -17,7 +17,7 @@
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, user_id, menu_id, status, reason, audit_remark, audit_by, audit_at, 
+    id, customer_number, menu_id, status, reason, audit_remark, audit_by, audit_at,
     create_by, create_at, update_by, update_at, `valid`
   </sql>
 </mapper>

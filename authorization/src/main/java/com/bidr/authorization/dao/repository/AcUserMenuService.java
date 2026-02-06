@@ -21,12 +21,12 @@ public class AcUserMenuService extends BaseSqlRepo<AcUserMenuDao, AcUserMenu> {
     /**
      * 绑定菜单给用户
      *
-     * @param userId 用户ID
+     * @param customerNumber 用户编码
      * @param menuId 菜单ID
      */
-    public void bind(Long userId, Long menuId) {
+    public void bind(String customerNumber, Long menuId) {
         AcUserMenu acUserMenu = new AcUserMenu();
-        acUserMenu.setUserId(userId);
+        acUserMenu.setCustomerNumber(customerNumber);
         acUserMenu.setMenuId(menuId);
         super.insertOrUpdate(acUserMenu);
     }
@@ -34,20 +34,20 @@ public class AcUserMenuService extends BaseSqlRepo<AcUserMenuDao, AcUserMenu> {
     /**
      * 解绑用户菜单
      *
-     * @param userId 用户ID
+     * @param customerNumber 用户ID
      * @param menuId 菜单ID
      */
-    public void unbind(Long userId, Long menuId) {
+    public void unbind(String customerNumber, Long menuId) {
         AcUserMenu acUserMenu = new AcUserMenu();
-        acUserMenu.setUserId(userId);
+        acUserMenu.setCustomerNumber(customerNumber);
         acUserMenu.setMenuId(menuId);
         super.deleteByMultiId(acUserMenu);
     }
 
-    public List<AcMenu> getAllMenu(Long userId, String clientType) {
+    public List<AcMenu> getAllMenu(String customerNumber, String clientType) {
         MPJLambdaWrapper<AcUserMenu> wrapper = super.getMPJLambdaWrapper();
         wrapper.leftJoin(AcMenu.class, AcMenu::getMenuId, AcUserMenu::getMenuId);
-        wrapper.eq(AcUserMenu::getUserId, userId);
+        wrapper.eq(AcUserMenu::getCustomerNumber, customerNumber);
         wrapper.eq(AcMenu::getClientType, clientType);
         wrapper.eq(AcMenu::getStatus, CommonConst.YES);
         wrapper.eq(AcMenu::getVisible, CommonConst.YES);

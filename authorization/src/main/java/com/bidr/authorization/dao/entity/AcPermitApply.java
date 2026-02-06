@@ -25,9 +25,9 @@ public class AcPermitApply {
     @ApiModelProperty(value = "ID")
     private Long id;
 
-    @TableField(value = "user_id")
-    @ApiModelProperty(value = "用户ID")
-    private Long userId;
+    @TableField(value = "customer_number")
+    @ApiModelProperty(value = "用户编码")
+    private String customerNumber;
 
     @TableField(value = "menu_id")
     @ApiModelProperty(value = "菜单ID（权限ID）")

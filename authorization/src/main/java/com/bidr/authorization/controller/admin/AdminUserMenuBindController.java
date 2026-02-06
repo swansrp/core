@@ -54,7 +54,7 @@ public class AdminUserMenuBindController extends BaseBindController<AcUser, AcUs
 
     @Override
     protected SFunction<AcUserMenu, ?> bindEntityId() {
-        return AcUserMenu::getUserId;
+        return AcUserMenu::getCustomerNumber;
     }
 
     @Override

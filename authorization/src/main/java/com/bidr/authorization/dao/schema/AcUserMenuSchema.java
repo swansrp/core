@@ -19,5 +19,11 @@ public class AcUserMenuSchema extends BaseMybatisSchema<AcUserMenu> {
                 "  KEY `user_id` (`user_id`),\n" +
                 "  KEY `menu_id` (`menu_id`)\n" +
                 ") COMMENT='用户和菜单关联表';");
+        setUpgradeDDL(1, "ALTER TABLE `ac_user_menu`\n" +
+                "\tCHANGE COLUMN `user_id` `customer_number` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '用户编码' FIRST,\n" +
+                "\tDROP PRIMARY KEY,\n" +
+                "\tADD PRIMARY KEY (`customer_number`, `menu_id`) USING BTREE,\n" +
+                "\tDROP INDEX `user_id`,\n" +
+                "\tADD INDEX `customer_number` (`customer_number`) USING BTREE;\n");
     }
 }

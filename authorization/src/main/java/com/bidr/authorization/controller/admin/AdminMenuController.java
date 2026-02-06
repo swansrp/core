@@ -3,19 +3,21 @@ package com.bidr.authorization.controller.admin;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.dao.entity.AcMenu;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.admin.AdminMenuService;
+import com.bidr.authorization.service.permit.MenuService;
+import com.bidr.authorization.service.permit.PermitSourceService;
 import com.bidr.authorization.vo.menu.MenuTreeReq;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
+import com.bidr.authorization.vo.permit.UserPermitRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.controller.BaseAdminTreeController;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -34,6 +36,10 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
 
     @Resource
     private AdminMenuService adminMenuService;
+    @Resource
+    private MenuService menuService;
+    @Resource
+    private PermitSourceService permitSourceService;
 
     @ApiOperation(value = "获取菜单树", notes = "全部")
     @RequestMapping(value = "/tree", method = RequestMethod.GET)
@@ -97,6 +103,21 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
     @RequestMapping(value = "/hide", method = RequestMethod.POST)
     public Boolean hide(@RequestBody IdReqVO vo) {
         return update(vo, AcMenu::getVisible, CommonConst.NO);
+    }
+
+    @ApiOperation(value = "获取用户权限来源")
+    @RequestMapping(value = "/user/permit/source", method = RequestMethod.GET)
+    public List<UserPermitRes> getUserPermitSource(Long menuId, @RequestParam(required = false) String customerNumber) {
+        if(FuncUtil.isEmpty(customerNumber)) {
+            customerNumber = AccountContext.getOperator();
+        }
+        return permitSourceService.getUserPermitSource(menuId, customerNumber);
+    }
+
+    @ApiOperation(value = "获取用户权限")
+    @RequestMapping(value = "/user/permit", method = RequestMethod.GET)
+    public List<MenuTreeRes> getUserPermit(String customerNumber) {
+        return menuService.getMenuTree(customerNumber);
     }
 
     @Override

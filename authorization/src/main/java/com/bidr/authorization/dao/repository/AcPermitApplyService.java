@@ -38,7 +38,7 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
         if (pass) {
             apply.setStatus(ApprovalDict.APPROVAL.getValue());
             // 审批通过，自动绑定权限
-            acUserMenuService.bind(apply.getUserId(), apply.getMenuId());
+            acUserMenuService.bind(apply.getCustomerNumber(), apply.getMenuId());
         } else {
             apply.setStatus(ApprovalDict.REJECT.getValue());
         }

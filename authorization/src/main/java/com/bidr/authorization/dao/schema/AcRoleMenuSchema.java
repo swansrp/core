@@ -32,7 +32,12 @@ public class AcRoleMenuSchema extends BaseMybatisSchema<AcRoleMenu> {
         setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 10);");
         setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 12);");
         setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 13);");
+        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 14);");
+        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 15);");
         setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 26);");
         setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 27);");
+        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 28);");
+        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 29);");
+        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 30);");
     }
 }

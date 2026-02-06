@@ -34,20 +34,22 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MenuService {
 
-    private final AcMenuService acMenuService;
     private final AcUserRoleMenuService acUserRoleMenuService;
     private final AcDeptMenuService acDeptMenuService;
     private final AcGroupMenuService acGroupMenuService;
     private final AcUserMenuService acUserMenuService;
 
     public List<MenuTreeRes> getMenuTree() {
-        String customerNumber = AccountContext.getOperator();
+        return getMenuTree(AccountContext.getOperator());
+    }
+
+    public List<MenuTreeRes> getMenuTree(String customerNumber) {
         Long userId = AccountContext.getUserId();
         String clientType = ClientTypeHolder.get();
         List<AcMenu> roleMenuList = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
         List<AcMenu> deptMenuList = acDeptMenuService.getAllMenu(userId, clientType);
         List<AcMenu> groupMenuList = acGroupMenuService.getAllMenu(userId, clientType);
-        List<AcMenu> userMenuList = acUserMenuService.getAllMenu(userId, clientType);
+        List<AcMenu> userMenuList = acUserMenuService.getAllMenu(customerNumber, clientType);
         List<AcMenu> menuList = merge(roleMenuList, deptMenuList, groupMenuList, userMenuList);
         Validator.assertNotEmpty(menuList, AccountErrCode.AC_PERMIT_NOT_EXISTED);
         for (AcMenu acMenu : menuList) {

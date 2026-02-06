@@ -31,8 +31,6 @@ import java.util.List;
 public class PermitController {
     @Resource
     private MenuService menuService;
-    @Resource
-    private PermitSourceService permitSourceService;
 
     @ApiOperation(value = "获取主菜单树", notes = "登录后准入")
     @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
@@ -80,15 +78,6 @@ public class PermitController {
     @RequestMapping(value = "/list", method = RequestMethod.GET)
     public List<MenuTreeItem> getPermitList() {
         return menuService.getMenuList();
-    }
-
-    @ApiOperation(value = "获取用户权限来源")
-    @RequestMapping(value = "/user/permit", method = RequestMethod.GET)
-    public List<UserPermitRes> getUserPermit(Long menuId, @RequestParam(required = false) String customerNumber) {
-        if(FuncUtil.isNotEmpty(customerNumber)) {
-            customerNumber = AccountContext.getOperator();
-        }
-        return permitSourceService.getUserPermit(menuId, customerNumber);
     }
 
 }

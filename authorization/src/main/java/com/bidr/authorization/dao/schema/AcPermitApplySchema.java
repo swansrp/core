@@ -30,5 +30,9 @@ public class AcPermitApplySchema extends BaseMybatisSchema<AcPermitApply> {
                 "  KEY `user_id` (`user_id`),\n" +
                 "  KEY `menu_id` (`menu_id`)\n" +
                 ") COMMENT='权限申请表';");
+        setUpgradeDDL(1, "ALTER TABLE `ac_permit_apply`\n" +
+                "\tCHANGE COLUMN `user_id` `customer_number` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '用户编码' AFTER `id`,\n" +
+                "\tDROP INDEX `user_id`,\n" +
+                "\tADD INDEX `customer_number` (`customer_number`) USING BTREE;\n");
     }
 }
