@@ -16,12 +16,12 @@ public class CaptchaUtil {
     private static final String RANDOM_STR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     private static final int FONT_SIZE = 30;
-    private static Font hanSansFont = null;
-    private static Random random = new Random();
     private static final int width = 80;
     private static final int height = 50;
     private static final int lineNum = 50;
     private static final int strNum = 4;
+    private static final Random random = new Random();
+    private static Font hanSansFont = null;
 
     /**
      * 生成随机图片
@@ -83,7 +83,7 @@ public class CaptchaUtil {
             try {
                 DefaultResourceLoader resourceLoader = new DefaultResourceLoader();
                 InputStream inputStream =
-                        resourceLoader.getResource("classpath:/SourceHanSansCN-Regular.otf").getInputStream();
+                        resourceLoader.getResource("classpath:/SourceHanSansCN-Regular.ttf").getInputStream();
                 hanSansFont = Font.createFont(Font.TRUETYPE_FONT, inputStream);
                 GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
             } catch (FontFormatException | IOException e) {
