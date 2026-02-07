@@ -24,6 +24,8 @@ import java.util.Map;
 @Slf4j
 @Configuration
 public class MybatisPlusConfig {
+
+    public static boolean SUPPORT_RECURSIVE;
     
     static {
         // 在类加载时就设置自定义日志实现，确保 MyBatis 使用我们的 Log
@@ -56,6 +58,7 @@ public class MybatisPlusConfig {
 
     @PostConstruct
     public void initTables() {
+
         Map<String, MybatisPlusTableInitializerInf> beans =
                 applicationContext.getBeansOfType(MybatisPlusTableInitializerInf.class);
 
@@ -64,6 +67,8 @@ public class MybatisPlusConfig {
              Statement stmt = connection.createStatement()) {
             DatabaseMetaData metaData = connection.getMetaData();
             ensureSysTableVersionTable(metaData, stmt);
+            String version = metaData.getDatabaseProductVersion();
+            SUPPORT_RECURSIVE = version.startsWith("8.");
         } catch (Exception e) {
             log.error("初始化 sys_table_version 表失败", e);
             return;

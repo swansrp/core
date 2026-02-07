@@ -21,8 +21,8 @@ public interface RecursionDao {
             "   FROM  temp r, ${tableName} t " +
             "   WHERE t.${pidFieldName} = r.${idFieldName})  " +
             "SELECT ${idFieldName} FROM temp;")
-    List<Object> getChildList(@Param("tableName") String tableName, @Param("idFieldName") String idFieldName,
-                              @Param("pidFieldName") String pidFieldName, @Param("id") Object id);
+    <T> List<T> getChildList(@Param("tableName") String tableName, @Param("idFieldName") String idFieldName,
+                              @Param("pidFieldName") String pidFieldName, @Param("id") T id);
 
     @Select("WITH RECURSIVE  temp(${idFieldName}, ${pidFieldName}) AS ( " +
             "   SELECT ${idFieldName}, ${pidFieldName} FROM ${tableName} WHERE ${idFieldName} = #{id} " +
@@ -31,6 +31,6 @@ public interface RecursionDao {
             "   FROM  temp r, ${tableName} t " +
             "   WHERE t.${idFieldName} = r.${pidFieldName})  " +
             "SELECT ${pidFieldName} FROM temp WHERE ${pidFieldName} IS NOT null;")
-    List<Object> getParentList(@Param("tableName") String tableName, @Param("idFieldName") String idFieldName,
-                              @Param("pidFieldName") String pidFieldName, @Param("id") Object id);
+    <T >List<T> getParentList(@Param("tableName") String tableName, @Param("idFieldName") String idFieldName,
+                              @Param("pidFieldName") String pidFieldName, @Param("id") T id);
 }
