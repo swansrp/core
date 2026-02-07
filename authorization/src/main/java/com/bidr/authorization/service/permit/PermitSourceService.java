@@ -184,12 +184,13 @@ public class PermitSourceService {
             List<GroupWithScope> inheritGroups = new ArrayList<>();
             for (GroupWithScope group : userGroups) {
                 if (DataPermitScopeDict.SUBORDINATE.getValue().equals(group.getDataScope())) {
-                    @SuppressWarnings("unchecked") List<BigInteger> childIds = (List<BigInteger>) recursionService.getChildList(AcGroup::getId, AcGroup::getPid, group.getId());
+                    List<Long> childIds = recursionService.getChildList(AcGroup::getId, AcGroup::getPid, group.getId());
                     if (FuncUtil.isNotEmpty(childIds)) {
-                        for (BigInteger childId : childIds) {
+                        for (Long childId : childIds) {
                             GroupWithScope inheritGroup = new GroupWithScope();
-                            inheritGroup.setId(childId.longValue());
-                            inheritGroup.setName("继承用户组-" + childId); // 实际应用中应查询真实用户组名称
+                            inheritGroup.setId(childId);
+                            inheritGroup.setName("继承用户组-" + childId);
+                            // 实际应用中应查询真实用户组名称
                             inheritGroup.setDataScope(DataPermitScopeDict.SUBORDINATE.getValue());
                             inheritGroups.add(inheritGroup);
                         }

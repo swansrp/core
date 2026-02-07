@@ -1,15 +1,19 @@
 package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcPermitApply;
 import com.bidr.authorization.dao.mapper.AcPermitApplyDao;
 import com.bidr.kernel.constant.dict.common.ApprovalDict;
+import com.bidr.kernel.mybatis.dao.repository.RecursionService;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * 权限申请表Service
@@ -20,7 +24,9 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermitApply> {
 
+    private final AcMenuService acMenuService;
     private final AcUserMenuService acUserMenuService;
+    private final RecursionService recursionService;
 
     /**
      * 审批申请
@@ -39,8 +45,20 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
 
         if (pass) {
             apply.setStatus(ApprovalDict.APPROVAL.getValue());
-            // 审批通过，自动绑定权限
-            acUserMenuService.bind(apply.getCustomerNumber(), apply.getMenuId());
+            AcMenu acMenu = acMenuService.selectById(apply.getMenuId());
+            if (acMenu != null) {
+                // 审批通过，自动绑定权限
+                acUserMenuService.replace(apply.getCustomerNumber(), apply.getMenuId());
+                if (acMenu.getGrandId() != null) {
+                    acUserMenuService.replace(apply.getCustomerNumber(), acMenu.getGrandId());
+                }
+                List<Long> parentList = recursionService.getParentList(AcMenu::getMenuId, AcMenu::getPid, apply.getMenuId());
+                if (FuncUtil.isNotEmpty(parentList)) {
+                    for (Long parentId : parentList) {
+                        acUserMenuService.replace(apply.getCustomerNumber(), parentId);
+                    }
+                }
+            }
         } else {
             apply.setStatus(ApprovalDict.REJECT.getValue());
         }
@@ -51,12 +69,23 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
         super.updateById(apply);
     }
 
-    public void applyUserPermit(String operator, Long menuId) {
-        AcPermitApply apply = new AcPermitApply();
+    public void applyUserPermit(String operator, Long menuId, String reason) {
+        LambdaQueryWrapper<AcPermitApply> wrapper = super.getQueryWrapper();
+        wrapper.eq(AcPermitApply::getCustomerNumber, operator)
+                .eq(AcPermitApply::getMenuId, menuId);
+        AcPermitApply apply = super.selectOne(wrapper);
+        if (apply == null) {
+            apply = new AcPermitApply();
+        }
         apply.setCustomerNumber(operator);
         apply.setMenuId(menuId);
+        apply.setReason(reason);
         apply.setStatus(ApprovalDict.APPLY.getValue());
-        super.save(apply);
+        if (FuncUtil.isEmpty(apply.getId())) {
+            super.insert(apply);
+        } else {
+            super.updateById(apply);
+        }
     }
 
     public AcPermitApply getUserPermitApply(String operator, Long menuId) {

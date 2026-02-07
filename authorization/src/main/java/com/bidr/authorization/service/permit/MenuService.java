@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,8 @@ public class MenuService {
         List<AcMenu> groupMenuList = acGroupMenuService.getAllMenu(userId, clientType);
         List<AcMenu> userMenuList = acUserMenuService.getAllMenu(customerNumber, clientType);
         List<AcMenu> menuList = merge(roleMenuList, deptMenuList, groupMenuList, userMenuList);
-        Validator.assertNotEmpty(menuList, AccountErrCode.AC_PERMIT_NOT_EXISTED);
+        // 前端已经不需要必须配置菜单了
+        // Validator.assertNotEmpty(menuList, AccountErrCode.AC_PERMIT_NOT_EXISTED);
         for (AcMenu acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
@@ -66,9 +68,10 @@ public class MenuService {
      * @param menuLists 可变参数的菜单列表
      * @return 合并去重后的菜单列表
      */
-    private List<AcMenu> merge(List<AcMenu>... menuLists) {
+    @SafeVarargs
+    private final List<AcMenu> merge(List<AcMenu>... menuLists) {
         Map<Long, AcMenu> menuMap = new LinkedHashMap<>();
-        
+
         // 遍历所有菜单列表
         for (List<AcMenu> menuList : menuLists) {
             if (FuncUtil.isNotEmpty(menuList)) {
@@ -80,8 +83,13 @@ public class MenuService {
                 }
             }
         }
-        
-        return new ArrayList<>(menuMap.values());
+
+        List<AcMenu> mergedMenus = new ArrayList<>(menuMap.values());
+        mergedMenus.sort(
+                Comparator.comparing(AcMenu::getShowOrder, Comparator.nullsLast(Integer::compareTo))
+                        .thenComparing(AcMenu::getMenuId)
+        );
+        return mergedMenus;
     }
 
     public List<MenuTreeItem> getMenuList() {

@@ -16,9 +16,5 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class PermitApplyMenuTreeRes extends PermitApplyMenuTreeItem {
-    private List<PermitApplyMenuTreeRes> children;
-
-    public void PermitApplyMenuTreeRes() {
-        children = new ArrayList<>();
-    }
+    private List<PermitApplyMenuTreeRes> children = new ArrayList<>();
 }

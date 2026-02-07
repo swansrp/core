@@ -24,11 +24,22 @@ public class AcUserMenuService extends BaseSqlRepo<AcUserMenuDao, AcUserMenu> {
      * @param customerNumber 用户编码
      * @param menuId 菜单ID
      */
+    public void replace(String customerNumber, Long menuId) {
+        unbind(customerNumber, menuId);
+        bind(customerNumber, menuId);
+    }
+
+    /**
+     * 绑定菜单给用户
+     *
+     * @param customerNumber 用户编码
+     * @param menuId 菜单ID
+     */
     public void bind(String customerNumber, Long menuId) {
         AcUserMenu acUserMenu = new AcUserMenu();
         acUserMenu.setCustomerNumber(customerNumber);
         acUserMenu.setMenuId(menuId);
-        super.insertOrUpdate(acUserMenu);
+        super.insert(acUserMenu);
     }
 
     /**
@@ -46,6 +57,7 @@ public class AcUserMenuService extends BaseSqlRepo<AcUserMenuDao, AcUserMenu> {
 
     public List<AcMenu> getAllMenu(String customerNumber, String clientType) {
         MPJLambdaWrapper<AcUserMenu> wrapper = super.getMPJLambdaWrapper();
+        wrapper.selectAll(AcMenu.class);
         wrapper.leftJoin(AcMenu.class, AcMenu::getMenuId, AcUserMenu::getMenuId);
         wrapper.eq(AcUserMenu::getCustomerNumber, customerNumber);
         wrapper.eq(AcMenu::getClientType, clientType);

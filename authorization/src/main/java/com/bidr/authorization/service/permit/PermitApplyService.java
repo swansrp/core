@@ -4,6 +4,7 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcPermitApply;
 import com.bidr.authorization.dao.repository.AcMenuService;
 import com.bidr.authorization.dao.repository.AcPermitApplyService;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.vo.permit.PermitApplyMenuTreeItem;
 import com.bidr.authorization.vo.permit.PermitApplyMenuTreeRes;
 import com.bidr.authorization.vo.permit.PermitApplyVO;
@@ -64,21 +65,26 @@ public class PermitApplyService {
         // 逐级查找菜单
         Long currentPid = null;
         Long lastMenuId = null;
+        Long grandId = null;
 
         for (int i = 0; i < pathSegments.length; i++) {
             String segment = pathSegments[i];
 
             // 查找当前层级的菜单
-            AcMenu menu = acMenuService.findByPathAndPid(segment, currentPid);
+            AcMenu menu = acMenuService.findByPathAndPid(segment, currentPid, grandId);
 
             if (menu == null) {
                 log.warn("未找到路径段对应的菜单: level={}, path={}, segment={}", i, fullPath, segment);
                 return null;
             }
-
-            // 更新当前PID为找到的菜单ID，用于下一级查找
-            currentPid = menu.getMenuId();
-            lastMenuId = menu.getMenuId();
+            if (menu.getGrandId() != null) {
+                // 更新当前PID为找到的菜单ID，用于下一级查找
+                currentPid = menu.getMenuId();
+                lastMenuId = menu.getMenuId();
+                grandId = menu.getGrandId();
+            } else {
+                grandId = menu.getMenuId();
+            }
 
             log.debug("找到菜单: level={}, menuId={}, path={}", i, menu.getMenuId(), segment);
         }
@@ -87,14 +93,14 @@ public class PermitApplyService {
         return lastMenuId;
     }
 
-    public void applyUserPermit(String operator, String url) {
+    public void applyUserPermit(String operator, String url, String reason) {
         Long menuId = findMenuIdByFullPath(url);
         if (FuncUtil.isNotEmpty(menuId)) {
-            acPermitApplyService.applyUserPermit(operator, menuId);
+            acPermitApplyService.applyUserPermit(operator, menuId, reason);
         }
     }
 
-    public PermitApplyVO getUserPermit(String operator, String url) {
+    public PermitApplyVO getUserPermit(String url, String operator) {
         Long menuId = findMenuIdByFullPath(url);
         if (FuncUtil.isNotEmpty(menuId)) {
             AcPermitApply userPermitApply = acPermitApplyService.getUserPermitApply(operator, menuId);
@@ -109,24 +115,28 @@ public class PermitApplyService {
         wrapper.selectAs(AcMenu::getMenuId, PermitApplyMenuTreeItem::getMenuId);
         wrapper.selectAs(AcMenu::getTitle, PermitApplyMenuTreeItem::getTitle);
         wrapper.selectAs(AcMenu::getPid, PermitApplyMenuTreeItem::getPid);
-        wrapper.selectAs(AcMenu::getShowOrder, PermitApplyMenuTreeItem::getGrandId);
-        wrapper.leftJoin(AcPermitApply.class, AcPermitApply::getMenuId, AcMenu::getMenuId);
+        wrapper.selectAs(AcMenu::getGrandId, PermitApplyMenuTreeItem::getGrandId);
+        wrapper.leftJoin(AcPermitApply.class, on->on.eq(AcPermitApply::getMenuId, AcMenu::getMenuId).eq(AcPermitApply::getStatus, ApprovalDict.APPLY.getValue()));
         wrapper.selectCount(AcPermitApply::getId, PermitApplyMenuTreeItem::getWaitApproveCount);
-        wrapper.eq(AcPermitApply::getStatus, ApprovalDict.APPLY.getValue());
         wrapper.orderByAsc(AcMenu::getShowOrder);
         wrapper.eq(AcMenu::getStatus, CommonConst.YES);
+        wrapper.groupBy(AcMenu::getMenuId, AcMenu::getPid, AcMenu::getShowOrder, AcMenu::getGrandId, AcMenu::getStatus);
+        wrapper.groupBy(AcPermitApply::getMenuId);
         List<PermitApplyMenuTreeItem> menuList = acMenuService.selectJoinList(PermitApplyMenuTreeItem.class, wrapper);
         for (PermitApplyMenuTreeItem acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
+                acMenu.setKey(acMenu.getMenuId());
             }
         }
         return ReflectionUtil.buildTree(PermitApplyMenuTreeRes::setChildren, menuList, PermitApplyMenuTreeItem::getMenuId, PermitApplyMenuTreeItem::getPid);
     }
 
     public void approvePermit(Long id) {
+        acPermitApplyService.audit(id, true, null, AccountContext.getOperator());
     }
 
-    public void rejectPermit(Long id) {
+    public void rejectPermit(Long id, String remark) {
+        acPermitApplyService.audit(id, false, remark, AccountContext.getOperator());
     }
 }

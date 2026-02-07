@@ -2,6 +2,8 @@ package com.bidr.admin.manage.permit.controller;
 
 import com.bidr.admin.manage.permit.service.AcPermitApplyPortalService;
 import com.bidr.admin.manage.permit.vo.AcPermitApplyVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.dao.entity.AcPermitApply;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.permit.PermitApplyService;
@@ -48,14 +50,15 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
 
     @ApiOperation(value = "申请页面权限", notes = "登录后准入")
     @RequestMapping(value = "", method = RequestMethod.POST)
-    public void applyUserPermit(String url) {
-        permitApplyService.applyUserPermit(AccountContext.getOperator(), url);
+    public void applyUserPermit(String url, String reason) {
+        permitApplyService.applyUserPermit(AccountContext.getOperator(), url, reason);
     }
 
+    @Auth(AuthNone.class)
     @ApiOperation(value = "获取页面权限现状", notes = "登录后准入")
     @RequestMapping(value = "", method = RequestMethod.GET)
-    public PermitApplyVO getUserPermitStatus(String url) {
-        return permitApplyService.getUserPermit(AccountContext.getOperator(), url);
+    public PermitApplyVO getUserPermitStatus(String url, String customerNumber) {
+        return permitApplyService.getUserPermit(url, customerNumber);
     }
 
     @ApiOperation(value = "同意权限申请")
@@ -66,7 +69,7 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
 
     @ApiOperation(value = "拒绝权限申请")
     @RequestMapping(value = "/reject", method = RequestMethod.POST)
-    public void rejectPermit(Long id) {
-        permitApplyService.rejectPermit(id);
+    public void rejectPermit(Long id, String remark) {
+        permitApplyService.rejectPermit(id, remark);
     }
 }

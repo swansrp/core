@@ -99,7 +99,11 @@ public class LoginServiceImpl implements LoginService {
         }
         if (!verify) {
             int passwordMistakeMaxTime = frameCacheService.getParamInt(AccountParam.ACCOUNT_LOCK_MISTAKE_NUMBER);
-            user.setPasswordErrorTime(user.getPasswordErrorTime() + 1);
+            if(FuncUtil.isNotEmpty(user.getPasswordErrorTime())) {
+                user.setPasswordErrorTime(user.getPasswordErrorTime() + 1);
+            } else {
+                user.setPasswordErrorTime(1);
+            }
             if (user.getPasswordErrorTime() >= passwordMistakeMaxTime) {
                 user.setStatus(ActiveStatusDict.LOCKING.getValue());
                 acUserService.updateById(user);
