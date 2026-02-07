@@ -32,7 +32,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <kernel.version>20251216092854-143</kernel.version>
+                <kernel.version>20260207213951-147</kernel.version>
                 <authorization.version>20250902154432-59</authorization.version>
             </properties>
         </profile>
