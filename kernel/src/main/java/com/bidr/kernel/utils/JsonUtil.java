@@ -3,8 +3,12 @@ package com.bidr.kernel.utils;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +17,12 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+
 
 /**
  * Title: JsonUtil
@@ -104,7 +111,7 @@ public class JsonUtil {
     public static <T> T readJson(String jsonStr, Class<?> collectionClass, Class<?>... elementClasses) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        registerAutoDateDeserializer(mapper);
         JavaType javaType = mapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);
         try {
             return mapper.readValue(jsonStr, javaType);
@@ -112,12 +119,13 @@ public class JsonUtil {
             log.error("", e);
             return null;
         }
+
     }
 
     public static <T> T readStreamJson(InputStream jsonIs, Class<?> collectionClass, Class<?>... elementClasses) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        registerAutoDateDeserializer(mapper);
         JavaType javaType = mapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);
         try {
             return mapper.readValue(jsonIs, javaType);
@@ -125,6 +133,7 @@ public class JsonUtil {
             log.error("", e);
             return null;
         }
+
     }
 
     private static String generateJsonString(Object object, boolean needOrder, boolean ignoreEmpty,
@@ -150,6 +159,7 @@ public class JsonUtil {
         } else {
             mapper.setDateFormat(new SimpleDateFormat(DATE_FORMAT));
         }
+        registerAutoDateDeserializer(mapper);
 
         JavaType javaType = mapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);
         try {
@@ -158,6 +168,7 @@ public class JsonUtil {
             log.error("", e);
             return null;
         }
+
     }
 
     public static boolean isJsonValid(String jsonInString) {
@@ -181,4 +192,83 @@ public class JsonUtil {
     public static String toJsonString(Object object, boolean needOrder, boolean ignoreEmpty, boolean ignoreIndent) {
         return generateJsonString(object, needOrder, ignoreEmpty, ignoreIndent, DATE_FORMAT);
     }
+
+    private static void registerAutoDateDeserializer(ObjectMapper mapper) {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(Date.class, new AutoDateDeserializer());
+        mapper.registerModule(module);
+    }
+
+    public static class AutoDateDeserializer extends JsonDeserializer<Date> {
+
+
+        private static final ZoneId ZONE_CN = ZoneId.of("Asia/Shanghai");
+
+        private static final List<DateTimeFormatter> FORMATTERS = Arrays.asList(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                DateTimeFormatter.ofPattern("yyyyMMddHHmmss"),
+                DateTimeFormatter.ofPattern("yyyyMMdd")
+        );
+
+        @Override
+        public Date deserialize(JsonParser p, DeserializationContext ctxt)
+                throws IOException {
+
+            JsonToken token = p.getCurrentToken();
+
+            // 1️⃣ 时间戳（UTC 绝对时间）
+            if (token == JsonToken.VALUE_NUMBER_INT) {
+                return new Date(p.getLongValue());
+            }
+
+            // 2️⃣ 字符串
+            if (token == JsonToken.VALUE_STRING) {
+                String text = p.getText().trim();
+                if (text.isEmpty()) {
+                    return null;
+                }
+
+                // 2.1 ISO-8601（带 Z / Offset）
+                try {
+                    OffsetDateTime odt = OffsetDateTime.parse(text);
+                    return Date.from(odt.atZoneSameInstant(ZONE_CN).toInstant());
+                } catch (Exception ignored) {
+                }
+
+                try {
+                    Instant instant = Instant.parse(text);
+                    return Date.from(instant);
+                } catch (Exception ignored) {
+                }
+
+                // 2.2 无时区字符串：强制按东八区解析
+                for (DateTimeFormatter formatter : FORMATTERS) {
+
+                    try {
+                        LocalDateTime ldt = LocalDateTime.parse(text, formatter);
+                        return Date.from(ldt.atZone(ZONE_CN).toInstant());
+                    } catch (Exception ignored) {
+                    }
+
+                    try {
+                        LocalDate ld = LocalDate.parse(text, formatter);
+                        return Date.from(ld.atStartOfDay(ZONE_CN).toInstant());
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+
+            throw new InvalidFormatException(
+                    p,
+                    "无法解析时间字段（已强制按东八区处理）",
+                    p.getText(),
+                    Date.class
+            );
+        }
+    }
 }
+

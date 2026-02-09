@@ -1,7 +1,9 @@
 package com.bidr.kernel.config.json;
 
+import com.bidr.kernel.utils.JsonUtil;
 import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -19,6 +21,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @JacksonAnnotationsInside
-@JsonDeserialize(using = AutoDateDeserializer.class)
+@JsonDeserialize(using = JsonUtil.AutoDateDeserializer.class)
 public @interface JsonDateAuto {
 }
