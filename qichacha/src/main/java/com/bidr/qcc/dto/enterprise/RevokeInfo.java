@@ -18,7 +18,6 @@ import java.util.Date;
 public class RevokeInfo {
     @ApiModelProperty("注销日期")
     @JsonProperty("CancelDate")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date cancelDate;
 
     @ApiModelProperty("注销原因")
@@ -27,7 +26,6 @@ public class RevokeInfo {
 
     @ApiModelProperty("吊销日期")
     @JsonProperty("RevokeDate")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date revokeDate;
 
     @ApiModelProperty("吊销原因")

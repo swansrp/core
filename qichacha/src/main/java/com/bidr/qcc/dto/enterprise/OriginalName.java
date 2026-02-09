@@ -22,6 +22,5 @@ public class OriginalName {
 
     @ApiModelProperty("变更日期")
     @JsonProperty("ChangeDate")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date changeDate;
 }
