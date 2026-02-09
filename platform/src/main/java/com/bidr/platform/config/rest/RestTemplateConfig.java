@@ -1,8 +1,6 @@
 package com.bidr.platform.config.rest;
 
-import com.bidr.kernel.config.json.JacksonConfig;
 import com.bidr.platform.exception.RestTemplateException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.impl.client.HttpClients;
@@ -78,9 +76,6 @@ public class RestTemplateConfig {
         RestTemplate restTemplate = new RestTemplate(httpRequestFactory);
         restTemplate.getMessageConverters().add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
         MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
-        ObjectMapper objectMapper = new ObjectMapper();
-        JacksonConfig.configObjectMapper(objectMapper);
-        mappingJackson2HttpMessageConverter.setObjectMapper(objectMapper);
         mappingJackson2HttpMessageConverter.setSupportedMediaTypes(
                 Arrays.asList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN));
         restTemplate.getMessageConverters().add(1, mappingJackson2HttpMessageConverter);
