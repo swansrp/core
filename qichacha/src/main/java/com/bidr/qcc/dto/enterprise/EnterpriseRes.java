@@ -31,9 +31,7 @@ public class EnterpriseRes {
 
     @ApiModelProperty("成立日期")
     @JsonProperty("StartDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
-    private Date startDate;
+    private String startDate;
 
     @ApiModelProperty("法定代表人姓名")
     @JsonProperty("OperName")
