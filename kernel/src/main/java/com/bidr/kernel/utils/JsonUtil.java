@@ -1,5 +1,6 @@
 package com.bidr.kernel.utils;
 
+import com.bidr.kernel.config.json.JacksonConfig;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,6 +42,7 @@ public class JsonUtil {
                                              boolean ignoreIndent, String dateFormat) {
         String result = null;
         ObjectMapper objectMapper = new ObjectMapper();
+        JacksonConfig.configObjectMapper(objectMapper);
         // set config of JSON
         // can use single quote
         objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
