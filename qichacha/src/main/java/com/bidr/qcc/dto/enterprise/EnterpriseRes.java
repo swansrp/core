@@ -1,5 +1,6 @@
 package com.bidr.qcc.dto.enterprise;
 
+import com.bidr.kernel.config.json.JsonDateAuto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
@@ -31,7 +32,9 @@ public class EnterpriseRes {
 
     @ApiModelProperty("成立日期")
     @JsonProperty("StartDate")
-    private String startDate;
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date startDate;
 
     @ApiModelProperty("法定代表人姓名")
     @JsonProperty("OperName")

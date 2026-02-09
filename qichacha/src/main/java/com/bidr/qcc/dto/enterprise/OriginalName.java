@@ -1,5 +1,6 @@
 package com.bidr.qcc.dto.enterprise;
 
+import com.bidr.kernel.config.json.JsonDateAuto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
@@ -22,5 +23,7 @@ public class OriginalName {
 
     @ApiModelProperty("变更日期")
     @JsonProperty("ChangeDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date changeDate;
 }

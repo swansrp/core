@@ -1,6 +1,8 @@
 package com.bidr.qcc.dto.enterprise;
 
+import com.bidr.kernel.config.json.JsonDateAuto;
 import com.diboot.core.binding.annotation.BindDict;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -44,10 +46,14 @@ public class EnterpriseAdvancedRes {
 
     @ApiModelProperty("成立日期")
     @JsonProperty("StartDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date startDate;
 
     @ApiModelProperty("吊销日期")
     @JsonProperty("EndDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date endDate;
 
     @ApiModelProperty("登记状态")
@@ -60,6 +66,8 @@ public class EnterpriseAdvancedRes {
 
     @ApiModelProperty("更新日期")
     @JsonProperty("UpdatedDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date updatedDate;
 
     @ApiModelProperty(
@@ -85,14 +93,20 @@ public class EnterpriseAdvancedRes {
 
     @ApiModelProperty("营业期限始")
     @JsonProperty("TermStart")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date termStart;
 
     @ApiModelProperty("营业期限至")
     @JsonProperty("TermEnd")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date termEnd;
 
     @ApiModelProperty("核准日期")
     @JsonProperty("CheckDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date checkDate;
 
     @ApiModelProperty("组织机构代码")

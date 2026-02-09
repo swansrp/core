@@ -1,5 +1,6 @@
 package com.bidr.qcc.dto.enterprise;
 
+import com.bidr.kernel.config.json.JsonDateAuto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
@@ -18,6 +19,8 @@ import java.util.Date;
 public class RevokeInfo {
     @ApiModelProperty("注销日期")
     @JsonProperty("CancelDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date cancelDate;
 
     @ApiModelProperty("注销原因")
@@ -26,6 +29,8 @@ public class RevokeInfo {
 
     @ApiModelProperty("吊销日期")
     @JsonProperty("RevokeDate")
+    @JsonDateAuto
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date revokeDate;
 
     @ApiModelProperty("吊销原因")
