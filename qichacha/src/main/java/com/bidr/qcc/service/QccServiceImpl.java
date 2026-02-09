@@ -104,7 +104,7 @@ public class QccServiceImpl implements QccService {
     }
 
     @Override
-    @Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
+    //@Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public NameSearchRes enterpriseSearch(NameSearchReq req) {
         List<EnterpriseRes> res = get(QiChaChaUrl.ENTERPRISE_INFO_URL + "?searchKey=" + req.getSearchName(),
                 new QccReq(),
@@ -133,7 +133,7 @@ public class QccServiceImpl implements QccService {
     }
 
     @Override
-    @Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
+    //@Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public EnterpriseRes getEnterpriseInfo(EnterpriseReq req) {
         String searchKey = req.getSearchKey();
         req.setSearchKey(null);
@@ -147,14 +147,14 @@ public class QccServiceImpl implements QccService {
     }
 
     @Override
-    @Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
+    //@Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public EnterpriseAdvancedRes getEnterpriseAdvancedInfo(EnterpriseAdvancedReq req) {
         return get(QiChaChaUrl.ENTERPRISE_ADVANCED_INFO_URL + "?keyword=" + req.getKeyword(), new QccReq(),
                 EnterpriseAdvancedRes.class);
     }
 
     @Override
-    @Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
+    //@Cacheable(unless = "#result == null", cacheNames = "QI-CHA-CHA#604800", keyGenerator = "cacheKeyByParam")
     public CreditCodeRes getCreditCode(CreditCodeReq req) {
         return get(QiChaChaUrl.CREDIT_INFO_URL + "?keyWord=" + req.getKeyWord(), new QccReq(), CreditCodeRes.class);
     }
