@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 
@@ -19,7 +18,6 @@ import java.util.Date;
 public class RevokeInfo {
     @ApiModelProperty("注销日期")
     @JsonProperty("CancelDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date cancelDate;
 
@@ -29,7 +27,6 @@ public class RevokeInfo {
 
     @ApiModelProperty("吊销日期")
     @JsonProperty("RevokeDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date revokeDate;
 

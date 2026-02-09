@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 import java.util.List;
@@ -46,13 +45,11 @@ public class EnterpriseAdvancedRes {
 
     @ApiModelProperty("成立日期")
     @JsonProperty("StartDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date startDate;
 
     @ApiModelProperty("吊销日期")
     @JsonProperty("EndDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date endDate;
 
@@ -66,7 +63,6 @@ public class EnterpriseAdvancedRes {
 
     @ApiModelProperty("更新日期")
     @JsonProperty("UpdatedDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date updatedDate;
 
@@ -93,19 +89,16 @@ public class EnterpriseAdvancedRes {
 
     @ApiModelProperty("营业期限始")
     @JsonProperty("TermStart")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date termStart;
 
     @ApiModelProperty("营业期限至")
     @JsonProperty("TermEnd")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date termEnd;
 
     @ApiModelProperty("核准日期")
     @JsonProperty("CheckDate")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date checkDate;
 

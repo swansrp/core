@@ -21,6 +21,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
                 <redis.version>${jarVersion}</redis.version>
             </properties>
         </profile>
@@ -33,12 +34,18 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
+                <kernel.version>20260209223545-148</kernel.version>
                 <redis.version>20250416171510-30</redis.version>
             </properties>
         </profile>
     </profiles>
 
     <dependencies>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>redis</artifactId>
