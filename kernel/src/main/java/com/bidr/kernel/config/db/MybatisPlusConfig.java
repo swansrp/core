@@ -1,6 +1,7 @@
 package com.bidr.kernel.config.db;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.DynamicTableNameInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
 import com.bidr.kernel.mybatis.log.MybatisLog;
@@ -26,11 +27,12 @@ import java.util.Map;
 public class MybatisPlusConfig {
 
     public static boolean SUPPORT_RECURSIVE;
-    
+
     static {
         // 在类加载时就设置自定义日志实现，确保 MyBatis 使用我们的 Log
         LogFactory.useCustomLogging(MybatisLog.class);
     }
+
     @Resource
     private AppProperties appProperties;
     @Resource
@@ -48,6 +50,17 @@ public class MybatisPlusConfig {
         //限制页大小
         innerInterceptor.setMaxLimit(appProperties.getMaxPageSize());
         interceptor.addInnerInterceptor(innerInterceptor);
+        //动态表名
+        DynamicTableNameInnerInterceptor dynamicTableNameInnerInterceptor = new DynamicTableNameInnerInterceptor();
+        dynamicTableNameInnerInterceptor.setTableNameHandler((sql, tableName) -> {
+            if (DynamicTableNameHolder.get() != null) {
+                if (DynamicTableNameHolder.get().containsKey(tableName)) {
+                    return DynamicTableNameHolder.get(tableName); // 从ThreadLocal取表名
+                }
+            }
+            return tableName;
+        });
+        interceptor.addInnerInterceptor(dynamicTableNameInnerInterceptor);
         return interceptor;
     }
 
@@ -59,12 +72,10 @@ public class MybatisPlusConfig {
     @PostConstruct
     public void initTables() {
 
-        Map<String, MybatisPlusTableInitializerInf> beans =
-                applicationContext.getBeansOfType(MybatisPlusTableInitializerInf.class);
+        Map<String, MybatisPlusTableInitializerInf> beans = applicationContext.getBeansOfType(MybatisPlusTableInitializerInf.class);
 
         // 提前一次性确保 sys_table_version 表存在，避免每个表初始化时重复检查
-        try (Connection connection = dataSource.getConnection();
-             Statement stmt = connection.createStatement()) {
+        try (Connection connection = dataSource.getConnection(); Statement stmt = connection.createStatement()) {
             DatabaseMetaData metaData = connection.getMetaData();
             ensureSysTableVersionTable(metaData, stmt);
             String version = metaData.getDatabaseProductVersion();
@@ -83,12 +94,7 @@ public class MybatisPlusConfig {
     private void ensureSysTableVersionTable(DatabaseMetaData metaData, Statement stmt) throws SQLException {
         String sysTableName = "sys_table_version";
         if (!tableExists(metaData, sysTableName)) {
-            String createSysTableSql = "CREATE TABLE IF NOT EXISTS `sys_table_version` (\n" +
-                    "              `table_name` varchar(255) NOT NULL COMMENT '表名',\n" +
-                    "              `version` int NOT NULL COMMENT '版本',\n" +
-                    "              `update_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',\n" +
-                    "              PRIMARY KEY (`table_name`)\n" +
-                    "            ) COMMENT='表版本控制';";
+            String createSysTableSql = "CREATE TABLE IF NOT EXISTS `sys_table_version` (\n" + "              `table_name` varchar(255) NOT NULL COMMENT '表名',\n" + "              `version` int NOT NULL COMMENT '版本',\n" + "              `update_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',\n" + "              PRIMARY KEY (`table_name`)\n" + "            ) COMMENT='表版本控制';";
             stmt.executeUpdate(createSysTableSql);
         }
     }
