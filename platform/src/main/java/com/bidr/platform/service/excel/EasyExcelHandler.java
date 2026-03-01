@@ -16,6 +16,16 @@ import java.util.Map;
 
 public interface EasyExcelHandler<T, VO> {
     /**
+     * 初始化准备
+     *
+     * @param analysisContext excel上下文
+     */
+    default void prepare(AnalysisContext analysisContext) {
+
+    }
+
+
+    /**
      * 解析转换实体
      *
      * @param data            excel数据
@@ -62,4 +72,13 @@ public interface EasyExcelHandler<T, VO> {
      * @param comments 异常信息
      */
     void setProgress(UploadProgressStep step, Integer total, Integer loaded, String comments);
+
+    /**
+     * 最终结束
+     *
+     * @param analysisContext excel上下文
+     */
+    default void finish(AnalysisContext analysisContext) {
+
+    }
 }
