@@ -12,11 +12,4 @@ import org.apache.ibatis.annotations.Update;
  */
 public interface CommonMapper {
 
-    /**
-     * 清空表 慎用
-     *
-     * @param tableName
-     */
-    @Update("truncate table ${tableName}")
-    void truncate(@Param("tableName") String tableName);
 }

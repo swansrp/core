@@ -14,6 +14,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.anno.EnableTruncate;
 import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
+import com.bidr.kernel.mybatis.service.TableSyncService;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -61,7 +62,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     protected PlatformTransactionManager transactionManager;
     Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 1);
     @Resource
-    private CommonMapper commonMapper;
+    private TableSyncService tableSyncService;
 
     protected static void setCreateDDL(String createSql) {
         StackTraceElement[] stack = Thread.currentThread().getStackTrace();
@@ -237,7 +238,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
             String tableName = annotation.value();
             if (FuncUtil.isNotEmpty(enableTruncate)) {
                 log.warn("#### [{}] 清空数据库表 开始 ####", tableName);
-                commonMapper.truncate(tableName);
+                tableSyncService.truncateTable(tableName);
                 log.warn("#### [{}] 清空数据库表 结束 ####", tableName);
             } else {
                 log.warn("#### [{}] 不支持 清空数据库表 ####", tableName);
