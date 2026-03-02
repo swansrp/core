@@ -21,6 +21,10 @@ public class DynamicTableNameHolder {
 
     }
 
+    public static void set(Map<String, String> tableNames) {
+        DYNAMIC_TABLE_NAME_HOLDER.set(tableNames);
+    }
+
     public static void set(String originalTableName, String targetTableName) {
         if (DYNAMIC_TABLE_NAME_HOLDER.get() == null) {
             DYNAMIC_TABLE_NAME_HOLDER.set(new HashMap<>(15));
@@ -54,11 +58,9 @@ public class DynamicTableNameHolder {
         }
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
-    public static class DynamicTableName {
-        private String originalTableName;
-        private String targetTableName;
+    public static void remove() {
+        if (DYNAMIC_TABLE_NAME_HOLDER.get() != null) {
+            DYNAMIC_TABLE_NAME_HOLDER.remove();
+        }
     }
 }

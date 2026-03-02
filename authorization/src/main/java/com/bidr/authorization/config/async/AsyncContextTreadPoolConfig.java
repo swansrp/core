@@ -5,6 +5,7 @@ import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.config.log.MdcConfig;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TokenHolder;
+import com.bidr.kernel.config.db.DynamicTableNameHolder;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -94,12 +95,14 @@ public class AsyncContextTreadPoolConfig implements AsyncConfigurer {
             RequestAttributes context = getMvcContext();
             AccountInfo accountInfo = AccountContext.get();
             TokenInfo tokenInfo = TokenHolder.get();
+            Map<String, String> dynamicTableNameInfo = DynamicTableNameHolder.get();
             return () -> {
                 try {
                     MdcConfig.forkLogInfo(copyOfContextMap);
                     RequestContextHolder.setRequestAttributes(context);
                     AccountContext.set(accountInfo);
                     TokenHolder.set(tokenInfo);
+                    DynamicTableNameHolder.set(dynamicTableNameInfo);
                     runnable.run();
                 } finally {
                     destroyLocalTreadInfo();
@@ -112,6 +115,7 @@ public class AsyncContextTreadPoolConfig implements AsyncConfigurer {
             RequestContextHolder.resetRequestAttributes();
             AccountContext.remove();
             TokenHolder.remove();
+            DynamicTableNameHolder.remove();
         }
     }
 }
