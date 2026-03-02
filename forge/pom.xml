@@ -47,7 +47,7 @@
                 <platform.version>20260302092143-50</platform.version>
                 <redis.version>20260210004452-32</redis.version>
                 <authorization.version>20260302092229-61</authorization.version>
-                <admin.version>20260207214613-101</admin.version>
+                <admin.version>20260302092606-102</admin.version>
             </properties>
         </profile>
     </profiles>
