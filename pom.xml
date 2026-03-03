@@ -26,6 +26,7 @@
         <module>mcp</module>
         <module>elasticsearch</module>
         <module>forge</module>
+        <module>kafka</module>
     </modules>
     <packaging>pom</packaging>
 
