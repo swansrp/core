@@ -1112,6 +1112,7 @@ COPY app.jar app.jar
 EXPOSE ${SERVER_PORT}
 
 ENTRYPOINT ["java",
+  "-Duser.timezone=Asia/Shanghai",
   "-Xms512m",
   "-Xmx1024m",
   "-XX:+HeapDumpOnOutOfMemoryError",

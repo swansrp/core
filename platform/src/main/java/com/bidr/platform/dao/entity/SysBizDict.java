@@ -59,6 +59,20 @@ public class SysBizDict {
     private String value;
 
     /**
+     * 父级字典编码（级联字典用）
+     */
+    @TableField(value = "`parent_dict_code`")
+    @ApiModelProperty(value = "父级字典编码（级联字典用）")
+    private String parentDictCode;
+
+    /**
+     * 父级字典项值（级联字典用）
+     */
+    @TableField(value = "`parent_value`")
+    @ApiModelProperty(value = "父级字典项值（级联字典用）")
+    private String parentValue;
+
+    /**
      * 描述
      */
     @TableField(value = "description")

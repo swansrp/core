@@ -10,6 +10,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.repository.SysBizDictService;
+import com.bidr.platform.vo.dict.BizDictRes;
 import com.bidr.platform.vo.dict.BizDictVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class BizDictService {
     @Nullable
     private final List<BizDictValidator> bizDictValidators;
 
-    public List<BizDictVO> getDict(String bizId, String dictCode) {
+    public List<BizDictVO> getDict(String bizId, String dictCode, String parentValue) {
         validateBizId(bizId);
         MPJLambdaWrapper<SysBizDict> wrapper = sysBizDictService.getMPJLambdaWrapper();
         wrapper.eq(SysBizDict::getDictCode, dictCode);
@@ -46,6 +47,7 @@ public class BizDictService {
         } else {
             wrapper.isNull(SysBizDict::getBizId);
         }
+        wrapper.eq(FuncUtil.isNotEmpty(parentValue), SysBizDict::getParentValue, parentValue);
         wrapper.eq(SysBizDict::getValid, CommonConst.YES);
         if (FuncUtil.isNotEmpty(bizId)) {
             // 企业字典排在前面，再按sort排序
@@ -138,5 +140,60 @@ public class BizDictService {
 
     public void updateDictName(KeyValueResVO req) {
         sysBizDictService.updateDictName(req.getValue(), req.getLabel());
+    }
+
+    public String getDictExisted(String name, String code) {
+        MPJLambdaWrapper<SysBizDict> wrapper = sysBizDictService.getMPJLambdaWrapper();
+        wrapper.nested(w -> w.eq(SysBizDict::getDictCode, code).or().eq(SysBizDict::getDictName, name));
+        wrapper.eq(SysBizDict::getValid, CommonConst.YES);
+        return StringUtil.convertSwitch(sysBizDictService.exists(wrapper));
+    }
+
+    /**
+     * 根据字典名称模糊查询字典列表
+     *
+     * @param dictName 字典名称
+     * @return 字典列表（包含字典项）
+     */
+    public List<BizDictRes> searchByDictName(String dictName) {
+        MPJLambdaWrapper<SysBizDict> wrapper = sysBizDictService.getMPJLambdaWrapper();
+        wrapper.like(FuncUtil.isNotEmpty(dictName), SysBizDict::getDictName, dictName);
+        wrapper.eq(SysBizDict::getValid, CommonConst.YES);
+        wrapper.orderByAsc(SysBizDict::getSort);
+        List<SysBizDict> list = sysBizDictService.select(wrapper);
+        return groupDictList(list);
+    }
+
+    /**
+     * 根据字典项名称模糊查询字典列表
+     *
+     * @param itemName 字典项名称（label）
+     * @return 字典列表（包含字典项）
+     */
+    public List<BizDictRes> searchByDictItemName(String itemName) {
+        MPJLambdaWrapper<SysBizDict> wrapper = sysBizDictService.getMPJLambdaWrapper();
+        wrapper.like(FuncUtil.isNotEmpty(itemName), SysBizDict::getLabel, itemName);
+        wrapper.eq(SysBizDict::getValid, CommonConst.YES);
+        wrapper.orderByAsc(SysBizDict::getSort);
+        List<SysBizDict> list = sysBizDictService.select(wrapper);
+        return groupDictList(list);
+    }
+
+    /**
+     * 将字典项列表按dictCode分组
+     */
+    private List<BizDictRes> groupDictList(List<SysBizDict> list) {
+        Map<String, BizDictRes> resultMap = new LinkedHashMap<>();
+        for (SysBizDict dict : list) {
+            BizDictRes res = resultMap.computeIfAbsent(dict.getDictCode(), code -> {
+                BizDictRes newRes = new BizDictRes();
+                newRes.setDictCode(code);
+                newRes.setDictName(dict.getDictName());
+                newRes.setDictItemList(new ArrayList<>());
+                return newRes;
+            });
+            res.getDictItemList().add(Resp.convert(dict, BizDictVO.class));
+        }
+        return new ArrayList<>(resultMap.values());
     }
 }

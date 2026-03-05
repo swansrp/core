@@ -31,5 +31,13 @@ public class SysBizDictSchema extends BaseMybatisSchema<SysBizDict> {
                 "  KEY `idx_value` (`value`) USING BTREE,\n" +
                 "  KEY `idx_dict_enterprise` (`dict_code`,`biz_id`) USING BTREE\n" +
                 ") COMMENT='业务字典表';");
+        setUpgradeDDL(1, "ALTER TABLE `sys_biz_dict`\n" +
+                "\tCHANGE COLUMN `dict_code` `dict_code` VARCHAR(200) NOT NULL COMMENT '字典编码' AFTER `id`,\n" +
+                "\tCHANGE COLUMN `dict_name` `dict_name` VARCHAR(200) NOT NULL COMMENT '字典名称' AFTER `dict_code`;\n");
+        setUpgradeDDL(2, "ALTER TABLE `sys_biz_dict` \n" +
+                "\tADD COLUMN `parent_value` varchar(100) DEFAULT NULL COMMENT '父级字典项值（级联字典用）' AFTER `value`,\n" +
+                "\tADD INDEX `idx_parent_value` (`dict_code`,`parent_value`) USING BTREE;");
+        setUpgradeDDL(3, "ALTER TABLE `sys_biz_dict` \n" +
+                "ADD COLUMN `parent_dict_code` varchar(200) DEFAULT NULL COMMENT '父级字典编码（级联字典用）' AFTER `value`;");
     }
 }

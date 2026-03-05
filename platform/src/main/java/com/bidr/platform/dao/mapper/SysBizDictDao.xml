@@ -8,6 +8,8 @@
     <result column="biz_id" jdbcType="VARCHAR" property="bizId" />
     <result column="label" jdbcType="VARCHAR" property="label" />
     <result column="value" jdbcType="VARCHAR" property="value" />
+    <result column="parent_dict_code" jdbcType="VARCHAR" property="parentDictCode" />
+    <result column="parent_value" jdbcType="VARCHAR" property="parentValue" />
     <result column="description" jdbcType="VARCHAR" property="description" />
     <result column="sort" jdbcType="INTEGER" property="sort" />
     <result column="is_default" jdbcType="CHAR" property="isDefault" />
@@ -18,7 +20,7 @@
     <result column="valid" jdbcType="CHAR" property="valid" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, dict_code, dict_name, biz_id, label, `value`, description, sort, is_default, 
+    id, dict_code, dict_name, biz_id, label, parent_value, `value`, description, sort, is_default,
     create_by, create_at, update_by, update_at, `valid`
   </sql>
 </mapper>

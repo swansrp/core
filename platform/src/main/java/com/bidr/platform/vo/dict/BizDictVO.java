@@ -40,6 +40,13 @@ public class BizDictVO {
     @ApiModelProperty(value = "字典项值")
     private String value;
 
+
+    @ApiModelProperty(value = "父级字典编码（级联字典用）")
+    private String parentDictCode;
+
+    @ApiModelProperty(value = "父级字典项值（级联字典用）")
+    private String parentValue;
+
     @ApiModelProperty(value = "描述")
     private String description;
 

@@ -5,6 +5,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.service.dict.BizDictService;
+import com.bidr.platform.vo.dict.BizDictRes;
 import com.bidr.platform.vo.dict.BizDictVO;
 import com.bidr.platform.vo.dict.BizDictValueReq;
 import io.swagger.annotations.Api;
@@ -29,6 +30,21 @@ import java.util.List;
 public class SystemBizDictController {
 
     private final BizDictService bizDictService;
+
+    /**
+     * 获取字典列表
+     *
+     * @param name  字典名称（可选）
+     * @param code  字典编码（可选）
+     * @return 字典列表
+     */
+    @ApiOperation("业务字典查重")
+    @GetMapping("/existed")
+    public String getDictExisted(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String code) {
+        return bizDictService.getDictExisted(name, code);
+    }
 
     /**
      * 获取字典列表
@@ -58,9 +74,12 @@ public class SystemBizDictController {
     @GetMapping("/code")
     public List<BizDictVO> getEnterpriseDictByCode(
             @RequestParam String bizId,
-            @RequestParam String dictCode) {
-        return bizDictService.getDict(bizId, dictCode);
+            @RequestParam String dictCode,
+            @RequestParam(required = false) String parentValue) {
+        return bizDictService.getDict(bizId, dictCode, parentValue);
     }
+
+
 
 
     @ApiOperation("变更指定字典编码的字典名称")
@@ -141,5 +160,29 @@ public class SystemBizDictController {
             Validator.assertTrue(result, ErrCodeSys.PA_DATA_NOT_SUPPORT, "操作, 只能删除业务自己的字典项");
         }
         Resp.notice("批量删除成功");
+    }
+
+    /**
+     * 根据字典名称模糊查询字典列表
+     *
+     * @param dictName 字典名称
+     * @return 字典列表（包含字典项）
+     */
+    @ApiOperation("根据字典名称查询字典列表")
+    @GetMapping("/search/name")
+    public List<BizDictRes> searchByDictName(@RequestParam(required = false) String dictName) {
+        return bizDictService.searchByDictName(dictName);
+    }
+
+    /**
+     * 根据字典项名称模糊查询字典列表
+     *
+     * @param itemName 字典项名称（label）
+     * @return 字典列表（包含字典项）
+     */
+    @ApiOperation("根据字典项名称查询字典列表")
+    @GetMapping("/search/item")
+    public List<BizDictRes> searchByDictItemName(@RequestParam(required = false) String itemName) {
+        return bizDictService.searchByDictItemName(itemName);
     }
 }
