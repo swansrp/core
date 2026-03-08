@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Description: 动态Portal控制器（统合接口）
  * <p>继承所有层级Controller，提供完整的数据操作能力</p>
  * <p>这是唯一允许使用@PathVariable的Controller，用于通过路径区分不同Portal</p>
- * 
+ *
  * <h3>Controller层次：</h3>
  * <pre>
  * DynamicQueryController（第1层 - 只读）
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  *         └── DynamicTreeController（第3层 - 树形结构）
  *               └── DynamicPortalController（统合接口）⬅ 当前类
  * </pre>
- * 
+ *
  * <h3>完整能力清单：</h3>
  * <ul>
  *   <li><b>查询能力</b>（来自DynamicPortalQueryController）：
@@ -47,13 +47,13 @@ import org.springframework.web.bind.annotation.RestController;
  *     </ul>
  *   </li>
  * </ul>
- * 
+ *
  * <h3>实现说明：</h3>
  * <ul>
  *   <li><b>Matrix驱动</b>：实现所有方法（完整功能）</li>
  *   <li><b>Dataset驱动</b>：只实现查询和统计方法，其他方法抛UnsupportedOperationException</li>
  * </ul>
- * 
+ *
  * <h3>选择合适的Controller：</h3>
  * <ul>
  *   <li>只需查询 → 使用 {@link DynamicQueryController}</li>
@@ -61,7 +61,7 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>需要树形结构 → 使用 {@link DynamicTreeController}</li>
  *   <li>需要所有功能 → 使用 {@link DynamicPortalController}</li>
  * </ul>
- * 
+ * <p>
  * Copyright: Copyright (c) 2025
  *
  * @author Sharp
@@ -69,7 +69,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@Api(tags = "动态Portal接口")
+@Api(tags = "系统基础 - 动态Portal接口")
 @RequestMapping("/web/dynamic/portal")
 public class DynamicPortalController extends DynamicTreeController {
     // 统合所有Portal能力（查询 + 统计 + CRUD + 树形 + 排序）

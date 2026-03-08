@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.forge.dao.mapper.FormDataGroupInstanceMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.forge.dao.entity.FormDataGroupInstance">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="history_id" jdbcType="VARCHAR" property="historyId" />
+    <result column="section_instance_id" jdbcType="VARCHAR" property="sectionInstanceId" />
+    <result column="group_id" jdbcType="BIGINT" property="groupId" />
+    <result column="row_index" jdbcType="INTEGER" property="rowIndex" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, history_id, section_instance_id, group_id, row_index, create_by, create_at, update_by, 
+    update_at
+  </sql>
+</mapper>

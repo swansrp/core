@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.forge.dao.mapper.FormDataSectionInstanceMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.forge.dao.entity.FormDataSectionInstance">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="history_id" jdbcType="VARCHAR" property="historyId" />
+    <result column="section_id" jdbcType="BIGINT" property="sectionId" />
+    <result column="version_no" jdbcType="INTEGER" property="versionNo" />
+    <result column="remark" jdbcType="VARCHAR" property="remark" />
+    <result column="form_content" jdbcType="LONGVARCHAR" property="formContent" />
+    <result column="submitted_by" jdbcType="VARCHAR" property="submittedBy" />
+    <result column="submitted_at" jdbcType="TIMESTAMP" property="submittedAt" />
+    <result column="confirm_by" jdbcType="VARCHAR" property="confirmBy" />
+    <result column="confirm_at" jdbcType="TIMESTAMP" property="confirmAt" />
+    <result column="confirm_status" jdbcType="CHAR" property="confirmStatus" />
+    <result column="confirm_comment" jdbcType="VARCHAR" property="confirmComment" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, history_id, section_id, version_no, remark, form_content, submitted_by, submitted_at, 
+    confirm_by, confirm_at, confirm_status, confirm_comment, create_by, create_at, update_by, 
+    update_at
+  </sql>
+</mapper>
