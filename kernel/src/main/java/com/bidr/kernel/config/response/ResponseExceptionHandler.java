@@ -1,9 +1,9 @@
 package com.bidr.kernel.config.response;
 
-import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.err.ErrCodeType;
+import com.bidr.kernel.event.ServiceExceptionEvent;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.JsonUtil;
@@ -25,9 +25,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,8 +63,10 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
     @ResponseBody
     @ExceptionHandler(value = Exception.class)
-    public static ResponseEntity<Response<String>> errorHandler(Exception ex) {
+    public ResponseEntity<Response<String>> errorHandler(Exception ex) {
         log.error("", ex);
+        // 发布异常事件
+        publishExceptionEvent(ex);
         Response<String> res = new Response(new ServiceException(ErrCodeSys.SYS_ERR));
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         return new ResponseEntity<>(res, status);
@@ -69,7 +74,7 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
     @ResponseBody
     @ExceptionHandler(value = NoticeException.class)
-    public static ResponseEntity<Response<Object>> errorHandler(NoticeException ex) {
+    public ResponseEntity<Response<Object>> errorHandler(NoticeException ex) {
         Response<Object> res = new Response<>(ex.getObj(), ex.getMessage());
         HttpStatus status = HttpStatus.OK;
         return new ResponseEntity<>(res, status);
@@ -77,8 +82,10 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
     @ResponseBody
     @ExceptionHandler(value = ServiceException.class)
-    public static ResponseEntity<Response<String>> errorHandler(ServiceException ex) {
+    public ResponseEntity<Response<String>> errorHandler(ServiceException ex) {
         ErrCodeLevel.log(log, ex.getErrCode().getErrLevel(), ex);
+        // 发布异常事件
+        publishExceptionEvent(ex);
         Response<String> res = new Response<>(ex);
         HttpStatus status = STATUS_MAP.getOrDefault(ex.getErrCode().getErrType(), HttpStatus.INTERNAL_SERVER_ERROR);
         return new ResponseEntity<>(res, status);
@@ -86,6 +93,30 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
 
     @ExceptionHandler(ClientAbortException.class)
     public void handleClientAbortException(ClientAbortException e) {
+        // 客户端断开连接，不处理
+    }
+
+    /**
+     * 发布异常事件，供业务模块监听处理
+     */
+    private void publishExceptionEvent(Exception ex) {
+        try {
+            HttpServletRequest request = null;
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                request = attributes.getRequest();
+            }
+
+            if (ex instanceof ServiceException) {
+                applicationContext.publishEvent(new ServiceExceptionEvent((ServiceException) ex, request));
+            } else {
+                // 其他异常包装为 ServiceException 事件
+                ServiceException serviceException = new ServiceException(ex.getMessage(), ex);
+                applicationContext.publishEvent(new ServiceExceptionEvent(serviceException, request));
+            }
+        } catch (Exception e) {
+            log.debug("发布异常事件失败", e);
+        }
     }
 
     @ResponseBody

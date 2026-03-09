@@ -34,7 +34,7 @@ public class ServiceException extends RuntimeException {
     }
 
     public ServiceException(String msg, Exception e) {
-        super(ErrCodeSys.SYS_ERR_MSG.getErrText(msg + "\n" + e.getMessage()));
+        super(ErrCodeSys.SYS_ERR_MSG.getErrText(msg + "\n" + e.getMessage()), e);
         errCode = ErrCodeSys.SYS_ERR_MSG;
     }
 
