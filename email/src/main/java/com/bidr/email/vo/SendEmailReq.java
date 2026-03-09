@@ -25,6 +25,8 @@ public class SendEmailReq {
     private String subject;
     @ApiModelProperty("内容")
     private String content;
+    @ApiModelProperty("是否为HTML内容")
+    private Boolean isHtml = false;
     @ApiModelProperty("附件名称")
     private String attachmentName;
     @ApiModelProperty("附件路径(本地路径或网络地址)")

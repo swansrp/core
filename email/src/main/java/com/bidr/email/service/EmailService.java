@@ -56,8 +56,56 @@ public class EmailService {
         sendEmail(to, null, subject, null, null, null);
     }
 
+    /**
+     * 发送纯文本邮件
+     */
+    public void sendTextEmail(String to, String subject, String text) {
+        sendEmail(to, null, subject, text, null, null, false);
+    }
+
+    /**
+     * 发送HTML邮件
+     */
+    public void sendHtmlEmail(String to, String subject, String htmlContent) {
+        sendEmail(to, null, subject, htmlContent, null, null, true);
+    }
+
+    /**
+     * 发送HTML邮件（带抄送）
+     */
+    public void sendHtmlEmail(String to, List<String> cc, String subject, String htmlContent) {
+        sendEmail(to, cc, subject, htmlContent, null, null, true);
+    }
+
+    /**
+     * 发送HTML邮件（带附件）
+     */
+    public void sendHtmlEmail(String to, String subject, String htmlContent, String attachmentName,
+                              FileSystemResource resource) {
+        sendEmail(to, null, subject, htmlContent, attachmentName, resource, true);
+    }
+
+    /**
+     * 发送HTML邮件（完整参数）
+     */
+    public void sendHtmlEmail(String to, List<String> cc, String subject, String htmlContent, String attachmentName,
+                              FileSystemResource resource) {
+        sendEmail(to, cc, subject, htmlContent, attachmentName, resource, true);
+    }
+
+    /**
+     * 发送邮件（核心方法）
+     *
+     * @param to              收件人
+     * @param cc              抄送列表
+     * @param subject         主题
+     * @param text            内容
+     * @param attachmentName  附件名称
+     * @param resource        附件资源
+     * @param isHtml          是否为HTML内容
+     */
     public void sendEmail(String to, List<String> cc, String subject, String text, String attachmentName,
-                          FileSystemResource resource) {
+                          FileSystemResource resource, boolean isHtml) {
 
         log.debug("sendEmail {}-{}-{}-{}", to, subject, text, attachmentName);
         MimeMessage message = javaMailSender.createMimeMessage();
@@ -67,9 +115,9 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setTo(to);
             if (FuncUtil.isEmpty(text)) {
-                helper.setText("");
+                helper.setText("", false);
             } else {
-                helper.setText(text);
+                helper.setText(text, isHtml);
             }
             if (cc != null) {
                 for (String c : cc) {
@@ -83,6 +131,14 @@ public class EmailService {
         } catch (MessagingException | UnsupportedEncodingException e) {
             log.error("sendEmail", e);
         }
+    }
+
+    /**
+     * 发送邮件（兼容旧接口，默认纯文本）
+     */
+    public void sendEmail(String to, List<String> cc, String subject, String text, String attachmentName,
+                          FileSystemResource resource) {
+        sendEmail(to, cc, subject, text, attachmentName, resource, false);
     }
 
     public void sendEmail(MimeMessage message) {
@@ -107,6 +163,7 @@ public class EmailService {
 
     public void sendEmail(SendEmailReq req) {
         try {
+            boolean isHtml = Boolean.TRUE.equals(req.getIsHtml());
             if (FuncUtil.isNotEmpty(req.getFilePath()) && req.getFilePath().startsWith("http")) {
                 File tempFile = File.createTempFile("tmp", null);
                 InputStream stream;
@@ -121,10 +178,10 @@ public class EmailService {
                 FileUtils.copyInputStreamToFile(stream, tempFile);
                 FileSystemResource fileSystemResource = new FileSystemResource(tempFile.getPath());
                 sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(),
-                        fileSystemResource);
+                        fileSystemResource, isHtml);
                 tempFile.delete();
             } else {
-                sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(), null);
+                sendEmail(req.getTo(), req.getCc(), req.getSubject(), req.getContent(), req.getAttachmentName(), null, isHtml);
             }
         } catch (IOException e) {
             Validator.assertException(e);
