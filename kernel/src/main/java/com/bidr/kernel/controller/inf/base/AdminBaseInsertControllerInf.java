@@ -62,7 +62,7 @@ public interface AdminBaseInsertControllerInf<ENTITY, VO> extends AdminBaseInf<E
         }
     }
 
-    default void insertEntity(VO vo) {
+    default ENTITY insertEntity(VO vo) {
         ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
         if (isAdmin()) {
             adminBeforeAdd(entity);
@@ -75,5 +75,6 @@ public interface AdminBaseInsertControllerInf<ENTITY, VO> extends AdminBaseInf<E
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "新增失败");
         afterAdd(entity);
         afterAdd(entity, vo);
+        return entity;
     }
 }

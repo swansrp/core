@@ -32,7 +32,6 @@ public class ExceptionAlertEmailBuilder {
     private final StringBuilder content = new StringBuilder();
     private ErrCodeLevel errCodeLevel;
     private String severityName;
-    private String severityDescription;
 
     private ExceptionAlertEmailBuilder() {
     }
@@ -45,26 +44,11 @@ public class ExceptionAlertEmailBuilder {
     }
 
     /**
-     * 设置严重级别（字符串形式）
-     */
-    public ExceptionAlertEmailBuilder severity(String severityName, String description) {
-        this.severityName = severityName;
-        this.severityDescription = description;
-        try {
-            this.errCodeLevel = ErrCodeLevel.valueOf(severityName);
-        } catch (Exception e) {
-            this.errCodeLevel = ErrCodeLevel.ERROR;
-        }
-        return this;
-    }
-
-    /**
      * 设置严重级别（枚举形式）
      */
     public ExceptionAlertEmailBuilder severity(ErrCodeLevel level) {
         this.errCodeLevel = level;
         this.severityName = level.name();
-        this.severityDescription = level.name();
         return this;
     }
 

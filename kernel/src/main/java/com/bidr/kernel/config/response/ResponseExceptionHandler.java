@@ -136,19 +136,15 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
         if (!applicationContext.containsBean(responseResultProperty.getFormatBean())) {
-            return returnType.getDeclaringClass().getName().startsWith(basePackage) &&
-                    !responseResultProperty.getClassWhiteList().contains(returnType.getDeclaringClass().getName());
+            return returnType.getDeclaringClass().getName().startsWith(basePackage) && !responseResultProperty.getClassWhiteList().contains(returnType.getDeclaringClass().getName());
         } else {
             return false;
         }
     }
 
     @Override
-    public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
-                                  Class<? extends HttpMessageConverter<?>> selectedConverterType,
-                                  ServerHttpRequest request, ServerHttpResponse response) {
+    public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
         Response<?> res = body instanceof Response ? (Response<?>) body : new Response<>(body);
-        return MappingJackson2HttpMessageConverter.class.isAssignableFrom(
-                selectedConverterType) ? res : JsonUtil.toJson(res, false, false, true);
+        return MappingJackson2HttpMessageConverter.class.isAssignableFrom(selectedConverterType) ? res : JsonUtil.toJson(res, false, false, true);
     }
 }

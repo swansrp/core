@@ -55,8 +55,8 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @RequestMapping(value = "/insert", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
     public void add(@RequestBody VO vo) {
-        insertEntity(vo);
-        Resp.notice("新增成功");
+        ENTITY entity = insertEntity(vo);
+        Resp.notice(entity, "新增成功");
     }
 
     @Override
