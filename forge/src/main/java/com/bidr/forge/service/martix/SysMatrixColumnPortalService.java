@@ -39,16 +39,16 @@ public class SysMatrixColumnPortalService extends BasePortalService<SysMatrixCol
     private ThreadLocal<SysMatrixColumn> beforeUpdateColumn = new ThreadLocal<>();
 
     /**
-     * 新增前处理：处理AUTO_INCREMENT配置
+     * 新增前处理：处理主键生成策略配置
      */
     @Override
     public void beforeAdd(SysMatrixColumn sysMatrixColumn) {
         super.beforeAdd(sysMatrixColumn);
-        handleAutoIncrement(sysMatrixColumn);
+        handleSequenceConfiguration(sysMatrixColumn);
     }
 
     /**
-     * 更新前保存原始数据并处理AUTO_INCREMENT配置
+     * 更新前保存原始数据并处理主键生成策略配置
      */
     @Override
     public void beforeUpdate(SysMatrixColumn sysMatrixColumn) {
@@ -57,43 +57,76 @@ public class SysMatrixColumnPortalService extends BasePortalService<SysMatrixCol
         SysMatrixColumn oldColumn = getRepo().selectById(sysMatrixColumn.getId());
         beforeUpdateColumn.set(oldColumn);
         
-        // 处理AUTO_INCREMENT配置
-        handleAutoIncrement(sysMatrixColumn);
+        // 处理主键生成策略配置
+        handleSequenceConfiguration(sysMatrixColumn);
     }
 
     /**
-     * 处理AUTO_INCREMENT配置
-     * 当sequence或defaultValue为AUTO_INCREMENT时，自动配置为自增型主键
+     * 处理主键生成策略配置
+     * 支持的策略：AUTO_INCREMENT（数据库自增）、UUID（应用层生成）
      *
      * @param sysMatrixColumn 字段配置
      */
-    private void handleAutoIncrement(SysMatrixColumn sysMatrixColumn) {
-        boolean isAutoIncrement = false;
-        String source = null;
+    private void handleSequenceConfiguration(SysMatrixColumn sysMatrixColumn) {
+        String sequence = sysMatrixColumn.getSequence();
         
-        // 优先检查sequence字段
-        if ("AUTO_INCREMENT".equalsIgnoreCase(sysMatrixColumn.getSequence())) {
-            isAutoIncrement = true;
-            source = "sequence";
+        // 处理 AUTO_INCREMENT 策略
+        if ("AUTO_INCREMENT".equalsIgnoreCase(sequence)) {
+            handleAutoIncrement(sysMatrixColumn, "sequence");
+            return;
         }
-        // 如果sequence为空，检查defaultValue字段（兼容旧版本）
-        else if ("AUTO_INCREMENT".equalsIgnoreCase(sysMatrixColumn.getDefaultValue())) {
-            isAutoIncrement = true;
-            source = "defaultValue";
-            // 将AUTO_INCREMENT移动到sequence字段
+        
+        // 兼容旧版本：检查 defaultValue 字段
+        if ("AUTO_INCREMENT".equalsIgnoreCase(sysMatrixColumn.getDefaultValue())) {
+            handleAutoIncrement(sysMatrixColumn, "defaultValue");
+            return;
+        }
+        
+        // 处理 UUID 策略
+        if ("UUID".equalsIgnoreCase(sequence)) {
+            handleUuidPrimaryKey(sysMatrixColumn);
+        }
+    }
+
+    /**
+     * 处理 AUTO_INCREMENT 配置
+     */
+    private void handleAutoIncrement(SysMatrixColumn sysMatrixColumn, String source) {
+        // 如果是从 defaultValue 检测到的，移动到 sequence 字段
+        if ("defaultValue".equals(source)) {
             sysMatrixColumn.setSequence("AUTO_INCREMENT");
             sysMatrixColumn.setDefaultValue(null);
         }
         
-        if (isAutoIncrement) {
-            // 设置为主键
-            sysMatrixColumn.setIsPrimaryKey("1");
-            // 不可为空
-            sysMatrixColumn.setIsNullable("0");
-            
-            log.info("字段 [{}] 从 {} 检测到 AUTO_INCREMENT 配置，自动设置为自增型主键", 
-                    sysMatrixColumn.getColumnName(), source);
+        // 设置为主键
+        sysMatrixColumn.setIsPrimaryKey("1");
+        // 不可为空
+        sysMatrixColumn.setIsNullable("0");
+        
+        log.info("字段 [{}] 从 {} 检测到 AUTO_INCREMENT 配置，自动设置为自增型主键", 
+                sysMatrixColumn.getColumnName(), source);
+    }
+
+    /**
+     * 处理 UUID 主键配置
+     */
+    private void handleUuidPrimaryKey(SysMatrixColumn sysMatrixColumn) {
+        // 设置为主键
+        sysMatrixColumn.setIsPrimaryKey("1");
+        // 不可为空
+        sysMatrixColumn.setIsNullable("0");
+        // 确保字段类型为 VARCHAR
+        if (sysMatrixColumn.getColumnType() == null || 
+            !sysMatrixColumn.getColumnType().toUpperCase().contains("VARCHAR")) {
+            sysMatrixColumn.setColumnType("VARCHAR");
         }
+        // 确保字段长度足够（UUID去掉横线后为32位）
+        if (sysMatrixColumn.getColumnLength() == null || sysMatrixColumn.getColumnLength() < 32) {
+            sysMatrixColumn.setColumnLength(50);
+        }
+        
+        log.info("字段 [{}] 检测到 UUID 配置，自动设置为UUID主键（VARCHAR(50)）", 
+                sysMatrixColumn.getColumnName());
     }
 
     /**

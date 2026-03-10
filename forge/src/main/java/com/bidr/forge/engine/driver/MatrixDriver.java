@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -151,6 +152,10 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
         Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
         Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+        
+        // 处理主键生成策略（UUID等）
+        processPrimaryKeySequence(data, aliasMap, matrixColumns.getColumns());
+        
         // 数据校验
         validateInsertData(data, aliasMap, matrixColumns.getColumns());
 
@@ -167,6 +172,56 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         } finally {
             jdbcConnectService.resetToDefaultDataSource();
         }
+    }
+
+    /**
+     * 处理主键生成策略
+     * 根据 sequence 字段配置自动生成主键值
+     *
+     * @param data     数据Map
+     * @param aliasMap 别名映射
+     * @param columns  字段配置列表
+     */
+    private void processPrimaryKeySequence(Map<String, Object> data, Map<String, String> aliasMap, List<SysMatrixColumn> columns) {
+        for (SysMatrixColumn column : columns) {
+            if (!CommonConst.YES.equals(column.getIsPrimaryKey())) {
+                continue;
+            }
+
+            String columnName = column.getColumnName();
+            String voFieldName = findVoColumnName(columnName, aliasMap);
+            
+            // 如果主键已有值，跳过
+            if (data.containsKey(voFieldName) && FuncUtil.isNotEmpty(data.get(voFieldName))) {
+                continue;
+            }
+
+            String sequence = column.getSequence();
+            if (FuncUtil.isEmpty(sequence)) {
+                continue;
+            }
+
+            // 根据 sequence 类型生成主键值
+            if ("UUID".equalsIgnoreCase(sequence)) {
+                String uuid = UUID.randomUUID().toString().replace("-", "");
+                data.put(voFieldName, uuid);
+                log.debug("为字段 [{}] 生成UUID主键: {}", columnName, uuid);
+            }
+            // AUTO_INCREMENT 由数据库处理，无需应用层生成
+        }
+    }
+
+    /**
+     * 根据数据库列名查找VO字段名
+     */
+    @Override
+    public String findVoColumnName(String columnName, Map<String, String> aliasMap) {
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            if (entry.getValue().equals(columnName)) {
+                return entry.getKey();
+            }
+        }
+        return columnName;
     }
 
     @Override

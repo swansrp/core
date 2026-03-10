@@ -27,7 +27,7 @@ public class FormDataHistoryVO extends BaseVO {
      * 表单 ID
      */
     @ApiModelProperty(value = "表单 ID")
-    private Long formId;
+    private String formId;
 
     /**
      * 批号

@@ -1111,14 +1111,7 @@ COPY app.jar app.jar
 
 EXPOSE ${SERVER_PORT}
 
-ENTRYPOINT ["java",
-  "-Duser.timezone=Asia/Shanghai",
-  "-Xms512m",
-  "-Xmx1024m",
-  "-XX:+HeapDumpOnOutOfMemoryError",
-  "-XX:HeapDumpPath=/app",
-  "-jar", "/app/app.jar"
-]
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Shanghai", "-Xms512m", "-Xmx1024m", "-XX:+HeapDumpOnOutOfMemoryError", "-XX:HeapDumpPath=/app", "-jar", "/app/app.jar"]
 EOF
 
 # 生成 docker-compose.yml
@@ -1298,8 +1291,8 @@ upload_docker(){
     scp ${basepath}/${DOCKER_START_SCRIPT} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/
     # 上传Dockerfile
     scp ${basepath}/Dockerfile ${ServerSSH[$1]}:${ServerTargetPath[$1]}/
-    # 确保脚本有执行权限
-    ssh ${ServerSSH[$1]} "chmod +x ${ServerTargetPath[$1]}/${DOCKER_START_SCRIPT}"
+    # 转换换行符并确保脚本有执行权限
+    ssh ${ServerSSH[$1]} "sed -i 's/\r$//' ${ServerTargetPath[$1]}/${DOCKER_START_SCRIPT} && chmod +x ${ServerTargetPath[$1]}/${DOCKER_START_SCRIPT}"
 	return 0
 }
 enter() {

@@ -45,4 +45,7 @@ public class SysMatrixVO extends BaseVO {
     @PortalOrderField
     @ApiModelProperty(value = "排序")
     private Integer sort;
+
+    @ApiModelProperty(value = "是否自增")
+    private String autoIncrement;
 }

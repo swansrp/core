@@ -35,6 +35,7 @@ public class FormSchemaAttributeSchema extends BaseMybatisSchema<FormSchemaAttri
                 "  `position_y` int(11) DEFAULT NULL COMMENT '纵轴坐标',\n" +
                 "  `validation_rule` longtext COMMENT '正则表达式',\n" +
                 "  `visibility_condition` longtext COMMENT '显示条件',\n" +
+                "  `matrix_column_id` bigint(20) DEFAULT NULL COMMENT '矩阵列 id',\n" +
                 "  `sort` int(11) DEFAULT NULL COMMENT '顺序',\n" +
                 "  `create_by` varchar(50) DEFAULT NULL COMMENT '创建者',\n" +
                 "  `create_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',\n" +

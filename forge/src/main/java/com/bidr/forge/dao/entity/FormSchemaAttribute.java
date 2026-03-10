@@ -172,6 +172,10 @@ public class FormSchemaAttribute {
     @ApiModelProperty(value = "显示条件")
     private String visibilityCondition;
 
+    @TableField(value = "matrix_column_id")
+    @ApiModelProperty(value = "矩阵列id")
+    private Long matrixColumnId;
+
     /**
      * 顺序
      */

@@ -21,7 +21,7 @@ public class FormData {
     /**
      * 主键 ID
      */
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableId(value = "id", type = IdType.ASSIGN_UUID)
     @ApiModelProperty(value = "主键 ID")
     private String id;
 

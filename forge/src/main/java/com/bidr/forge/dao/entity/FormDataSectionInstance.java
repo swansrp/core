@@ -21,7 +21,7 @@ public class FormDataSectionInstance {
     /**
      * 表单实例 ID
      */
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableId(value = "id", type = IdType.ASSIGN_UUID)
     @ApiModelProperty(value = "表单实例 ID")
     private String id;
 

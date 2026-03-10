@@ -24,6 +24,7 @@
     <result column="position_y" jdbcType="INTEGER" property="positionY" />
     <result column="validation_rule" jdbcType="LONGVARCHAR" property="validationRule" />
     <result column="visibility_condition" jdbcType="LONGVARCHAR" property="visibilityCondition" />
+    <result column="matrix_column_id" jdbcType="BIGINT" property="matrixColumnId" />
     <result column="sort" jdbcType="INTEGER" property="sort" />
     <result column="create_by" jdbcType="VARCHAR" property="createBy" />
     <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />

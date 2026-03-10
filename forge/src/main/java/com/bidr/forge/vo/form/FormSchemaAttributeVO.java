@@ -158,4 +158,10 @@ public class FormSchemaAttributeVO extends BaseVO {
     @PortalOrderField
     @ApiModelProperty("排序")
     private Integer sort;
+
+    /**
+     * 矩阵列 ID
+     */
+    @ApiModelProperty(value = "矩阵列 ID")
+    private Long matrixColumnId;
 }

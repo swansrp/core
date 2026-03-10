@@ -136,12 +136,16 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
             if (FuncUtil.isNotEmpty(columnName) && columnMap.containsKey(columnName)) {
                 SysMatrixColumn column = columnMap.get(columnName);
 
-                // 跳过自增主键（除非是序列主键）
+                // 跳过自增主键（数据库自动生成）
+                // 条件：主键 && 数字类型 && sequence为空（无特殊生成策略）
                 if (CommonConst.YES.equals(column.getIsPrimaryKey())
                         && isNumericType(column.getColumnType())
                         && FuncUtil.isEmpty(column.getSequence())) {
                     continue;
                 }
+
+                // UUID主键或其他有 sequence 配置的主键，需要包含在 INSERT 中
+                // （UUID值已在 MatrixDriver.insert() 中生成）
 
                 String paramKey = "param_" + columnName;
                 columnNames.add("`" + columnName + "`");

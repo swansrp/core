@@ -27,4 +27,8 @@ public class FormDataHistoryPortalService extends BasePortalService<FormDataHist
         entity.setStatus(ApprovalDict.UNKNOWN.getValue());
     }
 
+    @Override
+    public void afterAdd(FormDataHistory formDataHistory) {
+        super.afterAdd(formDataHistory);
+    }
 }

@@ -15,4 +15,19 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class FormDataPortalService extends BasePortalService<FormData, FormDataVO> {
 
+    private final FormDataMatrixSyncService formDataMatrixSyncService;
+
+    @Override
+    public void afterAdd(FormData formData) {
+        super.afterAdd(formData);
+        // 同步到动态Matrix表
+        formDataMatrixSyncService.syncToMatrix(formData);
+    }
+
+    @Override
+    public void afterUpdate(FormData formData) {
+        super.afterUpdate(formData);
+        // 同步到动态Matrix表
+        formDataMatrixSyncService.syncToMatrix(formData);
+    }
 }

@@ -18,6 +18,7 @@ import com.bidr.forge.vo.matrix.SysMatrixVO;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import lombok.RequiredArgsConstructor;
@@ -78,23 +79,32 @@ public class SysMatrixPortalService extends BasePortalService<SysMatrix, SysMatr
      * 新增矩阵后，自动创建ID主键字段
      */
     @Override
-    public void afterAdd(SysMatrix sysMatrix) {
+    public void afterAdd(SysMatrix sysMatrix, SysMatrixVO vo) {
         super.afterAdd(sysMatrix);
-
         // 自动创建ID主键字段
         SysMatrixColumn idColumn = new SysMatrixColumn();
         idColumn.setMatrixId(sysMatrix.getId());
         idColumn.setColumnName("id");
         idColumn.setColumnComment("主键ID");
-        idColumn.setColumnType("BIGINT");
-        idColumn.setColumnLength(20);
-        idColumn.setFieldType(PortalFieldDict.NUMBER.getValue());
         idColumn.setIsNullable(CommonConst.NO);
         idColumn.setIsPrimaryKey(CommonConst.YES);
         idColumn.setIsIndex(CommonConst.NO);
         idColumn.setIsUnique(CommonConst.NO);
-        idColumn.setSequence("AUTO_INCREMENT");  // 设置自增序列
         idColumn.setSort(0);
+        if (StringUtil.convertSwitch(vo.getAutoIncrement())) {
+            idColumn.setColumnType("BIGINT");
+            idColumn.setColumnLength(20);
+            idColumn.setFieldType(PortalFieldDict.NUMBER.getValue());
+            // 设置自增序列
+            idColumn.setSequence("AUTO_INCREMENT");
+
+        } else {
+            idColumn.setColumnType("VARCHAR");
+            idColumn.setColumnLength(50);
+            idColumn.setFieldType(PortalFieldDict.STRING.getValue());
+            // 设置自增序列
+            idColumn.setSequence("UUID");
+        }
 
         sysMatrixColumnService.save(idColumn);
     }
