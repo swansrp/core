@@ -54,14 +54,10 @@ public @interface ExceptionAlert {
     ErrCodeLevel severity() default ErrCodeLevel.ERROR;
 
     /**
-     * 是否异步发送告警
-     * 建议在生产环境开启，避免告警发送阻塞业务线程
+     * 堆栈信息最大深度
+     * 默认值 -2 表示使用系统配置（EmailParam.EXCEPTION_NOTIFY_STACK_DEPTH）
+     * 设置为 -1 表示不限制
+     * 设置为其他正数表示具体行数
      */
-    boolean async() default true;
-
-    /**
-     * 堆栈信息最大深度，默认50行
-     * 设置为-1表示不限制
-     */
-    int stackTraceDepth() default 50;
+    int stackTraceDepth() default -2;
 }

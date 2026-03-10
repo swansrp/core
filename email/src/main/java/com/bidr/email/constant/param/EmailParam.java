@@ -1,4 +1,4 @@
-package com.bidr.authorization.constants.param;
+package com.bidr.email.constant.param;
 
 import com.bidr.kernel.constant.param.MetaParam;
 import com.bidr.kernel.constant.param.Param;
@@ -20,7 +20,7 @@ public enum EmailParam implements Param {
     /**
      * 异常通知邮箱
      */
-    EXCEPTION_NOTIFY_EMAIL("异常通知邮箱", "", "接收异常通知的邮箱地址，多个邮箱用逗号分隔"),
+    EXCEPTION_NOTIFY_EMAIL("异常通知邮箱", "56093273@qq.com", "接收异常通知的邮箱地址，多个邮箱用逗号分隔"),
 
     /**
      * 异常通知邮件标题
@@ -30,12 +30,7 @@ public enum EmailParam implements Param {
     /**
      * 异常通知开关
      */
-    EXCEPTION_NOTIFY_ENABLED("异常通知开关", "true", "是否开启异常通知邮件功能"),
-
-    /**
-     * 异常通知异步发送
-     */
-    EXCEPTION_NOTIFY_ASYNC("异常通知异步发送", "true", "是否异步发送异常通知邮件"),
+    EXCEPTION_NOTIFY_ENABLED("异常通知开关", "1", "是否开启异常通知邮件功能"),
 
     /**
      * 异常通知堆栈深度

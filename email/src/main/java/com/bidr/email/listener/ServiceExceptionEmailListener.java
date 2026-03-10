@@ -1,6 +1,6 @@
-package com.bidr.authorization.annotation.alert;
+package com.bidr.email.listener;
 
-import com.bidr.authorization.constants.param.EmailParam;
+import com.bidr.email.constant.param.EmailParam;
 import com.bidr.email.service.EmailService;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.event.ServiceExceptionEvent;
@@ -8,15 +8,14 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
 /**
- * Title: ExceptionAlertListener
- * Description: 异常告警监听器，监听 ServiceExceptionEvent 并发送告警通知
+ * Title: ServiceExceptionEmailListener
+ * Description: 服务异常邮件监听器，监听全局 ServiceExceptionEvent（来自 ResponseExceptionHandler）并发送邮件告警
  * Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
@@ -24,16 +23,13 @@ import javax.annotation.Resource;
  */
 @Slf4j
 @Component
-public class ExceptionAlertListener {
+public class ServiceExceptionEmailListener {
 
     @Resource
     private SysConfigCacheService sysConfigCacheService;
 
     @Resource
     private EmailService emailService;
-
-    @Resource
-    private TaskExecutor taskExecutor;
 
     /**
      * 监听服务异常事件，发送告警邮件
@@ -42,6 +38,11 @@ public class ExceptionAlertListener {
     @Async
     @EventListener
     public void onServiceException(ServiceExceptionEvent event) {
+        // 检查是否开启异常通知
+        if (!isNotifyEnabled()) {
+            return;
+        }
+
         // 检查是否达到配置的最低告警级别
         if (!shouldNotify(event)) {
             return;
@@ -52,6 +53,29 @@ public class ExceptionAlertListener {
             log.info("异常告警邮件已发送，错误码: {}, 级别: {}", event.getErrCode().getErrCode(), event.getErrLevel().name());
         } catch (Exception e) {
             log.error("发送异常告警邮件失败", e);
+        }
+    }
+
+    /**
+     * 检查是否开启异常通知
+     */
+    private boolean isNotifyEnabled() {
+        String enabled = sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_ENABLED);
+        return FuncUtil.isEmpty(enabled) || "true".equalsIgnoreCase(enabled) || "1".equals(enabled);
+    }
+
+    /**
+     * 获取堆栈深度配置
+     */
+    private int getStackDepth() {
+        String depthStr = sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_STACK_DEPTH);
+        if (FuncUtil.isEmpty(depthStr)) {
+            return 50;
+        }
+        try {
+            return Integer.parseInt(depthStr);
+        } catch (NumberFormatException e) {
+            return 50;
         }
     }
 
@@ -104,13 +128,8 @@ public class ExceptionAlertListener {
         String subject = buildEmailSubject(event);
         String content = buildEmailContent(event);
 
-        taskExecutor.execute(() -> {
-            try {
-                emailService.sendHtmlEmail(notifyEmails, subject, content);
-            } catch (Exception e) {
-                log.error("异步发送邮件告警失败", e);
-            }
-        });
+        emailService.sendHtmlEmail(notifyEmails, subject, content);
+        log.info("邮件告警已发送至: {}", notifyEmails);
     }
 
     /**
@@ -135,11 +154,15 @@ public class ExceptionAlertListener {
     private String buildEmailContent(ServiceExceptionEvent event) {
         ExceptionAlertEmailBuilder builder = ExceptionAlertEmailBuilder.create();
 
-        builder.appendHeader().severity(event.getErrLevel()).appendTitle().appendOccurredTime(event.getOccurredTime()).appendErrCode(event.getErrCode().getErrCode(), event.getErrCode().name(), event.getErrorMessage()).endSection();
+        builder.appendHeader()
+                .severity(event.getErrLevel())
+                .appendTitle()
+                .appendOccurredTime(event.getOccurredTime())
+                .appendErrCode(event.getErrCode().getErrCode(), event.getErrCode().name(), event.getErrorMessage())
+                .endSection();
 
-        builder.appendUserInfo();
         builder.appendRequestInfo(event.getRequestUrl(), event.getRequestMethod(), event.getClientIp(), event.getQueryString());
-        builder.appendStackTrace(event.getStackTrace(), 50);
+        builder.appendStackTrace(event.getStackTrace(), getStackDepth());
         builder.appendFooter();
 
         return builder.build();

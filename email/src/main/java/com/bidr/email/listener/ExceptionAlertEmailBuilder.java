@@ -1,15 +1,9 @@
-package com.bidr.authorization.annotation.alert;
+package com.bidr.email.listener;
 
-import com.bidr.authorization.bo.account.AccountInfo;
-import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
@@ -61,7 +55,8 @@ public class ExceptionAlertEmailBuilder {
         content.append("<html><head><style>");
         content.append("body{font-family:Arial,sans-serif;line-height:1.6;color:#333;max-width:800px;margin:0 auto;}");
         // 标题样式
-        content.append("h3{color:").append(style.titleColor).append(";border-bottom:2px solid ").append(style.borderColor).append(";padding-bottom:10px;margin-bottom:20px;}");
+        content.append("h3{color:").append(style.titleColor).append(";border-bottom:2px solid ").append(style.borderColor).append(";padding-bottom:10px;" +
+                "margin-bottom:20px;}");
         if (style.titleBold) {
             content.append("h3{font-weight:bold;}");
         }
@@ -132,59 +127,39 @@ public class ExceptionAlertEmailBuilder {
     }
 
     /**
-     * 添加用户信息
+     * 添加用户信息（从参数获取）
      */
-    public ExceptionAlertEmailBuilder appendUserInfo() {
-        try {
-            AccountInfo accountInfo = AccountContext.get();
-            if (accountInfo != null) {
-                content.append("<div class='section'><p><span class='label'>用户信息：</span></p>");
-                if (accountInfo.getUserId() != null) {
-                    content.append("<p>用户ID：").append(accountInfo.getUserId()).append("</p>");
-                }
-                if (FuncUtil.isNotEmpty(accountInfo.getUserName())) {
-                    content.append("<p>用户名：").append(escapeHtml(accountInfo.getUserName())).append("</p>");
-                }
-                if (FuncUtil.isNotEmpty(accountInfo.getName())) {
-                    content.append("<p>姓名：").append(escapeHtml(accountInfo.getName())).append("</p>");
-                }
-                if (FuncUtil.isNotEmpty(accountInfo.getCustomerNumber())) {
-                    content.append("<p>客户编号：").append(escapeHtml(accountInfo.getCustomerNumber())).append("</p>");
-                }
-                if (FuncUtil.isNotEmpty(accountInfo.getEmail())) {
-                    content.append("<p>邮箱：").append(escapeHtml(accountInfo.getEmail())).append("</p>");
-                }
-                if (FuncUtil.isNotEmpty(accountInfo.getPhoneNumber())) {
-                    content.append("<p>手机号：").append(escapeHtml(accountInfo.getPhoneNumber())).append("</p>");
-                }
-                content.append("</div>");
-            }
-        } catch (Exception e) {
-            log.debug("获取用户信息失败", e);
+    public ExceptionAlertEmailBuilder appendUserInfo(Long userId, String userName, String name,
+                                                     String customerNumber, String email, String phoneNumber) {
+        boolean hasInfo = userId != null
+                || FuncUtil.isNotEmpty(userName)
+                || FuncUtil.isNotEmpty(name)
+                || FuncUtil.isNotEmpty(customerNumber)
+                || FuncUtil.isNotEmpty(email)
+                || FuncUtil.isNotEmpty(phoneNumber);
+        if (!hasInfo) {
+            return this;
         }
-        return this;
-    }
-
-    /**
-     * 添加请求信息（从当前上下文获取）
-     */
-    public ExceptionAlertEmailBuilder appendRequestInfo() {
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                content.append("<div class='section'><p><span class='label'>请求信息：</span></p>");
-                content.append("<p>请求URL：").append(escapeHtml(request.getRequestURL().toString())).append("</p>");
-                content.append("<p>请求方法：").append(request.getMethod()).append("</p>");
-                content.append("<p>客户端IP：").append(escapeHtml(HttpUtil.getRemoteIp(request))).append("</p>");
-                if (FuncUtil.isNotEmpty(request.getQueryString())) {
-                    content.append("<p>查询参数：").append(escapeHtml(request.getQueryString())).append("</p>");
-                }
-                content.append("</div>");
-            }
-        } catch (Exception e) {
-            log.debug("获取请求信息失败", e);
+        content.append("<div class='section'><p><span class='label'>用户信息：</span></p>");
+        if (userId != null) {
+            content.append("<p>用户ID：").append(userId).append("</p>");
         }
+        if (FuncUtil.isNotEmpty(userName)) {
+            content.append("<p>用户名：").append(escapeHtml(userName)).append("</p>");
+        }
+        if (FuncUtil.isNotEmpty(name)) {
+            content.append("<p>姓名：").append(escapeHtml(name)).append("</p>");
+        }
+        if (FuncUtil.isNotEmpty(customerNumber)) {
+            content.append("<p>客户编号：").append(escapeHtml(customerNumber)).append("</p>");
+        }
+        if (FuncUtil.isNotEmpty(email)) {
+            content.append("<p>邮箱：").append(escapeHtml(email)).append("</p>");
+        }
+        if (FuncUtil.isNotEmpty(phoneNumber)) {
+            content.append("<p>手机号：").append(escapeHtml(phoneNumber)).append("</p>");
+        }
+        content.append("</div>");
         return this;
     }
 
@@ -244,11 +219,20 @@ public class ExceptionAlertEmailBuilder {
     }
 
     /**
-     * 添加堆栈信息（字符串形式）
+     * 添加堆栈信息（字符串形式，带行数限制）
      */
     public ExceptionAlertEmailBuilder appendStackTrace(String stackTrace, int maxLines) {
         content.append("<div class='section'><p><span class='label'>堆栈信息：</span></p>");
         content.append("<pre>").append(escapeHtml(limitStackTrace(stackTrace, maxLines))).append("</pre></div>");
+        return this;
+    }
+
+    /**
+     * 添加堆栈信息（字符串形式，已处理行数限制）
+     */
+    public ExceptionAlertEmailBuilder appendStackTrace(String stackTrace) {
+        content.append("<div class='section'><p><span class='label'>堆栈信息：</span></p>");
+        content.append("<pre>").append(escapeHtml(stackTrace)).append("</pre></div>");
         return this;
     }
 

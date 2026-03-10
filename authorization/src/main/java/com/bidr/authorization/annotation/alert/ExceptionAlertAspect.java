@@ -1,9 +1,12 @@
 package com.bidr.authorization.annotation.alert;
 
-import com.bidr.authorization.constants.param.EmailParam;
-import com.bidr.email.service.EmailService;
+import com.bidr.authorization.bo.account.AccountInfo;
+import com.bidr.authorization.holder.AccountContext;
+import com.bidr.email.constant.param.EmailParam;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
+import com.bidr.kernel.event.ExceptionAlertEvent;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
@@ -11,12 +14,16 @@ import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.core.task.TaskExecutor;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 
 /**
  * Title: ExceptionAlertAspect
@@ -32,13 +39,10 @@ import java.time.LocalDateTime;
 public class ExceptionAlertAspect {
 
     @Resource
+    private ApplicationEventPublisher eventPublisher;
+
+    @Resource
     private SysConfigCacheService sysConfigCacheService;
-
-    @Resource
-    private EmailService emailService;
-
-    @Resource
-    private TaskExecutor taskExecutor;
 
     @Pointcut("@annotation(com.bidr.authorization.annotation.alert.ExceptionAlert)")
     public void exceptionAlert() {
@@ -47,112 +51,121 @@ public class ExceptionAlertAspect {
     @AfterThrowing(pointcut = "exceptionAlert() && @annotation(alert)", throwing = "e")
     public void afterThrowing(JoinPoint joinPoint, ExceptionAlert alert, Throwable e) {
         try {
-            // 发送邮件告警
-            sendEmailAlert(joinPoint, alert, e);
+            // 构建并发布异常告警事件
+            ExceptionAlertEvent event = buildExceptionAlertEvent(joinPoint, alert, e);
+            eventPublisher.publishEvent(event);
 
-            // TODO: 根据严重级别扩展其他告警方式
-            // if (alert.severity() == ErrCodeLevel.FATAL) {
-            //     sendSmsAlert(...);
-            //     sendDingTalkAlert(...);
-            // }
-
-            log.info("异常告警已发送，严重级别: {}", alert.severity().name());
+            log.info("异常告警事件已发布，严重级别: {}", alert.severity().name());
         } catch (Exception ex) {
-            log.error("发送异常告警失败", ex);
+            log.error("发布异常告警事件失败", ex);
         }
     }
 
     /**
-     * 发送邮件告警
+     * 构建异常告警事件
      */
-    private void sendEmailAlert(JoinPoint joinPoint, ExceptionAlert alert, Throwable e) {
-        String notifyEmails = getNotifyEmails(alert);
-        if (FuncUtil.isEmpty(notifyEmails)) {
-            log.warn("异常告警邮箱未配置，跳过发送邮件告警");
-            return;
-        }
-
-        String subject = buildEmailSubject(alert);
-        String content = buildEmailContent(joinPoint, alert, e);
-
-        if (alert.async()) {
-            sendEmailAsync(notifyEmails, subject, content);
-        } else {
-            emailService.sendHtmlEmail(notifyEmails, subject, content);
-        }
-        log.info("邮件告警已发送至: {}", notifyEmails);
-    }
-
-    /**
-     * 获取通知邮箱列表
-     * 优先使用注解中指定的邮箱，否则使用系统默认配置
-     */
-    private String getNotifyEmails(ExceptionAlert alert) {
-        String emails = alert.notifyEmails();
-        if (FuncUtil.isNotEmpty(emails)) {
-            return emails;
-        }
-        return sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_EMAIL);
-    }
-
-    /**
-     * 构建邮件主题
-     */
-    private String buildEmailSubject(ExceptionAlert alert) {
-        String baseSubject = sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_EMAIL_SUBJECT);
-        String severityPrefix = "[" + alert.severity().name() + "]";
-        return severityPrefix + baseSubject;
-    }
-
-    /**
-     * 异步发送邮件
-     */
-    public void sendEmailAsync(String to, String subject, String content) {
-        taskExecutor.execute(() -> {
-            try {
-                emailService.sendHtmlEmail(to, subject, content);
-            } catch (Exception e) {
-                log.error("异步发送邮件告警失败", e);
-            }
-        });
-    }
-
-    /**
-     * 构建邮件内容
-     */
-    private String buildEmailContent(JoinPoint joinPoint, ExceptionAlert alert, Throwable e) {
+    private ExceptionAlertEvent buildExceptionAlertEvent(JoinPoint joinPoint, ExceptionAlert alert, Throwable e) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         String className = joinPoint.getTarget().getClass().getName();
         String methodName = method.getName();
 
-        ExceptionAlertEmailBuilder builder = ExceptionAlertEmailBuilder.create();
+        // 获取堆栈深度：注解配置优先，-2 表示使用系统配置
+        int stackTraceDepth = alert.stackTraceDepth();
+        if (stackTraceDepth == -2) {
+            stackTraceDepth = getStackDepthFromConfig();
+        }
 
-        builder.appendHeader()
+        ExceptionAlertEvent.Builder builder = new ExceptionAlertEvent.Builder()
+                .source(this)
+                .description(alert.value())
                 .severity(alert.severity())
-                .appendTitle()
-                .appendOccurredTime(LocalDateTime.now())
-                .appendDescription(alert.value())
-                .endSection();
+                .throwable(e)
+                .stackTrace(getStackTraceString(e))
+                .stackTraceDepth(stackTraceDepth)
+                .className(className)
+                .methodName(methodName)
+                .includeArgs(alert.includeArgs())
+                .includeStackTrace(alert.includeStackTrace())
+                .notifyEmails(alert.notifyEmails());
 
+        // 添加方法参数
+        if (alert.includeArgs()) {
+            builder.args(joinPoint.getArgs());
+        }
+
+        // 添加用户信息
         if (alert.includeUserInfo()) {
-            builder.appendUserInfo();
+            appendUserInfo(builder);
         }
 
+        // 添加请求信息
         if (alert.includeRequestInfo()) {
-            builder.appendRequestInfo();
+            appendRequestInfo(builder);
         }
-
-        builder.appendMethodInfo(className, methodName, alert.includeArgs() ? joinPoint.getArgs() : null);
-
-        builder.appendExceptionInfo(e.getClass().getName(), e.getMessage());
-
-        if (alert.includeStackTrace()) {
-            builder.appendStackTrace(e, alert.stackTraceDepth());
-        }
-
-        builder.appendFooter();
 
         return builder.build();
+    }
+
+    /**
+     * 添加用户信息
+     */
+    private void appendUserInfo(ExceptionAlertEvent.Builder builder) {
+        try {
+            AccountInfo accountInfo = AccountContext.get();
+            if (accountInfo != null) {
+                builder.userId(accountInfo.getUserId())
+                        .userName(accountInfo.getUserName())
+                        .name(accountInfo.getName())
+                        .customerNumber(accountInfo.getCustomerNumber())
+                        .email(accountInfo.getEmail())
+                        .phoneNumber(accountInfo.getPhoneNumber());
+            }
+        } catch (Exception e) {
+            log.debug("获取用户信息失败", e);
+        }
+    }
+
+    /**
+     * 添加请求信息
+     */
+    private void appendRequestInfo(ExceptionAlertEvent.Builder builder) {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                builder.requestUrl(request.getRequestURL().toString())
+                        .requestMethod(request.getMethod())
+                        .clientIp(HttpUtil.getRemoteIp(request))
+                        .queryString(request.getQueryString());
+            }
+        } catch (Exception e) {
+            log.debug("获取请求信息失败", e);
+        }
+    }
+
+    /**
+     * 获取异常堆栈信息字符串
+     */
+    private String getStackTraceString(Throwable e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        return sw.toString();
+    }
+
+    /**
+     * 从系统配置获取堆栈深度
+     */
+    private int getStackDepthFromConfig() {
+        String depthStr = sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_STACK_DEPTH);
+        if (FuncUtil.isEmpty(depthStr)) {
+            return 50;
+        }
+        try {
+            return Integer.parseInt(depthStr);
+        } catch (NumberFormatException e) {
+            return 50;
+        }
     }
 }
