@@ -33,6 +33,13 @@ public class FormSchema {
     private String pid;
 
     /**
+     * 编码
+     */
+    @TableField(value = "code")
+    @ApiModelProperty(value = "编码")
+    private String code;
+
+    /**
      * 名称
      */
     @TableField(value = "title")

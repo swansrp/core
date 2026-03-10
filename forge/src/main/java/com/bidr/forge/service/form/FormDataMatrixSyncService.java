@@ -8,7 +8,6 @@ import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.FormSchemaAttributeService;
 import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.dao.repository.SysMatrixService;
-import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,7 @@ import java.util.UUID;
  * FormData同步到动态Matrix表服务
  * 当FormData创建或更新时，如果关联的FormSchemaAttribute有matrixColumnId，
  * 则将数据同步到对应的动态Matrix表中
- *
+ * <p>
  * 动态表结构说明：
  * - 主键：id (UUID类型)
  * - 关联字段：history_id (用于定位记录)
@@ -79,6 +78,7 @@ public class FormDataMatrixSyncService {
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("value", formData.getValue());
         parameters.put("historyId", formData.getHistoryId());
+        parameters.put("sectionInstanceId", formData.getSectionInstanceId());
 
         try {
             // 切换数据源
@@ -86,11 +86,11 @@ public class FormDataMatrixSyncService {
                 jdbcConnectService.switchDataSource(dataSource);
             }
 
-            // 检查记录是否存在（通过 history_id 定位）
-            boolean recordExists = checkRecordExists(tableName, formData.getHistoryId());
+            // 检查记录是否存在（通过 history_id 和 section_instance_id 联合定位）
+            boolean recordExists = checkRecordExists(tableName, formData.getHistoryId(), formData.getSectionInstanceId());
 
             if (recordExists) {
-                // 更新：通过 history_id 定位记录，更新指定字段
+                // 更新：通过 history_id 和 section_instance_id 联合定位记录，更新指定字段
                 String updateSql = buildUpdateSql(tableName, columnName);
                 int affected = jdbcConnectService.update(updateSql, parameters);
                 log.debug("同步FormData [{}] 到Matrix [{}] 更新成功，影响行数: {}", formData.getId(), tableName, affected);
@@ -112,13 +112,14 @@ public class FormDataMatrixSyncService {
 
     /**
      * 检查动态表中是否存在对应记录
-     * 通过 history_id 定位记录
+     * 通过 history_id 和 section_instance_id 联合定位记录
      */
-    private boolean checkRecordExists(String tableName, String historyId) {
-        String sql = "SELECT COUNT(*) FROM `" + tableName + "` WHERE `history_id` = :historyId";
+    private boolean checkRecordExists(String tableName, String historyId, String sectionInstanceId) {
+        String sql = "SELECT COUNT(*) FROM `" + tableName + "` WHERE `history_id` = :historyId AND `section_instance_id` = :sectionInstanceId";
 
         Map<String, Object> params = new HashMap<>();
         params.put("historyId", historyId);
+        params.put("sectionInstanceId", sectionInstanceId);
 
         Integer count = jdbcConnectService.queryForObject(sql, params, Integer.class);
         return count != null && count > 0;
@@ -126,17 +127,17 @@ public class FormDataMatrixSyncService {
 
     /**
      * 构建更新SQL
-     * 通过 history_id 定位记录，更新指定字段
+     * 通过 history_id 和 section_instance_id 联合定位记录，更新指定字段
      */
     private String buildUpdateSql(String tableName, String columnName) {
-        return "UPDATE `" + tableName + "` SET `" + columnName + "` = :value WHERE `history_id` = :historyId";
+        return "UPDATE `" + tableName + "` SET `" + columnName + "` = :value WHERE `history_id` = :historyId AND `section_instance_id` = :sectionInstanceId";
     }
 
     /**
      * 构建插入SQL
-     * 生成UUID主键，设置 history_id 和目标字段
+     * 生成UUID主键，设置 history_id、section_instance_id 和目标字段
      */
     private String buildInsertSql(String tableName, String columnName) {
-        return "INSERT INTO `" + tableName + "` (`id`, `history_id`, `" + columnName + "`) VALUES (:id, :historyId, :value)";
+        return "INSERT INTO `" + tableName + "` (`id`, `history_id`, `section_instance_id`, `" + columnName + "`) VALUES (:id, :historyId, :sectionInstanceId, :value)";
     }
 }

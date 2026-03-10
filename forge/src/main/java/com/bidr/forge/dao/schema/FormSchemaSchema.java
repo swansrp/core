@@ -15,6 +15,7 @@ public class FormSchemaSchema extends BaseMybatisSchema<FormSchema> {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `form_schema` (\n" +
                 "  `id` varchar(50) NOT NULL COMMENT 'id',\n" +
                 "  `pid` varchar(50) DEFAULT NULL COMMENT '父 id',\n" +
+                "  `code` varchar(50) NOT NULL COMMENT '编码',\n" +
                 "  `title` varchar(50) NOT NULL COMMENT '名称',\n" +
                 "  `description` varchar(50) DEFAULT NULL COMMENT '描述',\n" +
                 "  `status` varchar(20) DEFAULT 'published' COMMENT '状态: draft/published/archived',\n" +
@@ -26,6 +27,7 @@ public class FormSchemaSchema extends BaseMybatisSchema<FormSchema> {
                 "  `valid` char(1) DEFAULT '1' COMMENT '有效性',\n" +
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
                 "  KEY `pid` (`pid`) USING BTREE\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='表单';");
+                "  KEY `code` (`code`) USING BTREE\n" +
+                ") COMMENT='表单';");
     }
 }
