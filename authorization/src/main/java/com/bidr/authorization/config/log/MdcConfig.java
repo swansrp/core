@@ -41,5 +41,6 @@ public class MdcConfig {
         MDC.remove(TOTAL_TIME);
         MDC.remove(METHOD);
         MDC.remove(STATUS);
+        MDC.remove(LOG_SILENT);
     }
 }

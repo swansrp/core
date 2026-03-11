@@ -225,7 +225,8 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
     protected void subAppend(ILoggingEvent event, Connection connection,
                              PreparedStatement insertStatement) throws Throwable {
         if (event.getMDCPropertyMap().get(LOG_SILENT) != null) {
-            throw new Exception();
+            // 静默日志，跳过写入
+            return;
         }
         bindLoggingEventWithInsertStatement(insertStatement, event);
         // This is expensive... should we do it every time?

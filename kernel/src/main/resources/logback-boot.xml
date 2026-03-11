@@ -80,8 +80,14 @@
     </appender>
 
     <appender name="ASYNC-MYSQL" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 设置为0表示不丢弃任何级别的日志 -->
         <discardingThreshold>0</discardingThreshold>
-        <queueSize>10000</queueSize>
+        <!-- 队列容量，增大以应对高并发 -->
+        <queueSize>50000</queueSize>
+        <!-- 设置为false表示队列满时阻塞等待，而不是丢弃日志 -->
+        <neverBlock>false</neverBlock>
+        <!-- 包含调用者信息（类名、方法名、行号） -->
+        <includeCallerData>true</includeCallerData>
         <appender-ref ref="mysql"/>
     </appender>
 
