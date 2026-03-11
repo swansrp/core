@@ -1,5 +1,6 @@
 package com.bidr.forge.service.form;
 
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.forge.config.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.FormData;
 import com.bidr.forge.dao.entity.FormSchemaAttribute;
@@ -89,8 +90,12 @@ public class FormDataMatrixSyncService {
             // 检查记录是否存在（通过 history_id 和 section_instance_id 联合定位）
             boolean recordExists = checkRecordExists(tableName, formData.getHistoryId(), formData.getSectionInstanceId());
 
+            // 获取当前操作人
+            String operator = AccountContext.getOperator();
+
             if (recordExists) {
                 // 更新：通过 history_id 和 section_instance_id 联合定位记录，更新指定字段
+                parameters.put("updateBy", operator);
                 String updateSql = buildUpdateSql(tableName, columnName);
                 int affected = jdbcConnectService.update(updateSql, parameters);
                 log.debug("同步FormData [{}] 到Matrix [{}] 更新成功，影响行数: {}", formData.getId(), tableName, affected);
@@ -98,6 +103,7 @@ public class FormDataMatrixSyncService {
                 // 插入：生成UUID主键，设置 history_id 和目标字段
                 String uuid = UUID.randomUUID().toString().replace("-", "");
                 parameters.put("id", uuid);
+                parameters.put("createBy", operator);
 
                 String insertSql = buildInsertSql(tableName, columnName);
                 int affected = jdbcConnectService.update(insertSql, parameters);
@@ -130,7 +136,7 @@ public class FormDataMatrixSyncService {
      * 通过 history_id 和 section_instance_id 联合定位记录，更新指定字段
      */
     private String buildUpdateSql(String tableName, String columnName) {
-        return "UPDATE `" + tableName + "` SET `" + columnName + "` = :value WHERE `history_id` = :historyId AND `section_instance_id` = :sectionInstanceId";
+        return "UPDATE `" + tableName + "` SET `" + columnName + "` = :value, `update_by` = :updateBy WHERE `history_id` = :historyId AND `section_instance_id` = :sectionInstanceId";
     }
 
     /**
@@ -138,6 +144,6 @@ public class FormDataMatrixSyncService {
      * 生成UUID主键，设置 history_id、section_instance_id 和目标字段
      */
     private String buildInsertSql(String tableName, String columnName) {
-        return "INSERT INTO `" + tableName + "` (`id`, `history_id`, `section_instance_id`, `" + columnName + "`) VALUES (:id, :historyId, :sectionInstanceId, :value)";
+        return "INSERT INTO `" + tableName + "` (`id`, `history_id`, `section_instance_id`, `" + columnName + "`, `create_by`) VALUES (:id, :historyId, :sectionInstanceId, :value, :createBy)";
     }
 }
