@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author sharp
  */
-@Api(tags = "表单配置 - 字段属性")
+@Api(tags = "系统基础 - 表单配置 - 字段属性")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/form/attribute"})
