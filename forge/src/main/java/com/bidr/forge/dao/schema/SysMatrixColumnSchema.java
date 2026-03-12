@@ -45,5 +45,7 @@ public class SysMatrixColumnSchema extends BaseMybatisSchema<SysMatrixColumn> {
                 "ADD COLUMN `reference_matrix_id` varchar(50) DEFAULT NULL COMMENT '关联矩阵' AFTER `is_pid_field`, " +
                 "ADD COLUMN `reference_dict` varchar(50) DEFAULT NULL COMMENT '关联字典' AFTER `reference_matrix_id`, " +
                 "ADD COLUMN `sequence` varchar(50) DEFAULT NULL COMMENT '序列' AFTER `default_value`;");
+        setUpgradeDDL(2, "ALTER TABLE `sys_matrix_column` " +
+                "ADD COLUMN `unique_group_name` VARCHAR(50) DEFAULT NULL COMMENT '联合唯一键组名' AFTER `is_unique`;");
     }
 }

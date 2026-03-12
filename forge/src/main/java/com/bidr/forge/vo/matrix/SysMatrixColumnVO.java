@@ -63,6 +63,9 @@ public class SysMatrixColumnVO extends BaseVO {
     @ApiModelProperty(value = "是否唯一")
     private String isUnique;
 
+    @ApiModelProperty(value = "唯一组名")
+    private String uniqueGroupName;
+
     @PortalOrderField
     @ApiModelProperty(value = "排序")
     private Integer sort;

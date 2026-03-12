@@ -75,6 +75,10 @@ public class SysMatrixColumn {
     @ApiModelProperty(value = "是否唯一")
     private String isUnique;
 
+    @TableField(value = "unique_group_name")
+    @ApiModelProperty(value = "联合唯一键组名（相同组名的字段组成联合唯一键）")
+    private String uniqueGroupName;
+
     @TableField(value = "sort")
     @ApiModelProperty(value = "排序")
     private Integer sort;

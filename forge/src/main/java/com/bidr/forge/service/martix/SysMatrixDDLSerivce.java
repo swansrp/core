@@ -213,8 +213,33 @@ public class SysMatrixDDLSerivce {
             if ("1".equals(column.getIsIndex())) {
                 ddl.append(",\n  KEY `idx_").append(column.getColumnName()).append("` (`").append(column.getColumnName()).append("`)");
             }
-            if ("1".equals(column.getIsUnique())) {
+            // 单字段唯一键（isUnique=1 且 uniqueGroupName 为空）
+            if ("1".equals(column.getIsUnique()) && (column.getUniqueGroupName() == null || column.getUniqueGroupName().isEmpty())) {
                 ddl.append(",\n  UNIQUE KEY `uk_").append(column.getColumnName()).append("` (`").append(column.getColumnName()).append("`)");
+            }
+        }
+
+        // 联合唯一键（按 uniqueGroupName 分组）
+        Map<String, List<String>> uniqueGroupMap = new java.util.LinkedHashMap<>();
+        for (SysMatrixColumn column : columns) {
+            String groupName = column.getUniqueGroupName();
+            if (groupName != null && !groupName.isEmpty()) {
+                uniqueGroupMap.computeIfAbsent(groupName, k -> new java.util.ArrayList<>()).add(column.getColumnName());
+            }
+        }
+        // 生成联合唯一键 DDL
+        for (Map.Entry<String, List<String>> entry : uniqueGroupMap.entrySet()) {
+            String groupName = entry.getKey();
+            List<String> columnNames = entry.getValue();
+            if (columnNames.size() >= 2) {
+                ddl.append(",\n  UNIQUE KEY `uk_").append(groupName).append("` (");
+                for (int i = 0; i < columnNames.size(); i++) {
+                    if (i > 0) {
+                        ddl.append(", ");
+                    }
+                    ddl.append("`").append(columnNames.get(i)).append("`");
+                }
+                ddl.append(")");
             }
         }
 
