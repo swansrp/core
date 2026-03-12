@@ -12,6 +12,7 @@ import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -38,6 +39,16 @@ public class FormDataMatrixSyncService {
     private final SysMatrixColumnService sysMatrixColumnService;
     private final SysMatrixService sysMatrixService;
     private final JdbcConnectService jdbcConnectService;
+
+    /**
+     * 死锁重试最大次数
+     */
+    private static final int MAX_RETRY_COUNT = 3;
+
+    /**
+     * 死锁重试间隔（毫秒）
+     */
+    private static final long RETRY_INTERVAL_MS = 50;
 
     /**
      * 同步FormData到动态Matrix表
@@ -71,11 +82,54 @@ public class FormDataMatrixSyncService {
             return;
         }
 
-        // 4. 构建参数并执行SQL
+        // 4. 构建参数并执行SQL（带死锁重试）
         String tableName = matrix.getTableName();
         String columnName = matrixColumn.getColumnName();
         String dataSource = matrix.getDataSource();
 
+        executeWithRetry(tableName, columnName, dataSource, formData);
+    }
+
+    /**
+     * 带死锁重试的执行方法
+     *
+     * @param tableName         表名
+     * @param columnName        列名
+     * @param dataSource        数据源
+     * @param formData          表单数据
+     */
+    private void executeWithRetry(String tableName, String columnName, String dataSource, FormData formData) {
+        int retryCount = 0;
+        while (true) {
+            try {
+                doSync(tableName, columnName, dataSource, formData);
+                return;
+            } catch (DeadlockLoserDataAccessException e) {
+                retryCount++;
+                if (retryCount >= MAX_RETRY_COUNT) {
+                    log.error("同步FormData [{}] 到Matrix [{}] 死锁重试次数超限，放弃重试", formData.getId(), tableName, e);
+                    throw e;
+                }
+                log.warn("同步FormData [{}] 到Matrix [{}] 发生死锁，第 {} 次重试", formData.getId(), tableName, retryCount);
+                try {
+                    Thread.sleep(RETRY_INTERVAL_MS * retryCount);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("线程被中断", ie);
+                }
+            }
+        }
+    }
+
+    /**
+     * 执行同步操作
+     *
+     * @param tableName         表名
+     * @param columnName        列名
+     * @param dataSource        数据源
+     * @param formData          表单数据
+     */
+    private void doSync(String tableName, String columnName, String dataSource, FormData formData) {
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("value", formData.getValue());
         parameters.put("historyId", formData.getHistoryId());
@@ -87,28 +141,18 @@ public class FormDataMatrixSyncService {
                 jdbcConnectService.switchDataSource(dataSource);
             }
 
-            // 检查记录是否存在（通过 history_id 和 section_instance_id 联合定位）
-            boolean recordExists = checkRecordExists(tableName, formData.getHistoryId(), formData.getSectionInstanceId());
-
             // 获取当前操作人
             String operator = AccountContext.getOperator();
+            parameters.put("updateBy", operator);
+            parameters.put("createBy", operator);
 
-            if (recordExists) {
-                // 更新：通过 history_id 和 section_instance_id 联合定位记录，更新指定字段
-                parameters.put("updateBy", operator);
-                String updateSql = buildUpdateSql(tableName, columnName);
-                int affected = jdbcConnectService.update(updateSql, parameters);
-                log.debug("同步FormData [{}] 到Matrix [{}] 更新成功，影响行数: {}", formData.getId(), tableName, affected);
-            } else {
-                // 插入：生成UUID主键，设置 history_id 和目标字段
-                String uuid = UUID.randomUUID().toString().replace("-", "");
-                parameters.put("id", uuid);
-                parameters.put("createBy", operator);
+            // 使用 INSERT ... ON DUPLICATE KEY UPDATE 避免竞态条件
+            String uuid = UUID.randomUUID().toString().replace("-", "");
+            parameters.put("id", uuid);
 
-                String insertSql = buildInsertSql(tableName, columnName);
-                int affected = jdbcConnectService.update(insertSql, parameters);
-                log.debug("同步FormData [{}] 到Matrix [{}] 插入成功，影响行数: {}", formData.getId(), tableName, affected);
-            }
+            String upsertSql = buildUpsertSql(tableName, columnName);
+            int affected = jdbcConnectService.update(upsertSql, parameters);
+            log.debug("同步FormData [{}] 到Matrix [{}] 成功，影响行数: {}", formData.getId(), tableName, affected);
         } finally {
             if (FuncUtil.isNotEmpty(dataSource)) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -117,33 +161,24 @@ public class FormDataMatrixSyncService {
     }
 
     /**
-     * 检查动态表中是否存在对应记录
-     * 通过 history_id 和 section_instance_id 联合定位记录
+     * 构建 INSERT ... ON DUPLICATE KEY UPDATE SQL
+     * 使用 upsert 语法避免先查询后更新的竞态条件，减少死锁概率
+     *
+     * @param tableName  表名
+     * @param columnName  列名
+     * @return SQL语句
      */
-    private boolean checkRecordExists(String tableName, String historyId, String sectionInstanceId) {
-        String sql = "SELECT COUNT(*) FROM `" + tableName + "` WHERE `history_id` = :historyId AND `section_instance_id` = :sectionInstanceId";
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("historyId", historyId);
-        params.put("sectionInstanceId", sectionInstanceId);
-
-        Integer count = jdbcConnectService.queryForObject(sql, params, Integer.class);
-        return count != null && count > 0;
+    private String buildUpsertSql(String tableName, String columnName) {
+        return "INSERT INTO `" + tableName + "` (`id`, `history_id`, `section_instance_id`, `" + columnName + "`, `create_by`, `update_by`) " +
+                "VALUES (:id, :historyId, :sectionInstanceId, :value, :createBy, :updateBy) " +
+                "ON DUPLICATE KEY UPDATE `" + columnName + "` = :value, `update_by` = :updateBy";
     }
 
     /**
-     * 构建更新SQL
+     * 构建更新SQL（保留用于特殊场景）
      * 通过 history_id 和 section_instance_id 联合定位记录，更新指定字段
      */
     private String buildUpdateSql(String tableName, String columnName) {
         return "UPDATE `" + tableName + "` SET `" + columnName + "` = :value, `update_by` = :updateBy WHERE `history_id` = :historyId AND `section_instance_id` = :sectionInstanceId";
-    }
-
-    /**
-     * 构建插入SQL
-     * 生成UUID主键，设置 history_id、section_instance_id 和目标字段
-     */
-    private String buildInsertSql(String tableName, String columnName) {
-        return "INSERT INTO `" + tableName + "` (`id`, `history_id`, `section_instance_id`, `" + columnName + "`, `create_by`) VALUES (:id, :historyId, :sectionInstanceId, :value, :createBy)";
     }
 }
