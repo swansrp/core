@@ -6,6 +6,7 @@ package com.bidr.authorization.config.log;
 
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
+import com.bidr.kernel.config.log.LogSuppressor;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.RandomUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -58,6 +59,8 @@ public class LogFilter extends OncePerRequestFilter {
         String requestBodyStr = "";
         try {
             stopWatch.start();
+            // 防御性重置：确保每个请求开始时日志抑制状态为 false
+            LogSuppressor.suppressLogs(false);
 
             HttpServletRequest temRequest = request;
             HttpServletResponse temResponse = response;
