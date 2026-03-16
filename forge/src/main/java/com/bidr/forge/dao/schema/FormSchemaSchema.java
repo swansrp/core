@@ -26,7 +26,7 @@ public class FormSchemaSchema extends BaseMybatisSchema<FormSchema> {
                 "  `update_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',\n" +
                 "  `valid` char(1) DEFAULT '1' COMMENT '有效性',\n" +
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
-                "  KEY `pid` (`pid`) USING BTREE\n" +
+                "  KEY `pid` (`pid`) USING BTREE,\n" +
                 "  KEY `code` (`code`) USING BTREE\n" +
                 ") COMMENT='表单';");
     }

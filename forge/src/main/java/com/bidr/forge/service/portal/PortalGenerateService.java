@@ -27,7 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Portal配置生成服务
@@ -337,56 +341,220 @@ public class PortalGenerateService {
             // 2. 如果无下划线，首字母小写，保留后续大小写 (TodayTime -> todayTime, projectLeadDept -> projectLeadDept)
             String property = StringUtil.firstLowerCamelCase(columnAlias);
 
+            // 查询已有的PortalColumn配置，用于统计最频繁的字段值
+            List<SysPortalColumn> existingColumns = sysPortalColumnService.lambdaQuery().eq(SysPortalColumn::getProperty, property).list();
+            // 预计算所有字段的最高频率值
+            ColumnDefaults defaults = buildColumnDefaults(existingColumns);
+
             portalColumn.setProperty(property);
             portalColumn.setDbField(datasetColumn.getColumnAlias());
             if (FuncUtil.isNotEmpty(datasetColumn.getRemark())) {
                 portalColumn.setDisplayName(datasetColumn.getRemark());
             } else {
-                portalColumn.setDisplayName(datasetColumn.getColumnAlias());
+                if (FuncUtil.isNotEmpty(defaults.displayName)) {
+                    portalColumn.setDisplayName(defaults.displayName);
+                } else {
+                    portalColumn.setDisplayName(datasetColumn.getColumnAlias());
+                }
             }
 
-            // Dataset字段类型默认为文本
-            portalColumn.setFieldType(PortalFieldDict.STRING.getValue());
-            portalColumn.setReference(StringUtil.EMPTY);
-            portalColumn.setEntityField(StringUtil.EMPTY);
+            // 使用预计算的默认值
+            portalColumn.setFieldType(defaults.fieldType);
+            portalColumn.setReference(defaults.reference);
+            portalColumn.setEntityField(defaults.entityField);
             portalColumn.setDisplayOrder(displayOrder++);
-            portalColumn.setAlign("center");
-            portalColumn.setWidth(150);
-            portalColumn.setFixed(CommonConst.NO);
-            portalColumn.setTooltip(CommonConst.YES);
-            portalColumn.setEnable(CommonConst.YES);
-            portalColumn.setShow(CommonConst.YES);
-            portalColumn.setFilterAble(CommonConst.YES);
-            portalColumn.setSortAble(CommonConst.YES);
-            portalColumn.setSummaryAble(CommonConst.NO);
-            portalColumn.setEditAble(CommonConst.NO);
-            portalColumn.setDisplayGroupName(StringUtil.EMPTY);
+            portalColumn.setAlign(defaults.align);
+            portalColumn.setWidth(defaults.width);
+            portalColumn.setFixed(defaults.fixed);
+            portalColumn.setTooltip(defaults.tooltip);
+            portalColumn.setEnable(defaults.enable);
+            portalColumn.setShow(defaults.show);
+            portalColumn.setFilterAble(defaults.filterAble);
+            portalColumn.setSortAble(defaults.sortAble);
+            portalColumn.setSummaryAble(defaults.summaryAble);
+            portalColumn.setEditAble(defaults.editAble);
+            portalColumn.setDisplayGroupName(defaults.displayGroupName);
 
             // 详情配置
-            portalColumn.setDetailShow(CommonConst.YES);
-            portalColumn.setDetailSize(1);
-            portalColumn.setDetailPadding(0);
+            portalColumn.setDetailShow(defaults.detailShow);
+            portalColumn.setDetailSize(defaults.detailSize);
+            portalColumn.setDetailPadding(defaults.detailPadding);
 
             // Dataset只读，不支持新增和编辑
-            portalColumn.setAddShow(CommonConst.NO);
-            portalColumn.setAddSize(1);
-            portalColumn.setAddPadding(0);
-            portalColumn.setAddDisabled(CommonConst.YES);
+            portalColumn.setAddShow(defaults.addShow);
+            portalColumn.setAddSize(defaults.addSize);
+            portalColumn.setAddPadding(defaults.addPadding);
+            portalColumn.setAddDisabled(defaults.addDisabled);
 
-            portalColumn.setEditShow(CommonConst.NO);
-            portalColumn.setEditSize(1);
-            portalColumn.setEditPadding(0);
-            portalColumn.setEditDisabled(CommonConst.YES);
+            portalColumn.setEditShow(defaults.editShow);
+            portalColumn.setEditSize(defaults.editSize);
+            portalColumn.setEditPadding(defaults.editPadding);
+            portalColumn.setEditDisabled(defaults.editDisabled);
 
-            portalColumn.setRequired(CommonConst.NO);
-            portalColumn.setDefaultValue(StringUtil.EMPTY);
-            portalColumn.setMobileDisplayType("0");
+            portalColumn.setRequired(defaults.required);
+            portalColumn.setDefaultValue(defaults.defaultValue);
+            portalColumn.setMobileDisplayType(defaults.mobileDisplayType);
 
             portalColumns.add(portalColumn);
         }
 
         return portalColumns;
     }
+
+    /**
+     * 预计算所有字段的最高频率默认值
+     */
+    private ColumnDefaults buildColumnDefaults(List<SysPortalColumn> existingColumns) {
+        ColumnDefaults defaults = createDefaultsWithDefaults();
+        if (FuncUtil.isNotEmpty(existingColumns)) {
+            // 用于统计所有字段频率的 Map
+            Map<String, Map<Object, Long>> frequencyMaps = new HashMap<>();
+            // 只遍历一次列表，统计所有字段的频率
+            for (SysPortalColumn column : existingColumns) {
+                addToFrequency(frequencyMaps, "fieldType", column.getFieldType());
+                addToFrequency(frequencyMaps, "reference", column.getReference());
+                addToFrequency(frequencyMaps, "entityField", column.getEntityField());
+                addToFrequency(frequencyMaps, "align", column.getAlign());
+                addToFrequency(frequencyMaps, "width", column.getWidth());
+                addToFrequency(frequencyMaps, "fixed", column.getFixed());
+                addToFrequency(frequencyMaps, "tooltip", column.getTooltip());
+                addToFrequency(frequencyMaps, "enable", column.getEnable());
+                addToFrequency(frequencyMaps, "show", column.getShow());
+                addToFrequency(frequencyMaps, "filterAble", column.getFilterAble());
+                addToFrequency(frequencyMaps, "sortAble", column.getSortAble());
+                addToFrequency(frequencyMaps, "summaryAble", column.getSummaryAble());
+                addToFrequency(frequencyMaps, "editAble", column.getEditAble());
+                addToFrequency(frequencyMaps, "displayName", column.getDisplayName());
+                addToFrequency(frequencyMaps, "displayGroupName", column.getDisplayGroupName());
+                addToFrequency(frequencyMaps, "detailShow", column.getDetailShow());
+                addToFrequency(frequencyMaps, "detailSize", column.getDetailSize());
+                addToFrequency(frequencyMaps, "detailPadding", column.getDetailPadding());
+                addToFrequency(frequencyMaps, "mobileDisplayType", column.getMobileDisplayType());
+            }
+
+            // 从频率 Map 中获取每个字段的最高频值
+            defaults.fieldType = getMostFrequentFromMap(frequencyMaps, "fieldType", PortalFieldDict.STRING.getValue());
+            defaults.reference = getMostFrequentFromMap(frequencyMaps, "reference", StringUtil.EMPTY);
+            defaults.entityField = getMostFrequentFromMap(frequencyMaps, "entityField", StringUtil.EMPTY);
+            defaults.align = getMostFrequentFromMap(frequencyMaps, "align", "center");
+            defaults.width = getMostFrequentFromMap(frequencyMaps, "width", 150);
+            defaults.fixed = getMostFrequentFromMap(frequencyMaps, "fixed", CommonConst.NO);
+            defaults.tooltip = getMostFrequentFromMap(frequencyMaps, "tooltip", CommonConst.YES);
+            defaults.enable = getMostFrequentFromMap(frequencyMaps, "enable", CommonConst.YES);
+            defaults.show = getMostFrequentFromMap(frequencyMaps, "show", CommonConst.YES);
+            defaults.filterAble = getMostFrequentFromMap(frequencyMaps, "filterAble", CommonConst.YES);
+            defaults.sortAble = getMostFrequentFromMap(frequencyMaps, "sortAble", CommonConst.YES);
+            defaults.summaryAble = getMostFrequentFromMap(frequencyMaps, "summaryAble", CommonConst.NO);
+            defaults.editAble = getMostFrequentFromMap(frequencyMaps, "editAble", CommonConst.NO);
+            defaults.displayName = getMostFrequentFromMap(frequencyMaps, "displayName", StringUtil.EMPTY);
+            defaults.displayGroupName = getMostFrequentFromMap(frequencyMaps, "displayGroupName", StringUtil.EMPTY);
+            defaults.detailShow = getMostFrequentFromMap(frequencyMaps, "detailShow", CommonConst.YES);
+            defaults.detailSize = getMostFrequentFromMap(frequencyMaps, "detailSize", 1);
+            defaults.detailPadding = getMostFrequentFromMap(frequencyMaps, "detailPadding", 0);
+            defaults.mobileDisplayType = getMostFrequentFromMap(frequencyMaps, "mobileDisplayType", "0");
+        }
+        return defaults;
+    }
+
+    /**
+     * 向频率 Map 中添加值
+     */
+    private void addToFrequency(Map<String, Map<Object, Long>> frequencyMaps, String fieldName, Object value) {
+        if (value == null) {
+            return;
+        }
+        frequencyMaps.computeIfAbsent(fieldName, k -> new HashMap<>())
+                .merge(value, 1L, Long::sum);
+    }
+
+    /**
+     * 从频率 Map 中获取最高频的值
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T getMostFrequentFromMap(Map<String, Map<Object, Long>> frequencyMaps, String fieldName, T defaultValue) {
+        Map<Object, Long> freqMap = frequencyMaps.get(fieldName);
+        if (freqMap == null || freqMap.isEmpty()) {
+            return defaultValue;
+        }
+
+        return (T) freqMap.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(defaultValue);
+    }
+
+    /**
+     * 使用默认值创建 ColumnDefaults
+     */
+    private ColumnDefaults createDefaultsWithDefaults() {
+        ColumnDefaults defaults = new ColumnDefaults();
+        defaults.fieldType = PortalFieldDict.STRING.getValue();
+        defaults.reference = StringUtil.EMPTY;
+        defaults.entityField = StringUtil.EMPTY;
+        defaults.align = "center";
+        defaults.width = 150;
+        defaults.fixed = CommonConst.NO;
+        defaults.tooltip = CommonConst.YES;
+        defaults.enable = CommonConst.YES;
+        defaults.show = CommonConst.YES;
+        defaults.filterAble = CommonConst.YES;
+        defaults.sortAble = CommonConst.YES;
+        defaults.summaryAble = CommonConst.NO;
+        defaults.editAble = CommonConst.NO;
+        defaults.displayGroupName = StringUtil.EMPTY;
+        defaults.detailShow = CommonConst.YES;
+        defaults.detailSize = 1;
+        defaults.detailPadding = 0;
+        defaults.addShow = CommonConst.NO;
+        defaults.addSize = 1;
+        defaults.addPadding = 0;
+        defaults.addDisabled = CommonConst.YES;
+        defaults.editShow = CommonConst.NO;
+        defaults.editSize = 1;
+        defaults.editPadding = 0;
+        defaults.editDisabled = CommonConst.YES;
+        defaults.required = CommonConst.NO;
+        defaults.defaultValue = StringUtil.EMPTY;
+        defaults.mobileDisplayType = "0";
+        return defaults;
+    }
+
+    /**
+     * 存储所有字段的默认值
+     */
+    private static class ColumnDefaults {
+        String fieldType;
+        String reference;
+        String entityField;
+        String align;
+        Integer width;
+        String fixed;
+        String tooltip;
+        String enable;
+        String show;
+        String filterAble;
+        String sortAble;
+        String summaryAble;
+        String editAble;
+        String displayName;
+        String displayGroupName;
+        String detailShow;
+        Integer detailSize;
+        Integer detailPadding;
+        String addShow;
+        Integer addSize;
+        Integer addPadding;
+        String addDisabled;
+        String editShow;
+        Integer editSize;
+        Integer editPadding;
+        String editDisabled;
+        String required;
+        String defaultValue;
+        String mobileDisplayType;
+    }
+
+
 
     /**
      * 刷新Matrix对应的Portal配置
