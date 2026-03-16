@@ -87,7 +87,8 @@ public class ExceptionAlertAspect {
                 .methodName(methodName)
                 .includeArgs(alert.includeArgs())
                 .includeStackTrace(alert.includeStackTrace())
-                .notifyEmails(alert.notifyEmails());
+                .notifyEmails(alert.notifyEmails())
+                .notifyWx(alert.notifyWx());
 
         // 添加方法参数
         if (alert.includeArgs()) {

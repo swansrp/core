@@ -49,6 +49,12 @@ public @interface ExceptionAlert {
     String notifyEmails() default "";
 
     /**
+     * 指定通知微信，多个微信用逗号分隔
+      * 为空时使用系统默认配置的异常通知微信
+     */
+    String notifyWx() default "";
+
+    /**
      * 异常严重级别
      */
     ErrCodeLevel severity() default ErrCodeLevel.ERROR;

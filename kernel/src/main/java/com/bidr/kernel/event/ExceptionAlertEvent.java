@@ -133,6 +133,11 @@ public class ExceptionAlertEvent extends BaseEvent {
     private final String notifyEmails;
 
     /**
+     * 指定的通知微信接收人（可为空，使用系统默认配置）
+     */
+    private final String notifyWx;
+
+    /**
      * 构造函数
      *
      * @param builder 事件构建器
@@ -162,6 +167,7 @@ public class ExceptionAlertEvent extends BaseEvent {
         this.clientIp = builder.clientIp;
         this.queryString = builder.queryString;
         this.notifyEmails = builder.notifyEmails;
+        this.notifyWx = builder.notifyWx;
     }
 
     /**
@@ -233,6 +239,7 @@ public class ExceptionAlertEvent extends BaseEvent {
         private String clientIp;
         private String queryString;
         private String notifyEmails;
+        private String notifyWx;
 
         public Builder source(Object source) {
             this.source = source;
@@ -341,6 +348,11 @@ public class ExceptionAlertEvent extends BaseEvent {
 
         public Builder notifyEmails(String notifyEmails) {
             this.notifyEmails = notifyEmails;
+            return this;
+        }
+
+        public Builder notifyWx(String notifyWx) {
+            this.notifyWx = notifyWx;
             return this;
         }
 
