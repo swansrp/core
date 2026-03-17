@@ -20,13 +20,6 @@ public interface KafkaTopicConsumer {
     void consume(ConsumerRecord<String, String> record, AckCallback ack);
 
     /**
-     * 获取Topic名称
-     *
-     * @return Topic名称
-     */
-    String getTopic();
-
-    /**
      * 消费异常处理
      *
      * @param record Kafka消息记录

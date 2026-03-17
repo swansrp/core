@@ -53,11 +53,6 @@ public class ExampleTopicConsumer implements KafkaTopicConsumer {
     }
 
     @Override
-    public String getTopic() {
-        return "example-topic";
-    }
-
-    @Override
     public void onError(ConsumerRecord<String, String> record, Exception exception) {
         log.error("Error in consumer for topic: {}, message: {}", record.topic(), record.value(), exception);
         // 可以在这里实现错误处理逻辑，如发送到死信队列等
