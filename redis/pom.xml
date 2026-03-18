@@ -15,6 +15,11 @@
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <!-- 版本从父pom dependencyManagement继承 -->
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>
             <!-- 版本从父pom dependencyManagement继承 -->
         </dependency>
