@@ -1,5 +1,6 @@
 package com.bidr.forge.controller.form;
 
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.forge.dao.entity.FormDataHistory;
 import com.bidr.forge.service.form.FormDataHistoryPortalService;
 import com.bidr.forge.vo.form.FormDataHistoryVO;
@@ -31,6 +32,20 @@ public class FormDataHistoryPortalController extends BaseAdminController<FormDat
     @Override
     public PortalCommonService<FormDataHistory, FormDataHistoryVO> getPortalService() {
         return formDataHistoryPortalService;
+    }
+
+    /**
+     * 提交产品填报
+     * - 将上报历史记录的状态从草稿(0)变更为提交(1)
+     * - 记录提交人和提交时间
+     *
+     * @param historyId 上报历史记录ID
+     */
+    @ApiOperation("提交表单填报")
+    @PostMapping("/submit")
+    public void submit(@RequestParam String historyId) {
+        formDataHistoryPortalService.submit(historyId);
+        Resp.notice("表单填报已提交，等待审核");
     }
 
     /**
