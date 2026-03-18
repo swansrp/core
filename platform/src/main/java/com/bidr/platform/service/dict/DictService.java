@@ -4,8 +4,10 @@ import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.aop.RedisPublish;
+import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
+import com.bidr.platform.dao.repository.SysBizDictService;
 import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.dao.repository.SysDictTypeService;
 import com.bidr.platform.service.cache.dict.DictCacheService;
@@ -37,13 +39,15 @@ public class DictService {
     public final DictCacheService dictCacheService;
     private final SysDictService sysDictService;
     private final SysDictTypeService sysDictTypeService;
+    private final SysBizDictService sysBizDictService;
 
     public List<KeyValueResVO> getNameList(String name) {
         List<SysDictType> sysDictList = sysDictTypeService.getSysDictByTitle(name);
-        return buildKeyValueListByDictType(sysDictList);
+        List<SysBizDict> bizDictList = sysBizDictService.getBizDictListByTitle(name);
+        return buildKeyValueListByDictType(sysDictList, bizDictList);
     }
 
-    private List<KeyValueResVO> buildKeyValueListByDictType(List<SysDictType> sysDictList) {
+    private List<KeyValueResVO> buildKeyValueListByDictType(List<SysDictType> sysDictList, List<SysBizDict> bizDictList) {
         List<KeyValueResVO> resList = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(sysDictList)) {
             for (SysDictType sysDict : sysDictList) {
@@ -53,13 +57,20 @@ public class DictService {
                 resList.add(res);
             }
         }
+        if (CollectionUtils.isNotEmpty(bizDictList)) {
+            for (SysBizDict bizDict : bizDictList) {
+                KeyValueResVO res = new KeyValueResVO();
+                res.setValue(bizDict.getDictCode());
+                res.setLabel(bizDict.getDictName());
+                resList.add(res);
+            }
+        }
         return resList;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean addDict(AddDictReq req) {
-        Validator.assertFalse(sysDictTypeService.existedById(req.getDictName()), DICT_IS_ALREADY_EXISTED,
-                req.getDictTitle());
+        Validator.assertFalse(sysDictTypeService.existedById(req.getDictName()), DICT_IS_ALREADY_EXISTED, req.getDictTitle());
         SysDictType sysDictType = new SysDictType();
         sysDictType.setDictName(req.getDictName());
         sysDictType.setDictTitle(req.getDictTitle());
@@ -67,7 +78,35 @@ public class DictService {
     }
 
     public List<SysDict> getSysDictByName(String dictName) {
-        return sysDictService.getSysDictByName(dictName);
+        List<SysDict> res = new ArrayList<>();
+        List<SysBizDict> sysBizDictList = sysBizDictService.getBizDictListByTitle(dictName);
+        if (CollectionUtils.isNotEmpty(sysBizDictList)) {
+            for (SysBizDict sysBizDict : sysBizDictList) {
+                res.add(buildBySysBizDict(sysBizDict));
+            }
+        }
+        List<SysDict> sysDictByName = sysDictService.getSysDictByName(dictName);
+        if (CollectionUtils.isNotEmpty(sysDictByName)) {
+            res.addAll(sysDictByName);
+        }
+        return res;
+    }
+
+
+    /**
+     * 根据字典编码获取字典项列表
+     */
+    public List<SysBizDict> getBizDictItemsByCode(String dictCode) {
+        return sysBizDictService.getBizDictItemsByCode(dictCode);
+    }
+
+    private SysDict buildBySysBizDict(SysBizDict sysBizDict) {
+        SysDict sysDict = new SysDict();
+        sysDict.setDictId(sysBizDict.getId().toString());
+        sysDict.setDictLabel(sysBizDict.getLabel());
+        sysDict.setDictValue(sysBizDict.getValue());
+        sysDict.setShow(CommonConst.YES);
+        return sysDict;
     }
 
     public void replaceDefaultDictItem(UpdateDictDefaultReq vo) {
@@ -90,8 +129,7 @@ public class DictService {
     @Transactional(rollbackFor = Exception.class)
     public boolean addDictItem(AddDictItemReq req) {
         dictCacheService.cachePrepare(req.getDictName());
-        Validator.assertFalse(sysDictService.existed(req.getDictName(), req.getDictValue()),
-                DICT_ITEM_IS_ALREADY_EXISTED, req.getDictTitle());
+        Validator.assertFalse(sysDictService.existed(req.getDictName(), req.getDictValue()), DICT_ITEM_IS_ALREADY_EXISTED, req.getDictTitle());
         return sysDictService.insert(req);
     }
 

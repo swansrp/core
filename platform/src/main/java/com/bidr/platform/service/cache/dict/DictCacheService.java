@@ -13,8 +13,10 @@ import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.aop.RedisPublish;
 import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.constant.err.DictErrorCode;
+import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
+import com.bidr.platform.dao.repository.SysBizDictService;
 import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.dao.repository.SysDictTypeService;
 import com.bidr.platform.vo.dict.DictRes;
@@ -47,6 +49,7 @@ public class DictCacheService implements CommandLineRunner {
     private final Integer DEFAULT_EXPIRED = 24 * 60;
     private final SysDictTypeService sysDictTypeService;
     private final SysDictService sysDictService;
+    private final SysBizDictService sysBizDictService;
     private final DynamicMemoryCacheManager dynamicMemoryCacheManager;
     private final Map<String, DictCacheProvider> MAP = new ConcurrentHashMap<>();
     private final PlatformTransactionManager transactionManager;
@@ -84,7 +87,6 @@ public class DictCacheService implements CommandLineRunner {
         DictCacheProvider dictCacheProvider = MAP.get(dictName);
         if (FuncUtil.isNotEmpty(dictCacheProvider)) {
             LinkedHashMap<String, SysDict> valueMap = dictCacheProvider.getCache(DictTypeEnum.VALUE.name());
-            // Validator.assertNotEmpty(valueMap, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
             if (FuncUtil.isNotEmpty(valueMap)) {
                 valueMap.forEach((key, value) -> {
                     DictRes res = new DictRes();
@@ -93,8 +95,18 @@ public class DictCacheService implements CommandLineRunner {
                     res.setShow(value.getShow());
                     resList.add(res);
                 });
+            } else {
+                List<SysBizDict> bizDictList = sysBizDictService.getBizDictItemsByCode(dictName);
+                if (FuncUtil.isNotEmpty(bizDictList)) {
+                    bizDictList.forEach(dict -> {
+                        DictRes res = new DictRes();
+                        res.setValue(dict.getValue());
+                        res.setLabel(dict.getLabel());
+                        res.setShow(CommonConst.YES);
+                        resList.add(res);
+                    });
+                }
             }
-
         }
         return resList;
 
