@@ -1243,3 +1243,232 @@ public class DasExamTeamBindController extends BaseBindController<...> {
    - ENTITY2：第二个关联实体
    - ENTITY1_VO：第一个实体的VO
    - ENTITY2_VO：第二个实体的VO
+
+## 数据库字段变更处理指南
+
+### 概述
+
+当数据库表结构发生变化时，需要同步更新Java代码。本章节说明如何解析ALTER TABLE语句并同步更新相关文件。
+
+### ALTER TABLE 语句类型识别
+
+#### 1. ADD COLUMN（添加字段）
+
+**SQL语法**：
+```sql
+ALTER TABLE `table_name` ADD COLUMN `field_name` DATA_TYPE [NULL|NOT NULL] [DEFAULT value] [COMMENT '注释'] [AFTER `existing_field`];
+```
+
+**识别特征**：包含 `ADD COLUMN` 关键字
+
+**示例**：
+```sql
+ALTER TABLE `sys_portal_table` ADD COLUMN `filter_columns` VARCHAR(500) NULL DEFAULT NULL COMMENT '要排除显示的列' AFTER `padding_td`;
+```
+
+#### 2. DROP COLUMN（删除字段）
+
+**SQL语法**：
+```sql
+ALTER TABLE `table_name` DROP COLUMN `field_name`;
+```
+
+**识别特征**：包含 `DROP COLUMN` 关键字
+
+**示例**：
+```sql
+ALTER TABLE `sys_portal_table` DROP COLUMN `old_field`;
+```
+
+#### 3. MODIFY COLUMN（修改字段）
+
+**SQL语法**：
+```sql
+ALTER TABLE `table_name` MODIFY COLUMN `field_name` NEW_DATA_TYPE [NULL|NOT NULL] [DEFAULT value] [COMMENT '新注释'];
+```
+
+**识别特征**：包含 `MODIFY COLUMN` 或 `ALTER COLUMN` 关键字
+
+**示例**：
+```sql
+ALTER TABLE `sys_portal_table` MODIFY COLUMN `filter_columns` VARCHAR(1000) NOT NULL COMMENT '要排除显示的列（已修改）';
+```
+
+### 字段变更处理流程
+
+#### 步骤1：解析ALTER TABLE语句
+
+从SQL语句中提取以下信息：
+- **表名**：`table_name`
+- **字段名**：`field_name`（下划线命名）
+- **字段类型**：`DATA_TYPE`
+- **是否可空**：`NULL` 或 `NOT NULL`
+- **默认值**：`DEFAULT value`
+- **注释**：`COMMENT '注释内容'`
+
+#### 步骤2：确定需要修改的文件清单
+
+| 变更类型 | Entity | Mapper XML | VO | Schema Service |
+|---------|--------|------------|-----|----------------|
+| ADD COLUMN | 添加字段 | 添加映射 | 添加字段 | 添加 setUpgradeDDL |
+| DROP COLUMN | 删除字段 | 删除映射 | 删除字段 | 添加 setUpgradeDDL |
+| MODIFY COLUMN | 修改字段属性 | 修改映射 | 修改字段 | 添加 setUpgradeDDL |
+
+#### 步骤3：按文件类型进行修改
+
+##### 3.1 修改 Entity 类
+
+**文件位置**：`${module_name}/src/main/java/com/bidr/*/dao/entity/{Entity}.java`
+
+**添加字段示例**：
+```java
+/**
+ * 要排除显示的列
+ */
+@TableField(value = "filter_columns")
+@ApiModelProperty(value = "要排除显示的列")
+private String filterColumns;
+```
+
+**删除字段**：直接删除对应的字段声明及注解
+
+**修改字段**：更新字段类型或注解属性
+
+##### 3.2 修改 Mapper XML
+
+**文件位置**：`${module_name}/src/main/java/com/bidr/*/dao/mapper/{Entity}Mapper.xml`
+
+**添加映射示例**：
+```xml
+<!-- 在 resultMap 中添加 -->
+<result column="filter_columns" jdbcType="VARCHAR" property="filterColumns" />
+
+<!-- 在 Base_Column_List 中添加字段名 -->
+<sql id="Base_Column_List">
+  id, portal_name, table_code, filter_width, padding_th, padding_td, filter_columns, download_able, status
+</sql>
+```
+
+**删除映射**：从 resultMap 和 Base_Column_List 中移除对应字段
+
+##### 3.3 修改 VO 类
+
+**文件位置**：`${module_name}/src/main/java/com/bidr/*/vo/{Entity}VO.java`
+
+**添加字段示例**：
+```java
+/**
+ * 要排除显示的列
+ */
+@ApiModelProperty(value = "要排除显示的列")
+private String filterColumns;
+```
+
+**删除字段**：直接删除对应的字段声明及注解
+
+##### 3.4 修改 Schema Service
+
+**文件位置**：`${module_name}/src/main/java/com/bidr/*/dao/schema/{Entity}Schema.java`
+
+**添加升级脚本**：
+```java
+static {
+    setCreateDDL("CREATE TABLE IF NOT EXISTS ...");
+    
+    // 已有升级脚本
+    setUpgradeDDL(1, "ALTER TABLE `sys_portal_table` ADD COLUMN `filter_columns` VARCHAR(500) ...;");
+    
+    // 新增升级脚本 - version 为当前最大值 + 1
+    setUpgradeDDL(2, "ALTER TABLE `sys_portal_table` ADD COLUMN `download_able` CHAR(1) ...;");
+}
+```
+
+**版本号规则**：
+- 查找当前已有的 `setUpgradeDDL` 调用
+- 获取最大的 version 值
+- 新升级脚本使用 `最大version + 1`
+
+### 完整示例：添加 filter_columns 字段
+
+#### 原始SQL语句
+```sql
+ALTER TABLE `sys_portal_table` ADD COLUMN `filter_columns` VARCHAR(500) NULL DEFAULT NULL COMMENT '要排除显示的列' AFTER `padding_td`;
+```
+
+#### 解析结果
+- **表名**：`sys_portal_table`
+- **字段名**：`filter_columns`
+- **Java属性名**：`filterColumns`（驼峰命名）
+- **字段类型**：`VARCHAR(500)` → Java `String`
+- **可空**：`NULL`
+- **默认值**：`NULL`
+- **注释**：`要排除显示的列`
+
+#### 需要修改的文件
+
+**1. SysPortalTable.java（Entity）**
+```java
+// 添加字段（在 paddingTd 字段之后）
+/**
+ * 要排除显示的列
+ */
+@TableField(value = "filter_columns")
+@ApiModelProperty(value = "要排除显示的列")
+private String filterColumns;
+```
+
+**2. SysPortalTableMapper.xml**
+```xml
+<!-- 在 resultMap 中添加 -->
+<result column="filter_columns" jdbcType="VARCHAR" property="filterColumns" />
+
+<!-- 更新 Base_Column_List -->
+<sql id="Base_Column_List">
+  id, portal_name, table_code, filter_width, padding_th, padding_td, filter_columns, download_able, status
+</sql>
+```
+
+**3. PortalTableVO.java**
+```java
+// 添加字段
+/**
+ * 要排除显示的列
+ */
+@ApiModelProperty(value = "要排除显示的列")
+private String filterColumns;
+```
+
+**4. SysPortalTableSchema.java**
+```java
+static {
+    setCreateDDL("CREATE TABLE IF NOT EXISTS ...");
+    
+    // 假设当前最大 version 为 0，则新脚本 version 为 1
+    setUpgradeDDL(1, "ALTER TABLE `sys_portal_table` " +
+            "ADD COLUMN `filter_columns` VARCHAR(500) NULL DEFAULT NULL COMMENT '要排除显示的列' AFTER `padding_td`;");
+}
+```
+
+### 字段类型映射参考
+
+| SQL类型 | Java类型 | jdbcType |
+|---------|---------|----------|
+| VARCHAR(n) | String | VARCHAR |
+| CHAR(n) | String | CHAR |
+| TEXT | String | LONGVARCHAR |
+| BIGINT | Long | BIGINT |
+| INT | Integer | INTEGER |
+| TINYINT | String | TINYINT |
+| DECIMAL(m,n) | BigDecimal | DECIMAL |
+| DATETIME | Date | TIMESTAMP |
+| DATE | Date | DATE |
+| JSON | String | VARCHAR |
+
+### 注意事项
+
+1. **字段顺序**：Entity 中字段顺序建议与数据库表字段顺序保持一致
+2. **SQL关键字**：如果字段名是SQL关键字（如 `name`、`order`、`status`），需要在 `@TableField` 中使用反引号：`@TableField(value = "\`name\`")`
+3. **审计字段**：如果添加的是审计字段（create_by、create_at、update_by、update_at），需要配置 `fill` 属性
+4. **VO注解**：根据字段用途添加相应的 Portal 注解（`@PortalNameField`、`@PortalOrderField` 等）
+5. **版本号递增**：Schema Service 中的 setUpgradeDDL 版本号必须严格递增
+6. **Base_Column_List**：添加字段时记得更新此 SQL 片段，否则查询结果会缺失该字段
