@@ -2,8 +2,8 @@ package com.bidr.kernel.event;
 
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import lombok.Getter;
+import lombok.Setter;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 
 /**
@@ -15,6 +15,7 @@ import java.util.Arrays;
  * @since 2023/03/31 09:24
  */
 @Getter
+@Setter
 public class ExceptionAlertEvent extends BaseEvent {
 
     /**
@@ -46,96 +47,78 @@ public class ExceptionAlertEvent extends BaseEvent {
      * 堆栈信息
      */
     private final String stackTrace;
-
-    /**
-     * 堆栈深度限制
-     */
-    private final int stackTraceDepth;
-
     /**
      * 发生异常的类名
      */
     private final String className;
-
     /**
      * 发生异常的方法名
      */
     private final String methodName;
-
     /**
      * 方法参数
      */
     private final Object[] args;
-
     /**
      * 是否包含方法参数
      */
     private final boolean includeArgs;
-
     /**
      * 是否包含堆栈信息
      */
     private final boolean includeStackTrace;
-
-    /**
-     * 用户ID
-     */
-    private Long userId;
-
-    /**
-     * 用户名
-     */
-    private String userName;
-
-    /**
-     * 姓名
-     */
-    private String name;
-
-    /**
-     * 客户编号
-     */
-    private String customerNumber;
-
-    /**
-     * 邮箱
-     */
-    private String email;
-
-    /**
-     * 手机号
-     */
-    private String phoneNumber;
-
-    /**
-     * 请求URL
-     */
-    private String requestUrl;
-
-    /**
-     * 请求方法
-     */
-    private String requestMethod;
-
-    /**
-     * 客户端IP
-     */
-    private String clientIp;
-
-    /**
-     * 查询参数
-     */
-    private String queryString;
-
     /**
      * 指定的通知邮箱（可为空，使用系统默认配置）
      */
     private final String notifyEmails;
-
     /**
      * 指定的通知微信接收人（可为空，使用系统默认配置）
      */
     private final String notifyWx;
+    /**
+     * 堆栈深度限制
+     */
+    private int stackTraceDepth;
+    /**
+     * 用户ID
+     */
+    private Long userId;
+    /**
+     * 用户名
+     */
+    private String userName;
+    /**
+     * 姓名
+     */
+    private String name;
+    /**
+     * 客户编号
+     */
+    private String customerNumber;
+    /**
+     * 邮箱
+     */
+    private String email;
+    /**
+     * 手机号
+     */
+    private String phoneNumber;
+    /**
+     * 请求URL
+     */
+    private String requestUrl;
+    /**
+     * 请求方法
+     */
+    private String requestMethod;
+    /**
+     * 客户端IP
+     */
+    private String clientIp;
+    /**
+     * 查询参数
+     */
+    private String queryString;
 
     /**
      * 构造函数

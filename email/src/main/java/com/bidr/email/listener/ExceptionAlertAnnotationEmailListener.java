@@ -180,11 +180,31 @@ public class ExceptionAlertAnnotationEmailListener {
         builder.appendExceptionInfo(event.getExceptionType(), event.getExceptionMessage());
 
         if (event.isIncludeStackTrace()) {
+            // 获取堆栈深度：注解配置优先，-2 表示使用系统配置
+            int depth = getStackDepthFromConfig();
+            if (event.getStackTraceDepth() == -2) {
+                event.setStackTraceDepth(depth);
+            }
             builder.appendStackTrace(event.getLimitedStackTrace());
         }
 
         builder.appendFooter();
 
         return builder.build();
+    }
+
+    /**
+     * 从系统配置获取堆栈深度
+     */
+    private int getStackDepthFromConfig() {
+        String depthStr = sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_STACK_DEPTH);
+        if (FuncUtil.isEmpty(depthStr)) {
+            return 50;
+        }
+        try {
+            return Integer.parseInt(depthStr);
+        } catch (NumberFormatException e) {
+            return 50;
+        }
     }
 }

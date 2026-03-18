@@ -2,10 +2,7 @@ package com.bidr.authorization.annotation.alert;
 
 import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.holder.AccountContext;
-import com.bidr.email.constant.param.EmailParam;
-import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.event.ExceptionAlertEvent;
-import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.extern.slf4j.Slf4j;
@@ -69,12 +66,7 @@ public class ExceptionAlertAspect {
         Method method = signature.getMethod();
         String className = joinPoint.getTarget().getClass().getName();
         String methodName = method.getName();
-
-        // 获取堆栈深度：注解配置优先，-2 表示使用系统配置
         int stackTraceDepth = alert.stackTraceDepth();
-        if (stackTraceDepth == -2) {
-            stackTraceDepth = getStackDepthFromConfig();
-        }
 
         ExceptionAlertEvent.Builder builder = new ExceptionAlertEvent.Builder()
                 .source(this)
@@ -153,20 +145,5 @@ public class ExceptionAlertAspect {
         PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
         return sw.toString();
-    }
-
-    /**
-     * 从系统配置获取堆栈深度
-     */
-    private int getStackDepthFromConfig() {
-        String depthStr = sysConfigCacheService.getSysConfigValue(EmailParam.EXCEPTION_NOTIFY_STACK_DEPTH);
-        if (FuncUtil.isEmpty(depthStr)) {
-            return 50;
-        }
-        try {
-            return Integer.parseInt(depthStr);
-        } catch (NumberFormatException e) {
-            return 50;
-        }
     }
 }
