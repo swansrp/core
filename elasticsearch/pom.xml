@@ -12,52 +12,26 @@
     <artifactId>elasticsearch</artifactId>
     <version>${jarVersion}</version>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <elasticsearch.version>8.17.3</elasticsearch.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <elasticsearch.version>8.17.3</elasticsearch.version>
-                <kernel.version>20260303142953-154</kernel.version>
-            </properties>
-        </profile>
-    </profiles>
+    <properties>
+        <elasticsearch.version>8.17.3</elasticsearch.version>
+    </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
-            <version>${kernel.version}</version>
+            <!-- 版本从父pom dependencyManagement继承 -->
         </dependency>
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
-            <version>8.17.3</version> <!-- 请根据你的 ES 版本匹配 -->
+            <version>${elasticsearch.version}</version> <!-- 请根据你的 ES 版本匹配 -->
         </dependency>
         <!-- 将以上依赖版本写入项目 -->
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-client</artifactId>
-            <version>8.17.3</version>
+            <version>${elasticsearch.version}</version>
         </dependency>
         <!-- 将以上依赖版本写入项目 -->
 
