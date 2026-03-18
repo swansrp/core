@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.admin.dao.mapper.SysPortalTableMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalTable">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="portal_name" jdbcType="BIGINT" property="portalName" />
+    <result column="table_code" jdbcType="VARCHAR" property="tableCode" />
+    <result column="filter_width" jdbcType="INTEGER" property="filterWidth" />
+    <result column="padding_th" jdbcType="INTEGER" property="paddingTh" />
+    <result column="padding_td" jdbcType="INTEGER" property="paddingTd" />
+    <result column="filter_columns" jdbcType="VARCHAR" property="filterColumns" />
+    <result column="download_able" jdbcType="VARCHAR" property="downloadAble" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, portal_name, table_code, filter_width, padding_th, padding_td, filter_columns, download_able, status
+  </sql>
+</mapper>
