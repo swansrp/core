@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>ocr</artifactId>
-    <version>${jarVersion}</version>
+    <version>0.0.1-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -34,7 +34,7 @@
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
-            <!-- 版本从父pom dependencyManagement继承 -->
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>ai.djl</groupId>

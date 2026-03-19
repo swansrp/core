@@ -12,16 +12,43 @@
     <artifactId>email</artifactId>
     <version>${jarVersion}</version>
 
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
+                <platform.version>${jarVersion}</platform.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>20260303142953-154</kernel.version>
+                <platform.version>20260302092143-50</platform.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <dependencies>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
-            <!-- 版本从父pom dependencyManagement继承 -->
+            <version>${kernel.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>
-            <!-- 版本从父pom dependencyManagement继承 -->
+            <version>${platform.version}</version>
         </dependency>
 
         <dependency>
