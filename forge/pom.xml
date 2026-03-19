@@ -43,11 +43,11 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20260303142953-154</kernel.version>
-                <platform.version>20260302092143-50</platform.version>
-                <redis.version>20260210004452-32</redis.version>
-                <authorization.version>20260302092229-61</authorization.version>
-                <admin.version>20260302092606-102</admin.version>
+                <kernel.version>20260319113226-20</kernel.version>
+                <platform.version>20260319113226-20</platform.version>
+                <redis.version>20260319113226-20</redis.version>
+                <authorization.version>20260319113226-20</authorization.version>
+                <admin.version>20260319113226-20</admin.version>
             </properties>
         </profile>
     </profiles>
