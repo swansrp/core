@@ -12,10 +12,8 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Title: AcAccountService
@@ -35,8 +33,26 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
         LambdaQueryWrapper<AcAccount> wrapper = super.getQueryWrapper();
         wrapper.eq(AcAccount::getStatus, ActiveStatusDict.ACTIVATE.getValue())
                 .eq(AcAccount::getEmployStatus, BoolDict.YES.getValue())
-                .in(FuncUtil.isNotEmpty(deptIdList), AcAccount::getDepartment, deptIdList)
-                .like(FuncUtil.isNotEmpty(name), AcAccount::getName, name);
+                .in(FuncUtil.isNotEmpty(deptIdList), AcAccount::getDepartment, deptIdList);
+        if (FuncUtil.isNotEmpty(name)) {
+            String[] nameArray = name.split(",");
+            wrapper.nested(w -> {
+                AtomicBoolean first = new AtomicBoolean(true);
+
+                Arrays.stream(nameArray).forEach(n -> {
+                    if (!first.get()) {
+                        w.or();
+                    }
+                    first.set(false);
+
+                    w.nested(inner -> inner
+                            .like(AcAccount::getName, n)
+                            .or()
+                            .like(AcAccount::getUserName, n)
+                    );
+                });
+            });
+        }
         if (FuncUtil.isEmpty(deptIdList)) {
             return super.select(wrapper, 1, 50, false).getRecords();
         } else {

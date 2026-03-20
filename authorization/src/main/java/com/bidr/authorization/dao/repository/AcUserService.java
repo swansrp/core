@@ -17,10 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Title: AcUserService
@@ -59,9 +57,20 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         if (FuncUtil.isNotEmpty(name)) {
             String[] nameArray = name.split(",");
             wrapper.nested(w -> {
-                for (String n : nameArray) {
-                    w.like(AcUser::getName, n).or().like(AcUser::getUserName, n);
-                }
+                AtomicBoolean first = new AtomicBoolean(true);
+
+                Arrays.stream(nameArray).forEach(n -> {
+                    if (!first.get()) {
+                        w.or();
+                    }
+                    first.set(false);
+
+                    w.nested(inner -> inner
+                            .like(AcUser::getName, n)
+                            .or()
+                            .like(AcUser::getUserName, n)
+                    );
+                });
             });
         }
         if (FuncUtil.isEmpty(deptIdList)) {
