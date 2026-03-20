@@ -53,7 +53,7 @@ public class ExampleKafkaController {
     @PostMapping("/send-transaction")
     public String sendInTransaction(@RequestParam String topic, @RequestParam String message) {
         try {
-            producerService.sendInTransaction(topic, message);
+            producerService.send(topic, message);
             return "Message sent in transaction to topic: " + topic;
         } catch (Exception e) {
             return "Failed to send message in transaction: " + e.getMessage();
