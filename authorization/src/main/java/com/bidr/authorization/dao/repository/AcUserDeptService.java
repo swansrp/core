@@ -20,4 +20,9 @@ public class AcUserDeptService extends BaseSqlRepo<AcUserDeptDao, AcUserDept> {
         LambdaQueryWrapper<AcUserDept> wrapper = super.getQueryWrapper().eq(AcUserDept::getUserId, userId);
         return selectOne(wrapper);
     }
+
+    public void deleteByDeptId(String deptId) {
+        LambdaQueryWrapper<AcUserDept> wrapper = super.getQueryWrapper().eq(AcUserDept::getDeptId, deptId);
+        delete(wrapper);
+    }
 }

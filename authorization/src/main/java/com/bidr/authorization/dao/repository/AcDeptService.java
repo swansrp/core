@@ -27,10 +27,9 @@ public class AcDeptService extends BaseSqlRepo<AcDeptDao, AcDept> {
                 .orderByAsc(AcDept::getShowOrder);
         return select(wrapper);
     }
+
+    public AcDept getDeptByName(String name) {
+        LambdaQueryWrapper<AcDept> wrapper = super.getQueryWrapper().eq(AcDept::getName, name);
+        return selectOne(wrapper);
+    }
 }
-
-
-
-
-
-

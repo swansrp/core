@@ -19,8 +19,9 @@ public interface EasyExcelHandler<T, VO> {
      * 初始化准备
      *
      * @param analysisContext excel上下文
+     * @param context         处理数据上下文
      */
-    default void prepare(AnalysisContext analysisContext) {
+    default void prepare(AnalysisContext analysisContext, Map<String, Object> context) {
 
     }
 

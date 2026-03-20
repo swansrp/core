@@ -23,6 +23,13 @@ public class AcGroupService extends BaseSqlRepo<AcGroupDao, AcGroup> {
         return super.select(wrapper);
     }
 
+    public AcGroup getGroupByTypeAndName(String type, String name) {
+        LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper().eq(AcGroup::getType, type)
+                .eq(AcGroup::getName, name)
+                .orderByAsc(AcGroup::getDisplayOrder);
+        return super.selectOne(wrapper);
+    }
+
     public long countGroupByType(String type) {
         LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper().eq(AcGroup::getType, type)
                 .orderByAsc(AcGroup::getDisplayOrder);

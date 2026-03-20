@@ -31,4 +31,10 @@ public class AcUserGroupService extends BaseSqlRepo<AcUserGroupDao, AcUserGroup>
                 .in(FuncUtil.isNotEmpty(subGroup), AcUserGroup::getGroupId, subGroup);
         return super.existed(wrapper);
     }
+
+    public void deleteByGroupId(Object groupId) {
+        LambdaQueryWrapper<AcUserGroup> wrapper = super.getQueryWrapper()
+                .eq(AcUserGroup::getGroupId, groupId);
+        super.delete(wrapper);
+    }
 }

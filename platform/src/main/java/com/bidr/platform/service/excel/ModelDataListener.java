@@ -84,7 +84,7 @@ public class ModelDataListener<T, VO> extends AnalysisEventListener<VO> {
             ReadSheetHolder sheetHolder = context.readSheetHolder();
             maxLine = sheetHolder.getApproximateTotalRowNumber() - sheetHolder.getHeadRowNumber();
             onPrepare(context);
-            handler.prepare(context);
+            handler.prepare(context, handleContext);
             handler.setProgress(UploadProgressStep.VALIDATE, maxLine, null, null);
         }
         T entity = handler.parse(data, handleContext, context);

@@ -24,5 +24,7 @@ public class AcGroupSchema extends BaseMybatisSchema<AcGroup> {
                 "  PRIMARY KEY (`id`),\n" +
                 "  KEY `type` (`type`)\n" +
                 ") COMMENT='用户逻辑组群';");
+        setUpgradeDDL(1, "ALTER TABLE `ac_group`\n" +
+                "\tADD UNIQUE INDEX `type_name` (`type`, `name`);\n");
     }
 }
