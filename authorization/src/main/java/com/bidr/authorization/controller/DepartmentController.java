@@ -2,6 +2,7 @@ package com.bidr.authorization.controller;
 
 import com.bidr.authorization.service.department.DepartmentService;
 import com.bidr.authorization.vo.admin.UserRes;
+import com.bidr.authorization.vo.department.DepartmentItem;
 import com.bidr.authorization.vo.department.DepartmentTreeRes;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,9 +29,15 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @ApiOperation(value = "获取组织结构树", notes = "登录后准入")
-    @RequestMapping(value = "/tree", method = RequestMethod.GET)
+    @RequestMapping(value = {"/tree", "/tree/data"}, method = RequestMethod.GET)
     public List<DepartmentTreeRes> getDepartmentTree() {
         return departmentService.getDeptTree();
+    }
+
+    @ApiOperation(value = "获取组织结构树", notes = "登录后准入")
+    @RequestMapping(value = "/id", method = RequestMethod.GET)
+    public DepartmentItem getDepartmentTree(String id) {
+        return departmentService.getDeptTree(id);
     }
 
 

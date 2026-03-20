@@ -47,6 +47,11 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
         return adminMenuService.getMenuTree();
     }
 
+    @Override
+    protected List<AcMenu> getAllData() {
+        return adminMenuService.getAllData();
+    }
+
     @ApiOperation(value = "获取主菜单树", notes = "全部")
     @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
     public List<MenuTreeRes> getMainMenuTree() {

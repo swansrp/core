@@ -40,4 +40,8 @@ public class DepartmentService {
     public List<UserRes> getDeptMembers(String deptId) {
         return Resp.convert(acUserService.getUserByDeptId(deptId), UserRes.class);
     }
+
+    public DepartmentItem getDeptTree(String id) {
+        return Resp.convert(acDeptService.selectById(id), DepartmentItem.class);
+    }
 }
