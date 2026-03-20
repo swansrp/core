@@ -58,13 +58,18 @@ public class AdminMenuService {
         acRoleMenuService.insert(acRoleMenu);
     }
 
-    public List<MenuTreeRes> getMenuTree() {
+    public List<AcMenu> getAllData() {
         List<AcMenu> menuList = acMenuService.getAllMenu(permitService.isAdmin());
         for (AcMenu acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
             }
         }
+        return menuList;
+    }
+
+    public List<MenuTreeRes> getMenuTree() {
+        List<AcMenu> menuList = getAllData();
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }
