@@ -112,6 +112,7 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
             } else {
                 // 其他异常包装为 ServiceException 事件
                 ServiceException serviceException = new ServiceException(ex.getMessage(), ex);
+                serviceException.setErrCode(ErrCodeSys.SYS_ERR);
                 applicationContext.publishEvent(new ServiceExceptionEvent(serviceException, request));
             }
         } catch (Exception e) {
