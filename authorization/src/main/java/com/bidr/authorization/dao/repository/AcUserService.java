@@ -56,21 +56,31 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
         wrapper.in(FuncUtil.isNotEmpty(deptIdList), AcUser::getDeptId, deptIdList);
         if (FuncUtil.isNotEmpty(name)) {
             String[] nameArray = name.split(",");
+            boolean hasMultipleNames = nameArray.length > 1;
             wrapper.nested(w -> {
                 AtomicBoolean first = new AtomicBoolean(true);
 
-                Arrays.stream(nameArray).forEach(n -> {
-                    if (!first.get()) {
-                        w.or();
-                    }
-                    first.set(false);
-
+                if (hasMultipleNames) {
+                    // 多个名字时，使用精确匹配
+                    Arrays.stream(nameArray).forEach(n -> {
+                        if (!first.get()) {
+                            w.or();
+                        }
+                        first.set(false);
+                        w.nested(inner -> inner
+                                .eq(AcUser::getName, n)
+                                .or()
+                                .eq(AcUser::getUserName, n)
+                        );
+                    });
+                } else {
+                    // 单个名字时，使用模糊匹配
                     w.nested(inner -> inner
-                            .like(AcUser::getName, n)
+                            .like(AcUser::getName, nameArray[0])
                             .or()
-                            .like(AcUser::getUserName, n)
+                            .like(AcUser::getUserName, nameArray[0])
                     );
-                });
+                }
             });
         }
         if (FuncUtil.isEmpty(deptIdList)) {

@@ -3,6 +3,7 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcDept;
+import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.mapper.AcAccountDao;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;
@@ -36,21 +37,31 @@ public class AcAccountService extends BaseSqlRepo<AcAccountDao, AcAccount> {
                 .in(FuncUtil.isNotEmpty(deptIdList), AcAccount::getDepartment, deptIdList);
         if (FuncUtil.isNotEmpty(name)) {
             String[] nameArray = name.split(",");
+            boolean hasMultipleNames = nameArray.length > 1;
             wrapper.nested(w -> {
                 AtomicBoolean first = new AtomicBoolean(true);
 
-                Arrays.stream(nameArray).forEach(n -> {
-                    if (!first.get()) {
-                        w.or();
-                    }
-                    first.set(false);
-
+                if (hasMultipleNames) {
+                    // 多个名字时，使用精确匹配
+                    Arrays.stream(nameArray).forEach(n -> {
+                        if (!first.get()) {
+                            w.or();
+                        }
+                        first.set(false);
+                        w.nested(inner -> inner
+                                .eq(AcAccount::getName, n)
+                                .or()
+                                .eq(AcAccount::getUserName, n)
+                        );
+                    });
+                } else {
+                    // 单个名字时，使用模糊匹配
                     w.nested(inner -> inner
-                            .like(AcAccount::getName, n)
+                            .like(AcAccount::getName, nameArray[0])
                             .or()
-                            .like(AcAccount::getUserName, n)
+                            .like(AcAccount::getUserName, nameArray[0])
                     );
-                });
+                }
             });
         }
         if (FuncUtil.isEmpty(deptIdList)) {
