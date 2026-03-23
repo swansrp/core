@@ -48,7 +48,7 @@ public class RecursionService {
             String idFieldName = idField.getName();
             TableId idAnno = idField.getAnnotation(TableId.class);
             TableField idFieldAnno = idField.getAnnotation(TableField.class);
-            if (idFieldAnno != null) {
+            if (idAnno != null) {
                 idFieldName = idAnno.value();
             }
             if (idFieldAnno != null) {
@@ -97,7 +97,7 @@ public class RecursionService {
             String idFieldName = idField.getName();
             TableId idAnno = idField.getAnnotation(TableId.class);
             TableField idFieldAnno = idField.getAnnotation(TableField.class);
-            if (idFieldAnno != null) {
+            if (idAnno != null) {
                 idFieldName = idAnno.value();
             }
             if (idFieldAnno != null) {
