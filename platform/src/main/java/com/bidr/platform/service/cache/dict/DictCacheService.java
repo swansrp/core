@@ -95,17 +95,17 @@ public class DictCacheService implements CommandLineRunner {
                     res.setShow(value.getShow());
                     resList.add(res);
                 });
-            } else {
-                List<SysBizDict> bizDictList = sysBizDictService.getBizDictItemsByCode(dictName);
-                if (FuncUtil.isNotEmpty(bizDictList)) {
-                    bizDictList.forEach(dict -> {
-                        DictRes res = new DictRes();
-                        res.setValue(dict.getValue());
-                        res.setLabel(dict.getLabel());
-                        res.setShow(CommonConst.YES);
-                        resList.add(res);
-                    });
-                }
+            }
+        } else {
+            List<SysBizDict> bizDictList = sysBizDictService.getBizDictItemsByCode(dictName);
+            if (FuncUtil.isNotEmpty(bizDictList)) {
+                bizDictList.forEach(dict -> {
+                    DictRes res = new DictRes();
+                    res.setValue(dict.getValue());
+                    res.setLabel(dict.getLabel());
+                    res.setShow(CommonConst.YES);
+                    resList.add(res);
+                });
             }
         }
         return resList;
