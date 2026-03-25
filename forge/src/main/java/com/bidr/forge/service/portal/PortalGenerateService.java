@@ -348,14 +348,12 @@ public class PortalGenerateService {
 
             portalColumn.setProperty(property);
             portalColumn.setDbField(datasetColumn.getColumnAlias());
-            if (FuncUtil.isNotEmpty(datasetColumn.getRemark())) {
+            if (FuncUtil.isNotEmpty(defaults.displayName)) {
+                portalColumn.setDisplayName(defaults.displayName);
+            } else if (FuncUtil.isNotEmpty(datasetColumn.getRemark())) {
                 portalColumn.setDisplayName(datasetColumn.getRemark());
             } else {
-                if (FuncUtil.isNotEmpty(defaults.displayName)) {
-                    portalColumn.setDisplayName(defaults.displayName);
-                } else {
-                    portalColumn.setDisplayName(datasetColumn.getColumnAlias());
-                }
+                portalColumn.setDisplayName(datasetColumn.getColumnAlias());
             }
 
             // 使用预计算的默认值
