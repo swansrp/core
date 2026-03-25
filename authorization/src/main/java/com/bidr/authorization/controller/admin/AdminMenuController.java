@@ -119,6 +119,12 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
         return permitSourceService.getUserPermitSource(menuId, customerNumber);
     }
 
+    @ApiOperation(value = "获取菜单权限分配目标")
+    @RequestMapping(value = "/permit/targets", method = RequestMethod.GET)
+    public List<UserPermitRes> getMenuPermitTargets(Long menuId) {
+        return permitSourceService.getMenuPermitTargets(menuId);
+    }
+
     @ApiOperation(value = "获取用户权限")
     @RequestMapping(value = "/user/permit", method = RequestMethod.GET)
     public List<MenuTreeRes> getUserPermit(String customerNumber) {

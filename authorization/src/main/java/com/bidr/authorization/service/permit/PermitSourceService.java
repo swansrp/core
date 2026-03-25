@@ -340,6 +340,164 @@ public class PermitSourceService {
         return results;
     }
 
+    /**
+     * 获取菜单的权限分配目标
+     *
+     * @param menuId 菜单ID
+     * @return 权限分配目标列表，包含角色、部门、用户组、用户
+     */
+    public List<UserPermitRes> getMenuPermitTargets(Long menuId) {
+        log.info("开始查询菜单 {} 的权限分配目标", menuId);
+
+        List<UserPermitRes> results = new ArrayList<>();
+
+        // 1. 查询分配的角色
+        results.addAll(getMenuRoleTargets(menuId));
+
+        // 2. 查询分配的部门
+        results.addAll(getMenuDeptTargets(menuId));
+
+        // 3. 查询分配的用户组
+        results.addAll(getMenuGroupTargets(menuId));
+
+        // 4. 查询分配的个人
+        results.addAll(getMenuUserTargets(menuId));
+
+        log.info("菜单 {} 共分配给 {} 个目标", menuId, results.size());
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的角色
+     */
+    private List<UserPermitRes> getMenuRoleTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcRoleMenu> wrapper = new MPJLambdaWrapper<AcRoleMenu>()
+                    .selectAll(AcRole.class)
+                    .innerJoin(AcRole.class, AcRole::getRoleId, AcRoleMenu::getRoleId)
+                    .eq(AcRoleMenu::getMenuId, menuId)
+                    .eq(AcRole::getStatus, CommonConst.YES);
+
+            List<AcRole> roles = acRoleMenuService.selectJoinList(AcRole.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(roles)) {
+                roles.forEach(role -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.ROLE,
+                            role.getRoleId(),
+                            role.getRoleName(),
+                            String.format("已分配给角色[%s]", role.getRoleName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的角色失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的部门
+     */
+    private List<UserPermitRes> getMenuDeptTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcDeptMenu> wrapper = new MPJLambdaWrapper<AcDeptMenu>()
+                    .selectAll(AcDept.class)
+                    .innerJoin(AcDept.class, AcDept::getDeptId, AcDeptMenu::getDeptId)
+                    .eq(AcDeptMenu::getMenuId, menuId)
+                    .eq(AcDept::getStatus, CommonConst.YES);
+
+            List<AcDept> depts = acDeptMenuService.selectJoinList(AcDept.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(depts)) {
+                depts.forEach(dept -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.DEPT,
+                            Long.valueOf(dept.getDeptId()),
+                            dept.getName(),
+                            String.format("已分配给部门[%s]", dept.getName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的部门失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的用户组
+     */
+    private List<UserPermitRes> getMenuGroupTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcGroupMenu> wrapper = new MPJLambdaWrapper<AcGroupMenu>()
+                    .selectAll(AcGroup.class)
+                    .innerJoin(AcGroup.class, AcGroup::getId, AcGroupMenu::getGroupId)
+                    .eq(AcGroupMenu::getMenuId, menuId);
+
+            List<AcGroup> groups = acGroupMenuService.selectJoinList(AcGroup.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(groups)) {
+                groups.forEach(group -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.GROUP,
+                            group.getId(),
+                            group.getName(),
+                            String.format("已分配给用户组[%s]", group.getName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的用户组失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的个人
+     */
+    private List<UserPermitRes> getMenuUserTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcUserMenu> wrapper = new MPJLambdaWrapper<AcUserMenu>()
+                    .selectAll(AcUser.class)
+                    .innerJoin(AcUser.class, AcUser::getCustomerNumber, AcUserMenu::getCustomerNumber)
+                    .eq(AcUserMenu::getMenuId, menuId)
+                    .eq(AcUser::getStatus, CommonConst.YES);
+
+            List<AcUser> users = acUserMenuService.selectJoinList(AcUser.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(users)) {
+                users.forEach(user -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.USER,
+                            user.getUserId(),
+                            user.getName(),
+                            String.format("已分配给用户[%s]", user.getName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的用户失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class DeptWithScope extends AcDept {
