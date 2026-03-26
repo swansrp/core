@@ -106,11 +106,13 @@ public class LogFilter extends OncePerRequestFilter {
             try {
                 HandlerMethod handlerMethod = (HandlerMethod) temRequest.getAttribute(
                         HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
-                if (handlerMethod.getBeanType().isAnnotationPresent(ApiTrace.class)) {
-                    traceResponse = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).response();
-                }
-                if (handlerMethod.getMethod().isAnnotationPresent(ApiTrace.class)) {
-                    traceResponse = handlerMethod.getMethod().getAnnotation(ApiTrace.class).response();
+                if (handlerMethod != null) {
+                    if (handlerMethod.getBeanType().isAnnotationPresent(ApiTrace.class)) {
+                        traceResponse = handlerMethod.getBeanType().getAnnotation(ApiTrace.class).response();
+                    }
+                    if (handlerMethod.getMethod().isAnnotationPresent(ApiTrace.class)) {
+                        traceResponse = handlerMethod.getMethod().getAnnotation(ApiTrace.class).response();
+                    }
                 }
             } catch (ClassCastException ignored) {
 
