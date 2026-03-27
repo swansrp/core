@@ -5,6 +5,7 @@ import com.bidr.kernel.cache.MemoryCacheInf;
 import com.diboot.core.cache.StaticMemoryCacheManager;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,13 +23,19 @@ import java.util.Map;
  */
 @Configuration
 public class MemoryCacheConfig {
+
     @Autowired(required = false)
     private List<DynamicMemoryCacheInf<?>> dynamicMemoryCacheList;
 
     @Autowired(required = false)
     private List<MemoryCacheInf<?>> staticMemoryCacheList;
 
+    /**
+     * 创建本地内存缓存管理器
+     * 如果 redis 模块提供了 HybridDynamicMemoryCacheManager，则不会创建此 Bean
+     */
     @Bean
+    @ConditionalOnMissingBean(DynamicMemoryCacheManager.class)
     public DynamicMemoryCacheManager dynamicMemoryCacheManager() {
         Map<String, Integer> dynamicCaches = new HashMap<>();
         if (CollectionUtils.isNotEmpty(dynamicMemoryCacheList)) {
@@ -41,7 +48,6 @@ public class MemoryCacheConfig {
 
     @Bean
     public StaticMemoryCacheManager staticMemoryCacheManager() {
-
         List<String> staticCaches = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(staticMemoryCacheList)) {
             for (MemoryCacheInf<?> cache : staticMemoryCacheList) {

@@ -69,10 +69,21 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
 
     @Override
     protected Map<String, LinkedHashMap<String, SysDict>> getCacheData() {
+        return getCacheData(false);
+    }
+
+    /**
+     * 获取缓存数据
+     *
+     * @param init true=同步写入数据库（仅初始化时），false=只读取不写库（刷新时）
+     */
+    @Override
+    protected Map<String, LinkedHashMap<String, SysDict>> getCacheData(boolean init) {
         List<SysDict> sysDictCache = new ArrayList<>();
         String dictName = config.getDictName();
         String dictTitle = config.getDictTitle();
-        SysDictType sysDictType = buildSysDictType(dictName, dictTitle);
+
+        // 1. 从代码/数据库读取数据
         if (StringUtil.convertSwitch(config.getReadOnly())) {
             if (config.getDynamic()) {
                 buildDynamicSysDictCacheList(sysDictCache);
@@ -82,14 +93,26 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         } else {
             buildDbSysDictCacheList(sysDictCache);
         }
+
+        // 2. 构建内存映射
         Map<String, LinkedHashMap<String, SysDict>> map = new HashMap<>(DictTypeEnum.values().length);
         if (CollectionUtils.isNotEmpty(sysDictCache)) {
             buildSysDictMap(sysDictCache, map);
-            syncSysDictType(sysDictType);
-            syncSysDict(config.getDictName(), sysDictCache);
         }
-        return map;
 
+        // 3. 写库：仅在初始化时执行（syncToDb=true）
+        //    - 初始化：可能是首次部署，需要创建/更新数据库中的字典记录
+        //    - 刷新：说明本地+Redis都过期了，但数据库已有数据，无需重复写入
+        if (init) {
+            SysDictType sysDictType = buildSysDictType(dictName, dictTitle);
+            syncSysDictType(sysDictType);
+            if (CollectionUtils.isNotEmpty(sysDictCache)) {
+                syncSysDict(dictName, sysDictCache);
+            }
+            log.debug("字典[{}]初始化完成，已写入数据库", dictName);
+        }
+
+        return map;
     }
 
     private SysDictType buildSysDictType(String dictName, String dictTitle) {

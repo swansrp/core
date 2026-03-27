@@ -1,7 +1,9 @@
 package com.bidr.kernel.cache.config;
 
+import com.bidr.kernel.cache.lock.CacheLockProvider;
 import com.diboot.core.cache.BaseMemoryCacheManager;
 import com.diboot.core.util.V;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -20,18 +22,24 @@ import java.util.concurrent.ConcurrentMap;
  * @author Sharp
  * @since 2023/04/26 14:45
  */
+@Data
 @Slf4j
 public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
 
     /**
+     * 锁提供者（默认使用本地锁，redis 模块可注入分布式锁）
+     */
+    private CacheLockProvider lockProvider = CacheLockProvider.LOCAL;
+
+    /**
      * cache的清理时间缓存
      */
-    private final ConcurrentHashMap<String, String> CACHE_CLEANDATE_CACHE = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> CACHE_CLEAN_DATE_CACHE = new ConcurrentHashMap<>();
 
     /**
      * cache的过期时间缓存
      */
-    private final ConcurrentHashMap<String, Integer> CACHE_EXPIREDMINUTES_CACHE = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> CACHE_EXPIRED_MINUTES_CACHE = new ConcurrentHashMap<>();
 
     /**
      * cache的时间戳缓存
@@ -67,8 +75,8 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
         List<Cache> caches = new ArrayList<>(cacheNames.length);
         for (String cacheName : cacheNames) {
             caches.add(new ConcurrentMapCache(cacheName));
-            this.CACHE_EXPIREDMINUTES_CACHE.put(cacheName, expiredMinutes);
-            this.CACHE_CLEANDATE_CACHE.put(cacheName, "");
+            this.CACHE_EXPIRED_MINUTES_CACHE.put(cacheName, expiredMinutes);
+            this.CACHE_CLEAN_DATE_CACHE.put(cacheName, "");
         }
         setCaches(caches);
         super.afterPropertiesSet();
@@ -83,8 +91,8 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
         List<Cache> caches = new ArrayList<>(cacheName2ExpiredMinutes.size());
         for (Map.Entry<String, Integer> cacheEntry : cacheName2ExpiredMinutes.entrySet()) {
             caches.add(new ConcurrentMapCache(cacheEntry.getKey()));
-            this.CACHE_EXPIREDMINUTES_CACHE.put(cacheEntry.getKey(), cacheEntry.getValue());
-            this.CACHE_CLEANDATE_CACHE.put(cacheEntry.getKey(), "");
+            this.CACHE_EXPIRED_MINUTES_CACHE.put(cacheEntry.getKey(), cacheEntry.getValue());
+            this.CACHE_CLEAN_DATE_CACHE.put(cacheEntry.getKey(), "");
         }
         setCaches(caches);
         super.afterPropertiesSet();
@@ -115,8 +123,8 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
         List<Cache> caches = new ArrayList<>(cacheNames.length);
         for (String cacheName : cacheNames) {
             caches.add(new ConcurrentMapCache(cacheName));
-            this.CACHE_EXPIREDMINUTES_CACHE.put(cacheName, expiredMinutes);
-            this.CACHE_CLEANDATE_CACHE.put(cacheName, "");
+            this.CACHE_EXPIRED_MINUTES_CACHE.put(cacheName, expiredMinutes);
+            this.CACHE_CLEAN_DATE_CACHE.put(cacheName, "");
         }
         caches.addAll(super.loadCaches());
         setCaches(caches);
@@ -132,8 +140,8 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
         List<Cache> caches = new ArrayList<>(cacheName2ExpiredMinutes.size());
         for (Map.Entry<String, Integer> cacheEntry : cacheName2ExpiredMinutes.entrySet()) {
             caches.add(new ConcurrentMapCache(cacheEntry.getKey()));
-            this.CACHE_EXPIREDMINUTES_CACHE.put(cacheEntry.getKey(), cacheEntry.getValue());
-            this.CACHE_CLEANDATE_CACHE.put(cacheEntry.getKey(), "");
+            this.CACHE_EXPIRED_MINUTES_CACHE.put(cacheEntry.getKey(), cacheEntry.getValue());
+            this.CACHE_CLEAN_DATE_CACHE.put(cacheEntry.getKey(), "");
         }
         caches.addAll(super.loadCaches());
         setCaches(caches);
@@ -191,13 +199,13 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
     private void clearOutOfDateDataIfNeeded(String cacheName) {
         boolean needed = true;
         String today = LocalDate.now().toString();
-        if (CACHE_CLEANDATE_CACHE.containsKey(cacheName)) {
-            needed = V.notEquals(today, CACHE_CLEANDATE_CACHE.get(cacheName));
+        if (CACHE_CLEAN_DATE_CACHE.containsKey(cacheName)) {
+            needed = V.notEquals(today, CACHE_CLEAN_DATE_CACHE.get(cacheName));
         }
         if (needed) {
             log.debug("新的执行周期清理过期的本地缓存: {}", cacheName);
             clearOutOfDateData(cacheName);
-            CACHE_CLEANDATE_CACHE.put(cacheName, today);
+            CACHE_CLEAN_DATE_CACHE.put(cacheName, today);
         }
     }
 
@@ -239,7 +247,17 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
             return false;
         }
         long currentTimestamp = System.currentTimeMillis();
-        int expiredMinutes = CACHE_EXPIREDMINUTES_CACHE.get(cacheName);
+        int expiredMinutes = CACHE_EXPIRED_MINUTES_CACHE.get(cacheName);
         return (currentTimestamp - cacheTimestamp) > (expiredMinutes * 60000L);
+    }
+
+    /**
+     * 设置锁提供者
+     *
+     * @param lockProvider 锁提供者
+     */
+    public void setLockProvider(CacheLockProvider lockProvider) {
+        this.lockProvider = lockProvider;
+        log.info("缓存锁提供者已设置: {}", lockProvider.getClass().getSimpleName());
     }
 }

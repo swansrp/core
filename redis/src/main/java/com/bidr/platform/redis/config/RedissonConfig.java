@@ -2,12 +2,14 @@ package com.bidr.platform.redis.config;
 
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
+import org.redisson.api.NameMapper;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.BaseConfig;
 import org.redisson.config.Config;
 import org.redisson.config.SentinelServersConfig;
 import org.redisson.config.SingleServerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -29,6 +31,11 @@ public class RedissonConfig {
     @Autowired
     private RedisConfiguration redisConfig;
 
+    @Value("${app.projectId:}")
+    private String projectId;
+
+    @Value("${spring.application.name}")
+    private String applicationName;
 
     @Bean(destroyMethod = "shutdown")
     public RedissonClient redisson() {
@@ -38,7 +45,7 @@ public class RedissonConfig {
         String password = redisConfig.getPassword();
         RedisSentinelConfig sentinel = redisConfig.getSentinel();
         Config config = new Config();
-        BaseConfig serversConfig = null;
+        BaseConfig<?> serversConfig = null;
         if (sentinel != null) {
             String master = redisConfig.getSentinel().getMaster();
             List<String> nodes = redisConfig.getSentinel().getNodes();
@@ -59,11 +66,17 @@ public class RedissonConfig {
             serversConfig = singleServerConfig;
         }
         setRedisAuth(userName, password, serversConfig);
-        RedissonClient redisson = Redisson.create(config);
-        return redisson;
+
+        // 设置 NameMapper，给所有 Redisson key 加项目前缀
+        String keyPrefix = buildKeyPrefix();
+        if (StringUtils.isNotEmpty(keyPrefix)) {
+            serversConfig.setNameMapper(new ProjectNameMapper(keyPrefix));
+        }
+
+        return Redisson.create(config);
     }
 
-    private void setRedisAuth(String userName, String password, BaseConfig serversConfig) {
+    private void setRedisAuth(String userName, String password, BaseConfig<?> serversConfig) {
         if (StringUtils.isNotEmpty(password)) {
             serversConfig.setPassword(password);
         }
@@ -72,5 +85,37 @@ public class RedissonConfig {
         }
     }
 
+    /**
+     * 构建缓存 key 前缀
+     */
+    private String buildKeyPrefix() {
+        if (StringUtils.isNotBlank(projectId)) {
+            return projectId;
+        }
+        return applicationName;
+    }
 
+    /**
+     * 项目级 NameMapper，给所有 Redisson key 加项目前缀
+     */
+    private static class ProjectNameMapper implements NameMapper {
+        private final String prefix;
+
+        ProjectNameMapper(String prefix) {
+            this.prefix = prefix + ":";
+        }
+
+        @Override
+        public String map(String name) {
+            return prefix + name;
+        }
+
+        @Override
+        public String unmap(String name) {
+            if (name != null && name.startsWith(prefix)) {
+                return name.substring(prefix.length());
+            }
+            return name;
+        }
+    }
 }

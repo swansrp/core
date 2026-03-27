@@ -37,93 +37,82 @@ public class PermitSourceService {
     private final AcUserDeptService acUserDeptService;
     private final AcUserGroupService acUserGroupService;
     private final RecursionService recursionService;
+    private final AcDeptService acDeptService;
+    private final AcGroupService acGroupService;
 
     /**
      * 获取用户的可解释权限信息
-     * 
-     * @param menuId 菜单ID
+     *
+     * @param menuId         菜单ID
      * @param customerNumber 用户编码
      * @return 可解释的权限列表，包含权限来源详情
      */
-    public List<UserPermitRes> getUserPermit(Long menuId, String customerNumber) {
+    public List<UserPermitRes> getUserPermitSource(Long menuId, String customerNumber) {
         log.info("开始查询用户 {} 对菜单 {} 的可解释权限", customerNumber, menuId);
-        
+
         // 获取用户信息
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
         if (user == null) {
             log.warn("用户 {} 不存在", customerNumber);
             return new ArrayList<>();
         }
-        
+
         Long userId = user.getUserId();
         String clientType = ClientTypeHolder.get();
 
         // 1. 查询角色权限来源
         List<UserPermitRes> rolePermits = getRolePermitSources(userId, menuId, clientType);
         List<UserPermitRes> permitResults = new ArrayList<>(rolePermits);
-        
+
         // 2. 查询部门权限来源（包括继承）
         List<UserPermitRes> deptPermits = getDeptPermitSources(userId, menuId, clientType);
         permitResults.addAll(deptPermits);
-        
+
         // 3. 查询用户组权限来源（包括继承）
         List<UserPermitRes> groupPermits = getGroupPermitSources(userId, menuId, clientType);
         permitResults.addAll(groupPermits);
-        
+
         // 4. 查询用户直接权限来源
-        List<UserPermitRes> userPermits = getUserDirectPermitSources(userId, menuId, clientType);
+        List<UserPermitRes> userPermits = getUserDirectPermitSources(customerNumber, userId, menuId, clientType);
         permitResults.addAll(userPermits);
-        
+
         log.info("用户 {} 对菜单 {} 共找到 {} 条权限来源", customerNumber, menuId, permitResults.size());
         return permitResults;
     }
-    
+
     /**
      * 获取角色权限来源
      */
     private List<UserPermitRes> getRolePermitSources(Long userId, Long menuId, String clientType) {
         List<UserPermitRes> results = new ArrayList<>();
-        
+
         try {
             // 查询用户拥有的角色
-            MPJLambdaWrapper<AcUserRole> roleWrapper = new MPJLambdaWrapper<AcUserRole>()
-                    .selectAll(AcRole.class)
-                    .leftJoin(AcRole.class, AcRole::getRoleId, AcUserRole::getRoleId)
-                    .eq(AcUserRole::getUserId, userId);
-            
+            MPJLambdaWrapper<AcUserRole> roleWrapper = new MPJLambdaWrapper<AcUserRole>().selectAll(AcRole.class).leftJoin(AcRole.class, AcRole::getRoleId,
+                    AcUserRole::getRoleId).eq(AcUserRole::getUserId, userId);
+
             List<AcRole> roles = acUserRoleService.selectJoinList(AcRole.class, roleWrapper);
-            
+
             // 收集角色ID列表
-            List<Long> roleIds = roles.stream()
-                    .map(AcRole::getRoleId)
-                    .collect(Collectors.toList());
-            
+            List<Long> roleIds = roles.stream().map(AcRole::getRoleId).collect(Collectors.toList());
+
             // 使用wrapper in一次性查询所有角色的菜单权限
             if (FuncUtil.isNotEmpty(roleIds)) {
-                MPJLambdaWrapper<AcRoleMenu> menuWrapper = new MPJLambdaWrapper<AcRoleMenu>()
-                        .selectAll(AcMenu.class)
-                        .innerJoin(AcMenu.class, AcMenu::getMenuId, AcRoleMenu::getMenuId)
-                        .in(AcRoleMenu::getRoleId, roleIds)
-                        .eq(AcMenu::getMenuId, menuId)
-                        .eq(AcMenu::getClientType, clientType)
-                        .eq(AcMenu::getStatus, CommonConst.YES);
-                
+                MPJLambdaWrapper<AcRoleMenu> menuWrapper = new MPJLambdaWrapper<AcRoleMenu>().selectAll(AcMenu.class).innerJoin(AcMenu.class,
+                        AcMenu::getMenuId, AcRoleMenu::getMenuId).in(AcRoleMenu::getRoleId, roleIds).eq(AcMenu::getMenuId, menuId).eq(AcMenu::getClientType,
+                        clientType).eq(AcMenu::getStatus, CommonConst.YES);
+
                 List<AcMenu> menus = acRoleMenuService.selectJoinList(AcMenu.class, menuWrapper);
-                
+
                 // 如果找到了匹配的菜单权限，构建结果
                 if (FuncUtil.isNotEmpty(menus)) {
                     // 创建角色ID到角色名称的映射
-                    Map<Long, String> roleMap = roles.stream()
-                            .collect(Collectors.toMap(AcRole::getRoleId, AcRole::getRoleName));
-                    
+                    Map<Long, String> roleMap = roles.stream().collect(Collectors.toMap(AcRole::getRoleId, AcRole::getRoleName));
+
                     // 为每个有权限的角色创建结果
                     roleIds.forEach(roleId -> {
-                        UserPermitRes permitRes = new UserPermitRes(
-                                UserPermitRes.PermitSourceType.ROLE,
-                                roleId,
-                                roleMap.get(roleId),
-                                String.format("通过角色[%s]获得权限", roleMap.get(roleId))
-                        );
+                        UserPermitRes permitRes = new UserPermitRes(UserPermitRes.PermitSourceType.ROLE, roleId, roleMap.get(roleId), String.format("通过角色[%s" +
+                                "]获得权限", roleMap.get(roleId)));
                         results.add(permitRes);
                     });
                 }
@@ -131,16 +120,16 @@ public class PermitSourceService {
         } catch (Exception e) {
             log.error("查询角色权限来源失败", e);
         }
-        
+
         return results;
     }
-    
+
     /**
      * 获取部门权限来源（包括继承权限）
      */
     private List<UserPermitRes> getDeptPermitSources(Long userId, Long menuId, String clientType) {
         List<UserPermitRes> results = new ArrayList<>();
-        
+
         try {
             // 查询用户所属部门信息
             List<DeptWithScope> userDepts = getUserDepartments(userId);
@@ -155,38 +144,38 @@ public class PermitSourceService {
             List<DeptWithScope> inheritDepts = new ArrayList<>();
             for (DeptWithScope dept : userDepts) {
                 if (DataPermitScopeDict.SUBORDINATE.getValue().equals(dept.getDataScope())) {
-                    @SuppressWarnings("unchecked")
-                    List<String> childIds = (List<String>) recursionService.getChildList(AcDept::getDeptId, AcDept::getPid, dept.getDeptId());
+                    List<String> childIds = recursionService.getChildList(AcDept::getDeptId, AcDept::getPid, dept.getDeptId());
                     if (FuncUtil.isNotEmpty(childIds)) {
                         for (String childId : childIds) {
-                            DeptWithScope inheritDept = new DeptWithScope();
-                            inheritDept.setDeptId(childId);
-                            inheritDept.setName("继承部门-" + childId); // 实际应用中应查询真实部门名称
-                            inheritDept.setDataScope(DataPermitScopeDict.SUBORDINATE.getValue());
-                            inheritDepts.add(inheritDept);
+                            DeptWithScope inheritDeptWithScope = new DeptWithScope();
+                            inheritDeptWithScope.setDeptId(childId);
+                            AcDept inheritDept = acDeptService.selectById(childId);
+                            // 实际应用中应查询真实部门名称
+                            inheritDeptWithScope.setName("继承部门-" + inheritDept.getName());
+                            inheritDeptWithScope.setDataScope(DataPermitScopeDict.SUBORDINATE.getValue());
+                            inheritDepts.add(inheritDeptWithScope);
                         }
                     }
                 }
             }
-            
+
             if (FuncUtil.isNotEmpty(inheritDepts)) {
                 processDeptPermissions(results, inheritDepts, menuId, clientType, "继承");
             }
 
         } catch (Exception e) {
-            log.error("查询部门权限来源失败，userId={}, menuId={}, clientType={}", 
-                    userId, menuId, clientType, e);
+            log.error("查询部门权限来源失败，userId={}, menuId={}, clientType={}", userId, menuId, clientType, e);
         }
-        
+
         return results;
     }
-    
+
     /**
      * 获取用户组权限来源（包括继承权限）
      */
     private List<UserPermitRes> getGroupPermitSources(Long userId, Long menuId, String clientType) {
         List<UserPermitRes> results = new ArrayList<>();
-        
+
         try {
             // 查询用户所属的用户组
             List<GroupWithScope> userGroups = getUserGroupsWithScope(userId);
@@ -201,46 +190,39 @@ public class PermitSourceService {
             List<GroupWithScope> inheritGroups = new ArrayList<>();
             for (GroupWithScope group : userGroups) {
                 if (DataPermitScopeDict.SUBORDINATE.getValue().equals(group.getDataScope())) {
-                    @SuppressWarnings("unchecked")
-                    List<Long> childIds = (List<Long>) recursionService.getChildList(AcGroup::getId, AcGroup::getPid, group.getId());
+                    List<Long> childIds = recursionService.getChildList(AcGroup::getId, AcGroup::getPid, group.getId());
                     if (FuncUtil.isNotEmpty(childIds)) {
                         for (Long childId : childIds) {
-                            GroupWithScope inheritGroup = new GroupWithScope();
-                            inheritGroup.setId(childId);
-                            inheritGroup.setName("继承用户组-" + childId); // 实际应用中应查询真实用户组名称
-                            inheritGroup.setDataScope(DataPermitScopeDict.SUBORDINATE.getValue());
-                            inheritGroups.add(inheritGroup);
+                            GroupWithScope inheritGroupWithScope = new GroupWithScope();
+                            inheritGroupWithScope.setId(childId);
+                            AcGroup inheritAcGroup = acGroupService.selectById(childId);
+                            inheritGroupWithScope.setName("继承用户组-" + inheritAcGroup.getName());
+                            inheritGroupWithScope.setDataScope(DataPermitScopeDict.SUBORDINATE.getValue());
+                            inheritGroups.add(inheritGroupWithScope);
                         }
                     }
                 }
             }
-            
+
             if (FuncUtil.isNotEmpty(inheritGroups)) {
                 processGroupDirectPermissions(results, inheritGroups, menuId, clientType, "继承");
             }
 
         } catch (Exception e) {
-            log.error("查询用户组权限来源失败，userId={}, menuId={}, clientType={}", 
-                    userId, menuId, clientType, e);
+            log.error("查询用户组权限来源失败，userId={}, menuId={}, clientType={}", userId, menuId, clientType, e);
         }
-        
+
         return results;
     }
-    
 
 
     /**
      * 查询用户所属部门信息
      */
     private List<DeptWithScope> getUserDepartments(Long userId) {
-        MPJLambdaWrapper<AcUserDept> userDeptWrapper = new MPJLambdaWrapper<AcUserDept>()
-                .selectAll(AcDept.class)
-                .selectAs(AcUserDept::getUserId, DeptWithScope::getUserId)
-                .selectAs(AcUserDept::getDataScope, DeptWithScope::getDataScope)
-                .leftJoin(AcDept.class, AcDept::getDeptId, AcUserDept::getDeptId)
-                .eq(AcUserDept::getUserId, userId)
-                .eq(AcDept::getStatus, CommonConst.YES);
-
+        MPJLambdaWrapper<AcUserDept> userDeptWrapper = new MPJLambdaWrapper<AcUserDept>().selectAll(AcDept.class).selectAs(AcUserDept::getUserId,
+                DeptWithScope::getUserId).selectAs(AcUserDept::getDataScope, DeptWithScope::getDataScope).leftJoin(AcDept.class, AcDept::getDeptId,
+                AcUserDept::getDeptId).eq(AcUserDept::getUserId, userId).eq(AcDept::getStatus, CommonConst.YES);
         return acUserDeptService.selectJoinList(DeptWithScope.class, userDeptWrapper);
     }
 
@@ -248,44 +230,30 @@ public class PermitSourceService {
      * 查询用户所属的用户组（包含数据范围信息）
      */
     private List<GroupWithScope> getUserGroupsWithScope(Long userId) {
-        MPJLambdaWrapper<AcUserGroup> userGroupWrapper = new MPJLambdaWrapper<AcUserGroup>()
-                .selectAll(AcGroup.class)
-                .selectAs(AcUserGroup::getUserId, GroupWithScope::getUserId)
-                .selectAs(AcUserGroup::getDataScope, GroupWithScope::getDataScope)
-                .leftJoin(AcGroup.class, AcGroup::getId, AcUserGroup::getGroupId)
-                .eq(AcUserGroup::getUserId, userId);
-        
+        MPJLambdaWrapper<AcUserGroup> userGroupWrapper = new MPJLambdaWrapper<AcUserGroup>().selectAll(AcGroup.class).selectAs(AcUserGroup::getUserId,
+                GroupWithScope::getUserId).selectAs(AcUserGroup::getDataScope, GroupWithScope::getDataScope).leftJoin(AcGroup.class, AcGroup::getId,
+                AcUserGroup::getGroupId).eq(AcUserGroup::getUserId, userId);
         return acUserGroupService.selectJoinList(GroupWithScope.class, userGroupWrapper);
     }
-
-
-
 
 
     /**
      * 处理用户组直接权限（支持GroupWithScope类型）
      */
-    private void processGroupDirectPermissions(List<UserPermitRes> results, List<GroupWithScope> groups, 
-                                             Long menuId, String clientType, String permissionType) {
+    private void processGroupDirectPermissions(List<UserPermitRes> results, List<GroupWithScope> groups, Long menuId, String clientType,
+                                               String permissionType) {
         // 收集用户组ID列表
-        List<Long> groupIds = groups.stream()
-                .map(AcGroup::getId)
-                .collect(Collectors.toList());
-        
+        List<Long> groupIds = groups.stream().map(AcGroup::getId).collect(Collectors.toList());
+
         if (FuncUtil.isNotEmpty(groupIds)) {
             // 创建用户组ID到用户组名称的映射
-            Map<Long, String> groupMap = groups.stream()
-                    .collect(Collectors.toMap(AcGroup::getId, AcGroup::getName));
-            
+            Map<Long, String> groupMap = groups.stream().collect(Collectors.toMap(AcGroup::getId, AcGroup::getName));
+
             // 为每个有权限的用户组创建结果
             groupIds.forEach(groupId -> {
                 if (checkGroupMenuPermission(groupId, menuId, clientType)) {
-                    UserPermitRes permitRes = new UserPermitRes(
-                            UserPermitRes.PermitSourceType.GROUP,
-                            groupId,
-                            groupMap.get(groupId),
-                            String.format("通过用户组[%s]%s获得权限", groupMap.get(groupId), permissionType)
-                    );
+                    UserPermitRes permitRes = new UserPermitRes(UserPermitRes.PermitSourceType.GROUP, groupId, groupMap.get(groupId), String.format("通过用户组[%s" +
+                            "]%s获得权限", groupMap.get(groupId), permissionType));
                     results.add(permitRes);
                 }
             });
@@ -302,28 +270,19 @@ public class PermitSourceService {
             return permitDeptIds;
         }
 
-        MPJLambdaWrapper<AcDeptMenu> directMenuWrapper = new MPJLambdaWrapper<AcDeptMenu>()
-                .select(AcDeptMenu::getDeptId)
-                .innerJoin(AcMenu.class, AcMenu::getMenuId, AcDeptMenu::getMenuId)
-                .in(AcDeptMenu::getDeptId, deptIds)
-                .eq(AcMenu::getMenuId, menuId)
-                .eq(AcMenu::getClientType, clientType)
-                .eq(AcMenu::getStatus, CommonConst.YES)
-                .groupBy(AcDeptMenu::getDeptId);
+        MPJLambdaWrapper<AcDeptMenu> directMenuWrapper = new MPJLambdaWrapper<AcDeptMenu>().select(AcDeptMenu::getDeptId).innerJoin(AcMenu.class,
+                AcMenu::getMenuId, AcDeptMenu::getMenuId).in(AcDeptMenu::getDeptId, deptIds).eq(AcMenu::getMenuId, menuId).eq(AcMenu::getClientType,
+                clientType).eq(AcMenu::getStatus, CommonConst.YES).groupBy(AcDeptMenu::getDeptId);
 
         List<AcDeptMenu> permittedDepts = acDeptMenuService.selectJoinList(AcDeptMenu.class, directMenuWrapper);
 
-        return permittedDepts.stream()
-                .map(AcDeptMenu::getDeptId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        return permittedDepts.stream().map(AcDeptMenu::getDeptId).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     /**
      * 处理部门权限（通用方法用于直属和继承权限）
      */
-    private void processDeptPermissions(List<UserPermitRes> results, List<DeptWithScope> depts, 
-                                      Long menuId, String clientType, String permissionType) {
+    private void processDeptPermissions(List<UserPermitRes> results, List<DeptWithScope> depts, Long menuId, String clientType, String permissionType) {
         // 构建部门映射和ID列表
         Map<String, DeptWithScope> deptMap = ReflectionUtil.reflectToMap(depts, DeptWithScope::getDeptId);
         List<String> deptIds = new ArrayList<>(deptMap.keySet());
@@ -335,12 +294,8 @@ public class PermitSourceService {
         permitDeptIds.forEach(deptId -> {
             DeptWithScope dept = deptMap.get(deptId);
             if (dept != null) {
-                results.add(createDeptPermitResult(
-                        UserPermitRes.PermitSourceType.DEPT,
-                        dept.getDeptId(),
-                        dept.getName(),
-                        String.format("通过部门[%s]%s获得权限", dept.getName(), permissionType)
-                ));
+                results.add(createDeptPermitResult(UserPermitRes.PermitSourceType.DEPT, dept.getDeptId(), dept.getName(), String.format("通过部门[%s]%s获得权限",
+                        dept.getName(), permissionType)));
             }
         });
     }
@@ -348,76 +303,198 @@ public class PermitSourceService {
     /**
      * 创建部门权限结果对象
      */
-    private UserPermitRes createDeptPermitResult(UserPermitRes.PermitSourceType sourceType,
-                                                 String deptId, String deptName, String path) {
+    private UserPermitRes createDeptPermitResult(UserPermitRes.PermitSourceType sourceType, String deptId, String deptName, String path) {
         return new UserPermitRes(sourceType, Long.valueOf(deptId), deptName, path);
-    }
-
-    /**
-     * 检查部门是否拥有指定菜单权限
-     */
-    private boolean checkDeptMenuPermission(String deptId, Long menuId, String clientType) {
-        MPJLambdaWrapper<AcDeptMenu> wrapper = new MPJLambdaWrapper<AcDeptMenu>()
-                .innerJoin(AcMenu.class, AcMenu::getMenuId, AcDeptMenu::getMenuId)
-                .eq(AcDeptMenu::getDeptId, deptId)
-                .eq(AcMenu::getMenuId, menuId)
-                .eq(AcMenu::getClientType, clientType)
-                .eq(AcMenu::getStatus, CommonConst.YES);
-
-        return acDeptMenuService.existed(wrapper);
     }
 
     /**
      * 检查用户组是否拥有指定菜单权限
      */
     private boolean checkGroupMenuPermission(Long groupId, Long menuId, String clientType) {
-        MPJLambdaWrapper<AcGroupMenu> wrapper = new MPJLambdaWrapper<AcGroupMenu>()
-                .innerJoin(AcMenu.class, AcMenu::getMenuId, AcGroupMenu::getMenuId)
-                .eq(AcGroupMenu::getGroupId, groupId)
-                .eq(AcMenu::getMenuId, menuId)
-                .eq(AcMenu::getClientType, clientType)
-                .eq(AcMenu::getStatus, CommonConst.YES);
-        
+        MPJLambdaWrapper<AcGroupMenu> wrapper =
+                new MPJLambdaWrapper<AcGroupMenu>().innerJoin(AcMenu.class, AcMenu::getMenuId, AcGroupMenu::getMenuId).eq(AcGroupMenu::getGroupId, groupId).eq(AcMenu::getMenuId, menuId).eq(AcMenu::getClientType, clientType).eq(AcMenu::getStatus, CommonConst.YES);
+
         return acGroupMenuService.existed(wrapper);
     }
-    
-    /**
-     * 检查用户组继承权限
-     */
-    private boolean checkGroupInheritancePermission(AcGroup group, Long menuId, String clientType) {
-        // 简化实现，可根据需要扩展
-        return false;
-    }
-    
+
     /**
      * 获取用户直接权限来源
      */
-    private List<UserPermitRes> getUserDirectPermitSources(Long userId, Long menuId, String clientType) {
+    private List<UserPermitRes> getUserDirectPermitSources(String customerNumber, Long userId, Long menuId, String clientType) {
         List<UserPermitRes> results = new ArrayList<>();
-        
+
         try {
-            MPJLambdaWrapper<AcUserMenu> wrapper = new MPJLambdaWrapper<AcUserMenu>()
-                    .selectAll(AcMenu.class)
-                    .innerJoin(AcMenu.class, AcMenu::getMenuId, AcUserMenu::getMenuId)
-                    .eq(AcUserMenu::getUserId, userId)
-                    .eq(AcMenu::getMenuId, menuId)
-                    .eq(AcMenu::getClientType, clientType)
-                    .eq(AcMenu::getStatus, CommonConst.YES);
-            
+            MPJLambdaWrapper<AcUserMenu> wrapper = new MPJLambdaWrapper<AcUserMenu>().selectAll(AcMenu.class).innerJoin(AcMenu.class, AcMenu::getMenuId,
+                    AcUserMenu::getMenuId).eq(AcUserMenu::getCustomerNumber, customerNumber).eq(AcMenu::getMenuId, menuId).eq(AcMenu::getClientType,
+                    clientType).eq(AcMenu::getStatus, CommonConst.YES);
+
             List<AcMenu> menus = acUserMenuService.selectJoinList(AcMenu.class, wrapper);
             if (FuncUtil.isNotEmpty(menus)) {
-                UserPermitRes permitRes = new UserPermitRes(
-                        UserPermitRes.PermitSourceType.USER,
-                        userId,
-                        "用户直接授权",
-                        "通过用户直接授权获得权限"
-                );
+                UserPermitRes permitRes = new UserPermitRes(UserPermitRes.PermitSourceType.USER, userId, "用户直接授权", "通过用户直接授权获得权限");
                 results.add(permitRes);
             }
         } catch (Exception e) {
             log.error("查询用户直接权限来源失败", e);
         }
-        
+
+        return results;
+    }
+
+    /**
+     * 获取菜单的权限分配目标
+     *
+     * @param menuId 菜单ID
+     * @return 权限分配目标列表，包含角色、部门、用户组、用户
+     */
+    public List<UserPermitRes> getMenuPermitTargets(Long menuId) {
+        log.info("开始查询菜单 {} 的权限分配目标", menuId);
+
+        List<UserPermitRes> results = new ArrayList<>();
+
+        // 1. 查询分配的角色
+        results.addAll(getMenuRoleTargets(menuId));
+
+        // 2. 查询分配的部门
+        results.addAll(getMenuDeptTargets(menuId));
+
+        // 3. 查询分配的用户组
+        results.addAll(getMenuGroupTargets(menuId));
+
+        // 4. 查询分配的个人
+        results.addAll(getMenuUserTargets(menuId));
+
+        log.info("菜单 {} 共分配给 {} 个目标", menuId, results.size());
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的角色
+     */
+    private List<UserPermitRes> getMenuRoleTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcRoleMenu> wrapper = new MPJLambdaWrapper<AcRoleMenu>()
+                    .selectAll(AcRole.class)
+                    .innerJoin(AcRole.class, AcRole::getRoleId, AcRoleMenu::getRoleId)
+                    .eq(AcRoleMenu::getMenuId, menuId)
+                    .eq(AcRole::getStatus, CommonConst.YES);
+
+            List<AcRole> roles = acRoleMenuService.selectJoinList(AcRole.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(roles)) {
+                roles.forEach(role -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.ROLE,
+                            role.getRoleId(),
+                            role.getRoleName(),
+                            String.format("已分配给角色[%s]", role.getRoleName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的角色失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的部门
+     */
+    private List<UserPermitRes> getMenuDeptTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcDeptMenu> wrapper = new MPJLambdaWrapper<AcDeptMenu>()
+                    .selectAll(AcDept.class)
+                    .innerJoin(AcDept.class, AcDept::getDeptId, AcDeptMenu::getDeptId)
+                    .eq(AcDeptMenu::getMenuId, menuId)
+                    .eq(AcDept::getStatus, CommonConst.YES);
+
+            List<AcDept> depts = acDeptMenuService.selectJoinList(AcDept.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(depts)) {
+                depts.forEach(dept -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.DEPT,
+                            Long.valueOf(dept.getDeptId()),
+                            dept.getName(),
+                            String.format("已分配给部门[%s]", dept.getName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的部门失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的用户组
+     */
+    private List<UserPermitRes> getMenuGroupTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcGroupMenu> wrapper = new MPJLambdaWrapper<AcGroupMenu>()
+                    .selectAll(AcGroup.class)
+                    .innerJoin(AcGroup.class, AcGroup::getId, AcGroupMenu::getGroupId)
+                    .eq(AcGroupMenu::getMenuId, menuId);
+
+            List<AcGroup> groups = acGroupMenuService.selectJoinList(AcGroup.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(groups)) {
+                groups.forEach(group -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.GROUP,
+                            group.getId(),
+                            group.getName(),
+                            String.format("已分配给用户组[%s]", group.getName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的用户组失败, menuId={}", menuId, e);
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取菜单分配的个人
+     */
+    private List<UserPermitRes> getMenuUserTargets(Long menuId) {
+        List<UserPermitRes> results = new ArrayList<>();
+
+        try {
+            MPJLambdaWrapper<AcUserMenu> wrapper = new MPJLambdaWrapper<AcUserMenu>()
+                    .selectAll(AcUser.class)
+                    .innerJoin(AcUser.class, AcUser::getCustomerNumber, AcUserMenu::getCustomerNumber)
+                    .eq(AcUserMenu::getMenuId, menuId)
+                    .eq(AcUser::getStatus, CommonConst.YES);
+
+            List<AcUser> users = acUserMenuService.selectJoinList(AcUser.class, wrapper);
+
+            if (FuncUtil.isNotEmpty(users)) {
+                users.forEach(user -> {
+                    UserPermitRes permitRes = new UserPermitRes(
+                            UserPermitRes.PermitSourceType.USER,
+                            user.getUserId(),
+                            user.getName(),
+                            String.format("已分配给用户[%s]", user.getName())
+                    );
+                    results.add(permitRes);
+                });
+            }
+        } catch (Exception e) {
+            log.error("查询菜单分配的用户失败, menuId={}", menuId, e);
+        }
+
         return results;
     }
 
