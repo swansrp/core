@@ -1,6 +1,5 @@
 package com.bidr.platform.controller;
 
-import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.service.dict.DictService;
@@ -30,7 +29,6 @@ public class SystemDictController {
     private final DictCacheService dictCacheService;
 
     private final DictService dictService;
-
 
 
     @RequestMapping(path = {""}, method = {RequestMethod.GET})

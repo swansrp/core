@@ -7,6 +7,7 @@ import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.BeanUtil;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
@@ -20,6 +21,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeansException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Title: DictCacheProvider
@@ -75,7 +77,7 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
     /**
      * 获取缓存数据
      *
-     * @param init true=同步写入数据库（仅初始化时），false=只读取不写库（刷新时）
+     * @param init true=同步写入数据库（仅初始化时)，false=只读取不写库（刷新时)
      */
     @Override
     protected Map<String, LinkedHashMap<String, SysDict>> getCacheData(boolean init) {
@@ -100,7 +102,7 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
             buildSysDictMap(sysDictCache, map);
         }
 
-        // 3. 写库：仅在初始化时执行（syncToDb=true）
+        // 3. 写库：仅在初始化时执行（init=true）
         //    - 初始化：可能是首次部署，需要创建/更新数据库中的字典记录
         //    - 刷新：说明本地+Redis都过期了，但数据库已有数据，无需重复写入
         if (init) {
@@ -153,8 +155,37 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
     }
 
     private void syncSysDict(String dictName, Collection<SysDict> sysDictList) {
-        sysDictService.deleteByDictName(dictName);
-        sysDictService.saveBatch(sysDictList);
+        // 使用更安全的同步策略，避免并发死锁
+        // 原模式 delete + insert 在高并发下容易产生死锁：
+        //   请求A: delete获取锁 -> 请求B: delete等待 -> 请求A: insert等待新锁 -> 死锁
+        // 
+        // 新策略：先查出需要删除的ID，按ID删除（避免大范围行锁），再批量upsert
+        if (FuncUtil.isEmpty(sysDictList)) {
+            sysDictService.deleteByDictName(dictName);
+            return;
+        }
+
+        // 查询现有记录
+        List<SysDict> existingList = sysDictService.getSysDictByName(dictName);
+
+        // 构建新记录的ID集合
+        Set<String> newIds = sysDictList.stream()
+                .map(SysDict::getDictId)
+                .collect(Collectors.toSet());
+
+        // 找出需要删除的记录（存在于旧记录但不在新记录中）
+        List<String> idsToDelete = existingList.stream()
+                .map(SysDict::getDictId)
+                .filter(id -> !newIds.contains(id))
+                .collect(Collectors.toList());
+
+        // 按ID删除（更精确的锁，减少死锁概率）
+        if (FuncUtil.isNotEmpty(idsToDelete)) {
+            sysDictService.removeBatchByIds(new ArrayList<>(idsToDelete));
+        }
+
+        // 批量插入或更新
+        sysDictService.insertOrUpdate(sysDictList);
     }
 
     private SysDict buildSysDict(String dictName, String title, Object enumItem) {

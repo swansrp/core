@@ -27,11 +27,6 @@ import java.util.Map;
 @Slf4j
 public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> {
 
-    private final Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
-    /**
-     * 实例级别锁，避免不同缓存实例互相阻塞
-     */
-    private final Object lock = new Object();
     /**
      * 锁等待时间（毫秒）
      */
@@ -40,6 +35,11 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
      * 锁持有时间（毫秒）
      */
     private static final long LOCK_LEASE_TIME = 60000;
+    private final Class<T> entityClass = (Class<T>) ReflectionUtil.getSuperClassGenericType(this.getClass(), 0);
+    /**
+     * 实例级别锁，避免不同缓存实例互相阻塞
+     */
+    private final Object lock = new Object();
     @Lazy
     @Resource
     protected DynamicMemoryCacheManager dynamicMemoryCacheManager;
@@ -134,30 +134,43 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     /**
      * 带锁的初始化方法
      *
-     * @param syncToDb true=同步写入数据库，false=只读取不写库
+     * @param init true=初始化，false=刷新时
      */
-    private void initWithLock(boolean syncToDb) {
+    private void initWithLock(boolean init) {
         synchronized (lock) {
             CacheLockProvider lockProvider = cacheManager().getLockProvider();
             String lockKey = "cache:init:" + getCacheName();
             Object lockToken = null;
+            int retryCount = 0;
+            int maxRetry = 3;
             try {
-                lockToken = lockProvider.tryLock(lockKey, LOCK_WAIT_TIME, LOCK_LEASE_TIME);
-                if (lockToken != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("获取锁成功[{}], 开始{}缓存: {}",
-                                lockProvider.getClass().getSimpleName(),
-                                syncToDb ? "初始化" : "刷新",
-                                getCacheName());
+                while (retryCount < maxRetry) {
+                    lockToken = lockProvider.tryLock(lockKey, LOCK_WAIT_TIME, LOCK_LEASE_TIME);
+                    if (lockToken != null) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("获取锁成功[{}], 开始{}缓存: {}",
+                                    lockProvider.getClass().getSimpleName(),
+                                    init ? "初始化" : "刷新",
+                                    getCacheName());
+                        }
+                        doInit(init);
+                        return;
+                    } else {
+                        // 未获取到锁，说明其他实例/线程正在初始化，等待后检查缓存是否已初始化
+                        retryCount++;
+                        if (log.isDebugEnabled()) {
+                            log.debug("未获取到锁[{}], 其他实例正在初始化缓存: {}, 第{}次重试",
+                                    lockProvider.getClass().getSimpleName(), getCacheName(), retryCount);
+                        }
+                        Thread.sleep(1000);
+                        // 检查缓存是否已被其他实例初始化完成
+                        if (!cacheManager().isUninitializedCache(getCacheName())) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("缓存已被其他实例初始化: {}", getCacheName());
+                            }
+                            return;
+                        }
                     }
-                    doInit(syncToDb);
-                } else {
-                    // 未获取到锁，说明其他实例/线程正在初始化，等待后直接从缓存读取
-                    if (log.isDebugEnabled()) {
-                        log.debug("未获取到锁[{}], 其他实例正在初始化缓存: {}",
-                                lockProvider.getClass().getSimpleName(), getCacheName());
-                    }
-                    Thread.sleep(1000);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -180,10 +193,10 @@ public abstract class DynamicMemoryCache<T> implements DynamicMemoryCacheInf<T> 
     /**
      * 执行实际的初始化逻辑
      *
-     * @param syncToDb true=同步写入数据库，false=只读取不写库
+     * @param init true=初始化，false=刷新时
      */
-    private void doInit(boolean syncToDb) {
-        Map<String, T> cacheDataMap = getCacheData(syncToDb);
+    private void doInit(boolean init) {
+        Map<String, T> cacheDataMap = getCacheData(init);
         if (FuncUtil.isNotEmpty(cacheDataMap)) {
             for (Map.Entry<String, T> entry : cacheDataMap.entrySet()) {
                 cacheManager().putCacheObj(this.getCacheName(), entry.getKey(), entry.getValue());

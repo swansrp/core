@@ -25,11 +25,11 @@ public class MPJConfig extends MPJSqlInjector {
     @Override
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
         List<AbstractMethod> methodList = super.getMethodList(mapperClass, tableInfo);
-//        if (hasMultiIdAnnotation(tableInfo.getEntityType())) {
-//            methodList.add(new SelectByMultiIdMethod());
-//            methodList.add(new UpdateByMultiIdMethod());
-//            methodList.add(new DeleteByMultiIdMethod());
-//        }
+        if (hasMultiIdAnnotation(tableInfo.getEntityType())) {
+            methodList.add(new SelectByMultiIdMethod());
+            methodList.add(new UpdateByMultiIdMethod());
+            methodList.add(new DeleteByMultiIdMethod());
+        }
         methodList.add(new InsertBatchSomeColumn(t -> t.getFieldFill() != FieldFill.UPDATE));
         return methodList;
     }
