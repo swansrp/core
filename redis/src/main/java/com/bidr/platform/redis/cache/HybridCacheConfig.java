@@ -61,7 +61,7 @@ public class HybridCacheConfig {
             return CacheLockProvider.LOCAL;
         }
         log.info("检测到 RedissonClient，创建分布式锁提供者");
-        return new RedisCacheLockProvider(redissonClient);
+        return new RedisCacheLockProvider(redissonClient, buildKeyPrefix());
     }
 
     /**
@@ -125,6 +125,9 @@ public class HybridCacheConfig {
      * 构建缓存 key 前缀
      */
     private String buildKeyPrefix() {
-        return projectId;
+        if (StringUtils.isNotBlank(projectId)) {
+            return projectId;
+        }
+        return applicationName;
     }
 }

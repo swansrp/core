@@ -12,8 +12,6 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * 参考 {@link com.bidr.platform.redis.aop.redisson.RedissonLockAspect} 的实现方式，
  * tryLock 返回 RLock 实例作为锁令牌，unlock 接收同一个实例进行释放。
- * <p>
- * 注意：项目前缀由 RedissonConfig 的 NameMapper 统一处理，这里不再手动加前缀。
  *
  * @author Sharp
  * @since 2026/03/26
@@ -24,10 +22,12 @@ public class RedisCacheLockProvider implements CacheLockProvider {
     private static final String LOCK_KEY_PREFIX = "cache:lock:";
 
     private final RedissonClient redissonClient;
+    private final String keyPrefix;
     private volatile boolean available = false;
 
-    public RedisCacheLockProvider(RedissonClient redissonClient) {
+    public RedisCacheLockProvider(RedissonClient redissonClient, String keyPrefix) {
         this.redissonClient = redissonClient;
+        this.keyPrefix = (keyPrefix != null && !keyPrefix.isEmpty()) ? keyPrefix + ":" : "";
         checkAvailable();
     }
 
@@ -48,7 +48,7 @@ public class RedisCacheLockProvider implements CacheLockProvider {
             return null;
         }
         try {
-            String fullKey = LOCK_KEY_PREFIX + lockKey;
+            String fullKey = keyPrefix + LOCK_KEY_PREFIX + lockKey;
             RLock lock = redissonClient.getLock(fullKey);
             boolean acquired = lock.tryLock(waitTime, leaseTime, TimeUnit.MILLISECONDS);
             if (acquired) {
@@ -84,10 +84,8 @@ public class RedisCacheLockProvider implements CacheLockProvider {
             // 因为所有 lock API 都会访问 redisson_lock__channel，需要额外 ACL 权限
             // 调用方已确保只有锁持有者才会调用 unlock，所以这里直接删除
             String lockName = lock.getName();
+            log.debug("释放分布式锁: {}", lockName);
             redissonClient.getKeys().delete(lockName);
-            if (log.isDebugEnabled()) {
-                log.debug("释放分布式锁: {}", lockName);
-            }
         } catch (Exception e) {
             log.warn("释放分布式锁异常: {}", e.getMessage(), e);
         }

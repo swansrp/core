@@ -2,7 +2,6 @@ package com.bidr.platform.redis.config;
 
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
-import org.redisson.api.NameMapper;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.BaseConfig;
 import org.redisson.config.Config;
@@ -67,12 +66,6 @@ public class RedissonConfig {
         }
         setRedisAuth(userName, password, serversConfig);
 
-        // 设置 NameMapper，给所有 Redisson key 加项目前缀
-        String keyPrefix = buildKeyPrefix();
-        if (StringUtils.isNotEmpty(keyPrefix)) {
-            serversConfig.setNameMapper(new ProjectNameMapper(keyPrefix));
-        }
-
         return Redisson.create(config);
     }
 
@@ -88,34 +81,10 @@ public class RedissonConfig {
     /**
      * 构建缓存 key 前缀
      */
-    private String buildKeyPrefix() {
+    public String buildKeyPrefix() {
         if (StringUtils.isNotBlank(projectId)) {
             return projectId;
         }
         return applicationName;
-    }
-
-    /**
-     * 项目级 NameMapper，给所有 Redisson key 加项目前缀
-     */
-    private static class ProjectNameMapper implements NameMapper {
-        private final String prefix;
-
-        ProjectNameMapper(String prefix) {
-            this.prefix = prefix + ":";
-        }
-
-        @Override
-        public String map(String name) {
-            return prefix + name;
-        }
-
-        @Override
-        public String unmap(String name) {
-            if (name != null && name.startsWith(prefix)) {
-                return name.substring(prefix.length());
-            }
-            return name;
-        }
     }
 }
