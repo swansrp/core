@@ -42,10 +42,10 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20260328175113-27</kernel.version>
-                <platform.version>20260328175113-27</platform.version>
-                <redis.version>20260328175113-27</redis.version>
-                <authorization.version>20260328175113-27</authorization.version>
+                <kernel.version>20260328233859-28</kernel.version>
+                <platform.version>20260328233859-28</platform.version>
+                <redis.version>20260328233859-28</redis.version>
+                <authorization.version>20260328233859-28</authorization.version>
             </properties>
         </profile>
     </profiles>
