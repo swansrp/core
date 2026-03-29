@@ -30,5 +30,7 @@ public class SysPortalTableFilterSchema extends BaseMybatisSchema<SysPortalTable
                 ") COMMENT='表格报表筛选项';");
         setUpgradeDDL(1, "ALTER TABLE `sys_portal_table_filter`\n" +
                 "\tCHANGE COLUMN `condition` `condition` LONGTEXT NULL COMMENT '筛选条件' AFTER `label`;\n");
+        setUpgradeDDL(2, "ALTER TABLE `sys_portal_table_filter`\n" +
+                "\tADD COLUMN `code` varchar(50) NOT NULL COMMENT '筛选条目编码' AFTER `filter_type`;\n");
     }
 }

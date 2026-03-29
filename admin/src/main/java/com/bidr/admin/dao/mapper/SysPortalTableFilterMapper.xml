@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bidr.admin.dao.mapper.SysPortalTableFilterMapper">
-  <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalTableFilter">
-    <id column="id" jdbcType="BIGINT" property="id" />
-    <result column="table_id" jdbcType="BIGINT" property="tableId" />
-    <result column="filter_type" jdbcType="VARCHAR" property="filterType" />
-    <result column="label" jdbcType="VARCHAR" property="label" />
-    <result column="condition" jdbcType="VARCHAR" property="condition" />
-    <result column="dict_code" jdbcType="VARCHAR" property="dictCode" />
-    <result column="default_value" jdbcType="VARCHAR" property="defaultValue" />
-    <result column="placeholder" jdbcType="VARCHAR" property="placeholder" />
-    <result column="allow_clear" jdbcType="CHAR" property="allowClear" />
-    <result column="multiple" jdbcType="CHAR" property="multiple" />
-    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
-    <result column="status" jdbcType="CHAR" property="status" />
-  </resultMap>
-  <sql id="Base_Column_List">
-    id, table_id, filter_type, label, `condition`, dict_code, default_value, placeholder, 
+    <resultMap id="BaseResultMap" type="com.bidr.admin.dao.entity.SysPortalTableFilter">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="table_id" jdbcType="BIGINT" property="tableId"/>
+        <result column="filter_type" jdbcType="VARCHAR" property="filterType"/>
+        <result column="code" jdbcType="VARCHAR" property="code"/>
+        <result column="label" jdbcType="VARCHAR" property="label"/>
+        <result column="condition" jdbcType="VARCHAR" property="condition"/>
+        <result column="dict_code" jdbcType="VARCHAR" property="dictCode"/>
+        <result column="default_value" jdbcType="VARCHAR" property="defaultValue"/>
+        <result column="placeholder" jdbcType="VARCHAR" property="placeholder"/>
+        <result column="allow_clear" jdbcType="CHAR" property="allowClear"/>
+        <result column="multiple" jdbcType="CHAR" property="multiple"/>
+        <result column="display_order" jdbcType="INTEGER" property="displayOrder"/>
+        <result column="status" jdbcType="CHAR" property="status"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        id, table_id, filter_type, code, label, `condition`, dict_code, default_value, placeholder,
     allow_clear, multiple, display_order, status
-  </sql>
+    </sql>
 </mapper>

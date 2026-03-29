@@ -37,6 +37,13 @@ public class PortalTableFilterVO extends BaseVO {
     private String filterType;
 
     /**
+     * 筛选条目编码
+     */
+    @PortalNameField
+    @ApiModelProperty(value = "筛选条目编码")
+    private String code;
+
+    /**
      * 筛选条目标签
      */
     @PortalNameField

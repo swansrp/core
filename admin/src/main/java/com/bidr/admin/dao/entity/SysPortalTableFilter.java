@@ -39,6 +39,13 @@ public class SysPortalTableFilter {
     private String filterType;
 
     /**
+     * 筛选条目编码
+     */
+    @TableField(value = "code")
+    @ApiModelProperty(value = "筛选条目编码")
+    private String code;
+
+    /**
      * 筛选条目标签
      */
     @TableField(value = "label")
