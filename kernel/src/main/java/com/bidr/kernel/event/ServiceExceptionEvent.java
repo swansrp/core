@@ -4,6 +4,7 @@ import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.constant.err.ErrCodeType;
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.kernel.utils.HttpUtil;
 import lombok.Getter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -97,7 +98,7 @@ public class ServiceExceptionEvent extends BaseEvent {
         if (request != null) {
             this.requestUrl = request.getRequestURL().toString();
             this.requestMethod = request.getMethod();
-            this.clientIp = request.getRemoteAddr();
+            this.clientIp = HttpUtil.getRemoteIp(request);
             this.queryString = request.getQueryString();
         }
     }
