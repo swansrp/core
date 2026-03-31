@@ -67,7 +67,11 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
         log.error("", ex);
         // 发布异常事件
         publishExceptionEvent(ex);
-        Response<String> res = new Response(new ServiceException(ErrCodeSys.SYS_ERR));
+        ServiceException serviceException = new ServiceException(ex.getMessage(), ex);
+        serviceException.setErrCode(ErrCodeSys.SYS_ERR);
+        // 保留原始调用栈
+        serviceException.setStackTrace(ex.getStackTrace());
+        Response<String> res = new Response(serviceException);
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         return new ResponseEntity<>(res, status);
     }
@@ -113,6 +117,8 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
                 // 其他异常包装为 ServiceException 事件
                 ServiceException serviceException = new ServiceException(ex.getMessage(), ex);
                 serviceException.setErrCode(ErrCodeSys.SYS_ERR);
+                // 保留原始调用栈
+                serviceException.setStackTrace(ex.getStackTrace());
                 applicationContext.publishEvent(new ServiceExceptionEvent(serviceException, request));
             }
         } catch (Exception e) {
@@ -124,6 +130,8 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<Response<String>> errorHandler(MethodArgumentNotValidException ex) {
         ServiceException serviceException = new ServiceException(ex);
+        // 保留原始调用栈
+        serviceException.setStackTrace(ex.getStackTrace());
         return errorHandler(serviceException);
     }
 
@@ -131,6 +139,8 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(value = BindException.class)
     public ResponseEntity<Response<String>> errorHandler(BindException ex) {
         ServiceException serviceException = new ServiceException(ex);
+        // 保留原始调用栈
+        serviceException.setStackTrace(ex.getStackTrace());
         return errorHandler(serviceException);
     }
 

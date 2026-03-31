@@ -107,6 +107,7 @@ public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseInf<E
     default void updateEntity(VO vo, Boolean strict) {
         ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
         ENTITY originalEntity = getRepo().selectById(entity);
+        Validator.assertNotNull(originalEntity, ErrCodeSys.SYS_ERR_MSG, "数据不存在");
         entity = ReflectionUtil.copyAndMerge(entity, originalEntity, strict);
         if (isAdmin()) {
             adminBeforeUpdate(entity);
