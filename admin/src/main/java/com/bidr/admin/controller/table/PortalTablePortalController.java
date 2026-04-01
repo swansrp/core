@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author Sharp
  */
-@Api(tags = "表格展示配置")
+@Api(tags = "系统基础 - 表格展示配置")
 @RestController
 @RequiredArgsConstructor
 @AdminPortal
