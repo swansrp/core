@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcAccountService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.user.CreateUserService;
+import com.bidr.authorization.service.user.UserInfoService;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class AccountInitService {
     private final AcAccountService accountService;
     private final AcUserService acUserService;
     private final CreateUserService createUserService;
+    private final UserInfoService userInfoService;
 
     @Transactional(rollbackFor = Exception.class)
     public void accountSyncUser() {
@@ -44,7 +46,7 @@ public class AccountInitService {
                     if (!FuncUtil.equals(account.getDepartment(), user.getDeptId())) {
                         user.setDeptId(account.getDepartment());
                         acUserService.updateById(user);
-                        createUserService.bindDept(account, user);
+                        userInfoService.updateDept(account, user);
                     }
                 }
             }

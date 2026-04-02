@@ -1,7 +1,11 @@
 package com.bidr.authorization.service.user.impl;
 
+import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.constants.token.TokenItem;
+import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.entity.AcUserDept;
+import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.token.TokenService;
@@ -9,6 +13,7 @@ import com.bidr.authorization.service.user.UserInfoService;
 import com.bidr.authorization.vo.user.*;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +36,7 @@ import java.util.List;
 public class UserInfoServiceImpl implements UserInfoService {
 
     private final AcUserService acUserService;
+    private final AcUserDeptService acUserDeptService;
     private final TokenService tokenService;
 
     @Override
@@ -100,5 +106,18 @@ public class UserInfoServiceImpl implements UserInfoService {
         Validator.assertNotNull(user, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
         user.setPhoneNumber(phoneNumber);
         acUserService.updateById(user);
+    }
+
+    @Override
+    public void updateDept(AcAccount account, AcUser user) {
+        AcUserDept acUserDept = new AcUserDept();
+        acUserDept.setUserId(user.getUserId());
+        acUserDept.setDeptId(account.getDepartment());
+        AcUserDept original = acUserDeptService.selectByMultiId(acUserDept);
+        if (!FuncUtil.equals(original.getDeptId(), account.getDepartment())) {
+            acUserDept.setDataScope(DataPermitScopeDict.OWNER.getValue());
+            acUserDeptService.getByUserId(user.getUserId());
+            acUserDeptService.insert(acUserDept);
+        }
     }
 }

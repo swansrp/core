@@ -88,11 +88,4 @@ public interface CreateUserService {
      * @param user 用户
      */
     void bindDefaultRole(AcUser user);
-
-    /**
-     * 绑定部门
-     * @param account 账户信息
-     * @param user 用户信息
-     */
-    void bindDept(AcAccount account, AcUser user);
 }

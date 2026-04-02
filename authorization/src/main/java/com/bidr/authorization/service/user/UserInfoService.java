@@ -1,5 +1,7 @@
 package com.bidr.authorization.service.user;
 
+import com.bidr.authorization.dao.entity.AcAccount;
+import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.vo.user.*;
 
 /**
@@ -68,4 +70,11 @@ public interface UserInfoService {
      * @param phoneNumber
      */
     void bindPhoneNumber(String phoneNumber);
+
+    /**
+     * 绑定部门
+     * @param account 账户信息
+     * @param user 用户信息
+     */
+    void updateDept(AcAccount account, AcUser user);
 }
