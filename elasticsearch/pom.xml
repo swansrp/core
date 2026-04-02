@@ -36,8 +36,8 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <elasticsearch.version>20260402095423-30</elasticsearch.version>
-                <kernel.version>20260402095423-30</kernel.version>
+                <elasticsearch.version>20260402165643-31</elasticsearch.version>
+                <kernel.version>20260402165643-31</kernel.version>
             </properties>
         </profile>
     </profiles>
