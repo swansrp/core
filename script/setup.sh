@@ -1139,6 +1139,7 @@ services:
       - ./app.jar:/app/app.jar
       - ./logs:/data/log
       - ./dump:/app
+      - /oss:/oss
       - /etc/localtime:/etc/localtime:ro
 
     command: >
