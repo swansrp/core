@@ -134,7 +134,8 @@ public class CreateUserServiceImpl implements CreateUserService {
         acUser.setUserType(UserTypeDict.ACCOUNT.getValue());
     }
 
-    private void bindDept(AcAccount account, AcUser user) {
+    @Override
+    public void bindDept(AcAccount account, AcUser user) {
         AcUserDept acUserDept = new AcUserDept();
         acUserDept.setUserId(user.getUserId());
         acUserDept.setDeptId(account.getDepartment());
