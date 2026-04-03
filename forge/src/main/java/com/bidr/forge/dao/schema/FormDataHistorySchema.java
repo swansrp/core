@@ -31,5 +31,7 @@ public class FormDataHistorySchema extends BaseMybatisSchema<FormDataHistory> {
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
                 "  KEY `form_id` (`form_id`)\n" +
                 ") COMMENT='表单填写历史';");
+        setUpgradeDDL(1, "ALTER TABLE `form_data_history`\n" +
+                "\tCHANGE COLUMN `confirm_at` `confirm_at` DATETIME(3) NULL COMMENT '审批时间' AFTER `confirm_by`;\n");
     }
 }
