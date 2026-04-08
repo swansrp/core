@@ -405,6 +405,11 @@ cat > "$PROJECT_DIR/pom.xml" << EOF
                             <groupId>com.bidr</groupId>
                             <artifactId>kernel</artifactId>
                         </exclusion>
+                        <!-- 排除传递依赖的 platform,统一使用项目指定版本 -->
+                        <exclusion>
+                            <groupId>com.bidr</groupId>
+                            <artifactId>platform</artifactId>
+                        </exclusion>
                     </exclusions>
                 </dependency>
                 <dependency>
