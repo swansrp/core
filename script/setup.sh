@@ -1267,16 +1267,12 @@ ServerLogPath=("$DevLogPath" "$StgLogPath" "$TestLogPath" "$PRD1LogPath" "$PRD2L
 
 # 获取部署模式
 get_deploy_mode() {
-    mode="${DEPLOY_MODE[$1]}"
-    if [ "$mode" = "jar" ]; then
-        echo "  jar "
-    else
-        echo "docker"
-    fi
+    echo "${DEPLOY_MODE[$1]}"
 }
 
 # JAR部署相关函数
 upload(){
+    ssh ${ServerSSH[$1]} "mkdir -p ${ServerTargetPath[$1]}" # 确保远程目录存在
     scp ${localJarPath} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/$remoteJarName
 	return 0
 }
@@ -1284,6 +1280,8 @@ upload(){
 # Docker部署相关函数
 upload_docker(){
     echo "Uploading Docker deployment files to ${ServerSSH[$1]}..."
+    ssh ${ServerSSH[$1]} "mkdir -p ${ServerTargetPath[$1]}"  # 确保远程目录存在
+    ssh ${ServerSSH[$1]} "mkdir -p ${ServerTargetPath[$1]}/logs" # Docker日志目录
     # 上传jar包
     scp ${localJarPath} ${ServerSSH[$1]}:${ServerTargetPath[$1]}/$remoteJarName
     # 上传docker-compose.yml
@@ -1350,6 +1348,7 @@ status() {
     fi
     return 0
 }
+
 allstatus() {
 	echo ---------------------------
 	for((i=0;i<$ServerNum;i++));
@@ -1365,13 +1364,13 @@ allstatus() {
 }
 log() {
     mode=$(get_deploy_mode $1)
-    if [ ! -d "$basepath/log$1" ]; then
-        mkdir "$basepath/log$1"
-    fi
+    mkdir -p "$basepath/log$1"  # 确保本地目录存在
+
     if [ "$mode" = "docker" ]; then
         echo "Downloading Docker container logs from ${ServerSSH[$1]}..."
-        # 下载实际的文件日志
-        scp -r ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/PROJECT_CODE_PLACEHOLDER/*.log "$basepath/log$1/" 2>/dev/null || echo "No log files found"
+        ssh ${ServerSSH[$1]} "mkdir -p ${ServerTargetPath[$1]}/logs"
+        ssh ${ServerSSH[$1]} "docker logs ${DOCKER_CONTAINER_NAME} > ${ServerTargetPath[$1]}/logs/${remoteLogName} 2>&1"
+        scp ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/${remoteLogName} "$basepath/log$1/${remoteLogName}"
     else
         scp ${ServerSSH[$1]}:${ServerLogPath[$1]}/$remoteLogName "$basepath/log$1/$remoteLogName"
     fi
@@ -1379,17 +1378,11 @@ log() {
 
 allLog() {
     mode=$(get_deploy_mode $1)
-    if [ ! -d "$basepath/log$1" ]; then
-        mkdir "$basepath/log$1"
-    fi
+    mkdir -p "$basepath/log$1"  # 确保本地目录存在
+
     if [ "$mode" = "docker" ]; then
-        echo "Downloading all Docker container logs from ${ServerSSH[$1]}..."
-        # 下载所有日志文件（包括历史日志）
-        scp -r ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/PROJECT_CODE_PLACEHOLDER/ "$basepath/log$1/" 2>/dev/null || echo "No log files found"
-        # 额外下载docker logs输出
-        echo "Downloading container stdout logs..."
-        ssh ${ServerSSH[$1]} "docker logs ${DOCKER_CONTAINER_NAME} > ${ServerTargetPath[$1]}/logs/docker-stdout.log 2>&1"
-        scp ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/docker-stdout.log "$basepath/log$1/docker-stdout.log" 2>/dev/null
+        ssh ${ServerSSH[$1]} "mkdir -p ${ServerTargetPath[$1]}/logs"
+        scp -r ${ServerSSH[$1]}:${ServerTargetPath[$1]}/logs/*.log "$basepath/log$1/" 2>/dev/null || echo "No additional log files found"
     else
         scp -r ${ServerSSH[$1]}:${ServerLogPath[$1]}/log/ "$basepath/log$1/"
     fi
@@ -1416,22 +1409,22 @@ then
 
 
 echo "┌------------------------------┐"
-echo "|----0. DEV Server ($(get_deploy_mode 0))----|" 
+echo "|----0. DEV Server ($(get_deploy_mode 0))--|" 
 if [ -n "$StgSSH" ];
 then
-echo "|----1. STG Server ($(get_deploy_mode 1))----|" 
+echo "|----1. STG Server ($(get_deploy_mode 1))--|" 
 fi
 if [ -n "$TestSSH" ];
 then
-echo "|----2. TEST Server ($(get_deploy_mode 2))---|" 
+echo "|----2. TEST Server ($(get_deploy_mode 2))-|" 
 fi
 if [ -n "$PRD1SSH" ];
 then
-echo "|----3. PRD1 Server ($(get_deploy_mode 3))---|" 
+echo "|----3. PRD1 Server ($(get_deploy_mode 3))-|" 
 fi
 if [ -n "$PRD2SSH" ];
 then
-echo "|----4. PRD2 Server ($(get_deploy_mode 4))---|" 
+echo "|----4. PRD2 Server ($(get_deploy_mode 4))-|" 
 fi
 echo "|----5. All deploy-------------|" 
 echo "|----6. Status-----------------|" 
