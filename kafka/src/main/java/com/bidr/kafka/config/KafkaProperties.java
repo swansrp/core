@@ -51,6 +51,11 @@ public class KafkaProperties {
      */
     private SecurityConfig security = new SecurityConfig();
 
+    /**
+     * 死信队列配置
+     */
+    private DlqConfig dlq = new DlqConfig();
+
     @Data
     public static class ProducerConfig {
         /**
@@ -214,6 +219,45 @@ public class KafkaProperties {
     }
 
     @Data
+    public static class DlqConfig {
+        /**
+         * 是否启用死信队列
+         */
+        private boolean enabled = true;
+
+        /**
+         * 死信队列后缀，默认为 "-dlq"
+         * 例如：原Topic为 "test"，则死信队列为 "test-dlq"
+         */
+        private String suffix = "-dlq";
+
+        /**
+         * 重试次数，默认3次
+         */
+        private int retryAttempts = 3;
+
+        /**
+         * 重试间隔(毫秒)，默认1秒
+         */
+        private long retryInterval = 1000;
+
+        /**
+         * 是否使用指数退避
+         */
+        private boolean exponentialBackoff = false;
+
+        /**
+         * 指数退避乘数，默认2.0
+         */
+        private double backoffMultiplier = 2.0;
+
+        /**
+         * 最大重试间隔(毫秒)，默认30秒
+         */
+        private long maxRetryInterval = 30000;
+    }
+
+    @Data
     public static class SecurityConfig {
         /**
          * 安全协议: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
@@ -321,5 +365,18 @@ public class KafkaProperties {
                 props.put("sasl.jaas.config", security.buildJaasConfig());
             }
         }
+    }
+
+    /**
+     * 获取死信队列Topic名称
+     *
+     * @param originalTopic 原始Topic
+     * @return 死信队列Topic名称
+     */
+    public String getDlqTopic(String originalTopic) {
+        if (dlq != null && dlq.isEnabled()) {
+            return originalTopic + dlq.getSuffix();
+        }
+        return null;
     }
 }

@@ -57,3 +57,20 @@ kafka:
     enabled: true
     # 事务ID前缀
     transaction-id-prefix: kafka-tx-${HOSTNAME}-
+
+  # 死信队列配置
+  dlq:
+    # 是否启用死信队列（默认true）
+    enabled: true
+    # 死信队列后缀（原Topic为"test"，则死信队列为"test-dlq"）
+    suffix: "-dlq"
+    # 重试次数（默认3次）
+    retry-attempts: 3
+    # 重试间隔(毫秒)（默认1秒）
+    retry-interval: 1000
+    # 是否使用指数退避（默认false）
+    exponential-backoff: false
+    # 指数退避乘数（默认2.0）
+    backoff-multiplier: 2.0
+    # 最大重试间隔(毫秒)（默认30秒）
+    max-retry-interval: 30000

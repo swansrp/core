@@ -1,13 +1,15 @@
 package com.bidr.kafka.service;
 
 import com.bidr.kafka.config.KafkaProperties;
+import com.bidr.kafka.dao.entity.SysKafka;
+import com.bidr.kafka.dao.repository.SysKafkaService;
 import lombok.Setter;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.ContainerProperties;
 
@@ -52,6 +54,27 @@ public class KafkaConsumerManager {
      */
     @Setter
     private KafkaProperties kafkaProperties;
+
+    /**
+     * -- SETTER --
+     *  设置错误处理器（用于死信队列）
+     */
+    @Setter
+    private CommonErrorHandler errorHandler;
+
+    /**
+     * -- SETTER --
+     *  设置消息记录服务（用于自动落库）
+     */
+    @Setter
+    private SysKafkaService sysKafkaService;
+
+    /**
+     * -- SETTER --
+     *  设置是否启用消息落库
+     */
+    @Setter
+    private boolean persistenceEnabled = false;
 
     /**
      * 注册消费者
@@ -103,7 +126,19 @@ public class KafkaConsumerManager {
 
         // 设置消息监听器
         containerProps.setMessageListener((org.springframework.kafka.listener.AcknowledgingMessageListener<String, String>) (record, acknowledgment) -> {
+            // 自动落库：记录消息接收（重试时去重，返回已有记录）
+            SysKafka sysKafka = null;
+            long startTime = System.currentTimeMillis();
+            if (persistenceEnabled && sysKafkaService != null) {
+                sysKafka = sysKafkaService.recordReceived(record, groupId);
+            }
+
             try {
+                // 自动落库：更新为处理中（仅新记录）
+                if (sysKafka != null && SysKafkaService.STATUS_RECEIVED.equals(sysKafka.getStatus())) {
+                    sysKafkaService.updateProcessing(sysKafka);
+                }
+
                 KafkaTopicConsumer.AckCallback ackCallback = new KafkaTopicConsumer.AckCallback() {
                     private boolean acknowledged = false;
 
@@ -122,9 +157,17 @@ public class KafkaConsumerManager {
                 if (!topicConfig.isManualAck() && acknowledgment != null) {
                     acknowledgment.acknowledge();
                 }
+
+                // 自动落库：记录处理成功
+                if (sysKafka != null) {
+                    long costTime = System.currentTimeMillis() - startTime;
+                    sysKafkaService.updateSuccess(sysKafka, costTime);
+                }
             } catch (Exception e) {
                 log.error("Error consuming message from topic {}: {}", topicConfig.getName(), e.getMessage(), e);
                 consumer.onError(record, e);
+                // 重新抛出异常，让 DefaultErrorHandler 接管重试和死信队列逻辑
+                throw e;
             }
         });
 
@@ -138,6 +181,12 @@ public class KafkaConsumerManager {
             new ConcurrentMessageListenerContainer<>(topicConsumerFactory, containerProps);
         container.setConcurrency(topicConfig.getConcurrency());
         container.setBeanName("kafkaContainer-" + topicConfig.getName());
+        
+        // 设置错误处理器（死信队列支持）
+        if (errorHandler != null && kafkaProperties.getDlq() != null && kafkaProperties.getDlq().isEnabled()) {
+            container.setCommonErrorHandler(errorHandler);
+            log.info("Enabled DLQ error handler for topic: {}", topicConfig.getName());
+        }
 
         containers.put(topicConfig.getName(), container);
         log.info("Created Kafka consumer container for topic: {} with autoOffsetReset: {}", 

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.kafka.dao.mapper.SysKafkaMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.kafka.dao.entity.SysKafka">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="group_id" jdbcType="VARCHAR" property="groupId" />
+    <result column="topic" jdbcType="VARCHAR" property="topic" />
+    <result column="partition_no" jdbcType="INTEGER" property="partitionNo" />
+    <result column="offset_no" jdbcType="BIGINT" property="offsetNo" />
+    <result column="message_key" jdbcType="VARCHAR" property="messageKey" />
+    <result column="message_value" jdbcType="LONGVARCHAR" property="messageValue" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="retry_count" jdbcType="INTEGER" property="retryCount" />
+    <result column="exception_class" jdbcType="VARCHAR" property="exceptionClass" />
+    <result column="exception_message" jdbcType="VARCHAR" property="exceptionMessage" />
+    <result column="exception_stack" jdbcType="LONGVARCHAR" property="exceptionStack" />
+    <result column="dlq_topic" jdbcType="VARCHAR" property="dlqTopic" />
+    <result column="dlq_flag" jdbcType="CHAR" property="dlqFlag" />
+    <result column="cost_time" jdbcType="BIGINT" property="costTime" />
+    <result column="received_at" jdbcType="TIMESTAMP" property="receivedAt" />
+    <result column="processed_at" jdbcType="TIMESTAMP" property="processedAt" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, group_id, topic, partition_no, offset_no, message_key, message_value, `status`, 
+    retry_count, exception_class, exception_message, exception_stack, dlq_topic, dlq_flag, 
+    cost_time, received_at, processed_at, create_at, update_at
+  </sql>
+</mapper>
