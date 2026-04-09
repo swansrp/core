@@ -51,11 +51,34 @@ public class KafkaConfig {
     @Autowired(required = false)
     private SysKafkaService sysKafkaService;
 
+    private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
+
+    /**
+     * 打印Kafka安全配置（用于调试）
+     */
+    private void logSecurityConfig() {
+        if (kafkaProperties.getSecurity() != null && kafkaProperties.getSecurity().isEnabled()) {
+            log.info("========== Kafka Security Config ==========");
+            log.info("Bootstrap Servers: {}", kafkaProperties.getBootstrapServers());
+            log.info("Security Protocol: {}", kafkaProperties.getSecurity().getProtocol());
+            log.info("SASL Mechanism: {}", kafkaProperties.getSecurity().getMechanism());
+            log.info("SASL Username: {}", kafkaProperties.getSecurity().getUsername());
+            log.info("SASL Password: {}", kafkaProperties.getSecurity().getPassword());
+            log.info("JAAS Config: {}", kafkaProperties.getSecurity().buildJaasConfig());
+            log.info("===========================================");
+        } else {
+            log.info("Kafka Security: DISABLED (No authentication configured)");
+        }
+    }
+
     /**
      * 生产者工厂
      */
     @Bean
     public ProducerFactory<String, String> producerFactory() {
+        // 打印安全配置用于调试
+        logSecurityConfig();
+        
         Map<String, Object> configProps = kafkaProperties.buildProducerProps();
         return new DefaultKafkaProducerFactory<>(configProps);
     }
@@ -121,8 +144,6 @@ public class KafkaConfig {
         
         return factory;
     }
-
-    private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
 
     /**
      * Kafka错误处理器（重试 + 死信队列）
