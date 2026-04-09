@@ -7,8 +7,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -94,24 +92,14 @@ public class KafkaProducerService {
      * @return CompletableFuture
      */
     public CompletableFuture<SendResult<String, String>> sendAsync(String topic, String message) {
-        CompletableFuture<SendResult<String, String>> future = new CompletableFuture<>();
-
-        ListenableFuture<SendResult<String, String>> kafkaFuture = resolveTemplate().send(topic, message);
-        kafkaFuture.addCallback(new ListenableFutureCallback<SendResult<String, String>>() {
-            @Override
-            public void onSuccess(SendResult<String, String> result) {
-                log.debug("Sent message to topic: {} with offset: {}", topic, result.getRecordMetadata().offset());
-                future.complete(result);
-            }
-
-            @Override
-            public void onFailure(Throwable ex) {
-                log.error("Failed to send message to topic: {}", topic, ex);
-                future.completeExceptionally(ex);
-            }
-        });
-
-        return future;
+        return resolveTemplate().send(topic, message)
+            .whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("Failed to send message to topic: {}", topic, ex);
+                } else {
+                    log.debug("Sent message to topic: {} with offset: {}", topic, result.getRecordMetadata().offset());
+                }
+            });
     }
 
     /**
@@ -123,24 +111,14 @@ public class KafkaProducerService {
      * @return CompletableFuture
      */
     public CompletableFuture<SendResult<String, String>> sendAsync(String topic, String key, String message) {
-        CompletableFuture<SendResult<String, String>> future = new CompletableFuture<>();
-
-        ListenableFuture<SendResult<String, String>> kafkaFuture = resolveTemplate().send(topic, key, message);
-        kafkaFuture.addCallback(new ListenableFutureCallback<SendResult<String, String>>() {
-            @Override
-            public void onSuccess(SendResult<String, String> result) {
-                log.debug("Sent message to topic: {} with key: {} offset: {}", topic, key, result.getRecordMetadata().offset());
-                future.complete(result);
-            }
-
-            @Override
-            public void onFailure(Throwable ex) {
-                log.error("Failed to send message to topic: {} with key: {}", topic, key, ex);
-                future.completeExceptionally(ex);
-            }
-        });
-
-        return future;
+        return resolveTemplate().send(topic, key, message)
+            .whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("Failed to send message to topic: {} with key: {}", topic, key, ex);
+                } else {
+                    log.debug("Sent message to topic: {} with key: {} offset: {}", topic, key, result.getRecordMetadata().offset());
+                }
+            });
     }
 
     /**

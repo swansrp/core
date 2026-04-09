@@ -1,6 +1,7 @@
 package com.bidr.kafka.config;
 
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,12 @@ import java.util.Map;
 @Component
 @ConfigurationProperties(prefix = "kafka")
 public class KafkaProperties {
+
+    /**
+     * 当前环境标识（从 spring.profiles.active 获取）
+     */
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     /**
      * Kafka服务器地址
@@ -302,6 +309,25 @@ public class KafkaProperties {
     }
 
     /**
+     * 获取带环境标识的消费者组ID
+     * 格式：{groupId}-{profile}
+     * 例如：om-pm-assessment-pre
+     *
+     * @param baseGroupId 基础groupId
+     * @return 带环境标识的groupId
+     */
+    public String getGroupIdWithProfile(String baseGroupId) {
+        if (baseGroupId == null || baseGroupId.isEmpty()) {
+            baseGroupId = consumer.getGroupId();
+        }
+        // 如果已经包含环境标识，则不再添加
+        if (baseGroupId.endsWith("-" + activeProfile)) {
+            return baseGroupId;
+        }
+        return baseGroupId + "-" + activeProfile;
+    }
+
+    /**
      * 获取消费者配置Map
      */
     public Map<String, Object> buildConsumerProps(TopicConfig topicConfig) {
@@ -309,7 +335,7 @@ public class KafkaProperties {
         props.put("bootstrap.servers", bootstrapServers);
         props.put("key.deserializer", consumer.getKeyDeserializer());
         props.put("value.deserializer", consumer.getValueDeserializer());
-        props.put("enable.auto.commit", String.valueOf(topicConfig != null ? false : consumer.isAutoCommit()));
+        props.put("enable.auto.commit", String.valueOf(consumer.isAutoCommit()));
         props.put("auto.commit.interval.ms", String.valueOf(consumer.getAutoCommitInterval()));
         
         String offsetReset = topicConfig != null && topicConfig.getAutoOffsetReset() != null 

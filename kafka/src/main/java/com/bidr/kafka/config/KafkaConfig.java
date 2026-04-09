@@ -26,8 +26,6 @@ import org.springframework.util.backoff.BackOff;
 import org.springframework.util.backoff.ExponentialBackOff;
 import org.springframework.util.backoff.FixedBackOff;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,34 +49,16 @@ public class KafkaConfig {
     @Autowired(required = false)
     private SysKafkaService sysKafkaService;
 
-    private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
+    @Autowired(required = false)
+    private DefaultErrorHandler errorHandler;
 
-    /**
-     * 打印Kafka安全配置（用于调试）
-     */
-    private void logSecurityConfig() {
-        if (kafkaProperties.getSecurity() != null && kafkaProperties.getSecurity().isEnabled()) {
-            log.info("========== Kafka Security Config ==========");
-            log.info("Bootstrap Servers: {}", kafkaProperties.getBootstrapServers());
-            log.info("Security Protocol: {}", kafkaProperties.getSecurity().getProtocol());
-            log.info("SASL Mechanism: {}", kafkaProperties.getSecurity().getMechanism());
-            log.info("SASL Username: {}", kafkaProperties.getSecurity().getUsername());
-            log.info("SASL Password: {}", kafkaProperties.getSecurity().getPassword());
-            log.info("JAAS Config: {}", kafkaProperties.getSecurity().buildJaasConfig());
-            log.info("===========================================");
-        } else {
-            log.info("Kafka Security: DISABLED (No authentication configured)");
-        }
-    }
+    private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
 
     /**
      * 生产者工厂
      */
     @Bean
     public ProducerFactory<String, String> producerFactory() {
-        // 打印安全配置用于调试
-        logSecurityConfig();
-        
         Map<String, Object> configProps = kafkaProperties.buildProducerProps();
         return new DefaultKafkaProducerFactory<>(configProps);
     }
@@ -120,8 +100,10 @@ public class KafkaConfig {
     @Bean
     public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> props = kafkaProperties.buildConsumerProps(null);
-        // 设置消费者组ID
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaProperties.getConsumer().getGroupId());
+        // 设置消费者组ID（带环境标识）
+        String groupIdWithProfile = kafkaProperties.getGroupIdWithProfile(kafkaProperties.getConsumer().getGroupId());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupIdWithProfile);
+        log.info("Kafka Consumer Group ID: {}", groupIdWithProfile);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
@@ -171,7 +153,7 @@ public class KafkaConfig {
                             record.topic(), record.partition(), record.offset(),
                             (String) record.key(), (String) record.value()
                         );
-                        String groupId = kafkaProperties.getConsumer().getGroupId();
+                        String groupId = kafkaProperties.getGroupIdWithProfile(kafkaProperties.getConsumer().getGroupId());
                         sysKafkaService.updateDlqByRecord(typedRecord, groupId, dlqTopic, (Exception) exception);
                         log.info("Updated sys_kafka status to DLQ for topic={}, partition={}, offset={}",
                             record.topic(), record.partition(), record.offset());
@@ -202,7 +184,7 @@ public class KafkaConfig {
                         record.topic(), record.partition(), record.offset(),
                         (String) record.key(), (String) record.value()
                     );
-                    String groupId = kafkaProperties.getConsumer().getGroupId();
+                    String groupId = kafkaProperties.getGroupIdWithProfile(kafkaProperties.getConsumer().getGroupId());
                     sysKafkaService.updateRetryByRecord(typedRecord, groupId, deliveryAttempt, (Exception) ex);
                 } catch (Exception e) {
                     log.error("Failed to update sys_kafka retry count: {}", e.getMessage(), e);
@@ -258,16 +240,15 @@ public class KafkaConfig {
         KafkaConsumerManager manager = new KafkaConsumerManager();
         manager.setConsumerFactory(consumerFactory());
         manager.setKafkaProperties(kafkaProperties);
-        // 设置错误处理器（死信队列支持）
-        if (kafkaProperties.getDlq() != null && kafkaProperties.getDlq().isEnabled()) {
-            manager.setErrorHandler(kafkaErrorHandler());
+        // 设置错误处理器（死信队列支持）- 复用Bean
+        if (errorHandler != null && kafkaProperties.getDlq() != null && kafkaProperties.getDlq().isEnabled()) {
+            manager.setErrorHandler(errorHandler);
         }
         // 设置消息落库服务
         if (sysKafkaService != null && kafkaProperties.getConsumer() != null) {
             manager.setSysKafkaService(sysKafkaService);
             manager.setPersistenceEnabled(true);
-            org.slf4j.LoggerFactory.getLogger(KafkaConfig.class)
-                .info("Kafka message persistence enabled, messages will be recorded to sys_kafka table");
+            log.info("Kafka message persistence enabled, messages will be recorded to sys_kafka table");
         }
         return manager;
     }
@@ -297,7 +278,9 @@ public class KafkaConfig {
                 if (annotation.enabled() && bean instanceof KafkaTopicConsumer) {
                     KafkaProperties.TopicConfig topicConfig = new KafkaProperties.TopicConfig();
                     topicConfig.setName(annotation.topic());
-                    topicConfig.setGroupId(annotation.groupId().isEmpty() ? null : annotation.groupId());
+                    // 使用带环境标识的groupId
+                    String baseGroupId = annotation.groupId().isEmpty() ? null : annotation.groupId();
+                    topicConfig.setGroupId(properties.getGroupIdWithProfile(baseGroupId));
                     topicConfig.setManualAck(annotation.manualAck());
                     topicConfig.setConcurrency(annotation.concurrency());
                     topicConfig.setAutoOffsetReset(annotation.autoOffsetReset());

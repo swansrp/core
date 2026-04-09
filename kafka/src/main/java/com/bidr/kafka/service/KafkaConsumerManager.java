@@ -43,6 +43,11 @@ public class KafkaConsumerManager {
     private final Map<String, KafkaTopicConsumer> consumers = new ConcurrentHashMap<>();
 
     /**
+     * 消费者工厂缓存：topic -> ConsumerFactory
+     */
+    private final Map<String, DefaultKafkaConsumerFactory<String, String>> consumerFactoryCache = new ConcurrentHashMap<>();
+
+    /**
      * -- SETTER --
      *  设置消费者工厂
      */
@@ -171,11 +176,18 @@ public class KafkaConsumerManager {
             }
         });
 
-        // 使用topic特定配置创建消费者工厂，确保autoOffsetReset等配置生效
-        Map<String, Object> consumerProps = kafkaProperties.buildConsumerProps(topicConfig);
-        consumerProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        DefaultKafkaConsumerFactory<String, String> topicConsumerFactory = 
-            new DefaultKafkaConsumerFactory<>(consumerProps);
+        // 使用topic特定配置创建消费者工厂（带缓存）
+        DefaultKafkaConsumerFactory<String, String> topicConsumerFactory = consumerFactoryCache.computeIfAbsent(
+            topicConfig.getName(),
+            key -> {
+                Map<String, Object> consumerProps = kafkaProperties.buildConsumerProps(topicConfig);
+                consumerProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, groupId);
+                log.info("Created ConsumerFactory for topic: {} with autoOffsetReset: {}", 
+                    topicConfig.getName(), 
+                    topicConfig.getAutoOffsetReset() != null ? topicConfig.getAutoOffsetReset() : kafkaProperties.getConsumer().getAutoOffsetReset());
+                return new DefaultKafkaConsumerFactory<>(consumerProps);
+            }
+        );
 
         ConcurrentMessageListenerContainer<String, String> container =
             new ConcurrentMessageListenerContainer<>(topicConsumerFactory, containerProps);
@@ -189,9 +201,8 @@ public class KafkaConsumerManager {
         }
 
         containers.put(topicConfig.getName(), container);
-        log.info("Created Kafka consumer container for topic: {} with autoOffsetReset: {}", 
-            topicConfig.getName(), 
-            topicConfig.getAutoOffsetReset() != null ? topicConfig.getAutoOffsetReset() : kafkaProperties.getConsumer().getAutoOffsetReset());
+        log.info("Created Kafka consumer container for topic: {} with groupId: {}", 
+            topicConfig.getName(), groupId);
     }
 
     /**
