@@ -131,7 +131,7 @@ public class KafkaConsumerManager {
 
         // 设置消息监听器
         containerProps.setMessageListener((org.springframework.kafka.listener.AcknowledgingMessageListener<String, String>) (record, acknowledgment) -> {
-            // 自动落库：记录消息接收（重试时去重，返回已有记录）
+            // 自动落库：记录消息接收并设置为处理中（重试时去重，返回已有记录）
             SysKafka sysKafka = null;
             long startTime = System.currentTimeMillis();
             if (persistenceEnabled && sysKafkaService != null) {
@@ -139,10 +139,6 @@ public class KafkaConsumerManager {
             }
 
             try {
-                // 自动落库：更新为处理中（仅新记录）
-                if (sysKafka != null && SysKafkaService.STATUS_RECEIVED.equals(sysKafka.getStatus())) {
-                    sysKafkaService.updateProcessing(sysKafka);
-                }
 
                 KafkaTopicConsumer.AckCallback ackCallback = new KafkaTopicConsumer.AckCallback() {
                     private boolean acknowledged = false;

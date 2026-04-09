@@ -49,9 +49,6 @@ public class KafkaConfig {
     @Autowired(required = false)
     private SysKafkaService sysKafkaService;
 
-    @Autowired(required = false)
-    private DefaultErrorHandler errorHandler;
-
     private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
 
     /**
@@ -240,9 +237,9 @@ public class KafkaConfig {
         KafkaConsumerManager manager = new KafkaConsumerManager();
         manager.setConsumerFactory(consumerFactory());
         manager.setKafkaProperties(kafkaProperties);
-        // 设置错误处理器（死信队列支持）- 复用Bean
-        if (errorHandler != null && kafkaProperties.getDlq() != null && kafkaProperties.getDlq().isEnabled()) {
-            manager.setErrorHandler(errorHandler);
+        // 设置错误处理器（死信队列支持）
+        if (kafkaProperties.getDlq() != null && kafkaProperties.getDlq().isEnabled()) {
+            manager.setErrorHandler(kafkaErrorHandler());
         }
         // 设置消息落库服务
         if (sysKafkaService != null && kafkaProperties.getConsumer() != null) {

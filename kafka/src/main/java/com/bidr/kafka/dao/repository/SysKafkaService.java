@@ -22,15 +22,10 @@ import java.util.Date;
 @Slf4j
 @Service
 public class SysKafkaService extends BaseSqlRepo<SysKafkaMapper, SysKafka> {
-
-    /**
-     * 状态常量：已接收
-     */
-    public static final String STATUS_RECEIVED = "0";
     /**
      * 状态常量：处理中
      */
-    public static final String STATUS_PROCESSING = "2";
+    public static final String STATUS_PROCESSING = "0";
     /**
      * 状态常量：处理成功
      */
@@ -67,7 +62,8 @@ public class SysKafkaService extends BaseSqlRepo<SysKafkaMapper, SysKafka> {
         entity.setOffsetNo(record.offset());
         entity.setMessageKey(record.key());
         entity.setMessageValue(truncate(record.value(), 5000));
-        entity.setStatus(STATUS_RECEIVED);
+        // 优化：直接设置为处理中，避免后续立即更新
+        entity.setStatus(STATUS_PROCESSING);
         entity.setRetryCount(0);
         entity.setDlqFlag("0");
         entity.setReceivedAt(new Date());
