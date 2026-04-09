@@ -620,24 +620,7 @@ release.properties
 Thumbs.db
 EOF
 
-# 7. 生成项目文档
-print_info "生成项目文档..."
-DOC_DIR="$ROOT_DIR/doc"
-mkdir -p "$DOC_DIR"
-
-# 复制架构文档
-if [ -f "$CORE_DIR/doc/PROJECT_ARCHITECTURE.md" ]; then
-    cp "$CORE_DIR/doc/PROJECT_ARCHITECTURE.md" "$DOC_DIR/"
-    print_info "已复制 PROJECT_ARCHITECTURE.md"
-fi
-
-# 复制SQL代码生成指南
-if [ -f "$CORE_DIR/doc/SQL代码生成指南.md" ]; then
-    cp "$CORE_DIR/doc/SQL代码生成指南.md" "$DOC_DIR/"
-    print_info "已复制 SQL代码生成指南.md"
-fi
-
-# 创建 agent.md 索引文档
+# 7. 生成 agent.md 索引文档
 print_info "生成 agent.md 索引文档..."
 cat > "$ROOT_DIR/agent.md" << EOF
 # ${PROJECT_NAME} - AI Agent 开发指南
@@ -655,7 +638,7 @@ cat > "$ROOT_DIR/agent.md" << EOF
 
 ### 1. 项目架构文档
 
-**位置**: [\`doc/PROJECT_ARCHITECTURE.md\`](doc/PROJECT_ARCHITECTURE.md)
+**位置**: [`core/doc/PROJECT_ARCHITECTURE.md`](core/doc/PROJECT_ARCHITECTURE.md)
 
 **内容概要**:
 - 项目整体结构和模块职责
@@ -676,7 +659,7 @@ cat > "$ROOT_DIR/agent.md" << EOF
 
 ### 2. SQL代码生成指南
 
-**位置**: [\`doc/SQL代码生成指南.md\`](doc/SQL代码生成指南.md)
+**位置**: [`core/doc/SQL代码生成指南.md`](core/doc/SQL代码生成指南.md)
 
 **内容概要**:
 - 从SQL DDL生成完整Java代码的规范
@@ -782,9 +765,10 @@ ${ROOT_DIR}/
 │           ├── mapper/          # Mapper接口和XML
 │           ├── repository/      # Repository Service（业务逻辑）
 │           └── schema/          # Schema Service（DDL定义）
-├── doc/                         # 项目文档
-│   ├── PROJECT_ARCHITECTURE.md  # 架构文档
-│   └── SQL代码生成指南.md        # 代码生成指南
+├── core/
+│   └── doc/                 # 框架文档（原始位置）
+│       ├── PROJECT_ARCHITECTURE.md  # 架构文档
+│       └── SQL代码生成指南.md        # 代码生成指南
 └── agent.md                     # 本文档
 \`\`\`
 
@@ -808,7 +792,7 @@ npm run generate-api
 
 ### 生成代码时
 
-1. **阅读文档**: 先查看 \`doc/SQL代码生成指南.md\` 了解详细规范
+1. **阅读文档**: 先查看 \`core/doc/SQL代码生成指南.md\` 了解详细规范
 2. **遵循规范**: 严格按照文档中的模板和规则生成代码
 3. **注意分离**: Repository Service和Schema Service职责分离
 4. **类型正确**: Portal Service/Controller的第二个泛型必须是VO
@@ -816,7 +800,7 @@ npm run generate-api
 
 ### 开发功能时
 
-1. **参考架构**: 查看 \`doc/PROJECT_ARCHITECTURE.md\` 了解架构规范
+1. **参考架构**: 查看 \`core/doc/PROJECT_ARCHITECTURE.md\` 了解架构规范
 2. **返回值规范**: Controller无返回值时使用 \`Resp.notice()\`
 3. **数据校验**: Service层使用 \`Validator\` 进行校验
 4. **前端刷新**: Portal组件使用 \`portalRef.value.queryData()\`
@@ -878,9 +862,9 @@ src/main/java/${BASE_PACKAGE}/
 
 请参考项目根目录的文档：
 
-- [\`doc/PROJECT_ARCHITECTURE.md\`](../doc/PROJECT_ARCHITECTURE.md) - 项目架构文档
-- [\`doc/SQL代码生成指南.md\`](../doc/SQL代码生成指南.md) - SQL代码生成指南
-- [\`agent.md\`](../agent.md) - AI Agent开发指南
+- [`core/doc/PROJECT_ARCHITECTURE.md`](../core/doc/PROJECT_ARCHITECTURE.md) - 项目架构文档
+- [`core/doc/SQL代码生成指南.md`](../core/doc/SQL代码生成指南.md) - SQL代码生成指南
+- [`agent.md`](../agent.md) - AI Agent开发指南
 
 ## 构建和运行
 
@@ -1512,10 +1496,8 @@ print_info "已生成文件:"
 print_info "  ✓ 项目目录结构"
 print_info "  ✓ 模块 pom.xml"
 print_info "  ✓ .gitignore"
-print_info "  ✓ README.md"
-print_info "  ✓ agent.md (AI开发指南)"
-print_info "  ✓ 项目文档 (doc/)"
 print_info "  ✓ 配置文件 (application*.yml)"
+print_info "  ✓ agent.md (AI开发指南)"
 print_info "  ✓ ${PROJECT_CODE}-server 模块"
 print_info "  ✓ ${CAPITALIZED_CODE}Application.java"
 print_info "  ✓ Dockerfile"
@@ -1534,8 +1516,8 @@ print_info "  4. 启动应用: cd ${PROJECT_CODE}-server && mvn spring-boot:run"
 print_info "  5. 开始开发业务功能"
 echo ""
 print_info "开发指南:"
-print_info "  • 架构文档: doc/PROJECT_ARCHITECTURE.md"
-print_info "  • 代码生成: doc/SQL代码生成指南.md"
+print_info "  • 架构文档: core/doc/PROJECT_ARCHITECTURE.md"
+print_info "  • 代码生成: core/doc/SQL代码生成指南.md"
 print_info "  • AI助手: agent.md"
 echo ""
 print_info "================================================"
