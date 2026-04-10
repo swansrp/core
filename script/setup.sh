@@ -775,18 +775,20 @@ ${ROOT_DIR}/
 ## 常用命令
 
 \`\`\`bash
-# Maven编译
-mvn clean install
+# Maven编译（必须指定profile）
+mvn clean install -P development,!public-snapshots
 
 # 跳过测试
-mvn clean install -DskipTests
+mvn clean install -P development,!public-snapshots -DskipTests
 
 # 启动服务
-mvn spring-boot:run
+mvn spring-boot:run -P development,!public-snapshots
 
 # 前端API生成
 npm run generate-api
 \`\`\`
+
+**重要**: Maven 编译时必须使用 `-P development,!public-snapshots` 参数指定 profile，否则编译会失败。
 
 ## AI助手使用提示
 
@@ -797,6 +799,7 @@ npm run generate-api
 3. **注意分离**: Repository Service和Schema Service职责分离
 4. **类型正确**: Portal Service/Controller的第二个泛型必须是VO
 5. **注解完整**: Entity的审计字段、VO的Portal注解都要正确配置
+6. **编译命令**: Maven 编译必须使用 \`mvn clean install -P development,!public-snapshots\`
 
 ### 开发功能时
 
