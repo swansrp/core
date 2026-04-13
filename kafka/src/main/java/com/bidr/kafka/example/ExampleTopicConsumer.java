@@ -1,6 +1,5 @@
 package com.bidr.kafka.example;
 
-import com.bidr.kafka.annotation.KafkaTopicListener;
 import com.bidr.kafka.service.KafkaTopicConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;

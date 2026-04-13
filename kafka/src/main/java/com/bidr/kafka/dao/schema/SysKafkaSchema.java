@@ -1,7 +1,7 @@
 package com.bidr.kafka.dao.schema;
 
-import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
 import com.bidr.kafka.dao.entity.SysKafka;
+import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
 import org.springframework.stereotype.Service;
 
 /**

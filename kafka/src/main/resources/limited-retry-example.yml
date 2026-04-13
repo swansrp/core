@@ -1,0 +1,63 @@
+# Kafka Topic 有限重试配置示例
+
+kafka:
+  # Kafka服务器地址
+  bootstrap-servers: 10.3.23.117:9092
+
+  # 消费者配置
+  consumer:
+    # 消费者组ID
+    group-id: om-pm-assessment-dev
+    # 偏移量重置策略
+    auto-offset-reset: latest
+    # 最大poll记录数
+    max-poll-records: 100
+
+  # Topic配置列表
+  topics:
+    # 1. 正常的topic配置（无限重试，默认）
+    - name: "normal-topic"
+      enabled: true
+      autoStart: true
+      concurrency: 1
+      manualAck: false
+
+    # 2. 有限重试的topic配置（最大重试5次，每次间隔1分钟）
+    - name: "oa_flow_event"  # 不存在的topic示例
+      enabled: true
+      autoStart: false              # 不自动启动，通过定时任务控制
+      concurrency: 1
+      manualAck: true
+      # 新增的有限重试配置
+      maxTopicRetryAttempts: 5      # 最大重试5次，0表示无限重试
+      topicRetryInterval: 60000      # 重试间隔60秒（1分钟）
+
+    # 3. 短等待的有限重试配置（最大重试3次，每次间隔10秒）
+    - name: "temp-topic"
+      enabled: true
+      autoStart: false
+      concurrency: 1
+      manualAck: true
+      maxTopicRetryAttempts: 3       # 最大重试3次
+      topicRetryInterval: 10000      # 重试间隔10秒
+
+    # 4. 禁用的topic（不启动也不重试）
+    - name: "disabled-topic"
+      enabled: false
+      autoStart: false
+      concurrency: 1
+      manualAck: true
+
+  # 死信队列配置
+  dlq:
+    enabled: true
+    suffix: "-dlq"
+    retry-attempts: 3
+    retry-interval: 1000
+
+  # 安全配置
+  security:
+    protocol: SASL_PLAINTEXT
+    mechanism: SCRAM-SHA-256
+    username: test
+    password: bidr2025

@@ -210,6 +210,16 @@ public class KafkaProperties {
          * 消费者Bean名称
          */
         private String consumerBean;
+
+        /**
+         * topic不存在时的最大重试次数，0表示无限重试（默认为0）
+         */
+        private int maxTopicRetryAttempts = 0;
+
+        /**
+         * topic不存在时的重试间隔（毫秒），默认为60000毫秒（1分钟）
+         */
+        private long topicRetryInterval = 60000;
     }
 
     @Data

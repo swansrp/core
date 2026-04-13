@@ -1,7 +1,7 @@
 package com.bidr.kafka.dao.mapper;
 
-import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kafka.dao.entity.SysKafka;
+import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 
 /**
  * Title: SysKafkaMapper

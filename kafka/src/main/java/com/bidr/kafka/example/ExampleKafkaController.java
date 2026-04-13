@@ -3,7 +3,10 @@ package com.bidr.kafka.example;
 import com.bidr.kafka.service.KafkaConsumerManager;
 import com.bidr.kafka.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 
