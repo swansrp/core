@@ -2,9 +2,11 @@ package com.bidr.authorization.service.permit;
 
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.dao.entity.AcMenu;
+import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcDeptMenuService;
 import com.bidr.authorization.dao.repository.AcGroupMenuService;
 import com.bidr.authorization.dao.repository.AcUserMenuService;
+import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.ClientTypeHolder;
@@ -38,13 +40,15 @@ public class MenuService {
     private final AcDeptMenuService acDeptMenuService;
     private final AcGroupMenuService acGroupMenuService;
     private final AcUserMenuService acUserMenuService;
+    private final AcUserService acUserService;
 
     public List<MenuTreeRes> getMenuTree() {
         return getMenuTree(AccountContext.getOperator());
     }
 
     public List<MenuTreeRes> getMenuTree(String customerNumber) {
-        Long userId = AccountContext.getUserId();
+        AcUser acUser = acUserService.getByCustomerNumber(customerNumber);
+        Long userId = acUser.getUserId();
         String clientType = ClientTypeHolder.get();
         List<AcMenu> roleMenuList = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
         List<AcMenu> deptMenuList = acDeptMenuService.getAllMenu(userId, clientType);

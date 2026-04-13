@@ -110,14 +110,30 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     @Override
     public void updateDept(AcAccount account, AcUser user) {
+        // 添加空值校验
+        if (user.getUserId() == null || StringUtils.isBlank(account.getDepartment())) {
+            return; // 或抛出异常
+        }
+
+        // 先查询原记录
+        AcUserDept queryParam = new AcUserDept();
+        queryParam.setUserId(user.getUserId());
+        queryParam.setDeptId(account.getDepartment());
+
+        AcUserDept original = acUserDeptService.selectByMultiId(queryParam);
+
+        // 如果部门没有变化，不需要更新
+        if (original != null) {
+            return;
+        }
+
+        // 删除旧记录并插入新记录
+        acUserDeptService.deleteByUserId(user.getUserId());
+
         AcUserDept acUserDept = new AcUserDept();
         acUserDept.setUserId(user.getUserId());
         acUserDept.setDeptId(account.getDepartment());
-        AcUserDept original = acUserDeptService.selectByMultiId(acUserDept);
-        if (!FuncUtil.equals(original.getDeptId(), account.getDepartment())) {
-            acUserDept.setDataScope(DataPermitScopeDict.OWNER.getValue());
-            acUserDeptService.getByUserId(user.getUserId());
-            acUserDeptService.insert(acUserDept);
-        }
+        acUserDept.setDataScope(DataPermitScopeDict.OWNER.getValue());
+        acUserDeptService.insert(acUserDept);
     }
 }

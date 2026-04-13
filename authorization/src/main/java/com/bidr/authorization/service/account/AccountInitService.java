@@ -44,9 +44,9 @@ public class AccountInitService {
                     createUserService.createUser(account);
                 } else {
                     if (!FuncUtil.equals(account.getDepartment(), user.getDeptId())) {
+                        userInfoService.updateDept(account, user);
                         user.setDeptId(account.getDepartment());
                         acUserService.updateById(user);
-                        userInfoService.updateDept(account, user);
                     }
                 }
             }

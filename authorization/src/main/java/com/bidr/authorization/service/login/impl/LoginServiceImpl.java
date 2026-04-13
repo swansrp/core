@@ -151,9 +151,12 @@ public class LoginServiceImpl implements LoginService {
             if (FuncUtil.isNotEmpty(phoneNumberUser)) {
                 wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumberUser, avatar);
             } else {
-                wechatUser.setCustomerNumber(phoneNumber);
-                wechatUser.setUserName(phoneNumber);
-                wechatUser.setPhoneNumber(phoneNumber);
+                // 有手机号但是没有手机号用户 说明是微信手机号绑定
+                if (FuncUtil.isNotEmpty(phoneNumber)) {
+                    wechatUser.setCustomerNumber(phoneNumber);
+                    wechatUser.setUserName(phoneNumber);
+                    wechatUser.setPhoneNumber(phoneNumber);
+                }
             }
         }
         return buildLoginRes(wechatUser);
