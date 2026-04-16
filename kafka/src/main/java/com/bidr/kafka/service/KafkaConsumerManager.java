@@ -384,6 +384,13 @@ public class KafkaConsumerManager {
             return;
         }
 
+        // 跳过从未出现过问题的topic（无需检查）
+        if (!topicAbsentCounters.containsKey(topic) 
+            && !topicAbsentFirstSeen.containsKey(topic) 
+            && !topicAbsentStopped.containsKey(topic)) {
+            return;
+        }
+
         // 检查topic是否已存在
         if (checkTopicExists(topic)) {
             // topic已恢复，清理计数
