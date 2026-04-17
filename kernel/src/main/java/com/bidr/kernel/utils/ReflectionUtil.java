@@ -151,6 +151,15 @@ public class ReflectionUtil {
         }
     }
 
+    /**
+     * 使用CGLib BeanCopier复制对象属性（高性能）
+     * <p>
+     * 注意：BeanCopier只会复制同名且类型可转换的属性，null值也会被复制。
+     * 如果需要"仅复制非空字段"，请使用 {@link #merge(Object, Object, boolean)} 方法。
+     *
+     * @param source 源对象
+     * @param target 目标对象
+     */
     public static void copyProperties(Object source, Object target) {
         if (source == null) {
             return;
@@ -191,6 +200,103 @@ public class ReflectionUtil {
             return Object.class;
         }
         return (Class<?>) params[index];
+    }
+
+    /**
+     * 获取类或接口上的泛型参数类型（增强版）
+     * <p>
+     * 同时支持类继承（extends）和接口实现（implements）的泛型参数获取。
+     * 优先查找指定目标类的泛型，如果未找到则按继承链向上查找。
+     *
+     * @param clazz      要分析的类
+     * @param index      泛型参数索引（从0开始）
+     * @param targetClass 目标类或接口（可选，为null时查找第一个参数化类型）
+     * @return 泛型参数的Class类型，未找到时返回null
+     */
+    public static Class<?> getGenericType(Class<?> clazz, int index, Class<?> targetClass) {
+        // 1. 先尝试从父类获取
+        Class<?> fromSuperclass = getGenericTypeFromSuperclass(clazz, index, targetClass);
+        if (fromSuperclass != null) {
+            return fromSuperclass;
+        }
+
+        // 2. 再尝试从接口获取
+        return getGenericTypeFromInterfaces(clazz, index, targetClass);
+    }
+
+    /**
+     * 从父类链获取泛型参数
+     */
+    private static Class<?> getGenericTypeFromSuperclass(Class<?> clazz, int index, Class<?> targetClass) {
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            Type genType = current.getGenericSuperclass();
+            if (genType instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) genType;
+                // 如果指定了targetClass，检查是否匹配
+                if (targetClass == null || pt.getRawType().equals(targetClass)) {
+                    Type[] typeArgs = pt.getActualTypeArguments();
+                    if (index >= 0 && index < typeArgs.length) {
+                        return extractClassFromType(typeArgs[index]);
+                    }
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
+    }
+
+    /**
+     * 从接口链获取泛型参数
+     */
+    private static Class<?> getGenericTypeFromInterfaces(Class<?> clazz, int index, Class<?> targetClass) {
+        // 检查当前类实现的所有接口
+        Type[] interfaces = clazz.getGenericInterfaces();
+        Class<?> result = getGenericTypeFromTypes(interfaces, index, targetClass);
+        if (result != null) {
+            return result;
+        }
+
+        // 递归检查父类实现的接口
+        Class<?> superclass = clazz.getSuperclass();
+        if (superclass != null && superclass != Object.class) {
+            return getGenericTypeFromInterfaces(superclass, index, targetClass);
+        }
+
+        return null;
+    }
+
+    /**
+     * 从Type数组中提取泛型参数
+     */
+    private static Class<?> getGenericTypeFromTypes(Type[] types, int index, Class<?> targetClass) {
+        for (Type type : types) {
+            if (type instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) type;
+                // 如果指定了targetClass，检查是否匹配
+                if (targetClass == null || pt.getRawType().equals(targetClass)) {
+                    Type[] typeArgs = pt.getActualTypeArguments();
+                    if (index >= 0 && index < typeArgs.length) {
+                        return extractClassFromType(typeArgs[index]);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从Type中提取Class类型
+     */
+    private static Class<?> extractClassFromType(Type type) {
+        if (type instanceof ParameterizedType) {
+            // 处理嵌套泛型，如List<String> 返回 List.class
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        }
+        if (type instanceof Class) {
+            return (Class<?>) type;
+        }
+        return null;
     }
 
     private static <R, T> R buildTree(Class<R> resultClazz, Field children, T parentData, List<T> dataList, Field field,
@@ -244,12 +350,14 @@ public class ReflectionUtil {
                         .getMethod("get" + StringUtil.firstUpperCamelCase(field.getName()));
                 return (T) getFieldMethod.invoke(target);
             } catch (Exception e) {
-                e.printStackTrace();
+                // 如果getter方法调用失败，尝试直接访问字段
+                field.setAccessible(true);
             }
         }
         try {
             return (T) field.get(target);
         } catch (Exception ex) {
+            // 字段访问失败时返回null，避免中断业务流程
             return null;
         }
     }
@@ -435,17 +543,19 @@ public class ReflectionUtil {
         LinkedHashMap<String, String> res = new LinkedHashMap<>(fieldList.size());
         for (Field field : fieldList) {
             try {
-                String name = field.getName();
-                String value = name;
+                String fieldName = field.getName();
+                String displayName = fieldName;
                 ApiModelProperty apiModelAnnotation = field.getAnnotation(ApiModelProperty.class);
                 JsonProperty jsonPropertyAnnotation = field.getAnnotation(JsonProperty.class);
-                if (jsonPropertyAnnotation != null && StringUtils.isNotEmpty((jsonPropertyAnnotation).value())) {
-                    name = jsonPropertyAnnotation.value();
+                // 优先使用JsonProperty的值作为字段名
+                if (jsonPropertyAnnotation != null && StringUtils.isNotEmpty(jsonPropertyAnnotation.value())) {
+                    fieldName = jsonPropertyAnnotation.value();
                 }
-                if (apiModelAnnotation != null && StringUtils.isNotEmpty((apiModelAnnotation).value())) {
-                    value = apiModelAnnotation.value();
+                // 使用ApiModelProperty的值作为显示名
+                if (apiModelAnnotation != null && StringUtils.isNotEmpty(apiModelAnnotation.value())) {
+                    displayName = apiModelAnnotation.value();
                 }
-                res.put(name, value);
+                res.put(fieldName, displayName);
             } catch (SecurityException | IllegalArgumentException e) {
                 e.printStackTrace();
             }
