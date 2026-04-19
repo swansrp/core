@@ -1165,7 +1165,7 @@ stop)
   ;;
 restart)
   echo "===> docker compose restart"
-  docker compose down
+  docker compose down --remove-orphans
   docker compose up -d
   ;;
 status)
