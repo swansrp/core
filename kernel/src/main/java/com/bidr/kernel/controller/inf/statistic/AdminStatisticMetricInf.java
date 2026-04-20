@@ -72,9 +72,17 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         for (MetricCondition metricCondition : metricConditionList) {
             for (KeyValueResVO statistic : statisticColumn) {
                 if (FuncUtil.isNotEmpty(statistic.getValue())) {
-                    wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
-                            parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
-                            StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
+                    if (StringUtil.convertSwitch(metricCondition.getCount())) {
+                        wrapper.getSelectColum().add(new SelectString(String.format(
+                                "count(%s %s) as '%s'",
+                                StringUtil.convertSwitch(metricCondition.getDistinct()) ? "distinct" : StringUtil.EMPTY,
+                                parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
+                                StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
+                    } else {
+                        wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
+                                parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
+                                StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
+                    }
                 } else {
                     wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
                             parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
@@ -510,6 +518,9 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
         if (FuncUtil.isNotEmpty(req.getMetricCondition())) {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getMetricCondition(),
                     req.getStatisticColumn());
+            if (StringUtil.convertSwitch(req.getDistinct())) {
+                wrapper.distinct();
+            }
             wrapper.from(from -> buildSubFromWrapper(query, from));
             if (StringUtil.convertSwitch(req.getMajorCondition()) || FuncUtil.isEmpty(req.getMajorCondition())) {
                 return getConditionMajorStatisticRes(wrapper, req.getMetricColumn(), req.getMetricCondition(),
