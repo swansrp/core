@@ -50,7 +50,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             }
         } else {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
-                    req.getSort());
+                    req.getSort(), req.getLimit());
             wrapper.from(from -> buildSubFromWrapper(query, from));
             return getStatisticRes(wrapper, req.getMetricColumn(), req.getSort());
         }
@@ -276,7 +276,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
      * @return 字典分级
      */
     default MPJLambdaWrapper<ENTITY> buildStatisticWrapper(List<Metric> metricColumn,
-                                                           List<KeyValueResVO> statisticColumn, Integer sort) {
+                                                           List<KeyValueResVO> statisticColumn, Integer sort, Integer limit) {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         for (KeyValueResVO statistic : statisticColumn) {
             if (FuncUtil.isNotEmpty(statistic.getValue())) {
@@ -301,6 +301,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                     break;
             }
         }
+        wrapper.last(FuncUtil.isNotEmpty(limit), "limit " + limit);
         buildMetricWrapperByMetricColumn(metricColumn, wrapper);
         return wrapper;
     }
@@ -343,10 +344,10 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
     default void buildMetricWrapperByMetricColumn(List<Metric> metricColumn, MPJLambdaWrapper<ENTITY> wrapper) {
         for (Metric metric : metricColumn) {
             String column = metric.getColumn();
+            String columnSql = String.format("IFNULL(%s, '%s')", column, StatisticRes.NULL);
             if (FuncUtil.isNotEmpty(column)) {
-                wrapper.getSelectColum().add(new SelectString(
-                        String.format("IFNULL(%s, '%s') as %s", column, StatisticRes.NULL, column),
-                        wrapper.getAlias()));
+                wrapper.getSelectColum().add(new SelectString(String.format("%s as %s", columnSql, column), wrapper.getAlias()));
+                wrapper.groupBy(columnSql);
             }
         }
     }
@@ -531,7 +532,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             }
         } else {
             MPJLambdaWrapper<ENTITY> wrapper = buildStatisticWrapper(req.getMetricColumn(), req.getStatisticColumn(),
-                    req.getSort());
+                    req.getSort(), req.getLimit());
             wrapper.from(from -> buildSubFromWrapper(query, from));
             return getStatisticRes(wrapper, req.getMetricColumn(), req.getSort());
         }

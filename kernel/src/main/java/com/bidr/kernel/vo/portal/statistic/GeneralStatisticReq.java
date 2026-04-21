@@ -22,4 +22,5 @@ public class GeneralStatisticReq extends QueryConditionReq implements StatisticR
     private String majorCondition;
     private List<KeyValueResVO> statisticColumn;
     private Integer sort;
+    private Integer limit;
 }

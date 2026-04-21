@@ -38,23 +38,37 @@ public class DriverStatisticSupportService {
     /**
      * 生成 case when 表达式（参数化）：case when {condition} then {then} else {else} end
      * <ul>
-     *     <li>statisticColumnField 非空：then=该字段值，else=0（用于 sum）</li>
+     *     <li>statisticColumnField 非空且 isCount=false：then=该字段值，else=0（用于 sum）</li>
+     *     <li>statisticColumnField 非空且 isCount=true：then=1，else=null（用于 count）</li>
      *     <li>statisticColumnField 为空：then=1，else=null（用于 count）</li>
      * </ul>
+     * 
+     * <p>注意：DISTINCT 关键字应该在聚合函数（COUNT/SUM）外层添加，而不是在 CASE WHEN 内部</p>
+     *
+     * @param query               查询条件
+     * @param statisticColumnField 统计字段名
+     * @param isCount             是否使用 COUNT 统计（而非 SUM）
+     * @param aliasMap            别名映射
+     * @param parameters          参数容器
+     * @param ctx                 查询上下文
+     * @return CASE WHEN 表达式字符串（不包含 DISTINCT）
      */
     public static String buildCaseWhen(AdvancedQuery query,
                                        String statisticColumnField,
+                                       boolean isCount,
                                        Map<String, String> aliasMap,
                                        Map<String, Object> parameters,
                                        StatisticQueryContext ctx) {
-        // 1: 根据是否指定统计字段决定 THEN/ELSE 的返回表达式
+        // 1: 根据是否指定统计字段和统计类型决定 THEN/ELSE 的返回表达式
         String thenStr;
         String elseStr;
-        if (FuncUtil.isNotEmpty(statisticColumnField)) {
+        if (FuncUtil.isNotEmpty(statisticColumnField) && !isCount) {
+            // SUM 统计：返回字段值
             String statDb = aliasMap.getOrDefault(statisticColumnField, statisticColumnField);
             thenStr = ctx.formatColumnExpression(statDb);
             elseStr = "0";
         } else {
+            // COUNT 统计：返回 1
             thenStr = "1";
             elseStr = "null";
         }
@@ -66,7 +80,7 @@ public class DriverStatisticSupportService {
             conditionSql = "1=1"; // 如果没有具体条件，使用恒真条件以便 CASE WHEN 语法合法
         }
 
-        // 3: 返回最终的 CASE WHEN 表达式字符串
+        // 3: 返回最终的 CASE WHEN 表达式字符串（DISTINCT 由调用方在聚合函数处添加）
         return "case when " + conditionSql + " then " + thenStr + " else " + elseStr + " end";
     }
 
@@ -402,8 +416,13 @@ public class DriverStatisticSupportService {
                 sql.append(" ORDER BY `statistic` DESC");
             }
         }
+        
+        // 4.5 如 req.limit 存在且大于 0，则追加 LIMIT 子句
+        if (FuncUtil.isNotEmpty(req.getLimit()) && req.getLimit() > 0) {
+            sql.append(" LIMIT ").append(req.getLimit());
+        }
 
-        // 4.5 执行 SQL，jdbc.executeQuery 返回行列表
+        // 4.6 执行 SQL，jdbc.executeQuery 返回行列表
         List<Map<String, Object>> rows = jdbc.executeQuery(sql.toString(), parameters);
 
         // 5: 解析结果行并构造返回对象
@@ -472,10 +491,16 @@ public class DriverStatisticSupportService {
 
         // 4: 为每个 metricCondition x statisticColumn 生成 CASE WHEN 或 COUNT 列
         // 规则：列别名使用 join(condition.label, statistic.label) 的约定，便于后续解析
+        // 支持：distinct（去重）、count（统计类型）
         Map<String, String> aliasMapping = new HashMap<>();
         int aliasCounter = 0;
         for (MetricCondition metricCondition : metricConditions) {
             Validator.assertTrue(FuncUtil.isNotEmpty(metricCondition.getLabel()), ErrCodeSys.SYS_ERR_MSG, "自定义条件label不能为空");
+            
+            // 读取 distinct 和 count 配置
+            boolean isDistinct = "1".equals(metricCondition.getDistinct());
+            boolean isCount = "1".equals(metricCondition.getCount());
+            
             for (KeyValueResVO statistic : req.getStatisticColumn()) {
                 // 4.1 alias 作为 SQL 列别名（例如："分布统计###指标"），供后续解析使用
                 String originalAlias = StringUtil.join(metricCondition.getLabel(), statistic.getLabel());
@@ -484,13 +509,28 @@ public class DriverStatisticSupportService {
                 String safeAlias = "stat_col_" + (aliasCounter++);
                 aliasMapping.put(safeAlias, originalAlias);
 
-                // 4.2 使用 buildCaseWhen 生成参数化的 CASE WHEN 表达式，并把参数写入 parameters
-                String caseExpr = buildCaseWhen(metricCondition.getCondition(), statistic.getValue(), aliasMap, parameters, ctx);
-                // 4.3 如果 statistic.value 存在则对 caseExpr 求和，否则用 COUNT 统计匹配次数
-                if (FuncUtil.isNotEmpty(statistic.getValue())) {
-                    selectParts.add("SUM(" + caseExpr + ") AS `" + safeAlias + "`");
+                // 4.2 构建 DISTINCT 关键字（如果启用去重）
+                String distinctKeyword = isDistinct ? "DISTINCT " : "";
+                
+                // 4.3 使用 buildCaseWhen 生成参数化的 CASE WHEN 表达式
+                String caseExpr = buildCaseWhen(
+                        metricCondition.getCondition(), 
+                        statistic.getValue(),
+                        isCount,
+                        aliasMap, 
+                        parameters, 
+                        ctx);
+                
+                // 4.4 根据统计类型生成聚合表达式（DISTINCT 在聚合函数内部）
+                if (isCount) {
+                    // COUNT 统计：COUNT(DISTINCT CASE WHEN ...)
+                    selectParts.add("COUNT(" + distinctKeyword + caseExpr + ") AS `" + safeAlias + "`");
+                } else if (FuncUtil.isNotEmpty(statistic.getValue())) {
+                    // SUM 统计：SUM(DISTINCT CASE WHEN ...)
+                    selectParts.add("SUM(" + distinctKeyword + caseExpr + ") AS `" + safeAlias + "`");
                 } else {
-                    selectParts.add("COUNT(" + caseExpr + ") AS `" + safeAlias + "`");
+                    // 默认 COUNT(1) 统计
+                    selectParts.add("COUNT(" + distinctKeyword + caseExpr + ") AS `" + safeAlias + "`");
                 }
             }
         }
@@ -504,6 +544,20 @@ public class DriverStatisticSupportService {
         }
         if (FuncUtil.isNotEmpty(groupByDb)) {
             sql.append(" GROUP BY ").append(ctx.formatColumnExpression(groupByDb));
+        }
+        
+        // 追加排序（如果指定了 sort）
+        if (FuncUtil.isNotEmpty(req.getSort())) {
+            if (Integer.valueOf(1).equals(req.getSort())) {
+                sql.append(" ORDER BY `statistic` ASC");
+            } else if (Integer.valueOf(2).equals(req.getSort())) {
+                sql.append(" ORDER BY `statistic` DESC");
+            }
+        }
+        
+        // 追加 LIMIT（如果指定了 limit）
+        if (FuncUtil.isNotEmpty(req.getLimit()) && req.getLimit() > 0) {
+            sql.append(" LIMIT ").append(req.getLimit());
         }
 
         List<Map<String, Object>> rows = jdbc.executeQuery(sql.toString(), parameters);

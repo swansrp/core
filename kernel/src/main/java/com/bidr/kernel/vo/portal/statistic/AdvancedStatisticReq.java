@@ -22,5 +22,6 @@ public class AdvancedStatisticReq extends AdvancedQueryReq implements StatisticR
     private String majorCondition;
     private List<KeyValueResVO> statisticColumn;
     private Integer sort;
+    private Integer limit;
 }
 
