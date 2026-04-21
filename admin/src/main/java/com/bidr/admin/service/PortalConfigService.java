@@ -498,11 +498,13 @@ public class PortalConfigService implements LoginFillTokenInf {
         Map<String, Object> map = tokenService.getTokenValue();
         Map<Long, RoleInfo> roleInfoMap = JsonUtil.readJson(map.get(TokenItem.ROLE_MAP.name()), Map.class, Long.class,
                 RoleInfo.class);
-        for (Long roleId : roleInfoMap.keySet()) {
-            if (ROLE_BIND_PORTAL_MAP.containsKey(roleId)) {
-                tokenService.putItem(PortalTokenItem.PORTAL_ROLE, roleId);
-                log.info("实体显示配置使用[{}]方案", roleInfoMap.get(roleId).getRoleName());
-                return;
+        if (roleInfoMap != null) {
+            for (Long roleId : roleInfoMap.keySet()) {
+                if (ROLE_BIND_PORTAL_MAP.containsKey(roleId)) {
+                    tokenService.putItem(PortalTokenItem.PORTAL_ROLE, roleId);
+                    log.info("实体显示配置使用[{}]方案", roleInfoMap.get(roleId).getRoleName());
+                    return;
+                }
             }
         }
         tokenService.putItem(PortalTokenItem.PORTAL_ROLE, DEFAULT_CONFIG_ROLE_ID);
