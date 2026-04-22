@@ -48,6 +48,18 @@ public interface KafkaTopicConsumer {
         }
 
         /**
+         * 记录消息到数据库
+         * <p>
+         * 在确认消息有效后调用（如通过 systemCode 校验），框架会记录消息并返回 SysKafka 对象
+         * 后续可通过此对象更新处理状态
+         *
+         * @return SysKafka 记录对象，如果未启用持久化则返回 null
+         */
+        default Object recordMessage() {
+            return null;
+        }
+
+        /**
          * 标记消息处理失败，不确认
          */
         default void nack() {

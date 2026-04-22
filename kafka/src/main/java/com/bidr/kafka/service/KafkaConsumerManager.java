@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Title: KafkaConsumerManager
@@ -211,11 +212,8 @@ public class KafkaConsumerManager {
                                     ConsumerRecord<String, String> record,
                                     org.springframework.kafka.support.Acknowledgment acknowledgment,
                                     KafkaTopicConsumer consumer, String groupId) {
-        SysKafka sysKafka = null;
         long startTime = System.currentTimeMillis();
-        if (persistenceEnabled && sysKafkaService != null) {
-            sysKafka = sysKafkaService.recordReceived(record, groupId);
-        }
+        AtomicReference<SysKafka> sysKafkaRef = new AtomicReference<>();
 
         try {
             KafkaTopicConsumer.AckCallback ackCallback = new KafkaTopicConsumer.AckCallback() {
@@ -228,6 +226,15 @@ public class KafkaConsumerManager {
                         acknowledgment.acknowledge();
                     }
                 }
+
+                @Override
+                public Object recordMessage() {
+                    // 消费者确认消息有效后，才记录到数据库
+                    if (persistenceEnabled && sysKafkaService != null && sysKafkaRef.get() == null) {
+                        sysKafkaRef.set(sysKafkaService.recordReceived(record, groupId));
+                    }
+                    return sysKafkaRef.get();
+                }
             };
 
             consumer.consume(record, ackCallback);
@@ -236,12 +243,20 @@ public class KafkaConsumerManager {
                 acknowledgment.acknowledge();
             }
 
-            if (sysKafka != null) {
+            // 处理成功，更新状态
+            if (sysKafkaRef.get() != null) {
                 long costTime = System.currentTimeMillis() - startTime;
-                sysKafkaService.updateSuccess(sysKafka, costTime);
+                sysKafkaService.updateSuccess(sysKafkaRef.get(), costTime);
             }
         } catch (Exception e) {
             log.error("Error consuming message from topic {}: {}", topicConfig.getName(), e.getMessage(), e);
+            
+            // 处理失败，更新状态
+            if (sysKafkaRef.get() != null) {
+                long costTime = System.currentTimeMillis() - startTime;
+                sysKafkaService.updateFailed(sysKafkaRef.get(), e, costTime);
+            }
+            
             consumer.onError(record, e);
             throw e;
         }
