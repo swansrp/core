@@ -89,34 +89,34 @@ public class KafkaConsumerManager {
 
     /**
      * -- SETTER --
-     *  设置消费者工厂
+     * 设置消费者工厂
      */
     @Setter
     private ConsumerFactory<String, String> consumerFactory;
     /**
      * -- SETTER --
-     *  设置Kafka配置
+     * 设置Kafka配置
      */
     @Setter
     private KafkaProperties kafkaProperties;
 
     /**
      * -- SETTER --
-     *  设置错误处理器（用于死信队列）
+     * 设置错误处理器（用于死信队列）
      */
     @Setter
     private CommonErrorHandler errorHandler;
 
     /**
      * -- SETTER --
-     *  设置消息记录服务（用于自动落库）
+     * 设置消息记录服务（用于自动落库）
      */
     @Setter
     private SysKafkaService sysKafkaService;
 
     /**
      * -- SETTER --
-     *  设置是否启用消息落库
+     * 设置是否启用消息落库
      */
     @Setter
     private boolean persistenceEnabled = false;
@@ -127,7 +127,7 @@ public class KafkaConsumerManager {
      * 注册消费者
      *
      * @param topicConfig Topic配置
-     * @param consumer 消费者实例
+     * @param consumer    消费者实例
      */
     public void registerConsumer(KafkaProperties.TopicConfig topicConfig, KafkaTopicConsumer consumer) {
         if (!topicConfig.isEnabled()) {
@@ -159,37 +159,26 @@ public class KafkaConsumerManager {
         ContainerProperties containerProps = new ContainerProperties(topicConfig.getName());
 
         // 设置消费者组ID
-        String groupId = topicConfig.getGroupId() != null
-            ? topicConfig.getGroupId()
-            : kafkaProperties.getConsumer().getGroupId();
+        String groupId = topicConfig.getGroupId() != null ? topicConfig.getGroupId() : kafkaProperties.getConsumer().getGroupId();
         containerProps.setGroupId(groupId);
 
         // 设置ACK模式
-        containerProps.setAckMode(topicConfig.isManualAck()
-            ? ContainerProperties.AckMode.MANUAL
-            : ContainerProperties.AckMode.BATCH);
+        containerProps.setAckMode(topicConfig.isManualAck() ? ContainerProperties.AckMode.MANUAL : ContainerProperties.AckMode.BATCH);
 
         // 设置消息监听器
-        containerProps.setMessageListener(
-            (org.springframework.kafka.listener.AcknowledgingMessageListener<String, String>) (record, acknowledgment) -> {
-                onMessageConsumed(topicConfig, record, acknowledgment, consumer, groupId);
-            });
+        containerProps.setMessageListener((org.springframework.kafka.listener.AcknowledgingMessageListener<String, String>) (record, acknowledgment) -> {
+            onMessageConsumed(topicConfig, record, acknowledgment, consumer, groupId);
+        });
 
         // 使用topic特定配置创建消费者工厂（带缓存）
-        DefaultKafkaConsumerFactory<String, String> topicConsumerFactory = consumerFactoryCache.computeIfAbsent(
-            topicConfig.getName(),
-            key -> {
-                Map<String, Object> consumerProps = kafkaProperties.buildConsumerProps(topicConfig);
-                consumerProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, groupId);
-                log.info("Created ConsumerFactory for topic: {} with autoOffsetReset: {}",
-                    topicConfig.getName(),
-                    topicConfig.getAutoOffsetReset() != null ? topicConfig.getAutoOffsetReset() : kafkaProperties.getConsumer().getAutoOffsetReset());
-                return new DefaultKafkaConsumerFactory<>(consumerProps);
-            }
-        );
+        DefaultKafkaConsumerFactory<String, String> topicConsumerFactory = consumerFactoryCache.computeIfAbsent(topicConfig.getName(), key -> {
+            Map<String, Object> consumerProps = kafkaProperties.buildConsumerProps(topicConfig);
+            consumerProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, groupId);
+            log.info("Created ConsumerFactory for topic: {} with autoOffsetReset: {}", topicConfig.getName(), topicConfig.getAutoOffsetReset() != null ? topicConfig.getAutoOffsetReset() : kafkaProperties.getConsumer().getAutoOffsetReset());
+            return new DefaultKafkaConsumerFactory<>(consumerProps);
+        });
 
-        ConcurrentMessageListenerContainer<String, String> container =
-            new ConcurrentMessageListenerContainer<>(topicConsumerFactory, containerProps);
+        ConcurrentMessageListenerContainer<String, String> container = new ConcurrentMessageListenerContainer<>(topicConsumerFactory, containerProps);
         container.setConcurrency(topicConfig.getConcurrency());
         container.setBeanName("kafkaContainer-" + topicConfig.getName());
 
@@ -201,27 +190,20 @@ public class KafkaConsumerManager {
 
         containers.put(topicConfig.getName(), container);
 
-        log.info("Created Kafka consumer container for topic: {} with groupId: {}",
-            topicConfig.getName(), groupId);
+        log.info("Created Kafka consumer container for topic: {} with groupId: {}", topicConfig.getName(), groupId);
     }
 
     /**
      * 消息消费处理
      */
-    private void onMessageConsumed(KafkaProperties.TopicConfig topicConfig,
-                                    ConsumerRecord<String, String> record,
-                                    org.springframework.kafka.support.Acknowledgment acknowledgment,
-                                    KafkaTopicConsumer consumer, String groupId) {
+    private void onMessageConsumed(KafkaProperties.TopicConfig topicConfig, ConsumerRecord<String, String> record, org.springframework.kafka.support.Acknowledgment acknowledgment, KafkaTopicConsumer consumer, String groupId) {
         long startTime = System.currentTimeMillis();
         AtomicReference<SysKafka> sysKafkaRef = new AtomicReference<>();
 
         try {
             KafkaTopicConsumer.AckCallback ackCallback = new KafkaTopicConsumer.AckCallback() {
-                private boolean acknowledged = false;
-
                 @Override
                 public void acknowledge() {
-                    acknowledged = true;
                     if (acknowledgment != null) {
                         acknowledgment.acknowledge();
                     }
@@ -250,13 +232,13 @@ public class KafkaConsumerManager {
             }
         } catch (Exception e) {
             log.error("Error consuming message from topic {}: {}", topicConfig.getName(), e.getMessage(), e);
-            
+
             // 处理失败，更新状态
             if (sysKafkaRef.get() != null) {
                 long costTime = System.currentTimeMillis() - startTime;
                 sysKafkaService.updateFailed(sysKafkaRef.get(), e, costTime);
             }
-            
+
             consumer.onError(record, e);
             throw e;
         }
@@ -267,7 +249,7 @@ public class KafkaConsumerManager {
      */
     private void createAndStartContainer(KafkaProperties.TopicConfig topicConfig, KafkaTopicConsumer consumer) {
         String topic = topicConfig.getName();
-        
+
         // 启动前先检查topic是否存在
         if (!checkTopicExists(topic)) {
             log.warn("Topic '{}' does not exist on startup, will not start container. Will retry later.", topic);
@@ -279,15 +261,13 @@ public class KafkaConsumerManager {
             scheduleQuickRetryCheck(topic);
             return;
         }
-        
+
         // topic存在,正常启动
         createContainer(topicConfig, consumer);
         ConcurrentMessageListenerContainer<String, String> container = containers.get(topic);
         if (container != null) {
             container.start();
-            String groupId = topicConfig.getGroupId() != null
-                ? topicConfig.getGroupId()
-                : kafkaProperties.getConsumer().getGroupId();
+            String groupId = topicConfig.getGroupId() != null ? topicConfig.getGroupId() : kafkaProperties.getConsumer().getGroupId();
             log.info("Started Kafka consumer container for topic: {} with groupId: {}", topic, groupId);
         }
     }
@@ -303,30 +283,28 @@ public class KafkaConsumerManager {
                 if (topicAbsentStopped.containsKey(topic)) {
                     return;
                 }
-                
+
                 ConcurrentMessageListenerContainer<String, String> container = containers.get(topic);
                 KafkaProperties.TopicConfig config = topicConfigs.get(topic);
                 KafkaTopicConsumer consumer = consumers.get(topic);
-                
+
                 // 容器或配置不存在,放弃重试
                 if (container == null || config == null || consumer == null) {
                     return;
                 }
-                
+
                 // 如果容器已经在运行,不需要快速重试
                 if (container.isRunning()) {
                     return;
                 }
-                
+
                 // 检查topic是否存在
                 if (checkTopicExists(topic)) {
                     // topic存在,清理计数并启动容器
                     topicAbsentCounters.remove(topic);
                     topicAbsentFirstSeen.remove(topic);
                     container.start();
-                    String groupId = config.getGroupId() != null
-                        ? config.getGroupId()
-                        : kafkaProperties.getConsumer().getGroupId();
+                    String groupId = config.getGroupId() != null ? config.getGroupId() : kafkaProperties.getConsumer().getGroupId();
                     log.info("Topic '{}' is now available, container STARTED with groupId: {}", topic, groupId);
                 } else {
                     // topic仍不存在,增加计数
@@ -336,10 +314,8 @@ public class KafkaConsumerManager {
                     if (attempt >= DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS) {
                         // 达到最大次数,标记为已停止
                         topicAbsentStopped.put(topic, Instant.now());
-                        log.warn("Topic '{}' still does not exist after {} quick checks, will retry after cooldown ({} hour).",
-                            topic, DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS, DEFAULT_COOLDOWN_MILLIS / 3600000);
+                        log.warn("Topic '{}' still does not exist after {} quick checks, will retry after cooldown ({} hour).", topic, DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS, DEFAULT_COOLDOWN_MILLIS / 3600000);
                         // 立即返回,不再继续
-                        return;
                     } else {
                         log.warn("Topic '{}' does not exist, quick check {}/{}", topic, attempt, DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS);
                     }
@@ -347,7 +323,8 @@ public class KafkaConsumerManager {
             } catch (Exception e) {
                 log.debug("Quick retry check failed for topic '{}': {}", topic, e.getMessage());
             }
-        }, 0, 10, TimeUnit.SECONDS); // 立即执行,每10秒一次
+            // 立即执行,每10秒一次
+        }, 0, 10, TimeUnit.SECONDS);
     }
 
     // ==================== topic不存在时的有限重试 ====================
@@ -363,7 +340,7 @@ public class KafkaConsumerManager {
             // 创建专门的AdminClient配置（只包含必要的配置）
             Map<String, Object> adminProps = new java.util.HashMap<>();
             adminProps.put("bootstrap.servers", kafkaProperties.getBootstrapServers());
-            
+
             // 添加安全配置（如果有）
             if (kafkaProperties.getSecurity() != null && kafkaProperties.getSecurity().isEnabled()) {
                 adminProps.put("security.protocol", kafkaProperties.getSecurity().getProtocol());
@@ -374,9 +351,8 @@ public class KafkaConsumerManager {
                     adminProps.put("sasl.jaas.config", kafkaProperties.getSecurity().buildJaasConfig());
                 }
             }
-            
-            try (org.apache.kafka.clients.admin.AdminClient adminClient =
-                     org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
+
+            try (org.apache.kafka.clients.admin.AdminClient adminClient = org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
                 Set<String> topics = adminClient.listTopics().names().get(10, java.util.concurrent.TimeUnit.SECONDS);
                 return topics.contains(topicName);
             }
@@ -400,9 +376,7 @@ public class KafkaConsumerManager {
         }
 
         // 跳过从未出现过问题的topic（无需检查）
-        if (!topicAbsentCounters.containsKey(topic) 
-            && !topicAbsentFirstSeen.containsKey(topic) 
-            && !topicAbsentStopped.containsKey(topic)) {
+        if (!topicAbsentCounters.containsKey(topic) && !topicAbsentFirstSeen.containsKey(topic) && !topicAbsentStopped.containsKey(topic)) {
             return;
         }
 
@@ -425,8 +399,7 @@ public class KafkaConsumerManager {
             // 达到最大次数，停止容器
             container.stop();
             topicAbsentStopped.put(topic, Instant.now());
-            log.warn("Topic '{}' still does not exist after {} checks, container STOPPED. Will retry after cooldown.",
-                topic, DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS);
+            log.warn("Topic '{}' still does not exist after {} checks, container STOPPED. Will retry after cooldown.", topic, DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS);
         } else {
             log.warn("Topic '{}' does not exist, check {}/{}", topic, attempt, DEFAULT_MAX_TOPIC_RETRY_ATTEMPTS);
         }
@@ -450,7 +423,7 @@ public class KafkaConsumerManager {
             // 检查topic是否存在
             handleTopicAbsent(topic);
         });
-        
+
         // 同时检查被停止的topic是否可以恢复
         recoverStoppedTopics();
     }
@@ -462,7 +435,7 @@ public class KafkaConsumerManager {
         if (topicAbsentStopped.isEmpty()) {
             return;
         }
-        
+
         Iterator<Map.Entry<String, Instant>> it = topicAbsentStopped.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, Instant> entry = it.next();
@@ -476,8 +449,7 @@ public class KafkaConsumerManager {
             }
 
             long minutesSinceStop = Duration.between(stoppedAt, Instant.now()).toMinutes();
-            log.info("Topic '{}' cooldown period elapsed ({} minutes), checking availability...",
-                topic, minutesSinceStop);
+            log.info("Topic '{}' cooldown period elapsed ({} minutes), checking availability...", topic, minutesSinceStop);
 
             // 检查topic是否存在
             if (checkTopicExists(topic)) {
