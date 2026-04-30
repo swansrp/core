@@ -55,26 +55,50 @@ public class Base64Util {
     }
 
     public static String decode(String src) {
-        return decode(src, true);
-    }
-
-    public static String decode(String src, boolean urlSafe) {
-        if (urlSafe) {
+        try {
             return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
-        } else {
+        } catch (IllegalArgumentException e) {
             return new String(decoder.decode(src), StandardCharsets.UTF_8);
         }
     }
 
+    public static String decode(String src, boolean urlSafe) {
+        if (urlSafe) {
+            try {
+                return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                return new String(decoder.decode(src), StandardCharsets.UTF_8);
+            }
+        } else {
+            try {
+                return new String(decoder.decode(src), StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
+            }
+        }
+    }
+
     public static String decode(byte[] src) {
-        return decode(src, true);
+        try {
+            return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return new String(decoder.decode(src), StandardCharsets.UTF_8);
+        }
     }
 
     public static String decode(byte[] src, boolean urlSafe) {
         if (urlSafe) {
-            return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
+            try {
+                return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                return new String(decoder.decode(src), StandardCharsets.UTF_8);
+            }
         } else {
-            return new String(decoder.decode(src), StandardCharsets.UTF_8);
+            try {
+                return new String(decoder.decode(src), StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                return new String(urlDecoder.decode(src), StandardCharsets.UTF_8);
+            }
         }
     }
 }

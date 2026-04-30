@@ -159,8 +159,12 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
             return "";
         }
 
-        // 调试日志
-        log.debug("[SQL Builder] 字段: {}, 列名: {}, 关系: {}, 值: {}", fieldName, columnName, conditionDict, value);
+        // NULL / NOT_NULL 不需要值，其余条件类型值为空时直接跳过
+        if (conditionDict != PortalConditionDict.NULL
+                && conditionDict != PortalConditionDict.NOT_NULL
+                && FuncUtil.isEmpty(value)) {
+            return "";
+        }
 
         // 格式化列名（子类可重写）
         String formattedColumn = formatColumnName(columnName);
@@ -168,23 +172,17 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
         switch (conditionDict) {
             case EQUAL:
                 Object equalValue = getFirstValue(value);
-                // EQUAL 关系值为 null 时不生成条件（应使用 NULL 关系）
                 if (equalValue == null) {
-                    log.debug("[SQL Builder] EQUAL关系值为null，跳过条件: {}", fieldName);
                     return "";
                 }
                 parameters.put(paramKey, equalValue);
-                log.debug("[SQL Builder] 生成EQUAL条件: {} = :{} (值: {})", formattedColumn, paramKey, equalValue);
                 return formattedColumn + " = :" + paramKey;
             case NOT_EQUAL:
                 Object notEqualValue = getFirstValue(value);
-                // NOT_EQUAL 关系值为 null 时不生成条件（应使用 NOT_NULL 关系）
                 if (notEqualValue == null) {
-                    log.debug("[SQL Builder] NOT_EQUAL关系值为null，跳过条件: {}", fieldName);
                     return "";
                 }
                 parameters.put(paramKey, notEqualValue);
-                log.debug("[SQL Builder] 生成NOT_EQUAL条件: {} != :{} (值: {})", formattedColumn, paramKey, notEqualValue);
                 return formattedColumn + " != :" + paramKey;
             case GREATER:
                 parameters.put(paramKey, getFirstValue(value));
@@ -209,37 +207,28 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
                 parameters.put(paramKey, "%" + getFirstValue(value) + "%");
                 return formattedColumn + " NOT LIKE :" + paramKey;
             case IN:
-                if (FuncUtil.isNotEmpty(value)) {
-                    parameters.put(paramKey, value);
-                    return formattedColumn + " IN (:" + paramKey + ")";
-                }
-                break;
+                parameters.put(paramKey, value);
+                return formattedColumn + " IN (:" + paramKey + ")";
             case CONTAIN:
             case CONTAIN_IN_OR:
             case CONTAIN_IN_AND:
-                if (FuncUtil.isNotEmpty(value)) {
-                    List<String> parts = new ArrayList<>();
-                    String join = (conditionDict == PortalConditionDict.CONTAIN_IN_AND) ? " AND " : " OR ";
-                    int idx = 0;
-                    for (Object v : value) {
-                        String pk = paramKey + "_" + (idx++);
-                        parameters.put(pk, v);
-                        parts.add("FIND_IN_SET(:" + pk + ", " + formattedColumn + ") > 0");
-                    }
-                    if (parts.size() == 1) {
-                        return parts.get(0);
-                    }
-                    return "(" + String.join(join, parts) + ")";
+                List<String> parts = new ArrayList<>();
+                String join = (conditionDict == PortalConditionDict.CONTAIN_IN_AND) ? " AND " : " OR ";
+                int idx = 0;
+                for (Object v : value) {
+                    String pk = paramKey + "_" + (idx++);
+                    parameters.put(pk, v);
+                    parts.add("FIND_IN_SET(:" + pk + ", " + formattedColumn + ") > 0");
                 }
-                break;
+                if (parts.size() == 1) {
+                    return parts.get(0);
+                }
+                return "(" + String.join(join, parts) + ")";
             case NOT_IN:
-                if (FuncUtil.isNotEmpty(value)) {
-                    parameters.put(paramKey, value);
-                    return formattedColumn + " NOT IN (:" + paramKey + ")";
-                }
-                break;
+                parameters.put(paramKey, value);
+                return formattedColumn + " NOT IN (:" + paramKey + ")";
             case BETWEEN:
-                if (FuncUtil.isNotEmpty(value) && value.size() >= 2) {
+                if (value.size() >= 2) {
                     String paramKey1 = paramKey + "_start";
                     String paramKey2 = paramKey + "_end";
                     parameters.put(paramKey1, value.get(0));
@@ -248,7 +237,7 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
                 }
                 break;
             case NOT_BETWEEN:
-                if (FuncUtil.isNotEmpty(value) && value.size() >= 2) {
+                if (value.size() >= 2) {
                     String paramKey1 = paramKey + "_start";
                     String paramKey2 = paramKey + "_end";
                     parameters.put(paramKey1, value.get(0));
