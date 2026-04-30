@@ -347,7 +347,7 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
             String columnSql = String.format("IFNULL(%s, '%s')", column, StatisticRes.NULL);
             if (FuncUtil.isNotEmpty(column)) {
                 wrapper.getSelectColum().add(new SelectString(String.format("%s as %s", columnSql, column), wrapper.getAlias()));
-                wrapper.groupBy(columnSql);
+                wrapper.groupBy(column);
             }
         }
     }

@@ -5,6 +5,7 @@ import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import java.util.Map;
  * @author Sharp
  * @since 2025-11-24
  */
+@Slf4j
 public abstract class BaseSqlBuilder implements SqlBuilder {
 
     /**
@@ -157,15 +159,32 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
             return "";
         }
 
+        // 调试日志
+        log.debug("[SQL Builder] 字段: {}, 列名: {}, 关系: {}, 值: {}", fieldName, columnName, conditionDict, value);
+
         // 格式化列名（子类可重写）
         String formattedColumn = formatColumnName(columnName);
 
         switch (conditionDict) {
             case EQUAL:
-                parameters.put(paramKey, getFirstValue(value));
+                Object equalValue = getFirstValue(value);
+                // EQUAL 关系值为 null 时不生成条件（应使用 NULL 关系）
+                if (equalValue == null) {
+                    log.debug("[SQL Builder] EQUAL关系值为null，跳过条件: {}", fieldName);
+                    return "";
+                }
+                parameters.put(paramKey, equalValue);
+                log.debug("[SQL Builder] 生成EQUAL条件: {} = :{} (值: {})", formattedColumn, paramKey, equalValue);
                 return formattedColumn + " = :" + paramKey;
             case NOT_EQUAL:
-                parameters.put(paramKey, getFirstValue(value));
+                Object notEqualValue = getFirstValue(value);
+                // NOT_EQUAL 关系值为 null 时不生成条件（应使用 NOT_NULL 关系）
+                if (notEqualValue == null) {
+                    log.debug("[SQL Builder] NOT_EQUAL关系值为null，跳过条件: {}", fieldName);
+                    return "";
+                }
+                parameters.put(paramKey, notEqualValue);
+                log.debug("[SQL Builder] 生成NOT_EQUAL条件: {} != :{} (值: {})", formattedColumn, paramKey, notEqualValue);
                 return formattedColumn + " != :" + paramKey;
             case GREATER:
                 parameters.put(paramKey, getFirstValue(value));
