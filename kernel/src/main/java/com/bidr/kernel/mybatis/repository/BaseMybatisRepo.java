@@ -105,7 +105,7 @@ public class BaseMybatisRepo<M extends MyBaseMapper<T>, T> extends MyServiceImpl
     }
 
     public MPJLambdaWrapper<T> getMPJLambdaWrapper() {
-        return new MPJLambdaWrapper<>();
+        return new MPJLambdaWrapper<>(entityClass);
     }
 
     public LambdaUpdateWrapper<T> getUpdateWrapper() {

@@ -5,6 +5,7 @@ import com.bidr.kafka.dao.repository.SysKafkaService;
 import com.bidr.kafka.service.KafkaConsumerManager;
 import com.bidr.kafka.service.KafkaProducerService;
 import com.bidr.kafka.service.KafkaTopicConsumer;
+import com.bidr.kafka.exception.NonRetryableKafkaException;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -169,6 +170,9 @@ public class KafkaConfig {
         // 创建错误处理器
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, backOff);
         
+        // 标记非重试异常：实现 NonRetryableKafkaException 接口的异常直接进 DLQ，不重试
+        handler.addNotRetryableExceptions(NonRetryableKafkaException.class);
+
         // 重试监听器：更新重试次数 + 记录日志
         handler.setRetryListeners((record, ex, deliveryAttempt) -> {
             log.warn("Retry {} for topic: {}, key: {}, exception: {}", 
@@ -182,7 +186,7 @@ public class KafkaConfig {
                         (String) record.key(), (String) record.value()
                     );
                     String groupId = kafkaProperties.getGroupIdWithProfile(kafkaProperties.getConsumer().getGroupId());
-                    sysKafkaService.updateRetryByRecord(typedRecord, groupId, deliveryAttempt, (Exception) ex);
+                    sysKafkaService.updateRetryByRecord(typedRecord, groupId, deliveryAttempt, ex);
                 } catch (Exception e) {
                     log.error("Failed to update sys_kafka retry count: {}", e.getMessage(), e);
                 }
@@ -207,11 +211,10 @@ public class KafkaConfig {
             return backOff;
         } else {
             // 固定间隔重试
-            FixedBackOff backOff = new FixedBackOff(
+            return new FixedBackOff(
                 dlqConfig.getRetryInterval(),
                 dlqConfig.getRetryAttempts()
             );
-            return backOff;
         }
     }
 
