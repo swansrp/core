@@ -15,10 +15,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * MyBatis SQL 日志处理器
+ * 拦截 MyBatis 日志并格式化为完整的可执行 SQL 和 Markdown 表格
+ * 
  * @author Sharp
  * @since 2025/12/2 10:45
  */
 public class MybatisLog implements Log {
+
+    // MyBatis 日志消息前缀常量
+    private static final String PREFIX_PREPARING = "==>  Preparing:";
+    private static final String PREFIX_PARAMETERS = "==> Parameters:";
+    private static final String PREFIX_COLUMNS = "<==    Columns:";
+    private static final String PREFIX_ROW = "<==        Row:";
+    private static final String PREFIX_TOTAL = "<==      Total:";
+    private static final String PREFIX_UPDATES = "<==    Updates:";
+    
+    private static final String KEYWORD_PREPARING = "Preparing:";
+    private static final String KEYWORD_PARAMETERS = "Parameters:";
+    private static final String KEYWORD_COLUMNS = "Columns:";
+    private static final String KEYWORD_ROW = "Row:";
 
     private static final ThreadLocal<List<String>> COLS = ThreadLocal.withInitial(ArrayList::new);
     private static final ThreadLocal<List<List<String>>> ROWS = ThreadLocal.withInitial(ArrayList::new);
@@ -75,19 +91,19 @@ public class MybatisLog implements Log {
     }
 
     private void process(String msg) {
-        if (msg.startsWith("==>  Preparing:")) {
+        if (msg.startsWith(PREFIX_PREPARING)) {
             // 如果有之前未输出的批量操作，先输出
             if (!PARAMETERS_LIST.get().isEmpty()) {
                 printResult();
                 clearThreadLocals();
             }
-            String sql = msg.substring(msg.indexOf("Preparing:") + 10).trim();
+            String sql = msg.substring(msg.indexOf(KEYWORD_PREPARING) + KEYWORD_PREPARING.length()).trim();
             PREPARING_SQL.set(sql);
-        } else if (msg.startsWith("==> Parameters:")) {
-            String params = msg.substring(msg.indexOf("Parameters:") + 11).trim();
+        } else if (msg.startsWith(PREFIX_PARAMETERS)) {
+            String params = msg.substring(msg.indexOf(KEYWORD_PARAMETERS) + KEYWORD_PARAMETERS.length()).trim();
             PARAMETERS_LIST.get().add(params);
-        } else if (msg.startsWith("<==    Columns:")) {
-            String part = msg.substring(msg.indexOf("Columns:") + 8).trim();
+        } else if (msg.startsWith(PREFIX_COLUMNS)) {
+            String part = msg.substring(msg.indexOf(KEYWORD_COLUMNS) + KEYWORD_COLUMNS.length()).trim();
 
             List<String> cols = new ArrayList<>();
             for (String c : part.split(",")) {
@@ -95,8 +111,8 @@ public class MybatisLog implements Log {
             }
 
             COLS.set(cols);
-        } else if (msg.startsWith("<==        Row:")) {
-            String part = msg.substring(msg.indexOf("Row:") + 4).trim();
+        } else if (msg.startsWith(PREFIX_ROW)) {
+            String part = msg.substring(msg.indexOf(KEYWORD_ROW) + KEYWORD_ROW.length()).trim();
 
             List<String> rowValues = new ArrayList<>();
             for (String r : part.split(",")) {
@@ -104,9 +120,13 @@ public class MybatisLog implements Log {
             }
 
             ROWS.get().add(rowValues);
-        } else if (msg.startsWith("<==      Total:") || msg.startsWith("<==    Updates:")) {
-            printResult();
-            clearThreadLocals();
+        } else if (msg.startsWith(PREFIX_TOTAL) || msg.startsWith(PREFIX_UPDATES)) {
+            // 使用 try-finally 确保即使发生异常也能清理 ThreadLocal
+            try {
+                printResult();
+            } finally {
+                clearThreadLocals();
+            }
         }
     }
 
@@ -160,26 +180,40 @@ public class MybatisLog implements Log {
     private String getCallerInfo() {
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         boolean findBaseSqlRepo = false;
+        
+        // 需要跳过的框架类
+        String baseSqlRepoClassName = BaseSqlRepo.class.getName();
+        String joinServiceClassName = JoinService.class.getName();
+        String iServiceClassName = IService.class.getName();
+        String serviceImplClassName = ServiceImpl.class.getName();
+        
         // 遍历堆栈，找到真正的业务调用者
         for (StackTraceElement element : stackTrace) {
             String className = element.getClassName();
             String methodName = element.getMethodName();
 
             if (findBaseSqlRepo) {
-                String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
-                if (className.equals(BaseSqlRepo.class.getName())) {
-                    continue;
-                } else if (className.equals(ServiceImpl.class.getName())) {
-                    continue;
-                } else if (simpleClassName.contains("$")) {
-                    continue;
-                } else if (!className.startsWith("com.bidr")) {
+                // 跳过框架内部类和代理类
+                if (className.equals(baseSqlRepoClassName) || 
+                    className.equals(serviceImplClassName) ||
+                    className.contains("$")) {
                     continue;
                 }
+                
+                // 只保留 com.bidr 包下的业务类
+                if (!className.startsWith("com.bidr")) {
+                    continue;
+                }
+                
+                String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
                 int lineNumber = element.getLineNumber();
                 return simpleClassName + ".java:" + lineNumber + " " + methodName;
             }
-            if (className.equals(BaseSqlRepo.class.getName()) || className.equals(JoinService.class.getName()) || className.equals(IService.class.getName())) {
+            
+            // 检查是否进入了 MyBatis-Plus 的服务层
+            if (className.equals(baseSqlRepoClassName) || 
+                className.equals(joinServiceClassName) || 
+                className.equals(iServiceClassName)) {
                 findBaseSqlRepo = true;
             }
         }
