@@ -19,11 +19,11 @@ public abstract class BaseTdRepo<T> {
 
     private static final Logger log = LoggerFactory.getLogger(BaseTdRepo.class);
     private static final TdAdvancedQueryParser PARSER = new TdAdvancedQueryParser();
-    private static final Set<String> ALLOWED_AGGR_FUNCS = Set.of(
-        "COUNT", "SUM", "AVG", "MAX", "MIN", "SPREAD", "FIRST", "LAST",
-        "TOP", "BOTTOM", "PERCENTILE", "STDDEV", "LEASTSQUARES"
-    );
-    private static final Set<String> ALLOWED_FILL = Set.of("NONE", "PREV", "LINEAR", "NULL");
+    private static final Set<String> ALLOWED_AGGR_FUNCS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "COUNT", "SUM", "AVG", "MAX", "MIN", "SPREAD", "FIRST", "LAST",
+            "TOP", "BOTTOM", "PERCENTILE", "STDDEV", "LEASTSQUARES"
+    ));
+    private static final Set<String> ALLOWED_FILL = new java.util.HashSet<>(java.util.Arrays.asList("NONE", "PREV", "LINEAR", "NULL"));
     protected final JdbcTemplate taosJdbcTemplate;
     protected final Class<T> entityClass;
     protected final String stableName;

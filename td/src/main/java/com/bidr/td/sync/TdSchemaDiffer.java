@@ -42,7 +42,7 @@ public class TdSchemaDiffer {
         for (ColumnDef col : expected.columns) {
             if (!actualColumns.containsKey(col.name)) {
                 alterStatements.add("ALTER STABLE " + stableName + " ADD COLUMN " +
-                        col.name + " " + col.type.toSql() + (col.length > 0 ? "(" + col.length + ")" : ""));
+                        col.name + " " + col.type.toSql() + formatLength(col.type, col.length));
             }
         }
 
@@ -50,7 +50,7 @@ public class TdSchemaDiffer {
         for (ColumnDef tag : expected.tags) {
             if (!actualColumns.containsKey(tag.name)) {
                 alterStatements.add("ALTER STABLE " + stableName + " ADD TAG " +
-                        tag.name + " " + tag.type.toSql() + (tag.length > 0 ? "(" + tag.length + ")" : ""));
+                        tag.name + " " + tag.type.toSql() + formatLength(tag.type, tag.length));
             }
         }
 
@@ -142,6 +142,14 @@ public class TdSchemaDiffer {
             clazz = clazz.getSuperclass();
         }
         return fields;
+    }
+
+    private static boolean needsLength(TdDataType type) {
+        return type == TdDataType.BINARY || type == TdDataType.NCHAR;
+    }
+
+    private static String formatLength(TdDataType type, int length) {
+        return (needsLength(type) && length > 0) ? "(" + length + ")" : "";
     }
 
     static class TdColumnInfo {

@@ -166,11 +166,11 @@ public abstract class BaseTdSchema<T> implements TdSchemaInf {
         }
 
         String colDefs = columns.stream()
-                .map(c -> c.name + " " + c.type.toSql() + (c.length > 0 ? "(" + c.length + ")" : ""))
+                .map(c -> c.name + " " + c.type.toSql() + formatLength(c.type, c.length))
                 .collect(Collectors.joining(", "));
 
         String tagDefs = tags.stream()
-                .map(t -> t.name + " " + t.type.toSql() + (t.length > 0 ? "(" + t.length + ")" : ""))
+                .map(t -> t.name + " " + t.type.toSql() + formatLength(t.type, t.length))
                 .collect(Collectors.joining(", "));
 
         return "CREATE STABLE IF NOT EXISTS " + stableName + " (" + colDefs + ") TAGS (" + tagDefs + ")";
@@ -221,6 +221,14 @@ public abstract class BaseTdSchema<T> implements TdSchemaInf {
             clazz = clazz.getSuperclass();
         }
         return fields;
+    }
+
+    private static boolean needsLength(TdDataType type) {
+        return type == TdDataType.BINARY || type == TdDataType.NCHAR;
+    }
+
+    private static String formatLength(TdDataType type, int length) {
+        return (needsLength(type) && length > 0) ? "(" + length + ")" : "";
     }
 
     static class ColumnDef {
