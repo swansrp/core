@@ -27,6 +27,7 @@
         <module>elasticsearch</module>
         <module>forge</module>
         <module>kafka</module>
+        <module>td</module>
     </modules>
     <packaging>pom</packaging>
 

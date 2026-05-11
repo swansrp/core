@@ -1,0 +1,13 @@
+# TDengine 时序数据配置
+td:
+  url: jdbc:TAOS-RS://localhost:6041/water_guard
+  username: root
+  password: taosdata
+  database: water_guard
+  precision: ms
+  keep-days: 3650
+  pool:
+    initial-size: 5
+    max-active: 20
+  schema:
+    auto-drop: false

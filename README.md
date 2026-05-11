@@ -1,11 +1,39 @@
-# core
+# Bidr Core
 
-## Getting started
+Bidr Core 是水质在线监测平台的核心基础框架模块集合，提供通用能力和中间件集成。
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 模块列表
 
-Already a pro? Just edit this README.md and make it your own. Want to make it
-easy? [Use the template at the bottom](#editing-this-readme)!
+### 基础设施
+- **kernel** - 核心基础模块（通用工具、模型、异常处理等）
+- **platform** - 平台基础功能
+- **admin** - 管理后台支持
+
+### 数据存储
+- **mongo** - MongoDB 集成
+- **neo4j** - Neo4j 图数据库集成
+- **elasticsearch** - Elasticsearch 搜索引擎集成
+- **redis** - Redis 缓存集成
+- **td** - TDengine 时序数据库集成（[文档](./td/README.md)）
+
+### 消息队列
+- **kafka** - Kafka 消息队列集成
+- **mqtt** - MQTT 物联网协议集成
+
+### 通讯服务
+- **email** - 邮件服务
+- **sms** - 短信服务
+- **wechat** - 微信服务
+- **socket-io** - WebSocket 实时通讯
+
+### 其他服务
+- **xxl-job** - 分布式任务调度
+- **oss** - 对象存储
+- **ocr** - 光学字符识别
+- **qichacha** - 企查查数据服务
+- **mcp** - MCP 协议支持
+- **forge** - Forge 集成
+- **authorization** - 授权服务
 
 ## Add your files
 

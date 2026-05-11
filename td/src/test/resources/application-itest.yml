@@ -1,0 +1,16 @@
+# TDengine 集成测试配置
+td:
+  url: jdbc:TAOS-RS://sharp.tanya-plus.com.cn:16041/water_itest
+  username: hj212
+  password: Adm!n123
+  database: water_itest
+  precision: ms
+  keep-days: 3650
+  pool:
+    initial-size: 2
+    max-active: 5
+  schema:
+    auto-drop: false
+
+itest:
+  database: water_itest
