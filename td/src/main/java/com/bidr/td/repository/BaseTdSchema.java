@@ -178,10 +178,12 @@ public abstract class BaseTdSchema<T> implements TdSchemaInf {
 
     private boolean checkStableExists(String stableName, JdbcTemplate taosJdbcTemplate) {
         try {
-            List<Map<String, Object>> result = taosJdbcTemplate.queryForList(
-                    "SELECT 1 FROM information_schema.ins_stables WHERE stable_name = ?", stableName);
-            return !result.isEmpty();
+            // 方法1: 使用 DESCRIBE 命令检查表是否存在
+            // 如果表不存在，会抛出异常
+            taosJdbcTemplate.queryForList("DESCRIBE " + stableName);
+            return true;
         } catch (Exception e) {
+            // DESCRIBE 失败说明表不存在
             return false;
         }
     }
