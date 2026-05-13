@@ -733,6 +733,38 @@ EntityVO vo = ReflectionUtil.copy(entity, EntityVO.class);
 List<EntityVO> list = Resp.convert(entities, EntityVO.class);
 \`\`\`
 
+### Schema DDL 演进规范
+
+- **setCreateDDL 保持原始建表语句不变**，不随表结构演进而修改
+- **所有表结构变更必须通过 setUpgradeDDL 逐步升级**（字段重命名、类型变更、新增列等）
+- 版本号必须递增（1, 2, 3...）
+- Entity/VO 对应升级后的最终状态
+
+\`\`\`java
+// ❌ 错误：直接改 createDDL
+setCreateDDL("... \`region_id\` BIGINT ...");
+
+// ✅ 正确：createDDL保持原始，通过升级脚本变更
+setCreateDDL("... \`region_code\` VARCHAR ...");  // 保持原始
+setUpgradeDDL(1, "ALTER TABLE \`t_station\` CHANGE COLUMN \`region_code\` \`region_id\` BIGINT ...;");
+\`\`\`
+
+### 数据类型规范
+
+- **禁止使用 Double/Float**，必须使用 **BigDecimal** 表示精度数值（经纬度、金额、测量值等）
+- MySQL 对应使用 \`DECIMAL(10,6)\` 存储经纬度，\`DECIMAL(20,6)\` 存储金额
+- 外键关联字段（如区域ID、流域ID）使用 **Long/bigint** 存储表ID，不存编码字符串
+
+\`\`\`java
+// ❌ 错误
+private Double longitude;
+private String regionCode;
+
+// ✅ 正确
+private BigDecimal longitude;
+private Long regionId;
+\`\`\`
+
 ### 前端规范
 
 \`\`\`typescript
