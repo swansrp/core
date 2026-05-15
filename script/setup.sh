@@ -928,6 +928,52 @@ print_info "README.md 生成完成"
 # 9. 生成 common 模块配置文件
 print_info "生成 common 模块配置文件..."
 
+# 生成 application.yml（主配置）
+cat > "$PROJECT_DIR/src/main/resources/config/application.yml" << EOFAPP
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ${PROJECT_CODE}
+  profiles:
+    active: dev
+
+app:
+  projectId: ${PROJECT_CODE}
+  moduleId: \${spring.application.name}
+
+# Redis
+spring.redis:
+  host:
+  port: 6379
+  # password:
+  database: 0
+
+# MySQL
+my:
+  project:
+    name: ${PROJECT_CODE}
+  master-db:
+    config:
+      db:
+      url:
+      port: 3306
+      username:
+      password:
+      driver: com.mysql.cj.jdbc.Driver
+
+# Swagger
+swagger:
+  enabled: false
+
+oss:
+  endpoint: http://localhost:\${server.port}
+  bucket: \${spring.application.name}
+  appKey:
+  appSecret:
+EOFAPP
+
 # 生成 application-dev.yml
 cat > "$PROJECT_DIR/src/main/resources/config/application-dev.yml" << 'EOF'
 server: # 服务器的HTTP端口，默认为8080
@@ -950,30 +996,98 @@ my:
       driver: com.mysql.cj.jdbc.Driver
 EOF
 
-# 生成 application-prod.yml
-cat > "$PROJECT_DIR/src/main/resources/config/application-prod.yml" << 'EOF'
-my:
-  master-db:
-    config:
-      db:
-      url:
-      port:
-      username:
-      password:
-      driver: com.mysql.cj.jdbc.Driver
-EOF
-
 # 生成 application-pre.yml
 cat > "$PROJECT_DIR/src/main/resources/config/application-pre.yml" << 'EOF'
+server: # 服务器的HTTP端口，默认为8080
+  servlet: # 应用的访问路径
+    context-path: /${spring.application.name}
+
+swagger: # 是否开启swagger
+  enabled: true
+  # 请求前缀
+  pathMapping:
+
+# Redis（Docker host 网络模式，可直接使用 127.0.0.1 访问宿主机）
+spring.redis:
+  host: 127.0.0.1
+  port: 6379
+  # password:
+  database: 0
+
 my:
   master-db:
     config:
       db:
-      url:
-      port:
+      url: 127.0.0.1
+      port: 3306
       username:
       password:
       driver: com.mysql.cj.jdbc.Driver
+
+# Kafka（使用 kafka 模块的配置前缀）
+kafka:
+  bootstrap-servers: 127.0.0.1:9092
+  producer:
+    acks: all
+    retries: 2147483647
+    batch-size: 32768
+    linger-ms: 20
+    buffer-memory: 33554432
+  consumer:
+    group-id:
+    auto-commit: false
+    auto-offset-reset: latest
+  topics: [ ]
+  security:
+    # 安全协议: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
+    protocol: PLAINTEXT
+EOF
+
+# 生成 application-prod.yml
+cat > "$PROJECT_DIR/src/main/resources/config/application-prod.yml" << 'EOF'
+server: # 服务器的HTTP端口，默认为8080
+  servlet: # 应用的访问路径
+    context-path: /${spring.application.name}
+
+swagger: # 是否开启swagger
+  enabled: true
+  # 请求前缀
+  pathMapping:
+
+# Redis（Docker host 网络模式，可直接使用 127.0.0.1 访问宿主机）
+spring.redis:
+  host: 127.0.0.1
+  port: 6379
+  # password:
+  database: 0
+
+my:
+  master-db:
+    config:
+      db:
+      url: 127.0.0.1
+      port: 3306
+      username:
+      password:
+      driver: com.mysql.cj.jdbc.Driver
+
+# Kafka（使用 kafka 模块的配置前缀）
+kafka:
+  bootstrap-servers: 127.0.0.1:9092
+  producer:
+    acks: all
+    retries: 2147483647
+    batch-size: 32768
+    linger-ms: 20
+    buffer-memory: 33554432
+  consumer:
+    group-id:
+    auto-commit: false
+    auto-offset-reset: latest
+  topics: [ ]
+  security:
+    # 安全协议: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
+    protocol: PLAINTEXT
 EOF
 
 print_info "配置文件生成完成"
@@ -1083,40 +1197,7 @@ EOF
 </project>
 EOF
 
-    # 生成 server 模块的 application.yml
-    print_info "生成 server 模块 application.yml..."
-    cat > "$SERVER_DIR/src/main/resources/config/application.yml" << EOFAPP
-my:
-  project:
-    name: ${PROJECT_CODE}
-  chat:
-    server:
-      port: 29092
-
-swagger: # 是否开启swagger
-  enabled: true
-  # 请求前缀
-  pathMapping:
-app:
-  projectId: ${PROJECT_CODE}
-  moduleId: \${spring.application.name}
-  log:
-    path: /data/log
-
-
-spring:
-  profiles:
-    active: dev
-  redis:
-    host:
-    port: 6379
-
-oss:
-  endpoint: http://localhost:\${server.port}
-  bucket: \${spring.application.name}
-  appKey:
-  appSecret:
-EOFAPP
+    # server 模块不需要单独的 application.yml，配置统一在 common 模块管理
 
     print_info "${PROJECT_CODE}-server 模块创建完成"
 
@@ -1135,13 +1216,14 @@ COPY app.jar app.jar
 
 EXPOSE ${SERVER_PORT}
 
-ENTRYPOINT ["java", "-Duser.timezone=Asia/Shanghai", "-Xms512m", "-Xmx1024m", "-XX:+HeapDumpOnOutOfMemoryError", "-XX:HeapDumpPath=/app", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Shanghai", "-Dserver.port=${SERVER_PORT}", "-Xms512m", "-Xmx1024m", "-XX:+HeapDumpOnOutOfMemoryError", "-XX:HeapDumpPath=/app", "-jar", "/app/app.jar"]
 EOF
 
 # 生成 docker-compose.yml
 cat > "$ROOT_DIR/docker-compose.yml" << EOF
 services:
   ${PROJECT_CODE}-portal:
+    network_mode: "host"
     image: eclipse-temurin:8-jdk
     container_name: ${PROJECT_CODE}-server
     restart: always
@@ -1217,7 +1299,6 @@ esac
 EOF
 
 chmod +x "$ROOT_DIR/docker-start.sh"
-chmod +x "$ROOT_DIR/start.sh"
 
 # 生成 deploy.sh
 cat > "$ROOT_DIR/deploy.sh" << 'EOF'
@@ -1492,18 +1573,174 @@ esac
 
 EOF
 
-# 替换 deploy.sh 中的占位符
-if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
-    sed -i "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/deploy.sh"
-else
-    # Windows/Git Bash
-    sed -i'' -e "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/deploy.sh"
-fi
+# 替换 deploy.sh 中的占位符（使用 awk 避免 sed 特殊字符问题）
+awk -v code="${PROJECT_CODE}" '{gsub(/PROJECT_CODE_PLACEHOLDER/, code); print}' "$ROOT_DIR/deploy.sh" > "$ROOT_DIR/deploy.sh.tmp" && mv "$ROOT_DIR/deploy.sh.tmp" "$ROOT_DIR/deploy.sh"
 chmod +x "$ROOT_DIR/deploy.sh"
 
 print_info "Docker 部署文件生成完成"
 
-# 12. 打印完成信息
+# 12. 生成 start.sh
+print_info "生成 start.sh..."
+cat > "$ROOT_DIR/start.sh" << EOF
+#!/bin/bash
+# ${PROJECT_NAME} JAR包管理脚本
+
+SCRIPT_DIR=\$(cd "\$(dirname "\$0")"; pwd)
+SERVER_PORT=${SERVER_PORT}
+APP_NAME='${PROJECT_CODE}-server'
+JAR_NAME='app.jar'
+LOG_DIR="\${SCRIPT_DIR}/logs"
+
+# JVM参数
+JVM_OPTS="-Duser.timezone=Asia/Shanghai -Xms512m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\${SCRIPT_DIR}"
+
+mkdir -p "\${LOG_DIR}"
+
+get_pid() {
+    pgrep -f "\${APP_NAME}.*\${JAR_NAME}"
+}
+
+start() {
+    if pid=\$(get_pid); then
+        echo "\${APP_NAME} is already running (PID: \${pid})"
+        return 1
+    fi
+    echo "Starting \${APP_NAME} on port \${SERVER_PORT}..."
+    nohup java \${JVM_OPTS} -jar "\${SCRIPT_DIR}/\${JAR_NAME}" --server.port=\${SERVER_PORT} > "\${LOG_DIR}/spring.log" 2>&1 &
+    echo "\${APP_NAME} started (PID: \$!)"
+}
+
+stop() {
+    if pid=\$(get_pid); then
+        echo "Stopping \${APP_NAME} (PID: \${pid})..."
+        kill \${pid}
+        for i in \$(seq 1 30); do
+            if ! get_pid > /dev/null 2>&1; then
+                echo "\${APP_NAME} stopped"
+                return 0
+            fi
+            sleep 1
+        done
+        echo "Force killing \${APP_NAME}..."
+        kill -9 \${pid} 2>/dev/null
+    else
+        echo "\${APP_NAME} is not running"
+    fi
+}
+
+status() {
+    if pid=\$(get_pid); then
+        echo "\${APP_NAME} is running (PID: \${pid})"
+    else
+        echo "\${APP_NAME} is not running"
+    fi
+}
+
+restart() {
+    stop
+    sleep 2
+    start
+}
+
+case "\$1" in
+    start)   start   ;;
+    stop)    stop    ;;
+    restart) restart ;;
+    status)  status  ;;
+    *)
+        echo "Usage: \$0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+EOF
+chmod +x "$ROOT_DIR/start.sh"
+
+print_info "start.sh 生成完成"
+
+# 13. 生成 nginx 配置文件（location 片段）
+print_info "生成 nginx 配置文件..."
+mkdir -p "$ROOT_DIR/nginx"
+cat > "$ROOT_DIR/nginx/${PROJECT_CODE}.conf" << 'NGINX_EOF'
+# ============================================================
+# PROJECT_CODE_PLACEHOLDER 路由配置（location 片段）
+# 由 nginx server 块通过 include 引入
+#
+# 部署步骤:
+#   1. 将此文件放到 /etc/nginx/locations/<domain>/PROJECT_CODE_PLACEHOLDER.conf
+#   2. nginx server 块中添加:
+#      include /etc/nginx/locations/<domain>/*.conf;
+#      （必须在 location / { } 之前）
+#   3. nginx -t && nginx -s reload
+#
+# 路由策略（nginx 优先级：精确 > ^~前缀 > 正则 > 普通前缀）：
+#   1. ^~ /PROJECT_CODE_PLACEHOLDER/web/ → 后端 API（优先于正则，captcha.jpg 等不受影响）
+#   2. 正则 \.(js|css|...)$ → 静态资源从磁盘返回
+#   3. = /PROJECT_CODE_PLACEHOLDER/ 和 = /PROJECT_CODE_PLACEHOLDER/index.html → SPA 入口
+#   4. /PROJECT_CODE_PLACEHOLDER/ → 兜底，转发到后端
+# ============================================================
+
+# ------------------------------------------
+# API 反向代理（^~ 优先于正则，确保 /web/captcha.jpg 等不被静态资源拦截）
+# ------------------------------------------
+location ^~ /PROJECT_CODE_PLACEHOLDER/web/ {
+    proxy_pass http://127.0.0.1:SERVER_PORT_PLACEHOLDER/PROJECT_CODE_PLACEHOLDER/web/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 30s;
+    proxy_read_timeout 120s;
+    proxy_send_timeout 30s;
+}
+
+# ------------------------------------------
+# 静态资源文件（有扩展名）直接从磁盘返回
+# 正则 + alias 必须用捕获组，否则路径会重复
+# URL: /PROJECT_CODE_PLACEHOLDER/assets/main.js → 磁盘: view/assets/main.js
+# 注意: 被 ^~ /PROJECT_CODE_PLACEHOLDER/web/ 拦截的请求不会走到这里
+# ------------------------------------------
+location ~* ^/PROJECT_CODE_PLACEHOLDER/(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json|html|txt|xml|pdf|zip))$ {
+    alias /usr/local/nginx/html/PROJECT_CODE_PLACEHOLDER/view/$1;
+}
+
+# ------------------------------------------
+# SPA 入口文件（精确匹配首页）
+# ------------------------------------------
+location = /PROJECT_CODE_PLACEHOLDER/ {
+    alias /usr/local/nginx/html/PROJECT_CODE_PLACEHOLDER/view/;
+    index index.html;
+}
+
+location = /PROJECT_CODE_PLACEHOLDER/index.html {
+    alias /usr/local/nginx/html/PROJECT_CODE_PLACEHOLDER/view/index.html;
+}
+
+# ------------------------------------------
+# 其他所有 /PROJECT_CODE_PLACEHOLDER/ 请求 → 转发到后端
+# 覆盖: /actuator/*, /swagger-ui.html, 等所有非 /web/ 后端路由
+# ------------------------------------------
+location /PROJECT_CODE_PLACEHOLDER/ {
+    proxy_pass http://127.0.0.1:SERVER_PORT_PLACEHOLDER/PROJECT_CODE_PLACEHOLDER/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 30s;
+    proxy_read_timeout 120s;
+    proxy_send_timeout 30s;
+}
+NGINX_EOF
+
+# 替换 nginx 配置中的占位符
+awk -v code="${PROJECT_CODE}" -v port="${SERVER_PORT}" '{
+    gsub(/PROJECT_CODE_PLACEHOLDER/, code);
+    gsub(/SERVER_PORT_PLACEHOLDER/, port);
+    print
+}' "$ROOT_DIR/nginx/${PROJECT_CODE}.conf" > "$ROOT_DIR/nginx/${PROJECT_CODE}.conf.tmp" && mv "$ROOT_DIR/nginx/${PROJECT_CODE}.conf.tmp" "$ROOT_DIR/nginx/${PROJECT_CODE}.conf"
+
+print_info "nginx/${PROJECT_CODE}.conf 生成完成"
+
+# 14. 打印完成信息
 echo ""
 print_info "================================================"
 print_info "        项目初始化完成！"
@@ -1528,6 +1765,12 @@ print_info "  ✓ docker-compose.yml"
 print_info "  ✓ docker-start.sh"
 print_info "  ✓ start.sh"
 print_info "  ✓ deploy.sh"
+print_info "  ✓ nginx/${PROJECT_CODE}.conf"
+echo ""
+print_info "重要提示:"
+print_info "  ⚠ 前端 package.json 的 name 字段必须设置为 '${PROJECT_CODE}'"
+print_info "    否则前端 baseDomain 与后端 context-path 不一致会导致 nginx 路由冲突"
+print_info "    即: view/package.json 中 \"name\": \"${PROJECT_CODE}\""
 echo ""
 print_info "下一步操作:"
 print_info "  1. 如果根目录pom.xml已存在，请手动添加模块:"
