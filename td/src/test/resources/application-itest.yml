@@ -1,6 +1,6 @@
 # TDengine 集成测试配置
 td:
-  url: jdbc:TAOS-RS://sharp.tanya-plus.com.cn:16041/water_itest
+  url: jdbc:TAOS-RS://sharp.tanya-plus.com.cn:16041/water_itest?timezone=Asia/Shanghai
   username: hj212
   password: Adm!n123
   database: water_itest

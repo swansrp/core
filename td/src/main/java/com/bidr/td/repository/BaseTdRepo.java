@@ -397,7 +397,8 @@ public abstract class BaseTdRepo<T> {
                 if (field.isAnnotationPresent(TdTimestamp.class)) {
                     TdTimestamp t = field.getAnnotation(TdTimestamp.class);
                     colNames.add(t.name());
-                    colValues.add(value instanceof Long ? new Timestamp((Long) value) : value);
+                    // 直接传原始 Long（epoch 毫秒），避免 Timestamp 被 JDBC 驱动二次时区转换
+                    colValues.add(value);
                 } else if (field.isAnnotationPresent(TdColumn.class)) {
                     TdColumn c = field.getAnnotation(TdColumn.class);
                     String name = c.name().isEmpty() ? field.getName() : c.name();

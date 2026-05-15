@@ -1,6 +1,6 @@
 # TDengine 时序数据配置
 td:
-  url: jdbc:TAOS-RS://localhost:6041/water_guard
+  url: jdbc:TAOS-RS://localhost:6041/water_guard?timezone=Asia/Shanghai
   username: root
   password: taosdata
   database: water_guard
