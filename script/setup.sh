@@ -1176,17 +1176,18 @@ services:
 EOF
 
 # 生成 docker-start.sh
-cat > "$ROOT_DIR/docker-start.sh" << 'EOF'
+cat > "$ROOT_DIR/docker-start.sh" << EOF
 #!/bin/bash
 # 端口配置
-APP_PORT=SERVER_PORT_PLACEHOLDER
+APP_PORT=${SERVER_PORT}
 
-APP_NAME=PROJECT_CODE_PLACEHOLDER-portal
-IMAGE_NAME=${PROJECT_CODE}-portal:latest
-CONTAINER_NAME=${PROJECT_CODE}-server
-APP_DIR=$(cd "$(dirname "$0")"; pwd)
+APP_NAME=${PROJECT_CODE}-portal
+PROJECT_CODE=${PROJECT_CODE}
+IMAGE_NAME=\${PROJECT_CODE}-portal:latest
+CONTAINER_NAME=\${PROJECT_CODE}-server
+APP_DIR=\$(cd "\$(dirname "\$0")"; pwd)
 
-case $1 in
+case \$1 in
 start)
   echo "===> docker compose up"
   docker compose up -d
@@ -1210,24 +1211,11 @@ build)
   docker build -t \${IMAGE_NAME} .
   ;;
 *)
-  echo "Usage: $0 {start|stop|restart|status|log|build}"
+  echo "Usage: \$0 {start|stop|restart|status|log|build}"
   exit 1
 esac
 EOF
 
-# 替换占位符
-if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
-    sed -i "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/docker-start.sh"
-    sed -i "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/docker-start.sh"
-    sed -i "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/start.sh"
-    sed -i "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/start.sh"
-else
-    # Windows/Git Bash
-    sed -i'' -e "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/docker-start.sh"
-    sed -i'' -e "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/docker-start.sh"
-    sed -i'' -e "s/SERVER_PORT_PLACEHOLDER/${SERVER_PORT}/g" "$ROOT_DIR/start.sh"
-    sed -i'' -e "s/PROJECT_CODE_PLACEHOLDER/${PROJECT_CODE}/g" "$ROOT_DIR/start.sh"
-fi
 chmod +x "$ROOT_DIR/docker-start.sh"
 chmod +x "$ROOT_DIR/start.sh"
 
