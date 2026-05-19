@@ -6,6 +6,8 @@ import com.bidr.kafka.service.KafkaConsumerManager;
 import com.bidr.kafka.service.KafkaProducerService;
 import com.bidr.kafka.service.KafkaTopicConsumer;
 import com.bidr.kafka.exception.NonRetryableKafkaException;
+import com.bidr.kernel.constant.err.ErrCodeLevel;
+import com.bidr.kernel.event.ExceptionAlertEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -16,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -27,6 +30,8 @@ import org.springframework.util.backoff.BackOff;
 import org.springframework.util.backoff.ExponentialBackOff;
 import org.springframework.util.backoff.FixedBackOff;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Map;
 
 /**
@@ -46,6 +51,9 @@ public class KafkaConfig {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Autowired(required = false)
     private SysKafkaService sysKafkaService;
@@ -159,6 +167,8 @@ public class KafkaConfig {
                         log.error("Failed to update sys_kafka DLQ status: {}", e.getMessage(), e);
                     }
                 }
+                // 所有重试耗尽，消息进入DLQ时发布异常告警（每条消息仅触发一次）
+                publishDlqAlertEvent(record, exception);
                 // 调用父类发送到DLQ Topic
                 super.accept(record, exception);
             }
@@ -194,6 +204,54 @@ public class KafkaConfig {
         });
 
         return handler;
+    }
+
+    /**
+     * 发布Kafka消息进入DLQ时的异常告警事件（每条消息仅触发一次）
+     *
+     * @param record    消费记录
+     * @param exception 异常
+     */
+    private void publishDlqAlertEvent(org.apache.kafka.clients.consumer.ConsumerRecord<?, ?> record, Exception exception) {
+        if (eventPublisher == null) {
+            return;
+        }
+        try {
+            String description = "Kafka消息消费失败进入死信队列 - Topic: " + record.topic()
+                    + ", Partition: " + record.partition() + ", Offset: " + record.offset();
+
+            ExceptionAlertEvent event = new ExceptionAlertEvent.Builder()
+                    .source(this)
+                    .description(description)
+                    .severity(ErrCodeLevel.ERROR)
+                    .throwable(exception)
+                    .stackTrace(getStackTraceString(exception))
+                    .stackTraceDepth(50)
+                    .className("KafkaDLQ")
+                    .methodName("accept")
+                    .args(new Object[]{"topic=" + record.topic(), "key=" + record.key(), "partition=" + record.partition(), "offset=" + record.offset()})
+                    .includeArgs(true)
+                    .includeStackTrace(true)
+                    .build();
+
+            eventPublisher.publishEvent(event);
+            log.info("Kafka DLQ异常告警事件已发布，Topic: {}, Offset: {}", record.topic(), record.offset());
+        } catch (Exception ex) {
+            log.error("发布Kafka DLQ异常告警事件失败", ex);
+        }
+    }
+
+    /**
+     * 获取异常堆栈信息字符串
+     *
+     * @param e 异常
+     * @return 堆栈字符串
+     */
+    private String getStackTraceString(Throwable e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        return sw.toString();
     }
 
     /**
