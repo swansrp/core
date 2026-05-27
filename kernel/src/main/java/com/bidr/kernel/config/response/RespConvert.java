@@ -45,10 +45,19 @@ public class RespConvert {
                     if (FuncUtil.isEmpty(value) && convert.ignoreNull()) {
                         return;
                     }
-                    if (FuncUtil.isNotEmpty(convert.bean())) {
-                        value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value);
-                    } else if (!FuncUtil.equals(convert.util(), Object.class)) {
-                        value = ReflectionUtil.invoke(convert.util(), convert.method(), value);
+                    if (convert.passEntity()) {
+                        // passEntity模式：field值 + 整个VO对象
+                        if (FuncUtil.isNotEmpty(convert.bean())) {
+                            value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value, entity);
+                        } else if (!FuncUtil.equals(convert.util(), Object.class)) {
+                            value = ReflectionUtil.invoke(convert.util(), convert.method(), value, entity);
+                        }
+                    } else {
+                        if (FuncUtil.isNotEmpty(convert.bean())) {
+                            value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(), value);
+                        } else if (!FuncUtil.equals(convert.util(), Object.class)) {
+                            value = ReflectionUtil.invoke(convert.util(), convert.method(), value);
+                        }
                     }
                     ReflectionUtil.setValue(field, entity, value);
                 });
@@ -84,7 +93,16 @@ public class RespConvert {
                             if (FuncUtil.isEmpty(value) && convert.ignoreNull()) {
                                 continue;
                             }
-                            if (convert.batch()) {
+                            if (convert.passEntity()) {
+                                // passEntity模式不支持batch，直接处理
+                                if (FuncUtil.isNotEmpty(convert.bean())) {
+                                    value = ReflectionUtil.invoke(BeanUtil.getBean(convert.bean()), convert.method(),
+                                            value, entity);
+                                } else if (!FuncUtil.equals(convert.util(), Object.class)) {
+                                    value = ReflectionUtil.invoke(convert.util(), convert.method(), value, entity);
+                                }
+                                ReflectionUtil.setValue(field, entity, value);
+                            } else if (convert.batch()) {
                                 Map<Object, Object> covertValueMap = batchValueMap.getOrDefault(field,
                                         new HashMap<>(entityList.size()));
                                 covertValueMap.put(value, null);

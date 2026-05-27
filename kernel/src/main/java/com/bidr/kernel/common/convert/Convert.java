@@ -23,6 +23,14 @@ public @interface Convert {
 
     String field() default "";
 
+    /**
+     * 当设置为true时，除了将field对应的值作为第一个参数传入外，
+     * 还会将整个VO对象作为第二个参数传入，方法可从VO中获取任意字段值。
+     *
+     * @return 是否将整个VO对象作为额外参数传入
+     */
+    boolean passEntity() default false;
+
     boolean ignoreNull() default true;
 
     /**
