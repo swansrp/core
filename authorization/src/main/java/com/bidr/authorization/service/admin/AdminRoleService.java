@@ -10,13 +10,15 @@ import com.bidr.authorization.vo.admin.RoleReq;
 import com.bidr.authorization.vo.admin.RoleRes;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.bidr.authorization.constants.err.AccountErrCode.AC_ROLE_HAS_USER;
+import static com.bidr.authorization.constants.err.AccountErrCode.*;
+
 
 /**
  * Title: AdminRoleService
@@ -41,11 +43,15 @@ public class AdminRoleService {
     @Transactional(rollbackFor = Exception.class)
     public void addRole(RoleReq req) {
         AcRole role = ReflectionUtil.copy(req, AcRole.class);
-        role.setStatus(ActiveStatusDict.SYSTEM.getValue());
+        role.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         acRoleService.insert(role);
     }
 
     public void deleteRole(String id) {
+        AcRole role = acRoleService.selectById(id);
+        Validator.assertNotNull(role, AC_ROLE_NOT_EXISTED);
+        Validator.assertFalse(FuncUtil.equals(role.getStatus(), ActiveStatusDict.SYSTEM.getValue()), AC_ROLE_SYSTEM);
+
         boolean existedUserInRole = acUserRoleService.existedByRoleId(id);
         Validator.assertFalse(existedUserInRole, AC_ROLE_HAS_USER);
         acRoleService.deleteById(id);

@@ -65,6 +65,8 @@ public enum AccountErrCode implements ErrCode {
 
     AC_ROLE_HAS_USER(1024, "该角色下尚有用户, 不能删除该角色"),
 
+    AC_ROLE_NOT_EXISTED(1033, "该角色不存在"),
+
     AC_GROUP_HAS_USER(1025, "该用户组下尚有用户, 不能删除该用户组"),
     AC_PARTNER_NOT_EXISTED(1026, "该渠道不存在"),
 
@@ -77,6 +79,8 @@ public enum AccountErrCode implements ErrCode {
     AC_PARTNER_SECRET_INVALID(1030, "该渠道账号秘钥不匹配"),
 
     AC_PASSWORD_EXPIRED(1031, "密码已过期，请更换密码"),
+
+    AC_ROLE_SYSTEM(1032, "系统内置角色，不可删除"),
 
     ;
 

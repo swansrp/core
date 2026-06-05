@@ -7,6 +7,7 @@ import com.bidr.authorization.dao.repository.*;
 import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.vo.permit.UserPermitRes;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.mybatis.dao.repository.RecursionService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -378,7 +379,7 @@ public class PermitSourceService {
                     .selectAll(AcRole.class)
                     .innerJoin(AcRole.class, AcRole::getRoleId, AcRoleMenu::getRoleId)
                     .eq(AcRoleMenu::getMenuId, menuId)
-                    .eq(AcRole::getStatus, CommonConst.YES);
+                    .in(AcRole::getStatus, ActiveStatusDict.SYSTEM.getValue(), ActiveStatusDict.ACTIVATE.getValue());
 
             List<AcRole> roles = acRoleMenuService.selectJoinList(AcRole.class, wrapper);
 
