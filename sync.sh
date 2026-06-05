@@ -126,6 +126,13 @@ if [[ -z "$GITEE_URL" ]]; then
   exit 1
 fi
 
+# 确保 gitee 作为 named remote 存在（幂等）
+REMOTE_GITEE="gitee"
+if ! git remote get-url "$REMOTE_GITEE" &>/dev/null; then
+  log_info "添加 gitee 远程: $GITEE_URL"
+  git remote add "$REMOTE_GITEE" "$GITEE_URL"
+fi
+
 # 记录当前分支并注册 cleanup
 INITIAL_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 trap cleanup EXIT
@@ -152,18 +159,15 @@ fi
 ######################################
 log_info "同步 Git Tags..."
 
-# 并行从两个远程拉取 tags
-git fetch "$REMOTE_ORIGIN" --tags 2>&1 &
-FETCH_PID1=$!
-git fetch "$GITEE_URL" --tags 2>&1 &
-FETCH_PID2=$!
-wait $FETCH_PID1 $FETCH_PID2
+# 串行拉取 tags
+git fetch "$REMOTE_ORIGIN" --tags 2>&1
+git fetch "$REMOTE_GITEE" --tags 2>&1
 
-log_info "推送 tags -> gitee"
-safe_push "$GITEE_URL" --tags || log_warn "推送 tags 到 gitee 失败"
+log_info "推送 tags -> $REMOTE_GITEE"
+safe_push "$REMOTE_GITEE" --tags --force || log_warn "推送 tags 到 $REMOTE_GITEE 失败"
 
 log_info "推送 tags -> $REMOTE_ORIGIN"
-safe_push "$REMOTE_ORIGIN" --tags || log_warn "推送 tags 到 $REMOTE_ORIGIN 失败"
+safe_push "$REMOTE_ORIGIN" --tags --force || log_warn "推送 tags 到 $REMOTE_ORIGIN 失败"
 
 log_info "Tags 同步完成"
 echo ""
@@ -188,7 +192,7 @@ for BRANCH in "${BRANCHES[@]}"; do
 
   git checkout "$BRANCH" --quiet
 
-  # 串行 fetch，更新标准 remote tracking 分支
+  # 串行 fetch
   log_info "fetch $REMOTE_ORIGIN/$BRANCH"
   git fetch "$REMOTE_ORIGIN" "$BRANCH" 2>&1 || {
     log_error "fetch $REMOTE_ORIGIN/$BRANCH 失败，跳过"
@@ -197,15 +201,13 @@ for BRANCH in "${BRANCHES[@]}"; do
     continue
   }
 
-  log_info "fetch gitee/$BRANCH"
-  git fetch "$GITEE_URL" "$BRANCH" 2>&1 || {
-    log_error "fetch gitee/$BRANCH 失败，跳过"
+  log_info "fetch $REMOTE_GITEE/$BRANCH"
+  git fetch "$REMOTE_GITEE" "$BRANCH" 2>&1 || {
+    log_error "fetch $REMOTE_GITEE/$BRANCH 失败，跳过"
     FAILED_BRANCHES+=("$BRANCH")
     echo ""
     continue
   }
-  # 保存 gitee FETCH_HEAD（后续 origin 的 fetch 不会覆盖，但显式保存更安全）
-  GITEE_FETCH_HEAD=$(git rev-parse FETCH_HEAD)
 
   # ---- 先将两个远程的最新提交都合并到本地 ----
   log_info "rebase 到 $REMOTE_ORIGIN/$BRANCH"
@@ -216,18 +218,29 @@ for BRANCH in "${BRANCHES[@]}"; do
     continue
   fi
 
-  log_info "rebase 到 gitee/$BRANCH"
-  if ! try_rebase "$GITEE_FETCH_HEAD"; then
-    log_error "rebase gitee/$BRANCH 失败，跳过分支 $BRANCH"
+  # 合并 gitee（--allow-unrelated-histories 处理首次无共同祖先的情况）
+  log_info "合并 $REMOTE_GITEE/$BRANCH"
+  if ! git merge "$REMOTE_GITEE/$BRANCH" --allow-unrelated-histories --no-edit 2>&1; then
+    log_error "合并 $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
+    git merge --abort 2>/dev/null || true
+    FAILED_BRANCHES+=("$BRANCH")
+    echo ""
+    continue
+  fi
+
+  # rebase 整理提交顺序（确保本地新提交在远程之上）
+  log_info "rebase 到 $REMOTE_GITEE/$BRANCH"
+  if ! try_rebase "$REMOTE_GITEE/$BRANCH"; then
+    log_error "rebase $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
     FAILED_BRANCHES+=("$BRANCH")
     echo ""
     continue
   fi
 
   # ---- 推送 -> gitee ----
-  log_info "推送 $BRANCH -> gitee"
-  if ! safe_push "$GITEE_URL" "$BRANCH"; then
-    log_error "推送到 gitee 失败"
+  log_info "推送 $BRANCH -> $REMOTE_GITEE"
+  if ! safe_push "$REMOTE_GITEE" "$BRANCH"; then
+    log_error "推送到 $REMOTE_GITEE 失败"
     FAILED_BRANCHES+=("$BRANCH")
     echo ""
     continue
