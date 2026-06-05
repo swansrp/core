@@ -32,8 +32,8 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <kernel.version>20260519151331-39</kernel.version>
-                <authorization.version>20260519151331-39</authorization.version>
+                <kernel.version>20260605175346-40</kernel.version>
+                <authorization.version>20260605175346-40</authorization.version>
             </properties>
         </profile>
     </profiles>
