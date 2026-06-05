@@ -188,14 +188,26 @@ for BRANCH in "${BRANCHES[@]}"; do
 
   git checkout "$BRANCH" --quiet
 
-  # 并行从两个远程拉取
-  git fetch "$REMOTE_ORIGIN" "$BRANCH" 2>&1 &
-  FETCH_PID1=$!
-  git fetch "$GITEE_URL" "$BRANCH" 2>&1 &
-  FETCH_PID2=$!
-  wait $FETCH_PID1 $FETCH_PID2
+  # 串行 fetch，更新标准 remote tracking 分支
+  log_info "fetch $REMOTE_ORIGIN/$BRANCH"
+  git fetch "$REMOTE_ORIGIN" "$BRANCH" 2>&1 || {
+    log_error "fetch $REMOTE_ORIGIN/$BRANCH 失败，跳过"
+    FAILED_BRANCHES+=("$BRANCH")
+    echo ""
+    continue
+  }
 
-  # ---- origin -> gitee ----
+  log_info "fetch gitee/$BRANCH"
+  git fetch "$GITEE_URL" "$BRANCH" 2>&1 || {
+    log_error "fetch gitee/$BRANCH 失败，跳过"
+    FAILED_BRANCHES+=("$BRANCH")
+    echo ""
+    continue
+  }
+  # 保存 gitee FETCH_HEAD（后续 origin 的 fetch 不会覆盖，但显式保存更安全）
+  GITEE_FETCH_HEAD=$(git rev-parse FETCH_HEAD)
+
+  # ---- 先将两个远程的最新提交都合并到本地 ----
   log_info "rebase 到 $REMOTE_ORIGIN/$BRANCH"
   if ! try_rebase "$REMOTE_ORIGIN/$BRANCH"; then
     log_error "rebase $REMOTE_ORIGIN/$BRANCH 失败，跳过分支 $BRANCH"
@@ -204,56 +216,30 @@ for BRANCH in "${BRANCHES[@]}"; do
     continue
   fi
 
-  log_info "推送 $BRANCH -> gitee"
-  if ! safe_push "$GITEE_URL" "$BRANCH"; then
-    log_warn "推送失败，尝试 fetch + rebase 后重推..."
-    if [ "$DRY_RUN" != true ]; then
-      if git fetch "$GITEE_URL" "$BRANCH" 2>/dev/null && git rebase FETCH_HEAD; then
-        safe_push "$GITEE_URL" "$BRANCH" || {
-          log_error "推送到 gitee 失败，跳过反向同步"
-          FAILED_BRANCHES+=("$BRANCH")
-          echo ""
-          continue
-        }
-      else
-        git rebase --abort 2>/dev/null || true
-        log_error "rebase gitee/$BRANCH 失败，跳过反向同步"
-        FAILED_BRANCHES+=("$BRANCH")
-        echo ""
-        continue
-      fi
-    fi
-  fi
-
-  # ---- gitee -> origin ----
   log_info "rebase 到 gitee/$BRANCH"
-  if ! git fetch "$GITEE_URL" "$BRANCH" 2>&1 || ! git rebase FETCH_HEAD; then
-    log_error "rebase gitee/$BRANCH 失败，正在中止..."
-    git rebase --abort 2>/dev/null || true
+  if ! try_rebase "$GITEE_FETCH_HEAD"; then
+    log_error "rebase gitee/$BRANCH 失败，跳过分支 $BRANCH"
     FAILED_BRANCHES+=("$BRANCH")
     echo ""
     continue
   fi
 
+  # ---- 推送 -> gitee ----
+  log_info "推送 $BRANCH -> gitee"
+  if ! safe_push "$GITEE_URL" "$BRANCH"; then
+    log_error "推送到 gitee 失败"
+    FAILED_BRANCHES+=("$BRANCH")
+    echo ""
+    continue
+  fi
+
+  # ---- 推送 -> origin ----
   log_info "推送 $BRANCH -> $REMOTE_ORIGIN"
   if ! safe_push "$REMOTE_ORIGIN" "$BRANCH"; then
-    log_warn "推送失败，尝试 pull --rebase 后重推..."
-    if [ "$DRY_RUN" != true ]; then
-      if git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase 2>/dev/null; then
-        safe_push "$REMOTE_ORIGIN" "$BRANCH" || {
-          log_error "推送到 $REMOTE_ORIGIN 最终失败"
-          FAILED_BRANCHES+=("$BRANCH")
-          echo ""
-          continue
-        }
-      else
-        git rebase --abort 2>/dev/null || true
-        log_error "rebase $REMOTE_ORIGIN/$BRANCH 失败"
-        FAILED_BRANCHES+=("$BRANCH")
-        echo ""
-        continue
-      fi
-    fi
+    log_error "推送到 $REMOTE_ORIGIN 失败"
+    FAILED_BRANCHES+=("$BRANCH")
+    echo ""
+    continue
   fi
 
   SUCCESS_BRANCHES+=("$BRANCH")
