@@ -2,7 +2,8 @@
 set -euo pipefail
 
 REMOTE_ORIGIN="origin"
-REMOTE_GITEE="gitee"
+# 直接把 gitee 仓库 URL 填在这里，不需要提前配 remote
+GITEE_URL="https://gitee.com/swansrp/core.git"
 DRY_RUN=false
 STASHED=false
 INITIAL_BRANCH=""
@@ -113,13 +114,17 @@ if ! git rev-parse --is-inside-work-tree &>/dev/null; then
   exit 1
 fi
 
-# 检查 remote 是否存在
-for remote in "$REMOTE_ORIGIN" "$REMOTE_GITEE"; do
-  if ! git remote get-url "$remote" &>/dev/null; then
-    log_error "远程仓库 '$remote' 不存在，请先添加: git remote add $remote <url>"
-    exit 1
-  fi
-done
+# 检查 origin remote 是否存在
+if ! git remote get-url "$REMOTE_ORIGIN" &>/dev/null; then
+  log_error "远程仓库 '$REMOTE_ORIGIN' 不存在"
+  exit 1
+fi
+
+# 检查 gitee URL 是否已配置
+if [[ -z "$GITEE_URL" ]]; then
+  log_error "请先在脚本顶部 GITEE_URL 变量中填入 gitee 仓库的完整 URL"
+  exit 1
+fi
 
 # 记录当前分支并注册 cleanup
 INITIAL_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
@@ -127,7 +132,7 @@ trap cleanup EXIT
 
 echo "========================================="
 echo "  Git 双向同步工具"
-echo "  远程: $REMOTE_ORIGIN <-> $REMOTE_GITEE"
+echo "  远程: $REMOTE_ORIGIN <-> gitee"
 if [ "$DRY_RUN" = true ]; then
   echo "  模式: DRY-RUN (预览)"
 fi
@@ -150,12 +155,12 @@ log_info "同步 Git Tags..."
 # 并行从两个远程拉取 tags
 git fetch "$REMOTE_ORIGIN" --tags 2>&1 &
 FETCH_PID1=$!
-git fetch "$REMOTE_GITEE" --tags 2>&1 &
+git fetch "$GITEE_URL" --tags 2>&1 &
 FETCH_PID2=$!
 wait $FETCH_PID1 $FETCH_PID2
 
-log_info "推送 tags -> $REMOTE_GITEE"
-safe_push "$REMOTE_GITEE" --tags || log_warn "推送 tags 到 $REMOTE_GITEE 失败"
+log_info "推送 tags -> gitee"
+safe_push "$GITEE_URL" --tags || log_warn "推送 tags 到 gitee 失败"
 
 log_info "推送 tags -> $REMOTE_ORIGIN"
 safe_push "$REMOTE_ORIGIN" --tags || log_warn "推送 tags 到 $REMOTE_ORIGIN 失败"
@@ -186,7 +191,7 @@ for BRANCH in "${BRANCHES[@]}"; do
   # 并行从两个远程拉取
   git fetch "$REMOTE_ORIGIN" "$BRANCH" 2>&1 &
   FETCH_PID1=$!
-  git fetch "$REMOTE_GITEE" "$BRANCH" 2>&1 &
+  git fetch "$GITEE_URL" "$BRANCH" 2>&1 &
   FETCH_PID2=$!
   wait $FETCH_PID1 $FETCH_PID2
 
@@ -199,24 +204,32 @@ for BRANCH in "${BRANCHES[@]}"; do
     continue
   fi
 
-  log_info "推送 $BRANCH -> $REMOTE_GITEE"
-  if ! safe_push "$REMOTE_GITEE" "$BRANCH"; then
-    log_warn "推送失败，尝试 pull --rebase 后重推..."
+  log_info "推送 $BRANCH -> gitee"
+  if ! safe_push "$GITEE_URL" "$BRANCH"; then
+    log_warn "推送失败，尝试 fetch + rebase 后重推..."
     if [ "$DRY_RUN" != true ]; then
-      git pull "$REMOTE_GITEE" "$BRANCH" --rebase 2>/dev/null || true
-      safe_push "$REMOTE_GITEE" "$BRANCH" || {
-        log_error "推送到 $REMOTE_GITEE 失败，跳过反向同步"
+      if git fetch "$GITEE_URL" "$BRANCH" 2>/dev/null && git rebase FETCH_HEAD; then
+        safe_push "$GITEE_URL" "$BRANCH" || {
+          log_error "推送到 gitee 失败，跳过反向同步"
+          FAILED_BRANCHES+=("$BRANCH")
+          echo ""
+          continue
+        }
+      else
+        git rebase --abort 2>/dev/null || true
+        log_error "rebase gitee/$BRANCH 失败，跳过反向同步"
         FAILED_BRANCHES+=("$BRANCH")
         echo ""
         continue
-      }
+      fi
     fi
   fi
 
   # ---- gitee -> origin ----
-  log_info "rebase 到 $REMOTE_GITEE/$BRANCH"
-  if ! try_rebase "$REMOTE_GITEE/$BRANCH"; then
-    log_error "rebase $REMOTE_GITEE/$BRANCH 失败，跳过推送到 $REMOTE_ORIGIN"
+  log_info "rebase 到 gitee/$BRANCH"
+  if ! git fetch "$GITEE_URL" "$BRANCH" 2>&1 || ! git rebase FETCH_HEAD; then
+    log_error "rebase gitee/$BRANCH 失败，正在中止..."
+    git rebase --abort 2>/dev/null || true
     FAILED_BRANCHES+=("$BRANCH")
     echo ""
     continue
@@ -226,13 +239,20 @@ for BRANCH in "${BRANCHES[@]}"; do
   if ! safe_push "$REMOTE_ORIGIN" "$BRANCH"; then
     log_warn "推送失败，尝试 pull --rebase 后重推..."
     if [ "$DRY_RUN" != true ]; then
-      git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase 2>/dev/null || true
-      safe_push "$REMOTE_ORIGIN" "$BRANCH" || {
-        log_error "推送到 $REMOTE_ORIGIN 最终失败"
+      if git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase 2>/dev/null; then
+        safe_push "$REMOTE_ORIGIN" "$BRANCH" || {
+          log_error "推送到 $REMOTE_ORIGIN 最终失败"
+          FAILED_BRANCHES+=("$BRANCH")
+          echo ""
+          continue
+        }
+      else
+        git rebase --abort 2>/dev/null || true
+        log_error "rebase $REMOTE_ORIGIN/$BRANCH 失败"
         FAILED_BRANCHES+=("$BRANCH")
         echo ""
         continue
-      }
+      fi
     fi
   fi
 
