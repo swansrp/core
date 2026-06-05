@@ -5,8 +5,8 @@ import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.engine.builder.BaseSqlBuilder;
 import com.bidr.forge.engine.builder.DatasetSqlBuilder;
-import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.forge.utils.SqlIdentifierUtil;
+import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
 import java.util.*;

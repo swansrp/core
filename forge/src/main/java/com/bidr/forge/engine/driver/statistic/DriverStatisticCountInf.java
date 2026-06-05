@@ -1,7 +1,6 @@
 package com.bidr.forge.engine.driver.statistic;
 
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
 
 /**
  * Driver统计计数接口

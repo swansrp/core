@@ -1,7 +1,6 @@
 package com.bidr.forge.engine.driver.statistic;
 
 import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.StatisticRes;
 
 import java.util.List;

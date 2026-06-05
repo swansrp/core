@@ -18,7 +18,6 @@ import com.bidr.kernel.vo.portal.statistic.*;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import lombok.RequiredArgsConstructor;
 import net.sf.jsqlparser.JSQLParserException;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +31,7 @@ import java.util.Map;
  * @author Sharp
  * @since 2025/9/19 8:46
  */
-@Service
+@Deprecated
 @RequiredArgsConstructor
 public class PortalDatasetService {
 

@@ -3,10 +3,11 @@ package com.bidr.forge.engine.builder;
 import com.bidr.forge.constant.dict.JoinTypeDict;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.utils.DictEnumUtil;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import lombok.extern.slf4j.Slf4j;
@@ -340,7 +341,7 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
                         String mapped = FuncUtil.isNotEmpty(aliasMap) ? aliasMap.getOrDefault(field, field) : field;
                         mapped = SqlIdentifierUtil.sanitizeQuotedIdentifier(mapped);
 
-                        String direction = sort.getType() != null && sort.getType() == 2 ? "DESC" : "ASC";
+                        String direction = PortalSortDict.DESC.getValue().equals(sort.getType()) ? "DESC" : "ASC";
                         return mapped + " " + direction;
                     })
                     .collect(Collectors.joining(", "));

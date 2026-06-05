@@ -1,7 +1,7 @@
 package com.bidr.forge.dao.mapper;
 
-import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.forge.dao.entity.FormDataSectionInstance;
+import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 
 /**
  * 表单区块实例 Mapper接口

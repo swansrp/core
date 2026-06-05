@@ -1,6 +1,5 @@
 package com.bidr.forge.vo.form;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.bidr.admin.config.PortalIdField;
 import com.bidr.admin.config.PortalNameField;
 import com.bidr.admin.config.PortalOrderField;

@@ -12,15 +12,16 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.ConditionVO;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.statistic.*;
+import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
+import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 
 import javax.annotation.Resource;
-import java.util.List;
 import java.util.Map;
 
 /**

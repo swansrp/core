@@ -1,7 +1,6 @@
 package com.bidr.forge.engine.driver.statistic;
 
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 
 import java.util.Map;
 
