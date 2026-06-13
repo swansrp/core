@@ -42,7 +42,7 @@ public class TdSchemaDiffer {
         for (ColumnDef col : expected.columns) {
             if (!actualColumns.containsKey(col.name)) {
                 alterStatements.add("ALTER STABLE " + stableName + " ADD COLUMN " +
-                        col.name + " " + col.type.toSql() + formatLength(col.type, col.length));
+                        escapeCol(col.name) + " " + col.type.toSql() + formatLength(col.type, col.length));
             }
         }
 
@@ -50,7 +50,7 @@ public class TdSchemaDiffer {
         for (ColumnDef tag : expected.tags) {
             if (!actualColumns.containsKey(tag.name)) {
                 alterStatements.add("ALTER STABLE " + stableName + " ADD TAG " +
-                        tag.name + " " + tag.type.toSql() + formatLength(tag.type, tag.length));
+                        escapeCol(tag.name) + " " + tag.type.toSql() + formatLength(tag.type, tag.length));
             }
         }
 
@@ -172,5 +172,15 @@ public class TdSchemaDiffer {
             this.type = type;
             this.length = length;
         }
+    }
+
+    /**
+     * 转义列名，防止 TDengine 保留关键字冲突。
+     */
+    private static String escapeCol(String name) {
+        if ("ts".equals(name)) {
+            return name;
+        }
+        return "`" + name + "`";
     }
 }

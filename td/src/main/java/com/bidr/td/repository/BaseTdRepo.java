@@ -396,18 +396,18 @@ public abstract class BaseTdRepo<T> {
 
                 if (field.isAnnotationPresent(TdTimestamp.class)) {
                     TdTimestamp t = field.getAnnotation(TdTimestamp.class);
-                    colNames.add(t.name());
+                    colNames.add(escapeColumn(t.name()));
                     // 直接传原始 Long（epoch 毫秒），避免 Timestamp 被 JDBC 驱动二次时区转换
                     colValues.add(value);
                 } else if (field.isAnnotationPresent(TdColumn.class)) {
                     TdColumn c = field.getAnnotation(TdColumn.class);
                     String name = c.name().isEmpty() ? field.getName() : c.name();
-                    colNames.add(name);
+                    colNames.add(escapeColumn(name));
                     colValues.add(value);
                 } else if (field.isAnnotationPresent(TdTag.class)) {
                     TdTag t = field.getAnnotation(TdTag.class);
                     String name = t.name().isEmpty() ? field.getName() : t.name();
-                    tagNames.add(name);
+                    tagNames.add(escapeColumn(name));
                     tagValues.add(value);
                 }
             }
@@ -426,5 +426,16 @@ public abstract class BaseTdRepo<T> {
             clazz = clazz.getSuperclass();
         }
         return fields;
+    }
+
+    /**
+     * 使用反引号转义列名，防止 TDengine 保留关键字（如 value）导致语法错误。
+     * ts 时间戳列无需转义。
+     */
+    private static String escapeColumn(String name) {
+        if ("ts".equals(name)) {
+            return name;
+        }
+        return "`" + name + "`";
     }
 }

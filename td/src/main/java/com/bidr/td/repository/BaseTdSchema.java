@@ -166,11 +166,12 @@ public abstract class BaseTdSchema<T> implements TdSchemaInf {
         }
 
         String colDefs = columns.stream()
-                .map(c -> c.name + " " + c.type.toSql() + formatLength(c.type, c.length))
-                .collect(Collectors.joining(", "));
+                .map(c -> "`" + c.name + "`" + " " + c.type.toSql() + formatLength(c.type, c.length))
+                .collect(Collectors.joining(", "))
+                .replace("`ts`", "ts");  // ts 是首列时间戳，无需转义
 
         String tagDefs = tags.stream()
-                .map(t -> t.name + " " + t.type.toSql() + formatLength(t.type, t.length))
+                .map(t -> "`" + t.name + "`" + " " + t.type.toSql() + formatLength(t.type, t.length))
                 .collect(Collectors.joining(", "));
 
         return "CREATE STABLE IF NOT EXISTS " + stableName + " (" + colDefs + ") TAGS (" + tagDefs + ")";
