@@ -29,7 +29,7 @@ public class AcRoleSchema extends BaseMybatisSchema<AcRole> {
                 "  PRIMARY KEY (`role_id`)\n" +
                 ") COMMENT='角色信息表';");
 
-        setInitData("INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '超级管理员', 'admin', 1, 1, 1, 1, '超级管理员', '1');");
-        setInitData("INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(2, '普通角色', 'common', 1, 2, 1, 1, '普通角色', '1');");
+        setInitData("INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '超级管理员', 'admin', -1, 1, 1, 1, '超级管理员', '1');");
+        setInitData("INSERT INTO `ac_role` (`role_id`, `role_name`, `role_key`, `status`, `display_order`, `create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(2, '普通角色', 'common', -1, 2, 1, 1, '普通角色', '1');");
     }
 }
