@@ -1,156 +1,231 @@
-# Bidr Core
+# Bidr Framework
 
-Bidr Core 是水质在线监测平台的核心基础框架模块集合，提供通用能力和中间件集成。
+> Enterprise-grade Microservice Foundation Framework based on Spring Boot
 
-## 模块列表
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.3-brightgreen)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-8+-orange)](https://www.java.com/)
+[![MyBatis-Plus](https://img.shields.io/badge/MyBatis--Plus-3.5.2-blue)](https://baomidou.com/)
 
-### 基础设施
-- **kernel** - 核心基础模块（通用工具、模型、异常处理等）
-- **platform** - 平台基础功能
-- **admin** - 管理后台支持
+---
 
-### 数据存储
-- **mongo** - MongoDB 集成
-- **neo4j** - Neo4j 图数据库集成
-- **elasticsearch** - Elasticsearch 搜索引擎集成
-- **redis** - Redis 缓存集成
-- **td** - TDengine 时序数据库集成（[文档](./td/README.md)）
+## Project Overview
 
-### 消息队列
-- **kafka** - Kafka 消息队列集成
-- **mqtt** - MQTT 物联网协议集成
+**Bidr Framework** is a multi-module enterprise microservice foundation framework built on Spring Boot 2.7.3. It provides a comprehensive set of reusable infrastructure capabilities including unified authentication & authorization, caching, messaging, persistence, file storage, search engine integration, workflow automation, and more. Designed with modularity and extensibility in mind, it serves as the technical foundation for building complex business applications.
 
-### 通讯服务
-- **email** - 邮件服务
-- **sms** - 短信服务
-- **wechat** - 微信服务
-- **socket-io** - WebSocket 实时通讯
+---
 
-### 其他服务
-- **xxl-job** - 分布式任务调度
-- **oss** - 对象存储
-- **ocr** - 光学字符识别
-- **qichacha** - 企查查数据服务
-- **mcp** - MCP 协议支持
-- **forge** - Forge 集成
-- **authorization** - 授权服务
+## Architecture
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file)
-  or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line)
-  or push an existing Git repository with the following command:
+The framework follows a two-layer modular architecture:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.bidr.com.cn/infrastructure/core.git
-git branch -M master
-git push -uf origin master
+Bidr Framework
+├── Core Layer (bidr-core)
+│   ├── kernel                          — Core infrastructure (unified response, MyBatis-Plus, Swagger, JSON, cache, logging)
+│   ├── platform                        — Platform services (system dictionary, Excel, config management, audit log)
+│   ├── authorization                   — Authentication & authorization
+│   ├── admin                           — System administration
+│   ├── redis                           — Redis cache
+│   ├── kafka                           — Message queue
+│   ├── email                           — Email service
+│   ├── sms                             — SMS service
+│   ├── oss                             — Object storage
+│   ├── elasticsearch                   — Search engine
+│   ├── mongo                           — MongoDB
+│   ├── neo4j                           — Neo4j graph database
+│   ├── mqtt                            — MQTT IoT protocol
+│   ├── socket-io                       — WebSocket real-time communication
+│   ├── wechat                          — WeChat integration
+│   ├── ocr                             — OCR recognition
+│   ├── qichacha                        — Qichacha (business data) integration
+│   ├── mcp                             — Model Context Protocol
+│   ├── xxl-job                         — Distributed task scheduling
+│   ├── td                              — Time-series data (TDengine)
+│   ├── forge                           — Developer tooling
+│   └── db                              — Database components
+│
+└── Service Layer (bidr-services)
+    ├── bidr-framework                  — Framework foundation (login, token)
+    ├── bidr-om                         — Operations management services
+    ├── bidr-dc                         — Data center services
+    ├── bidr-mdm                        — Master data management services
+    ├── bidr-oa                         — Office automation services
+    ├── bidr-notice                     — Notification services
+    ├── bidr-ai                         — AI integration services
+    ├── bidr-sequence                   — Sequence number generation
+    └── bidr-elasticsearch              — Elasticsearch wrapper
 ```
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://gitlab.bidr.com.cn/infrastructure/core/-/settings/integrations)
+## Features
 
-## Collaborate with your team
+| Category | Capabilities |
+| --- | --- |
+| **Web Framework** | Spring Boot 2.7.3, RESTful API, unified exception handling, unified response |
+| **ORM & Database** | MyBatis-Plus 3.5.2, multi-datasource, MyBatis-Plus-Join, dynamic table name, Code First |
+| **Authentication** | Unified token auth, API permission control, tenant isolation, MDM integration |
+| **Cache** | Redis, dynamic memory cache, distributed lock |
+| **Messaging** | Kafka, MQTT |
+| **Search Engine** | Elasticsearch 8.17.3 |
+| **File Storage** | OSS object storage |
+| **Real-time Communication** | Socket.IO (WebSocket) |
+| **Scheduling** | XXL-JOB distributed scheduler |
+| **Notification** | Email, SMS |
+| **Third-party Integration** | WeChat, Qichacha, OCR |
+| **AI** | Model Context Protocol (MCP), AI service integration |
+| **Office** | Excel import/export (EasyExcel, JXLS), QR code generation |
+| **System Management** | Dynamic dictionary, business config, audit log, admin panel |
+| **API Documentation** | Swagger 3.0 (OpenAPI) |
+| **Time-series Data** | TDengine integration |
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+---
 
-## Test and Deploy
+## Tech Stack
 
-Use the built-in continuous integration in GitLab.
+### Core
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+| Technology | Version |
+| --- | --- |
+| Java | 8+ |
+| Spring Boot | 2.7.3 |
+| MyBatis-Plus | 3.5.2 |
+| MyBatis-Plus-Join | 1.5.2 |
+| Dynamic Datasource | 3.5.2 |
+| diboot-core | 2.11.0 |
+| JSQLParser | 4.6 |
+| Swagger (Springfox) | 3.0.0 |
+| Lombok | - |
+| Hutool | 5.8.8 |
+| Reflections | 0.9.11 |
 
-***
+### Data & Storage
 
-# Editing this README
+| Technology | Version |
+| --- | --- |
+| MySQL | - |
+| Redis | - |
+| MongoDB | - |
+| Neo4j | - |
+| Elasticsearch | 8.17.3 |
+| TDengine | - |
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to
-structure it however you want - this is just a starting point!). Thank you
-to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Messaging & Communication
 
-## Suggestions for a good README
+| Technology | Version |
+| --- | --- |
+| Kafka | - |
+| MQTT | - |
+| Socket.IO | - |
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are
-suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long
-is better than too short. If you think your README is too long, consider utilizing another form of documentation rather
-than cutting out information.
+### Infrastructure
 
-## Name
+| Technology | Version |
+| --- | --- |
+| Maven | 3+ |
+| XXL-JOB | - |
+| Nacos / Apollo (Config) | - |
+| JUnit 4 | 4.13.2 |
+| TestNG | 6.14.3 |
 
-Choose a self-explaining name for your project.
+---
 
-## Description
+## Quick Start
 
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be
-unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your
-project, this is a good place to list differentiating factors.
+### Prerequisites
 
-## Badges
+- **JDK 8+**
+- **Maven 3.6+**
+- **MySQL 5.7+**
+- **Redis**
+- **Optional**: Kafka, Elasticsearch, MongoDB, Neo4j, TDengine
 
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the
-project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Scaffold a New Project
 
-## Visuals
+The framework provides a `setup.sh` scaffolding script to quickly bootstrap a complete project module.
 
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see
-GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+```bash
+# Navigate to the script directory
+cd framework/core/script
 
-## Installation
+# Create a new project (interactive mode, prompts for project code and port)
+bash setup.sh
 
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew.
-However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing
-specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a
-specific context like a particular programming language version or operating system or has dependencies that have to be
-installed manually, also add a Requirements subsection.
+# Or specify project code directly (name and package are auto-generated)
+bash setup.sh mcp
 
-## Usage
+# Force overwrite existing project directory
+bash setup.sh --force mcp
 
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of
-usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably
-include in the README.
+# Change port of an existing project
+bash setup.sh --change-port 8080
+```
 
-## Support
+### Generated Artifacts
 
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address,
-etc.
+| Artifact | Description |
+| --- | --- |
+| `{code}-common` module | Common module: entities, mappers, services, controllers, VOs, config |
+| `{code}-server` module | Boot module: Application class, Spring Boot packaging config |
+| `application*.yml` | Multi-environment config (dev / pre / prod) |
+| `Dockerfile` | Docker image build file |
+| `docker-compose.yml` | Docker Compose deployment |
+| `docker-start.sh` | Docker deployment management script |
+| `start.sh` | JAR deployment management script |
+| `deploy.sh` | Multi-environment deployment script |
+| `nginx/{code}.conf` | Nginx routing configuration |
+| `agent.md` | AI assistant development guide |
+
+### Generated Module Structure
+
+```
+{code}-common/
+└── src/main/java/com/bidr/{code}/
+    ├── config/              # Configuration classes
+    ├── constant/            # Constants & enum dictionaries
+    ├── controller/          # REST API controllers
+    ├── service/             # Business service layer
+    ├── vo/                  # Value objects (frontend interaction)
+    └── dao/
+        ├── entity/          # Database entities
+        ├── mapper/          # Mapper interfaces and XML
+        ├── repository/      # Repository services (business logic)
+        └── schema/          # Schema services (DDL definition & migration)
+```
+
+### Start Developing
+
+```bash
+# 1. Configure database and Redis connection in application-*.yml
+
+# 2. Build the project (use development profile)
+mvn clean install -P development,!public-snapshots -DskipTests
+
+# 3. Start the service
+cd {code}-server
+mvn spring-boot:run -P development,!public-snapshots
+
+# 4. Start building your business features
+```
+
+> **Tip**: Always use `-P development,!public-snapshots` when building locally. Without this flag, Maven will resolve SNAPSHOT dependencies from the remote Nexus repository instead of your local changes, causing your modifications to be ignored.
+
+---
 
 ## Roadmap
 
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+- [ ] MCP service enhancement (tool registration, resource discovery)
+- [ ] Reactive programming support (Spring WebFlux)
+- [ ] Upgrade to Spring Boot 3.x / JDK 17
+- [ ] GraalVM Native Image support
+- [ ] Improved observability (Metrics, Tracing)
+- [ ] API Gateway layer
+- [ ] Deep integration with configuration center
+- [ ] Multi-region / disaster recovery architecture
+- [ ] Service Mesh adaptation
 
-## Contributing
-
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started.
-Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps
-explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce
-the likelihood that the changes inadvertently break something. Having instructions for running tests is especially
-helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-
-Show your appreciation to those who have contributed to the project.
+---
 
 ## License
 
-For open source projects, say how it is licensed.
-
-## Project status
-
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has
-slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or
-owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Copyright © Bidr. All rights reserved.
