@@ -76,16 +76,16 @@ public interface AdminStatisticMetricInf<ENTITY, VO> extends AdminStatisticBaseI
                         wrapper.getSelectColum().add(new SelectString(String.format(
                                 "count(%s %s) as '%s'",
                                 StringUtil.convertSwitch(metricCondition.getDistinct()) ? "distinct" : StringUtil.EMPTY,
-                                parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
+                                parseStatisticSelect(metricCondition.getCondition(), statistic.getValue(), true),
                                 StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                     } else {
                         wrapper.getSelectColum().add(new SelectString(String.format("sum(%s) as '%s'",
-                                parseStatisticSelect(metricCondition.getCondition(), statistic.getValue()),
+                                parseStatisticSelect(metricCondition.getCondition(), statistic.getValue(), false),
                                 StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                     }
                 } else {
                     wrapper.getSelectColum().add(new SelectString(String.format("count(%s) as '%s'",
-                            parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY),
+                            parseStatisticSelect(metricCondition.getCondition(), StringUtil.EMPTY, true),
                             StringUtil.join(metricCondition.getLabel(), statistic.getLabel())), wrapper.getAlias()));
                 }
             }

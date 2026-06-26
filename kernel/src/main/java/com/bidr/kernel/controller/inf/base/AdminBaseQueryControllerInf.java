@@ -13,6 +13,7 @@ import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,8 +64,12 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             selectApplyMap = null;
             havingFields = null;
         }
-        filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
+        if (FuncUtil.isNotEmpty(query.getSelectColumnList()) && FuncUtil.isNotEmpty(havingFields)) {
+            havingFields = new HashSet<>(havingFields);
+            havingFields.retainAll(query.getSelectColumnList());
+        }
         boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), havingFields);
         if (defaultHaveHavingFields || conditionHaveHavingFields) {
@@ -195,8 +200,12 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             selectApplyMap = null;
             havingFields = null;
         }
-        filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
+        if (FuncUtil.isNotEmpty(query.getSelectColumnList()) && FuncUtil.isNotEmpty(havingFields)) {
+            havingFields = new HashSet<>(havingFields);
+            havingFields.retainAll(query.getSelectColumnList());
+        }
         boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         boolean conditionHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         if (defaultHaveHavingFields || conditionHaveHavingFields) {

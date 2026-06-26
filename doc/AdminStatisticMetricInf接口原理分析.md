@@ -702,3 +702,356 @@ public interface AdminStatisticMetricInf<ENTITY, VO> {
 ⚠️ **可维护性**：代码重复度高，方法过长  
 
 建议按照优先级逐步优化，优先解决安全性和稳定性问题。
+
+---
+
+## 9. 前端拼接API实战经验
+
+基于客户仪表盘开发实践，总结出一套前端构建 `statisticByAdvancedReq` 请求体的标准化模式。
+
+### 9.1 请求体核心结构速查
+
+```typescript
+{
+  // ① GROUP BY 维度（决定按什么字段分组）
+  metricColumn: [{ column: '字段名', dictMap?: { 'code': 'label' } }],
+
+  // ② 统计目标（仅用于生成 SQL 别名，实际聚合由 metricCondition 控制）
+  statisticColumn: [{ value: '目标字段', label: '显示标签' }],
+
+  // ③ 自定义聚合条件（控制 SELECT 中的 COUNT/SUM + CASE WHEN）
+  metricCondition: [{
+    count: '1',        // '1'=COUNT, '0'=SUM
+    distinct: '1',     // '1'=DISTINCT
+    value: '字段名',   // COUNT(DISTINCT 字段名)
+    label: '条件标签', // 用于结果集 key 拼接
+    condition: { conditionList: [] }  // 空=无CASE WHEN, 直接聚合
+  }],
+
+  // ④ 全局 WHERE 过滤条件
+  condition: {
+    conditionList: [
+      { property: '字段', relation: 1, value: ['值'] },  // relation: 1=EQUAL, 3=GREATER, 11=IN
+    ]
+  },
+
+  // ⑤ 其他控制参数
+  distinct: '1',                    // wrapper.distinct()
+  majorCondition: '1',              // '1'/空=条件为主, '0'=指标为主
+  selectColumnCondition: { category: 0, mode: 2 }  // 控制查询视图切换
+}
+```
+
+### 9.2 参数作用域分层
+
+| 层级 | 参数 | SQL 对应 | 说明 |
+|------|------|----------|------|
+| 全局过滤 | `condition.conditionList` | `WHERE ...` | 所有行都受此条件过滤 |
+| 分组维度 | `metricColumn` | `GROUP BY ...` | 决定结果的分组字段 |
+| 聚合函数 | `metricCondition` | `SELECT COUNT/SUM(...)` | 控制统计方式和 CASE WHEN 条件 |
+| 视图切换 | `selectColumnCondition` | 前端控制 | `category`=数据类别, `mode`=传统(2)/总包 |
+
+### 9.3 维度切换模式（同一接口不同统计维度）
+
+仅需替换 `metricColumn` 中的 `column` 即可切换统计维度：
+
+```typescript
+// 按客户类型分组（饼图）
+metricColumn: [{ column: 'customerCategory', dictMap: { '01': '企业', '02': '政府部门', '09': '其他' } }]
+
+// 按省份分组（地图）
+metricColumn: [{ column: 'province' }]
+
+// 按年度分组（趋势图）
+// 使用 metricCondition 的交叉条件模式，而非 metricColumn
+```
+
+### 9.4 metricCondition 的两种用法
+
+#### 用法 A：空条件直接聚合（最常用）
+
+```typescript
+metricCondition: [{
+  count: '1', distinct: '1', value: 'customerNo',
+  label: '客户数',
+  condition: { conditionList: [] }  // ← 空条件
+}]
+```
+
+生成 SQL：`COUNT(DISTINCT customerNo) AS '客户数'`
+
+**适用场景**：分组统计总数（客户数、项目数等）
+
+#### 用法 B：交叉条件（趋势图专用）
+
+```typescript
+metricCondition: [
+  { label: '2024&&新客户', condition: { conditionList: [
+    { property: 'dy', relation: 1, value: ['2024'] },
+    { property: 'newCustomer', relation: 1, value: ['1'] }
+  ]}},
+  { label: '2024&&老客户', condition: { conditionList: [
+    { property: 'dy', relation: 1, value: ['2024'] },
+    { property: 'newCustomer', relation: 1, value: ['0'] }
+  ]}}
+]
+```
+
+生成 SQL：`COUNT(CASE WHEN dy='2024' AND newCustomer='1' THEN 1 END) AS '2024&&新客户'`
+
+**适用场景**：多维度交叉统计（年 × 新老客户）
+
+### 9.5 响应结构速查
+
+#### 有 metricCondition + majorCondition='1'/空 → 条件为主
+
+```json
+[
+  {
+    "metricLabel": "客户数",
+    "statistic": 3953,
+    "children": [
+      { "metricColumn": "province", "metric": "北京", "statistic": 200 },
+      { "metricColumn": "province", "metric": "上海", "statistic": 150 }
+    ]
+  }
+]
+```
+
+#### 有 metricCondition + majorCondition='0' → 指标为主
+
+```json
+[
+  {
+    "metricColumn": "province",
+    "metric": "北京",
+    "statistic": 200,
+    "children": [
+      { "metricLabel": "客户数", "statistic": 200 }
+    ]
+  }
+]
+```
+
+#### 无 metricCondition → 纯分组
+
+```json
+[
+  { "metricColumn": "province", "metric": "北京", "statistic": 200 }
+]
+```
+
+### 9.6 前端解析嵌套响应的通用模式
+
+响应结构为多层嵌套树形时，使用递归查找定位目标维度：
+
+```typescript
+function findMetricLevel(items: any[], targetColumn: string): any[] {
+  for (const item of items) {
+    if (item.metricColumn === targetColumn) return items
+    if (item.children?.length > 0) {
+      const result = findMetricLevel(item.children, targetColumn)
+      if (result.length > 0) return result
+    }
+  }
+  return []
+}
+```
+
+### 9.7 条件增量模式（复用基础请求体）
+
+通过 `extraConditions` 参数实现条件叠加，避免重复构建：
+
+```typescript
+function buildProvinceBody(year, mode, extraConditions, area, plate, manageLevel) {
+  const conditionList = [
+    { property: 'dy', relation: 1, value: [String(year)] },
+    { property: 'contractSummary', relation: 3, value: [0] },
+    ...extraConditions,  // ← 增量条件插入
+  ]
+  // ...
+}
+
+// 全体客户：extraConditions = []
+// 新增客户：extraConditions = [{ property: 'newCustomer', relation: 1, value: ['1'] }]
+// 新签合同：extraConditions = [{ property: 'projectSignStatus', relation: 11, value: ['01','02'] }]
+```
+
+### 9.8 relation 枚举速查
+
+| relation | 含义 | SQL | 示例 |
+|----------|------|-----|------|
+| 1 | EQUAL | `= value` | `dy = '2026'` |
+| 3 | GREATER | `> value` | `contractSummary > 0` |
+| 5 | LESS | `< value` | |
+| 11 | IN | `IN (v1, v2)` | `projectSignStatus IN ('01','02')` |
+| 13 | BETWEEN | `BETWEEN v1 AND v2` | |
+
+---
+
+## 10. 图表点击穿透 Portal Table 条件构造指南
+
+### 10.1 核心原理
+
+当用户点击图表中的某个数据项时，需要弹出 Portal Table 展示该数据项对应的明细记录。
+**条件构造的核心思路**：将图表请求体中的全局筛选条件 + 点击项的维度条件合并，作为 Portal Table 的 `advanceCondition`。
+
+```
+图表请求体 (buildXxxBody)
+    │
+    ├── condition.conditionList  ──→  Portal 全局筛选条件（原样提取）
+    ├── selectColumnCondition.mode ──→  Portal 视图切换条件（提取 mode）
+    └── 点击项的维度字段         ──→  Portal 穿透维度条件（手动追加）
+```
+
+### 10.2 通用构造步骤
+
+**Step 1**：在 API 文件的 `buildXxxDrillConfig` 函数中，调用对应的请求体构建函数生成 body
+
+**Step 2**：从 body 中提取全局条件
+```typescript
+const globalConditionList = body?.condition?.conditionList ?? []
+const mode = body?.selectColumnCondition?.mode ?? 2
+```
+
+**Step 3**：根据点击项构造维度条件
+```typescript
+// 示例：点击饼图的 "企业" 分类
+const drillConditionList = [
+  { property: 'customerCategory', relation: 1, value: ['01'] }
+]
+```
+
+**Step 4**：合并为 `CustomerDrillingConfig`
+```typescript
+return {
+  type: CustomerDrillingType.CATEGORY_ALL,
+  globalConditionList,     // 全局筛选
+  drillConditionList,      // 维度条件
+  mode,                    // 视图切换
+  title: '客户类型分布 - 企业',
+}
+```
+
+**Step 5**：`CustomerDrilling.vue` 内部将两者合并为 Portal 的 `advanceCondition`
+```typescript
+// buildDrillingCondition 工具函数
+const conditionList = [...globalConditionList, ...drillConditionList]
+return { conditionList, andOr: '0' }  // AND 连接
+```
+
+### 10.3 各图表类型穿透条件速查表
+
+| 图表 | 点击项 | 维度条件 (drillConditionList) | 说明 |
+|------|--------|-------------------------------|------|
+| **生命周期卡片** | 潜在/种子/正式客户 | `{ property: 'customerStatus', relation: 1, value: [status] }` | status: '2'=潜在, '3'=种子, '4'=正式 |
+| **生命周期卡片** | 新增客户 | `[]`（空） | becomeOfficeDt 已在全局条件中 |
+| **生命周期卡片** | 新成单用户 | `[]`（空） | contractAmt>0 + becomeOfficeDt 已在全局条件中 |
+| **客户排行榜** | 某客户 | `{ property: 'customerNo', relation: 1, value: [customerId] }` | 优先用 customerId，回退到 customerName |
+| **客户类型饼图** | 某分类 | `{ property: 'customerCategory', relation: 1, value: [code] }` | code: '01'=企业, '02'=政府, '09'=其他 |
+| **客户趋势图** | 某年某类 | `[{property:'dy', value:[year]}, {property:'newCustomer', value:['1'/'0']}]` | 新客户='1', 老客户='0' |
+| **地域分布地图** | 某省份 | `{ property: 'customerProvince', relation: 1, value: [provinceCode] }` | 需用行政区编码，如 '110000' |
+
+### 10.4 关键设计原则
+
+#### 原则 1：全局条件原样提取，不重新构建
+
+```typescript
+// ✅ 正确：从 body 中直接提取
+const globalConditionList = extractGlobalConditionList(body)
+
+// ❌ 错误：手动重新构建全局条件
+const globalConditionList = [
+  { property: 'dy', relation: 1, value: [year] },
+  { property: 'area', relation: 1, value: [area] },
+  // ...
+]
+```
+
+**原因**：body 中已包含完整的全局条件（dy、area、plate、manageLevel、contractSummary 等），
+直接提取可保证穿透表格的筛选范围与图表数据完全一致。
+
+#### 原则 2：维度条件只追加点击项的字段
+
+```typescript
+// ✅ 正确：仅追加点击维度
+// 点击饼图 "企业" → 仅追加 customerCategory
+drillConditionList: [{ property: 'customerCategory', relation: 1, value: ['01'] }]
+
+// ❌ 错误：重复追加已在全局条件中的字段
+// 趋势图全局条件已有 projectSignStatus，不需要再追加
+```
+
+#### 原则 3：condition 计算逻辑下沉到 API 层
+
+每个 API 文件导出独立的 `buildXxxDrillConfig` 函数，视图层仅保留一行调用：
+
+```typescript
+// API 层 (apis/customerMap.ts)
+export function buildMapDrillConfig(provinceName, activeTab, queryCondition) {
+  const body = buildXxxBody(...)
+  return {
+    type: CustomerDrillingType.MAP_ALL,
+    globalConditionList: extractGlobalConditionList(body),
+    drillConditionList: [{ property: 'customerProvince', relation: 1, value: [code] }],
+    mode: extractModeFromBody(body),
+    title: `客户地域分布 - ${provinceName}`,
+  }
+}
+
+// 视图层 (index.vue) —— 一行调用
+chart.on('click', (params) => {
+  const config = buildMapDrillConfig(params.name, mapActiveTab.value, queryCondition)
+  if (config) openCustomerDrilling(config)
+})
+```
+
+#### 原则 4：selectColumnCondition.mode 必须同步传递
+
+Portal Table 的查询视图由 `selectColumnCondition` 控制（传统/总包），
+穿透时必须从原始请求体中提取 mode 并传给 Portal，否则视图可能不匹配。
+
+```typescript
+// 提取 mode
+const mode = body?.selectColumnCondition?.mode ?? 2
+
+// CustomerDrilling.vue 中构建 Map 传给 Portal
+const selectColumnCondition = new Map()
+selectColumnCondition.set('category', 0)
+selectColumnCondition.set('mode', config.mode)
+```
+
+### 10.5 特殊场景处理
+
+#### 场景 A：全局条件中已包含维度字段（无需追加 drillConditionList）
+
+新增客户卡片：`buildNewCustomerBody` 的全局条件已包含 `becomeOfficeDt BETWEEN`，
+穿透时无需额外追加 `drillConditionList`，设为空数组即可。
+
+#### 场景 B：不同 Tab 对应不同全局条件（需在函数内分支构建 body）
+
+地图模块有 3 个 Tab（存量/新增/新签），每个 Tab 的全局条件不同：
+```typescript
+const body = activeTab === 'all'
+  ? buildAllCustomerByProvinceBody(...)     // 无额外条件
+  : activeTab === 'new'
+    ? buildNewCustomerByProvinceBody(...)   // + newCustomer = '1'
+    : buildContractCustomerByProvinceBody(...) // + projectSignStatus IN ('01','02')
+```
+
+穿透时全局条件从对应 Tab 的 body 中提取，保证筛选范围与图表数据一致。
+
+#### 场景 C：图表使用独立 API（非 statistic 接口）
+
+合作往来分析使用 `getCustomerRetention`（非 statistic 接口），
+其条件结构完全不同，需要单独实现 `buildXxxDrillConfig`，
+不能复用 `extractGlobalConditionList` 等工具函数。
+
+#### 场景 D：同一接口不同 tableId（需按类型路由）
+
+生命周期中：
+- 潜在/种子/正式/新增客户 → tableId = `DimOmCustomerDyf`
+- 新成单用户 → tableId = `OmCustomerSelf`
+
+通过 `CustomerDrillingType` 枚举区分，在 `getDrillingTableId` 中路由到正确的表。
+

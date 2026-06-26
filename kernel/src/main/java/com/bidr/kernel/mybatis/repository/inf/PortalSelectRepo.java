@@ -649,7 +649,7 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
      * 过滤查询字段
      *
      * @param selectColumns 指定查询字段
-     * @param wrapper 查询条件
+     * @param wrapper       查询条件
      */
     default void filterSelectColumn(Set<String> selectColumns, Boolean distinct, MPJLambdaWrapper<T> wrapper) {
         if (distinct) {
@@ -658,22 +658,40 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
         if (FuncUtil.isNotEmpty(selectColumns)) {
             wrapper.getSelectColumns().removeIf(selectColumn -> {
                 String column = selectColumn.getColumn();
-                String columnToCheck = column;
-                // 如果包含 AS，提取别名部分
-                if (column.contains(" AS ")) {
-                    String[] parts = column.split(" AS ");
-                    if (parts.length > 1) {
-                        // 提取单引号或双引号中的内容
-                        String alias = parts[1].trim();
-                        if ((alias.startsWith("'") && alias.endsWith("'")) ||  (alias.startsWith("\"") && alias.endsWith("\""))) {
-                            columnToCheck = alias.substring(1, alias.length() - 1);
-                        } else {
-                            columnToCheck = alias;
-                        }
-                    }
+                String alias = extractSelectAlias(column);
+                if (alias != null) {
+                    return !selectColumns.contains(alias);
                 }
-                return !selectColumns.contains(columnToCheck);
+                // 无法提取别名时，直接对比原始 SQL 片段
+                return !selectColumns.contains(column);
             });
         }
+    }
+
+    /**
+     * 从 SQL 列定义中提取别名
+     * 取 AS/as 后的标识符，再去掉可能的引号包裹
+     * 例如：
+     *   {@code dim_om_customer_dyf.customer_no AS 'customerNo'} → {@code customerNo}
+     *   {@code IFNULL(col, 'NULL') as customerCategory} → {@code customerCategory}
+     *
+     * @param column SQL 列定义字符串
+     * @return 别名，若无法提取返回 null
+     */
+    default String extractSelectAlias(String column) {
+        if (FuncUtil.isEmpty(column)) {
+            return null;
+        }
+        int asIndex = column.toUpperCase().lastIndexOf(" AS ");
+        if (asIndex < 0) {
+            return null;
+        }
+        String alias = column.substring(asIndex + 4).trim();
+        // 去掉可能的引号包裹
+        if ((alias.startsWith("'") && alias.endsWith("'"))
+                || (alias.startsWith("\"") && alias.endsWith("\""))) {
+            return alias.substring(1, alias.length() - 1);
+        }
+        return alias;
     }
 }

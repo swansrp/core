@@ -12,8 +12,12 @@ import java.util.stream.Collectors;
 
 public interface AdminStatisticParseInf {
     default String parseStatisticSelect(AdvancedQuery query, String statisticColumn) {
+        return parseStatisticSelect(query, statisticColumn, false);
+    }
+
+    default String parseStatisticSelect(AdvancedQuery query, String statisticColumn, boolean isCount) {
         String thenStr = FuncUtil.isNotEmpty(statisticColumn) ? statisticColumn : "1";
-        String elseStr = FuncUtil.isNotEmpty(statisticColumn) ? "0" : "null";
+        String elseStr = FuncUtil.isNotEmpty(statisticColumn) ? (isCount ? "null" : "0") : "null";
         StringBuilder sql = new StringBuilder();
         String conditionSql = parseStatisticSelectRecursion(sql, query, SqlConstant.AND);
         return String.format("case when %s then %s else %s end", conditionSql, thenStr, elseStr);
