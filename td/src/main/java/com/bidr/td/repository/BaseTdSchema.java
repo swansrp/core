@@ -3,6 +3,7 @@ package com.bidr.td.repository;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.td.annotation.*;
 import com.bidr.td.constant.TdDataType;
+import com.bidr.td.constant.TdReservedWords;
 import com.bidr.td.inf.TdSchemaInf;
 import com.bidr.td.sync.TdSchemaDiffer;
 import org.slf4j.Logger;
@@ -166,12 +167,11 @@ public abstract class BaseTdSchema<T> implements TdSchemaInf {
         }
 
         String colDefs = columns.stream()
-                .map(c -> "`" + c.name + "`" + " " + c.type.toSql() + formatLength(c.type, c.length))
-                .collect(Collectors.joining(", "))
-                .replace("`ts`", "ts");  // ts 是首列时间戳，无需转义
+                .map(c -> TdReservedWords.escape(c.name) + " " + c.type.toSql() + formatLength(c.type, c.length))
+                .collect(Collectors.joining(", "));
 
         String tagDefs = tags.stream()
-                .map(t -> "`" + t.name + "`" + " " + t.type.toSql() + formatLength(t.type, t.length))
+                .map(t -> TdReservedWords.escape(t.name) + " " + t.type.toSql() + formatLength(t.type, t.length))
                 .collect(Collectors.joining(", "));
 
         return "CREATE STABLE IF NOT EXISTS " + stableName + " (" + colDefs + ") TAGS (" + tagDefs + ")";
