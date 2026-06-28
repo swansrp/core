@@ -1437,7 +1437,7 @@ status() {
         echo "Checking Docker container status on ${ServerSSH[$1]}..."
         ssh ${ServerSSH[$1]} "cd ${ServerTargetPath[$1]} && sh ${DOCKER_START_SCRIPT} status"
     else
-        ssh ${ServerSSH[$1]} sh ${ServerLogPath[$1]}/$StatusCmd
+        ssh ${ServerSSH[$1]} sh ${ServerTargetPath[$1]}/$StatusCmd
     fi
     return 0
 }
@@ -1449,7 +1449,7 @@ allstatus() {
 	if [ -n "${ServerSSH[$i]}" ]; 
 	then
 		echo ${ServerSSH[$i]} 
-		status i;
+		status $i;
 		echo ---------------------------
 	fi
 	done
@@ -1487,7 +1487,7 @@ deployAll() {
 		if [ -n "${ServerSSH[$i]}" ]; 
 		then
 			echo "===== Start  to deploy: " ${ServerSSH[$i]} ...  ======
-			deploy i "noTrace";
+			deploy $i "noTrace";
 			echo "===== Finish to deploy: " ${ServerSSH[$i]} ...  ======
 		fi
 	done

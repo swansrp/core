@@ -36,7 +36,8 @@ public class BaseTdSchemaTest {
         assertNotNull(createSql);
         assertTrue(createSql.contains("CREATE STABLE IF NOT EXISTS test_stable"));
         assertTrue(createSql.contains("ts TIMESTAMP"));
-        assertTrue(createSql.contains("value FLOAT"));
+        // value 是 TDengine 保留字，框架自动转义为 `value`
+        assertTrue(createSql.contains("`value` FLOAT"));
         assertTrue(createSql.contains("deviceId BINARY(64)"));
     }
 

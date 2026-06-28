@@ -73,25 +73,25 @@ upload_docker(){
 }
 
 init() {
-	if dirExsit "${ServerTargetPath[$1]}"; then
-		send "mkdir ${ServerTargetPath[$1]}"
+	if dirNotExist "${ServerTargetPath[$1]}"; then
+		send "mkdir -p ${ServerTargetPath[$1]}"
 	fi
-	if dirExsit "${ServerTargetPath[$1]}/pre/"; then
-		send "mkdir ${ServerTargetPath[$1]}/pre/"
+	if dirNotExist "${ServerTargetPath[$1]}/pre/"; then
+		send "mkdir -p ${ServerTargetPath[$1]}/pre/"
 	fi
-	if dirExsit "${ServerTargetPath[$1]}/backup/"; then
-		send "mkdir ${ServerTargetPath[$1]}/backup/"
+	if dirNotExist "${ServerTargetPath[$1]}/backup/"; then
+		send "mkdir -p ${ServerTargetPath[$1]}/backup/"
 	fi
 }
 send() {
 	ssh ${ServerSSH[$serverName]} $1
 	return $?
 }
-dirExsit() {
+dirNotExist() {
 	if send "test -d $1"; then
-		return 1
+		return 1  # 目录存在 → 返回 1 (false)
 	else
-		return 0
+		return 0  # 目录不存在 → 返回 0 (true)
 	fi
 }
 
@@ -117,7 +117,7 @@ restart() {
 }
 
 stop() {
-	ssh ${ServerSSH[$1]} sh ${ServerTargetPath[$1]}/$StopCmd
+	ssh ${ServerSSH[$1]} sh ${ServerTargetPath[$1]}/start.sh stop
 	return 0
 }
 
@@ -155,7 +155,7 @@ status() {
         echo "Checking Docker container status on ${ServerSSH[$1]}..."
         ssh ${ServerSSH[$1]} "cd ${ServerTargetPath[$1]} && sh ${DOCKER_START_SCRIPT} status"
     else
-        ssh ${ServerSSH[$1]} sh ${ServerLogPath[$1]}/$StatusCmd
+        ssh ${ServerSSH[$1]} sh ${ServerTargetPath[$1]}/$StatusCmd
     fi
     return 0
 }
@@ -167,7 +167,7 @@ allstatus() {
 	if [ -n "${ServerSSH[$i]}" ]; 
 	then
 		echo ${ServerSSH[$i]} 
-		status i;
+		status $i;
 		echo ---------------------------
 	fi
 	done
@@ -206,7 +206,7 @@ deployAll() {
 		if [ -n "${ServerSSH[$i]}" ]; 
 		then
 			echo "===== Start  to deploy: " ${ServerSSH[$i]} ...  ======
-			deploy i "noTrace";
+			deploy $i "noTrace";
 			echo "===== Finish to deploy: " ${ServerSSH[$i]} ...  ======
 		fi
 	done
