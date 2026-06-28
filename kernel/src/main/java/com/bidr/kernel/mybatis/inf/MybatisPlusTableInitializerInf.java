@@ -355,51 +355,53 @@ public interface MybatisPlusTableInitializerInf {
      * @throws SQLException SQL 异常
      */
     default boolean shouldSkip(DatabaseMetaData metaData, String sql) throws SQLException {
-        sql = sql.trim().toUpperCase();
+        String rawSql = sql.trim();
+        sql = rawSql.toUpperCase();
 
         if (sql.startsWith("ALTER TABLE")) {
-            String[] parts = sql.split("\\s+");
-            String table = parts[2];
+            String[] parts = rawSql.split("\\s+");
+            // 剥离反引号和分号，保留原始大小写（Linux MySQL 表名大小写敏感）
+            String table = stripIdent(parts[2]);
 
             // ADD COLUMN
             if (sql.contains("ADD COLUMN")) {
-                String column = parts[5];
+                String column = parts.length > 5 ? stripIdent(parts[5]) : "";
                 return columnExists(metaData, table, column);
             }
 
             // DROP COLUMN
             if (sql.contains("DROP COLUMN")) {
-                String column = parts[5];
+                String column = parts.length > 5 ? stripIdent(parts[5]) : "";
                 return !columnExists(metaData, table, column);
             }
 
             // MODIFY / CHANGE COLUMN
             if (sql.contains("MODIFY COLUMN") || sql.contains("CHANGE COLUMN")) {
-                String column = parts[4];
+                String column = parts.length > 5 ? stripIdent(parts[5]) : "";
                 return shouldSkipColumn(metaData, table, column, sql);
             }
 
             // ADD CONSTRAINT / ADD FOREIGN KEY
             if (sql.contains("ADD CONSTRAINT") || sql.contains("ADD FOREIGN KEY")) {
-                String constraint = parts[6];
+                String constraint = parts.length > 6 ? stripIdent(parts[6]) : "";
                 return indexExists(metaData, table, constraint);
             }
 
             // DROP CONSTRAINT / DROP FOREIGN KEY
             if (sql.contains("DROP CONSTRAINT") || sql.contains("DROP FOREIGN KEY")) {
-                String constraint = parts[5];
+                String constraint = parts.length > 5 ? stripIdent(parts[5]) : "";
                 return !indexExists(metaData, table, constraint);
             }
 
             // ADD INDEX
             if (sql.contains("ADD INDEX")) {
-                String index = parts[5];
+                String index = parts.length > 5 ? stripIdent(parts[5]) : "";
                 return indexExists(metaData, table, index);
             }
 
             // DROP INDEX
             if (sql.contains("DROP INDEX")) {
-                String index = parts[2];
+                String index = parts.length > 2 ? stripIdent(parts[2]) : "";
                 return !indexExists(metaData, table, index);
             }
         }
@@ -407,27 +409,24 @@ public interface MybatisPlusTableInitializerInf {
         // CREATE TABLE
         if (sql.startsWith("CREATE TABLE")) {
             if (sql.contains("IF NOT EXISTS")) {
-                // 交给数据库自己处理，不跳过
                 return false;
             }
-            String table = sql.split("\\s+")[2];
+            String table = stripIdent(rawSql.split("\\s+")[2]);
             return tableExists(metaData, table);
         }
 
         // DROP TABLE
         if (sql.startsWith("DROP TABLE")) {
             if (sql.contains("IF NOT EXISTS")) {
-                // 交给数据库自己处理，不跳过
                 return false;
             }
-            String table = sql.split("\\s+")[2];
+            String table = stripIdent(rawSql.split("\\s+")[2]);
             return !tableExists(metaData, table);
         }
 
         // CREATE PROCEDURE
         if (sql.startsWith("CREATE PROCEDURE")) {
-            String procedure = sql.split("\\s+")[2];
-            // 移除可能的括号和参数
+            String procedure = stripIdent(rawSql.split("\\s+")[2]);
             if (procedure.contains("(")) {
                 procedure = procedure.substring(0, procedure.indexOf("("));
             }
@@ -437,17 +436,15 @@ public interface MybatisPlusTableInitializerInf {
         // DROP PROCEDURE
         if (sql.startsWith("DROP PROCEDURE")) {
             if (sql.contains("IF EXISTS")) {
-                // 交给数据库自己处理，不跳过
                 return false;
             }
-            String procedure = sql.split("\\s+")[2];
+            String procedure = stripIdent(rawSql.split("\\s+")[2]);
             return !procedureExists(metaData, procedure);
         }
 
         // CREATE FUNCTION
         if (sql.startsWith("CREATE FUNCTION")) {
-            String function = sql.split("\\s+")[2];
-            // 移除可能的括号和参数
+            String function = stripIdent(rawSql.split("\\s+")[2]);
             if (function.contains("(")) {
                 function = function.substring(0, function.indexOf("("));
             }
@@ -457,44 +454,35 @@ public interface MybatisPlusTableInitializerInf {
         // DROP FUNCTION
         if (sql.startsWith("DROP FUNCTION")) {
             if (sql.contains("IF EXISTS")) {
-                // 交给数据库自己处理，不跳过
                 return false;
             }
-            String function = sql.split("\\s+")[2];
+            String function = stripIdent(rawSql.split("\\s+")[2]);
             return !functionExists(metaData, function);
         }
 
         // CREATE VIEW
         if (sql.startsWith("CREATE VIEW")) {
-            // CREATE OR REPLACE VIEW 不跳过，因为可能是更新视图定义
             if (sql.startsWith("CREATE OR REPLACE VIEW")) {
                 return false;
             }
-            // 普通 CREATE VIEW 如果已存在则跳过
-            String[] parts = sql.split("\\s+");
-            String view = parts[2];
-            // 移除可能的反引号
-            view = view.replace("`", "");
+            String view = stripIdent(rawSql.split("\\s+")[2]);
             return viewExists(metaData, view);
         }
 
         // DROP VIEW
         if (sql.startsWith("DROP VIEW")) {
             if (sql.contains("IF EXISTS")) {
-                // 交给数据库自己处理，不跳过
                 return false;
             }
-            String view = sql.split("\\s+")[2];
-            // 移除可能的反引号
-            view = view.replace("`", "");
+            String view = stripIdent(rawSql.split("\\s+")[2]);
             return !viewExists(metaData, view);
         }
 
         // CREATE INDEX
         if (sql.startsWith("CREATE INDEX")) {
-            String[] parts = sql.split("\\s+");
-            String index = parts[2];
-            String table = parts[4];
+            String[] parts = rawSql.split("\\s+");
+            String index = stripIdent(parts[2]);
+            String table = stripIdent(parts[4]);
             return indexExists(metaData, table, index);
         }
 
@@ -591,5 +579,22 @@ public interface MybatisPlusTableInitializerInf {
         String colSegment = sqlSegment.substring(idx + column.length()).trim();
         String[] parts = colSegment.split("\\s+");
         return parts.length > 0 ? parts[0].toUpperCase() : "";
+    }
+
+    /**
+     * 剥离 SQL 标识符的反引号和分号，保留原始大小写。
+     * <p>
+     * 用于从 DDL SQL 中提取表名、列名、索引名等，
+     * 确保 JDBC metaData 查询时大小写与数据库实际一致。
+     * </p>
+     *
+     * @param identifier SQL 分词后的标识符片段
+     * @return 剥离反引号和分号后的标识符
+     */
+    default String stripIdent(String identifier) {
+        if (identifier == null) {
+            return "";
+        }
+        return identifier.replace("`", "").replace(";", "");
     }
 }
