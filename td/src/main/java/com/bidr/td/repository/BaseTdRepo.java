@@ -223,7 +223,7 @@ public abstract class BaseTdRepo<T> {
             }
         }
         List<Object> params = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("SELECT ")
+        StringBuilder sql = new StringBuilder("SELECT _wstart, ")
                 .append(req.getFuncs() != null ? String.join(", ", req.getFuncs()) : "COUNT(*)")
                 .append(" FROM ").append(stableName).append(" WHERE 1=1");
 
