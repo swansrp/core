@@ -14,15 +14,15 @@ import java.util.regex.Pattern;
 
 public class TemplateUtil {
     private static final Pattern PATTERN =
-            Pattern.compile("\\$\\{\\s*(\\w+)\\s*(?:\\?\\:\\s*([^}]+))?\\s*}");
+            Pattern.compile("\\$\\{\\s*(\\w+)\\s*(?:=\\s*([^?]+)\\?\\s*([^:}]+)\\s*:\\s*([^}]+)|\\?\\:\\s*([^}]+))?\\s*}");
 
     /**
      * 支持语法
-     * ${key}
-     * <p>
-     * ${key ?: defaultValue}
+     * ${key}                                  - 简单替换
+     * ${key ?: defaultValue}                  - 带默认值
+     * ${key=value?trueExpr:falseExpr}         - 比较分支：key的值等于value时输出trueExpr，否则falseExpr
      *
-     * @param template 模版
+     * @param template  模版
      * @param variables 参数
      * @return 解析后的字符串
      */
@@ -39,14 +39,27 @@ public class TemplateUtil {
 
         while (matcher.find()) {
             String key = matcher.group(1);
-            String defaultValue = matcher.group(2);
+            String compareValue = matcher.group(2);
+            String trueExpr = matcher.group(3);
+            String falseExpr = matcher.group(4);
+            String defaultValue = matcher.group(5);
 
             Object value = variables.get(key);
             String replacement;
 
-            if (value != null) {
+            if (compareValue != null) {
+                // 比较分支: ${key=value?trueExpr:falseExpr}
+                String valStr = value != null ? value.toString() : "";
+                if (compareValue.equals(valStr)) {
+                    replacement = trueExpr != null ? trueExpr.trim() : "";
+                } else {
+                    replacement = falseExpr != null ? falseExpr.trim() : "";
+                }
+            } else if (value != null) {
+                // 简单替换: ${key}
                 replacement = value.toString();
             } else if (defaultValue != null) {
+                // 默认值: ${key?:defaultValue}
                 replacement = defaultValue.trim();
             } else {
                 replacement = "";

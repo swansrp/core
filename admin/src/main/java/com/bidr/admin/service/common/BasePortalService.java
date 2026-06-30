@@ -75,6 +75,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     protected Map<String, String> aliasMap = new HashMap<>(32);
     protected Map<String, String> summaryAliasMap = new HashMap<>(32);
     protected Set<String> havingFields = new HashSet<>();
+    protected Set<String> dynamicGroupByFields = new HashSet<>();
     protected Map<String, List<DynamicColumn>> selectApplyMap = new HashMap<>(32);
     @Resource
     protected SysPortalService sysPortalService;
@@ -165,11 +166,18 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         PortalDynamicColumn[] portalDynamicColumns = field.getAnnotationsByType(PortalDynamicColumn.class);
         if (FuncUtil.isNotEmpty(portalDynamicColumns)) {
             List<DynamicColumn> list = map.getOrDefault(field.getName(), new ArrayList<>());
+            boolean hasGroup = false;
             for (PortalDynamicColumn dynamic : portalDynamicColumns) {
                 list.add(new DynamicColumn(dynamic.condition(), dynamic.script(), dynamic.prefix(), dynamic.suffix(),
-                        dynamic.complex()));
+                        dynamic.complex(), dynamic.group()));
+                if (dynamic.group()) {
+                    hasGroup = true;
+                }
             }
             map.put(field.getName(), list);
+            if (hasGroup) {
+                dynamicGroupByFields.add(field.getName());
+            }
         }
     }
 
@@ -377,6 +385,11 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public Set<String> getHavingFields() {
         return havingFields;
+    }
+
+    @Override
+    public Set<String> getDynamicGroupByFields() {
+        return dynamicGroupByFields;
     }
 
     @Override

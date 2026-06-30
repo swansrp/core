@@ -20,4 +20,5 @@ public class DynamicColumn {
     String prefix;
     String suffix;
     boolean complex;
+    boolean group;
 }

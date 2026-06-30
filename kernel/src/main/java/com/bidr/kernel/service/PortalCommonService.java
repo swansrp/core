@@ -312,6 +312,17 @@ public interface PortalCommonService<ENTITY, VO> extends AdminBaseInf<ENTITY, VO
     }
 
     /**
+     * 获取需要补充 GROUP BY 的动态列字段名
+     * 这些字段在 getJoinWrapper 阶段因 selectApplyMap 冲突未被加入 GROUP BY，
+     * 需要在 parseSelectApply 动态解析后补充
+     *
+     * @return 动态列字段名集合
+     */
+    default Set<String> getDynamicGroupByFields() {
+        return null;
+    }
+
+    /**
      * 生成需要select条件的字段map
      *
      * @return select apply 字段

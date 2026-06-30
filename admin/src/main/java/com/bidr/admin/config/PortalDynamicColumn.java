@@ -24,4 +24,6 @@ public @interface PortalDynamicColumn {
     String suffix() default "";
 
     boolean complex() default false;
+
+    boolean group() default false;
 }

@@ -65,6 +65,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             havingFields = null;
         }
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        addDynamicGroupBy(wrapper, selectAliasMap);
         filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
         if (FuncUtil.isNotEmpty(query.getSelectColumnList()) && FuncUtil.isNotEmpty(havingFields)) {
             havingFields = new HashSet<>(havingFields);
@@ -146,6 +147,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
         }
         MPJLambdaWrapper<ENTITY> wr;
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        addDynamicGroupBy(wrapper, selectAliasMap);
         boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         boolean conditionHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
         if (hasHavingFields(query.getDefaultQuery(), havingFields)) {
@@ -201,6 +203,7 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             havingFields = null;
         }
         Map<String, String> selectAliasMap = parseSelectApply(query.getSelectColumnCondition(), aliasMap, selectApplyMap, wrapper);
+        addDynamicGroupBy(wrapper, selectAliasMap);
         filterSelectColumn(query.getSelectColumnList(), query.getDistinct(), wrapper);
         if (FuncUtil.isNotEmpty(query.getSelectColumnList()) && FuncUtil.isNotEmpty(havingFields)) {
             havingFields = new HashSet<>(havingFields);
@@ -222,5 +225,28 @@ public interface AdminBaseQueryControllerInf<ENTITY, VO> extends AdminBaseInf<EN
             beforeQuery(req);
         }
         return select(new Query(req));
+    }
+
+    /**
+     * 动态列解析后，为 @PortalSelect(group = true) 的动态字段补充 GROUP BY
+     */
+    default void addDynamicGroupBy(MPJLambdaWrapper<ENTITY> wrapper, Map<String, String> selectAliasMap) {
+        if (FuncUtil.isEmpty(getPortalService()) || FuncUtil.isEmpty(selectAliasMap)) {
+            return;
+        }
+        Set<String> groupByFields = getPortalService().getDynamicGroupByFields();
+        if (FuncUtil.isEmpty(groupByFields)) {
+            return;
+        }
+        for (String fieldName : groupByFields) {
+            String alias = selectAliasMap.get(fieldName);
+            if (FuncUtil.isNotEmpty(alias) && alias.length() > 2) {
+                // alias 格式为 (retention_sub.retention) 或 ( null )，去掉外层括号并判断是否为 null
+                String expr = alias.substring(1, alias.length() - 1).trim();
+                if (!"null".equals(expr)) {
+                    wrapper.groupBy(expr);
+                }
+            }
+        }
     }
 }
