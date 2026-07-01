@@ -195,14 +195,14 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Override
     @ApiOperation("指标统计")
-    @RequestMapping(value = "/general/statistic", method = RequestMethod.POST)
+    @RequestMapping(value = {"/general/statistic", "/general/statistic/**"}, method = RequestMethod.POST)
     public List<StatisticRes> generalStatistic(@RequestBody GeneralStatisticReq req) {
         return statisticByGeneralReq(req);
     }
 
     @Override
     @ApiOperation("指标统计")
-    @RequestMapping(value = "/advanced/statistic", method = RequestMethod.POST)
+    @RequestMapping(value = {"/advanced/statistic", "/advanced/statistic/**"}, method = RequestMethod.POST)
     public List<StatisticRes> advancedStatistic(@RequestBody AdvancedStatisticReq req) {
         return statisticByAdvancedReq(req);
     }

@@ -8,6 +8,7 @@
 4. [功能详解](#4-功能详解)
 5. [样例输入与SQL对应](#5-样例输入与sql对应)
 6. [优化建议](#6-优化建议)
+7. [前端通用穿透工具函数](#7-前端通用穿透工具函数)
 
 ---
 
@@ -23,7 +24,25 @@
 - **作者**: Sharp
 - **创建时间**: 2025/4/29
 
-### 1.2 核心职责
+### 1.3 调试路径支持
+
+所有 statistic 接口均支持 `/**` 通配路径，便于调试时在 URL 末尾追加描述性标识（不影响业务逻辑）：
+
+| 接口 | 标准路径 | 调试路径示例 |
+|------|----------|-------------|
+| BaseAdminController | `/general/statistic` | `/general/statistic/潜在客户统计` |
+| BaseAdminController | `/advanced/statistic` | `/advanced/statistic/潜在客户` |
+| DynamicQueryController | `/{portalName}/general/statistic` | `/{portalName}/general/statistic/新签项目` |
+| DynamicQueryController | `/{portalName}/advanced/statistic` | `/{portalName}/advanced/statistic/客户趋势` |
+
+**实现方式**：
+```java
+@RequestMapping(value = {"/advanced/statistic", "/advanced/statistic/**"}, method = RequestMethod.POST)
+```
+
+> 末尾的路径段仅用于调试识别，不会被解析或使用。
+
+### 1.4 核心职责
 
 `AdminStatisticMetricInf` 是一个**多维度指标统计接口**，用于实现灵活的数据统计查询功能。它通过 MyBatis-Plus-Join (MPJ) 框架动态构建 SQL，支持：
 
@@ -33,7 +52,7 @@
 - ✅ 双层指标嵌套（父子指标结构）
 - ✅ 动态排序和限制条数
 
-### 1.3 使用场景
+### 1.5 使用场景
 
 - 仪表盘数据统计
 - 多维度报表生成
@@ -1055,3 +1074,71 @@ const body = activeTab === 'all'
 
 通过 `CustomerDrillingType` 枚举区分，在 `getDrillingTableId` 中路由到正确的表。
 
+---
+
+## 7. 前端通用穿透工具函数
+
+### 7.1 函数定义
+
+**`buildDrillConditionFromStatistic(body, drillMetric)`**
+
+位置: `erp-view/src/framework/components/common/Portal/utils.ts`
+
+这是一个通用工具函数，将 statistic 请求体 + 点击项标识（drillMetric）自动合并为 Portal Table 所需的 `advanceCondition`，消除各模块手写条件拼装逻辑的重复代码。
+
+### 7.2 工作原理
+
+```
+输入: body (statistic 请求体) + drillMetric (点击项标识)
+                         │
+     ┌───────────────────┼───────────────────┐
+     ▼                   ▼                   ▼
+ 全局条件提取        条件匹配            分组等值
+ body.condition     metricCondition      metricColumn + metric
+ .conditionList     匹配 conditionLabel  → WHERE col = 'val'
+                    提取其 condition
+     │                   ▼                   │
+     └───────────────────┬───────────────────┘
+                         ▼
+         ConditionListType (advanceCondition)
+         { conditionList: [全局..., 维度条件...], andOr: '0' }
+```
+
+### 7.3 drillMetric 参数对照
+
+| 场景 | drillMetric | 自动追加的条件 |
+|------|-------------|---------------|
+| 纯条件穿透（点击卡片/列表项） | `{ conditionLabel: '正式客户' }` | 从 body.metricCondition 匹配 label，提取其 condition 对象 |
+| 纯分组穿透（饼图扇区/柱图柱子） | `{ metricColumn: 'province', metric: '北京' }` | 构建 `WHERE province = '北京'` |
+| 分组 + 条件（趋势子项） | 三者都传 | AND 合并两种条件 |
+| NULL 值分组 | `metric: 'NULL'` | 构建 `WHERE column IS NULL` |
+
+### 7.4 使用示例
+
+```typescript
+import { buildDrillConditionFromStatistic } from '@/framework/components/common/Portal/utils'
+
+// 生命周期模块：点击"正式客户"卡片
+const config = {
+  body,                          // 原始 statistic body
+  drillMetric: { conditionLabel: '正式客户' },
+}
+
+// CustomerDrilling.vue 中自动调用
+const advanceCondition = buildDrillConditionFromStatistic(
+  config.body,
+  config.drillMetric
+)
+// 结果: { conditionList: [area='', plate='', dy='2026', customerStatus='4'], andOr: '0' }
+```
+
+### 7.5 接入规范
+
+新增统计模块时，按以下步骤即可实现穿透：
+
+1. **构建 statistic body** — 复用已有的 `buildXxxBody` 函数
+2. **指定 drillMetric** — 根据点击场景设置 `conditionLabel` / `metricColumn` + `metric`
+3. **输出配置** — 返回包含 `body` + `drillMetric` 的 `CustomerDrillingConfig`
+4. **Portal 渲染** — `CustomerDrilling.vue` 自动调用 `buildDrillConditionFromStatistic` 生成 advanceCondition
+
+无需手动提取 `conditionList`、无需手动拼装维度条件。

@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.List;
 import java.util.Map;
@@ -118,7 +120,7 @@ public class DynamicQueryController extends DynamicBaseController {
     }
 
     @ApiOperation("指标统计")
-    @PostMapping("/{portalName}/general/statistic")
+    @RequestMapping(value = {"/{portalName}/general/statistic", "/{portalName}/general/statistic/**"}, method = RequestMethod.POST)
     public List<StatisticRes> generalStatistic(@PathVariable String portalName, @RequestBody GeneralStatisticReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         AdvancedStatisticReq advReq = convertToAdvancedReq(req);
@@ -126,7 +128,7 @@ public class DynamicQueryController extends DynamicBaseController {
     }
 
     @ApiOperation("指标统计")
-    @PostMapping("/{portalName}/advanced/statistic")
+    @RequestMapping(value = {"/{portalName}/advanced/statistic", "/{portalName}/advanced/statistic/**"}, method = RequestMethod.POST)
     public List<StatisticRes> advancedStatistic(@PathVariable String portalName, @RequestBody AdvancedStatisticReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         return driver.statistic(req, portalName, getRoleId());
