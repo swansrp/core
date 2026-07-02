@@ -9,6 +9,7 @@ import com.bidr.kernel.controller.inf.statistic.AdminStatisticControllerInf;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -61,11 +62,11 @@ public interface AdminControllerInf<ENTITY, VO> extends AdminBaseInsertControlle
     /**
      * 修改数据
      *
-     * @param vo     数据
+     * @param body   JSON 请求体（通过 key 存在性区分“传了 null”和“没传”）
      * @param strict 是否更新null
      */
 
-    void update(@RequestBody VO vo, @RequestParam(required = false) boolean strict);
+    void update(@RequestBody JsonNode body, @RequestParam(required = false) boolean strict);
 
     /**
      * 修改数据列表

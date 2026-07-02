@@ -6,6 +6,8 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.validate.Validator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.ApiModelProperty;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -30,6 +32,12 @@ public class ReflectionUtil {
 
 
     private static final Map<String, BeanCopier> beanCopierMap = new ConcurrentHashMap<>();
+
+    private static final ObjectMapper MERGE_MAPPER;
+    static {
+        MERGE_MAPPER = new ObjectMapper();
+        MERGE_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
 
     private ReflectionUtil() {
     }
@@ -957,6 +965,9 @@ public class ReflectionUtil {
                             continue;
                         }
                     }
+                    if (sourceValue != null) {
+                        sourceValue = convertMapValue(sourceValue, field.getType());
+                    }
                     setValue(field, dist, sourceValue);
                 }
             } else {
@@ -972,6 +983,26 @@ public class ReflectionUtil {
             }
         }
         return dist;
+    }
+
+    /**
+     * 将 Map 中的值转换为目标字段类型，解决 JsonNode → Map 反序列化时默认类型
+     * （如 Integer）与 Entity 字段类型（如 Long）不匹配的问题。
+     */
+    private static Object convertMapValue(Object sourceValue, Class<?> targetType) {
+        if (sourceValue == null || targetType.isAssignableFrom(sourceValue.getClass())) {
+            return sourceValue;
+        }
+        try {
+            return MERGE_MAPPER.convertValue(sourceValue, targetType);
+        } catch (Exception ignored) {
+        }
+        // 回退: 通过 JSON 序列化/反序列化转换
+        try {
+            return JsonUtil.readJson(JsonUtil.toJson(sourceValue), targetType);
+        } catch (Exception ignored) {
+        }
+        return sourceValue;
     }
 
     public static boolean existedField(Class<?> aClass, String fieldName) {

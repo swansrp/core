@@ -17,6 +17,8 @@ import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
 import com.bidr.kernel.vo.portal.statistic.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,9 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
 
     @Resource
     private ApplicationContext applicationContext;
+
+    @Resource
+    private ObjectMapper objectMapper;
 
     @Override
     @ApiOperation("添加数据")
@@ -98,8 +103,16 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     @ApiOperation("更新数据")
     @RequestMapping(value = "/update", method = RequestMethod.POST)
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NoticeException.class)
-    public void update(@RequestBody VO vo, @RequestParam(required = false) boolean strict) {
-        updateEntity(vo, strict);
+    public void update(@RequestBody JsonNode body, @RequestParam(required = false) boolean strict) {
+        VO vo = objectMapper.convertValue(body, getVoClass());
+        Validator.assertNotNull(vo, ErrCodeSys.SYS_ERR_MSG, "请求体解析失败");
+        if (strict) {
+            // strict=true: 通过 JsonNode 的 key 存在性精确判断哪些字段需要更新（包括显式传 null）
+            updateEntity(vo, body);
+        } else {
+            // strict=false: 传统模式，只更新非 null 字段
+            updateEntity(vo, false);
+        }
         Resp.notice("更新成功");
     }
 

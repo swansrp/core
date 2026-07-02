@@ -2,12 +2,10 @@ package com.bidr.kernel.controller.inf.base;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.utils.DbUtil;
-import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.LambdaUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
+import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Date;
 import java.util.Map;
@@ -108,7 +106,7 @@ public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseInf<E
         ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
         ENTITY originalEntity = getRepo().selectById(entity);
         Validator.assertNotNull(originalEntity, ErrCodeSys.SYS_ERR_MSG, "数据不存在");
-        entity = ReflectionUtil.copyAndMerge(entity, originalEntity, strict);
+        entity = ReflectionUtil.copyAndMerge(entity, originalEntity, !strict);
         if (isAdmin()) {
             adminBeforeUpdate(entity);
         } else {
@@ -119,5 +117,36 @@ public interface AdminBaseUpdateControllerInf<ENTITY, VO> extends AdminBaseInf<E
         Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
         afterUpdate(entity);
         afterUpdate(entity, vo);
+    }
+
+    /**
+     * 基于 JsonNode 的精确更新，通过 JSON key 判断前端实际传了哪些字段，
+     * 只有传了的字段才会被更新（包括显式传 null 的字段也会被写 null 到库）。
+     *
+     * @param vo   前端传入的 VO 对象（用于 afterUpdate 等钩子）
+     * @param body 前端传入的原始 JSON 请求体
+     */
+    @SuppressWarnings("unchecked")
+    default void updateEntity(VO vo, JsonNode body) {
+        ENTITY entity = ReflectionUtil.copy(vo, getEntityClass());
+        ENTITY originalEntity = getRepo().selectById(entity);
+        Validator.assertNotNull(originalEntity, ErrCodeSys.SYS_ERR_MSG, "数据不存在");
+
+        // 将 JsonNode 转为 Map，只有前端传了的字段才有 key
+        Map<String, Object> bodyMap = JsonUtil.readJson(body, Map.class, String.class, Object.class);
+
+        // merge: Map 作为 source 时通过 containsKey 判断字段是否存在，ignoreNull=false 保证 null 也写入
+        originalEntity = ReflectionUtil.copyAndMerge(bodyMap, originalEntity, false);
+
+        if (isAdmin()) {
+            adminBeforeUpdate(originalEntity);
+        } else {
+            beforeUpdate(originalEntity);
+        }
+        DbUtil.setUpdateAtTimeStamp(originalEntity, new Date());
+        Boolean result = getRepo().updateById(originalEntity, false);
+        Validator.assertTrue(result, ErrCodeSys.SYS_ERR_MSG, "更新失败");
+        afterUpdate(originalEntity);
+        afterUpdate(originalEntity, vo);
     }
 }
