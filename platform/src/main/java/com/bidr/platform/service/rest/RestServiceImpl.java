@@ -28,6 +28,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.Resource;
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Collection;
@@ -277,7 +278,7 @@ public class RestServiceImpl implements RestService {
         try {
             log.debug("[{}]==> {}", transactionId, JsonUtil.toJson(body));
             long startTime = System.currentTimeMillis();
-            response = restTemp.exchange(url, method, entity, parameter);
+            response = restTemp.exchange(URI.create(url), method, entity, parameter);
             long endTime = System.currentTimeMillis();
             String duration = String.valueOf(endTime - startTime);
             try {
