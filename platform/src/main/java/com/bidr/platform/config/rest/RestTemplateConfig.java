@@ -22,6 +22,7 @@ import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
@@ -74,7 +75,13 @@ public class RestTemplateConfig {
         }
         RestTemplate restTemplate = new RestTemplate(httpRequestFactory);
         restTemplate.getMessageConverters().add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
-        MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
+        // 响应时不限制 Content-Type，请求时用默认 application/json
+        MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter() {
+            @Override
+            public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
+                return getObjectMapper().canDeserialize(getJavaType(type, contextClass));
+            }
+        };
         restTemplate.getMessageConverters().add(1, mappingJackson2HttpMessageConverter);
         restTemplate.setInterceptors(Collections.singletonList(new AgentInterceptor()));
         restTemplate.setErrorHandler(responseErrorHandler);
