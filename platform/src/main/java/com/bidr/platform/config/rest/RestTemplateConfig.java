@@ -75,7 +75,6 @@ public class RestTemplateConfig {
         RestTemplate restTemplate = new RestTemplate(httpRequestFactory);
         restTemplate.getMessageConverters().add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
         MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
-        mappingJackson2HttpMessageConverter.setSupportedMediaTypes(Collections.singletonList(MediaType.ALL));
         restTemplate.getMessageConverters().add(1, mappingJackson2HttpMessageConverter);
         restTemplate.setInterceptors(Collections.singletonList(new AgentInterceptor()));
         restTemplate.setErrorHandler(responseErrorHandler);
