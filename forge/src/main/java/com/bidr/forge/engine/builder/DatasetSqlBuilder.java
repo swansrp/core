@@ -199,7 +199,8 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
 
         if (mainTable != null) {
             fromClause.append(mainTable.getTableSql());
-            if (FuncUtil.isNotEmpty(mainTable.getTableAlias())) {
+            if (FuncUtil.isNotEmpty(mainTable.getTableAlias())
+                    && !tableSqlAlreadyHasAlias(mainTable.getTableSql(), mainTable.getTableAlias())) {
                 fromClause.append(" AS ").append(mainTable.getTableAlias());
             }
 
@@ -214,7 +215,8 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
                             .append(" JOIN ")
                             .append(dataset.getTableSql());
 
-                    if (FuncUtil.isNotEmpty(dataset.getTableAlias())) {
+                    if (FuncUtil.isNotEmpty(dataset.getTableAlias())
+                            && !tableSqlAlreadyHasAlias(dataset.getTableSql(), dataset.getTableAlias())) {
                         fromClause.append(" AS ").append(dataset.getTableAlias());
                     }
 
@@ -226,6 +228,23 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
         }
 
         return fromClause.toString();
+    }
+
+    /**
+     * 检查 tableSql 是否已经以 "AS <alias>" 结尾（不区分大小写），
+     * 如果是则无需重复追加别名，避免生成类似 "AS d AS d" 的非法SQL。
+     *
+     * @param tableSql 表SQL（可能是子查询且已内联别名，如 "(SELECT ...) AS d"）
+     * @param alias    表别名
+     * @return true 表示 tableSql 已包含该别名，无需再追加
+     */
+    private static boolean tableSqlAlreadyHasAlias(String tableSql, String alias) {
+        if (FuncUtil.isEmpty(tableSql) || FuncUtil.isEmpty(alias)) {
+            return false;
+        }
+        String lowerTrimmed = tableSql.trim().toLowerCase(Locale.ROOT);
+        String lowerSuffix = " as " + alias.trim().toLowerCase(Locale.ROOT);
+        return lowerTrimmed.endsWith(lowerSuffix);
     }
 
     /**

@@ -269,8 +269,19 @@ public class PortalDatasetSqlUtil {
             table.setTableSql(t.getFullyQualifiedName());
             table.setTableAlias(t.getAlias() != null ? t.getAlias().getName() : t.getName());
         } else {
+            // SubSelect 等非 Table 类型：toString() 会携带 alias，需要先剥离 alias
+            // 避免 tableSql 中已含 "AS d"、重建时再拼一次导致 "AS d AS d" 的重复
+            Alias itemAlias = fromItem.getAlias();
+            if (itemAlias != null) {
+                fromItem.setAlias(null);
+            }
             table.setTableSql(fromItem.toString());
-            table.setTableAlias(fromItem.getAlias() != null ? fromItem.getAlias().getName() : null);
+            if (itemAlias != null) {
+                fromItem.setAlias(itemAlias);
+                table.setTableAlias(itemAlias.getName());
+            } else {
+                table.setTableAlias(null);
+            }
         }
 
         table.setJoinType(joinType);
