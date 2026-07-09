@@ -13,6 +13,7 @@ import lombok.Data;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ public class Resp {
     public static <T, VO> VO convert(T entity, Class<VO> voClass) {
         if (entity != null) {
             RespConvert.fieldConvert(entity, voClass);
+            RespConvert.customBindConvert(entity, voClass);
             VO vo = Binder.convertAndBindRelations(entity, voClass);
             RespConvert.fieldAfterConvert(vo, voClass);
             return vo;
@@ -74,7 +76,12 @@ public class Resp {
             return convert(entityList, voClass, dictList, dictField, dataFiled,
                     (Class<T>) entityList.get(0).getClass());
         } else {
-            return Binder.convertAndBindRelations(new ArrayList<>(new LinkedHashMap<>().values()), voClass);
+            List<T> emptyList = Collections.emptyList();
+            RespConvert.fieldConvert(emptyList, voClass);
+            RespConvert.customBindConvert(emptyList, voClass);
+            List<VO> res = Binder.convertAndBindRelations(emptyList, voClass);
+            RespConvert.fieldAfterConvert(res, voClass);
+            return res;
         }
     }
 
@@ -109,7 +116,12 @@ public class Resp {
                 map.put(dataFiled.apply(entity), entity);
             }
         }
-        return Binder.convertAndBindRelations(new ArrayList<>(map.values()), voClass);
+        List<T> mergedList = new ArrayList<>(map.values());
+        RespConvert.fieldConvert(mergedList, voClass);
+        RespConvert.customBindConvert(mergedList, voClass);
+        List<VO> res = Binder.convertAndBindRelations(mergedList, voClass);
+        RespConvert.fieldAfterConvert(res, voClass);
+        return res;
     }
 
     /**
@@ -123,6 +135,7 @@ public class Resp {
      */
     public static <T, VO> List<VO> convert(List<T> entityList, Class<VO> voClass) {
         RespConvert.fieldConvert(entityList, voClass);
+        RespConvert.customBindConvert(entityList, voClass);
         List<VO> res = Binder.convertAndBindRelations(entityList, voClass);
         RespConvert.fieldAfterConvert(res, voClass);
         return res;
@@ -131,6 +144,7 @@ public class Resp {
     public static <T, R> Page<R> convert(IPage<T> page, Class<R> clazz) {
         Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         RespConvert.fieldConvert(page.getRecords(), clazz);
+        RespConvert.customBindConvert(page.getRecords(), clazz);
         List<R> targetList = Binder.convertAndBindRelations(page.getRecords(), clazz);
         RespConvert.fieldAfterConvert(targetList, clazz);
         res.setRecords(targetList);
