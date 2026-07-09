@@ -73,6 +73,7 @@ public class CaptchaServiceImpl implements CaptchaService, CommandLineRunner {
         if (sysConfigCacheService.getParamSwitch(AccountParam.TEST_MODE_VALIDATE_SWITCH)) {
             captcha = tokenServiceImpl.getItem(token, type, String.class);
             Long timeStamp = tokenServiceImpl.getItem(token, getExpiredTimestampTokenItem(type), Long.class);
+            Validator.assertNotNull(timeStamp, ErrCodeSys.SYS_ERR_MSG, "图形验证码已过期");
             Validator.assertTrue(timeStamp > System.currentTimeMillis(), ErrCodeSys.SYS_ERR_MSG, "图形验证码已过期");
             Validator.assertMatch(captcha, code.toLowerCase(), ErrCodeSys.SYS_ERR_MSG, "验证码错误");
         } else {

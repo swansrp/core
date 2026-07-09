@@ -96,7 +96,23 @@ public class ServiceExceptionEmailListener {
      * @return 正数表示 level1 更严重，负数表示 level2 更严重，0 表示相同
      */
     private int compareLevel(ErrCodeLevel level1, ErrCodeLevel level2) {
-        return Integer.compare(Integer.parseInt(level1.getValue()), Integer.parseInt(level2.getValue()));
+        return Integer.compare(parseIntLevel(level1), parseIntLevel(level2));
+    }
+
+    /**
+     * 将 ErrCodeLevel 转换为可比较的整数
+     * HIDE 等无数值的级别视为 -1（最低优先级）
+     */
+    private int parseIntLevel(ErrCodeLevel level) {
+        String value = level.getValue();
+        if (FuncUtil.isEmpty(value)) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     /**
