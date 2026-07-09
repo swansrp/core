@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * <p>
@@ -192,7 +194,10 @@ public interface MybatisPlusTableInitializerInf {
                         LoggerFactory.getLogger(getClass())
                                 .info("执行表 {} 升级 v{} -> v{}", tableName, currentVersion, targetVersion);
                         if (!shouldSkip(metaData, sql)) {
-                            stmt.executeUpdate(sql);
+                            String effectiveSql = filterDdlSql(metaData, sql);
+                            if (FuncUtil.isNotEmpty(effectiveSql)) {
+                                stmt.executeUpdate(effectiveSql);
+                            }
                         }
                         stmt.executeUpdate(
                                 "INSERT INTO sys_table_version(table_name, version) VALUES ('" + tableName + "', " +
@@ -334,6 +339,76 @@ public interface MybatisPlusTableInitializerInf {
         }
     }
 
+    /**
+     * 从 ALTER TABLE ... DROP COLUMN 语句中解析所有要删除的列名。
+     * 支持单列和多列 DROP COLUMN 语法。
+     * <p>
+     * 示例：
+     * </p>
+     * <pre>
+     * ALTER TABLE `t` DROP COLUMN `a`, DROP COLUMN `b`  →  ["a", "b"]
+     * ALTER TABLE `t` DROP COLUMN `a`                    →  ["a"]
+     * </pre>
+     *
+     * @param rawSql 原始 SQL 语句
+     * @return 要删除的列名列表
+     */
+    default List<String> parseDropColumnNames(String rawSql) {
+        List<String> columns = new ArrayList<>();
+        Pattern pattern = Pattern.compile("DROP\\s+COLUMN\\s+`?(\\w+)`?", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(rawSql);
+        while (matcher.find()) {
+            columns.add(matcher.group(1));
+        }
+        return columns;
+    }
+
+    /**
+     * 过滤 DDL SQL，移除已经不存在的列，避免执行失败。
+     * <p>
+     * 主要用于处理多列 DROP COLUMN 语句：当部分列已被删除时，
+     * 只保留仍然存在的列重建 SQL，避免 MySQL 报 "Can't DROP" 错误。
+     * </p>
+     *
+     * @param metaData 数据库元数据
+     * @param sql      待过滤的 DDL SQL
+     * @return 过滤后的 SQL；如果无需执行（所有列已不存在）则返回 null
+     * @throws SQLException SQL 异常
+     */
+    default String filterDdlSql(DatabaseMetaData metaData, String sql) throws SQLException {
+        String rawSql = sql.trim();
+        String upperSql = rawSql.toUpperCase();
+
+        if (upperSql.startsWith("ALTER TABLE") && upperSql.contains("DROP COLUMN")) {
+            String[] parts = rawSql.split("\\s+");
+            String table = stripIdent(parts[2]);
+
+            List<String> dropColumns = parseDropColumnNames(rawSql);
+            List<String> existingColumns = new ArrayList<>();
+            for (String col : dropColumns) {
+                if (columnExists(metaData, table, col)) {
+                    existingColumns.add(col);
+                }
+            }
+
+            if (existingColumns.isEmpty()) {
+                return null;
+            }
+
+            // 重建只包含仍存在列的 DROP COLUMN SQL
+            StringBuilder sb = new StringBuilder("ALTER TABLE `").append(table).append("` ");
+            for (int i = 0; i < existingColumns.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append("DROP COLUMN `").append(existingColumns.get(i)).append("`");
+            }
+            return sb.toString();
+        }
+
+        return sql;
+    }
+
     /** ----------------- 列/索引/表判断 ----------------- */
 
     /**
@@ -371,8 +446,18 @@ public interface MybatisPlusTableInitializerInf {
 
             // DROP COLUMN
             if (sql.contains("DROP COLUMN")) {
-                String column = parts.length > 5 ? stripIdent(parts[5]) : "";
-                return !columnExists(metaData, table, column);
+                // 多列 DROP COLUMN（如 "DROP COLUMN `a`, DROP COLUMN `b`"）时，
+                // parts[5] 带尾逗号会导致 stripIdent 解析错误。
+                // 改为解析所有 DROP COLUMN 子句，仅当全部列已不存在时才跳过。
+                List<String> dropColumns = parseDropColumnNames(rawSql);
+                boolean allGone = true;
+                for (String col : dropColumns) {
+                    if (columnExists(metaData, table, col)) {
+                        allGone = false;
+                        break;
+                    }
+                }
+                return allGone;
             }
 
             // MODIFY / CHANGE COLUMN
@@ -595,6 +680,6 @@ public interface MybatisPlusTableInitializerInf {
         if (identifier == null) {
             return "";
         }
-        return identifier.replace("`", "").replace(";", "");
+        return identifier.replace("`", "").replace(";", "").replace(",", "");
     }
 }
