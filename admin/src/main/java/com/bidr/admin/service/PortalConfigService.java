@@ -23,12 +23,14 @@ import com.bidr.kernel.common.convert.Convert;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
+import com.bidr.kernel.constant.dict.portal.PortalSortDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.kernel.vo.portal.SortVO;
 import com.bidr.platform.config.portal.AdminPortal;
 import com.diboot.core.binding.annotation.BindEntity;
 import com.diboot.core.binding.annotation.BindEntityList;
@@ -316,6 +318,8 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalOrderField.class))) {
             portal.setOrderColumn(field.getName());
+            portal.setDefaultSort(JsonUtil.toJson(Collections.singletonList(
+                    new SortVO(field.getName(), PortalSortDict.ASC.getValue()))));
             column.setShow(CommonConst.NO);
             column.setDetailShow(CommonConst.NO);
             column.setAddShow(CommonConst.NO);
