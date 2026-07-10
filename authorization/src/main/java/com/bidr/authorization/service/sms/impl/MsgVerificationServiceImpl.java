@@ -8,6 +8,7 @@ import com.bidr.authorization.service.sms.MsgVerificationService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.msg.MsgVerificationReq;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.RandomUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -100,7 +101,10 @@ public class MsgVerificationServiceImpl implements MsgVerificationService {
         Validator.assertTrue(StringUtils.equals(phoneNumber, msgPhoneNumber), ErrCodeSys.PA_DATA_DIFF, "手机号码");
         String msgCode = tokenService.getItem(token, msgCodeType, String.class);
         Long timeStamp = tokenService.getItem(token, getExpiredTimestampTokenItem(msgCodeType), Long.class);
-        Validator.assertFalse(timeStamp <= System.currentTimeMillis(), AccountErrCode.AC_MSG_CODE_EXPIRED);
+        if (timeStamp <= System.currentTimeMillis()) {
+            cleanMsgCodeToken(token, msgCodeType);
+            throw new ServiceException(AccountErrCode.AC_NO_GET_MSG_CODE);
+        }
         if (!frameCacheService.getParamSwitch(AccountParam.TEST_MODE_SMS_SEND_SWITCH)) {
             Validator.assertMatch(msgCode, code.toLowerCase(), AccountErrCode.AC_MSG_CODE_ERROR);
         }
