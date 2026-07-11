@@ -74,19 +74,24 @@ public class LoginServiceImpl implements LoginService {
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
-        // 新建用户 直接重置密码
-        if(FuncUtil.isNotEmpty(user.getPassword())) {
-            verifyPassword(user, user.getPassword(), password);
+        // 无密码账号处理
+        if (FuncUtil.isEmpty(user.getPassword())) {
+            if (user.getPasswordLastTime() != null && user.getPasswordLastTime().getTime() == 0L) {
+                // 标记需要设置密码，走设置密码流程
+                Validator.assertException(AccountErrCode.AC_PASSWORD_NOT_EXISTED);
+            }
+            // 无密码且没有设置密码标记，拒绝密码登录
+            Validator.assertException(ErrCodeSys.SYS_ERR_MSG, "该账号未设置密码，请使用微信或短信验证码登录");
         }
-        // 老系统初始化无密码更新时间 直接重置密码
+        // 有密码，正常校验
+        verifyPassword(user, user.getPassword(), password);
+        // 密码过期检查
         Validator.assertNotNull(user.getPasswordLastTime(), AccountErrCode.AC_PASSWORD_EXPIRED);
         int expiredDays = frameCacheService.getParamInt(AccountParam.PASSWORD_EXPIRED);
         if(expiredDays > 0) {
             Date expiredTime = new Date(user.getPasswordLastTime().getTime() + expiredDays * 24 * 60 * 60 * 1000L);
             Validator.assertTrue(DateUtil.dayDiff(expiredTime, new Date()) > 0, AccountErrCode.AC_PASSWORD_EXPIRED);
         }
-        // 重置密码 特征
-        Validator.assertFalse(user.getPasswordLastTime().getTime() == 0L, AccountErrCode.AC_PASSWORD_NOT_EXISTED);
         return login(user);
     }
 
