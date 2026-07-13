@@ -52,6 +52,13 @@ public class TokenServiceImpl implements TokenService {
         return AuthTokenUtil.getToken(token);
     }
 
+    @Override
+    public String fetchToken(String customerNumber) {
+        TokenInfo token = AuthTokenUtil.buildToken(RandomUtil.getUUID(), TokenType.GUEST_TOKEN, customerNumber, TOKEN_DEFAULT_TIMEOUT);
+        saveToken(token, customerNumber, TOKEN_DEFAULT_TIMEOUT);
+        return AuthTokenUtil.getToken(token);
+    }
+
     private void saveToken(TokenInfo token, String customerNumber, int expired) {
         Date now = new Date();
         Map<String, Object> tokenMap = new HashMap<>(16);

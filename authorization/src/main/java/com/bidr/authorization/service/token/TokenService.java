@@ -20,6 +20,14 @@ public interface TokenService {
     String fetchToken();
 
     /**
+     * 获取扫码登录专用token（绑定用户身份，使用后销毁，不影响用户登录态）
+     *
+     * @param customerNumber 用户customerNumber
+     * @return token字符串
+     */
+    String fetchToken(String customerNumber);
+
+    /**
      * 验证token是否存在
      *
      * @param token token

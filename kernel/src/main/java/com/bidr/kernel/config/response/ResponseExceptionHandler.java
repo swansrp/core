@@ -100,7 +100,7 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     public void handleClientAbortException(ClientAbortException e) {
         // 客户端断开连接，不处理
     }
-    
+
     @ExceptionHandler(RepeatSubmitException.class)
     public void handleRepeatSubmitException(RepeatSubmitException e) {
         // 防重复提交，不处理

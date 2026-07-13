@@ -1,6 +1,7 @@
 package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.annotation.captcha.CaptchaVerify;
 import com.bidr.authorization.annotation.msg.MsgCodeVerify;
@@ -12,6 +13,7 @@ import com.bidr.authorization.vo.login.LoginReq;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.login.MsgRegReq;
+import com.bidr.authorization.vo.login.QrCodeReq;
 import com.bidr.authorization.vo.login.pwd.ChangePasswordReq;
 import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
@@ -127,6 +129,15 @@ public class LoginController {
     @RequestMapping(value = "/refresh", method = RequestMethod.POST)
     public LoginRes refresh(@RequestBody @Validated TokenReq req) {
         LoginRes res = loginService.refreshLogin(req.getToken());
+        afterLogin(res);
+        return res;
+    }
+
+    @Auth(AuthNone.class)
+    @ApiOperation(value = "通过扫码信息进行登录", notes = "通过扫码信息进行登录")
+    @RequestMapping(value = "/qrCode", method = RequestMethod.POST)
+    public LoginRes loginByQrCode(@RequestBody QrCodeReq req) {
+        LoginRes res = loginService.loginByQrCode(req);
         afterLogin(res);
         return res;
     }
