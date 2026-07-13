@@ -212,7 +212,18 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public LoginRes loginByQrCode(QrCodeReq qrCodeReq) {
-        return null;
+        // 验证扫码token有效性
+        TokenInfo qrToken = AuthTokenUtil.resolveToken(qrCodeReq.getToken());
+        Validator.assertNotNull(qrToken, ErrCodeSys.SYS_ERR_MSG, "二维码已过期，请重新扫码");
+        Validator.assertTrue(tokenService.isTokenExist(qrToken), ErrCodeSys.SYS_ERR_MSG, "二维码已过期，请重新扫码");
+        // 通过userId查找用户并登录
+        String userId = qrCodeReq.getUserId();
+        Validator.assertNotBlank(userId, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
+        AcUser user = acUserService.getByCustomerNumber(userId);
+        Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
+        // 扫码token使用后销毁
+        tokenService.removeToken(qrToken);
+        return login(user);
     }
 
     @Override

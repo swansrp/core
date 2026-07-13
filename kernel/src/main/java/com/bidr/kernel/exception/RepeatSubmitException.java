@@ -1,4 +1,4 @@
-package com.bidr.platform.redis.aop.redisson;
+package com.bidr.kernel.exception;
 
 /**
  * 防重复提交异常

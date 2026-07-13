@@ -5,6 +5,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.constant.err.ErrCodeType;
 import com.bidr.kernel.event.ServiceExceptionEvent;
 import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.exception.RepeatSubmitException;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -98,6 +99,11 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(ClientAbortException.class)
     public void handleClientAbortException(ClientAbortException e) {
         // 客户端断开连接，不处理
+    }
+    
+    @ExceptionHandler(RepeatSubmitException.class)
+    public void handleRepeatSubmitException(RepeatSubmitException e) {
+        // 防重复提交，不处理
     }
 
     /**
