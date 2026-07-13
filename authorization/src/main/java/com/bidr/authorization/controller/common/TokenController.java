@@ -2,6 +2,7 @@ package com.bidr.authorization.controller.common;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
+import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.authorization.vo.token.TokenReq;
@@ -44,5 +45,13 @@ public class TokenController {
     public String verifyToken(@RequestBody @Validated TokenReq req) {
         boolean res = tokenService.verifyToken(AuthTokenUtil.decode(req.getToken()));
         return StringUtil.convertSwitch(res);
+    }
+
+    @Auth(AuthToken.class)
+    @ApiOperation(value = "获取扫码登录Token", notes = "获取扫码登录用的临时Token，用于生成二维码")
+    @RequestMapping(value = "/qrCode", method = RequestMethod.GET)
+    public TokenRes getQrLoginToken() {
+        String customerNumber = tokenService.getCurrentUserId();
+        return new TokenRes(tokenService.fetchToken(customerNumber));
     }
 }
