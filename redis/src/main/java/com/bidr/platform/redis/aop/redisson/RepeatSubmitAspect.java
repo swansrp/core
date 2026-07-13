@@ -1,5 +1,6 @@
 package com.bidr.platform.redis.aop.redisson;
 
+import com.bidr.kernel.exception.RepeatSubmitException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
