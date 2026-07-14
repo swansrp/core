@@ -1,4 +1,4 @@
-package com.bidr.forge.config.jdbc;
+package com.bidr.kernel.jdbc;
 
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import com.bidr.kernel.mybatis.log.MybatisLogFormatter;
@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
 
 /**
  * Title: JdbcConnectService
- * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
+ * Description: 通用JDBC连接服务，提供数据源切换、命名参数查询、更新等能力
+ * Copyright: Copyright (c) 2025 Company: Bidr Ltd.
  *
  * @author Sharp
  * @since 2025/9/19 11:12

@@ -1,6 +1,6 @@
 package com.bidr.forge.engine.driver.base;
 
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.engine.DriverCapability;
 import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.engine.builder.SqlBuilder;

@@ -1,7 +1,7 @@
 package com.bidr.forge.service.martix;
 
 import com.bidr.admin.service.common.BasePortalService;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.SysMatrix;
 import com.bidr.forge.dao.entity.SysMatrixColumn;

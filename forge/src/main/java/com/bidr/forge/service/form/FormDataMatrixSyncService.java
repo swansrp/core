@@ -1,7 +1,7 @@
 package com.bidr.forge.service.form;
 
 import com.bidr.authorization.holder.AccountContext;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.FormData;
 import com.bidr.forge.dao.entity.FormSchemaAttribute;
 import com.bidr.forge.dao.entity.SysMatrix;

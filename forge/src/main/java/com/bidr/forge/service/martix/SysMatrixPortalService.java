@@ -5,7 +5,7 @@ import com.bidr.admin.dao.repository.SysPortalColumnService;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.forge.bo.MatrixColumns;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.SysMatrix;
 import com.bidr.forge.dao.entity.SysMatrixChangeLog;

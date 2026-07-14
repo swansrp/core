@@ -2,7 +2,7 @@ package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.forge.bo.DatasetColumns;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;

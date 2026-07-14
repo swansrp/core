@@ -1,7 +1,7 @@
 package com.bidr.forge.engine.driver.base;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.engine.builder.SqlBuilder;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;

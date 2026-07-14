@@ -2,7 +2,7 @@ package com.bidr.forge.service.statistic;
 
 import com.bidr.forge.bo.DatasetColumns;
 import com.bidr.forge.bo.MatrixColumns;
-import com.bidr.forge.config.jdbc.JdbcConnectService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.forge.engine.builder.BaseSqlBuilder;
