@@ -40,6 +40,7 @@ public class DictService {
     private final SysDictService sysDictService;
     private final SysDictTypeService sysDictTypeService;
     private final SysBizDictService sysBizDictService;
+    private final DynamicDictService dynamicDictService;
 
     public List<KeyValueResVO> getNameList(String name) {
         List<SysDictType> sysDictList = sysDictTypeService.getSysDictByTitle(name);
@@ -161,6 +162,9 @@ public class DictService {
 
     @RedisPublish
     public void refresh() {
+        // 先按动态字典配置重新执行SQL，将结果写入 sys_biz_dict
+        dynamicDictService.refreshDynamicDictData();
+        // 再刷新内存缓存
         dictCacheService.refresh();
     }
 }
