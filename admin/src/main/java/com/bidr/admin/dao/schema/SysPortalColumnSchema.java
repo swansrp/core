@@ -20,7 +20,7 @@ public class SysPortalColumnSchema extends BaseMybatisSchema<SysPortalColumn> {
                 "  `db_field` varchar(50) NOT NULL DEFAULT '' COMMENT '数据字段名',\n" +
                 "  `display_name` varchar(50) NOT NULL DEFAULT '' COMMENT '显示名称',\n" +
                 "  `field_type` varchar(2) NOT NULL DEFAULT '0' COMMENT '属性类型PORTAL_FIELD_DICT',\n" +
-                "  `reference` varchar(50) DEFAULT NULL COMMENT '字典或者跳转地址',\n" +
+                "  `reference` varchar(200) DEFAULT NULL COMMENT '字典或者跳转地址',\n" +
                 "  `entity_field` varchar(50) DEFAULT NULL COMMENT '相关实体字段',\n" +
                 "  `entity_condition` json DEFAULT NULL COMMENT '查询实体关系',\n" +
                 "  `display_order` int(11) NOT NULL DEFAULT '0' COMMENT '显示顺序',\n" +
@@ -56,6 +56,8 @@ public class SysPortalColumnSchema extends BaseMybatisSchema<SysPortalColumn> {
                 "  KEY `role_id` (`role_id`),\n" +
                 "  KEY `portal_id` (`portal_id`)\n" +
                 ") COMMENT='系统表表头';");
+
+        setUpgradeDDL(1, "ALTER TABLE `sys_portal_column` MODIFY COLUMN `reference` varchar(200) DEFAULT NULL COMMENT '字典或者跳转地址';");
 
         // 初始化Portal列配置数据 - AcUser(用户信息表)
         setInitData("INSERT INTO `sys_portal_column` (`id`, `role_id`, `portal_id`, `property`, `db_field`, `display_name`, `field_type`, `reference`, `entity_field`, `entity_condition`, `display_order`, `align`, `width`, `fixed`, `tooltip`, `enable`, `show`, `filter_able`, `sort_able`, `edit_able`, `display_group_name`, `detail_show`, `detail_size`, `detail_padding`, `add_show`, `add_size`, `add_padding`, `add_disabled`, `edit_show`, `edit_size`, `edit_padding`, `edit_disabled`, `required`, `min`, `max`, `default_value`) VALUES " +
