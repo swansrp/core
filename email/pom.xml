@@ -33,8 +33,8 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20260715144701-52</kernel.version>
-                <platform.version>20260715144701-52</platform.version>
+                <kernel.version>20260716134555-53</kernel.version>
+                <platform.version>20260716134555-53</platform.version>
             </properties>
         </profile>
     </profiles>
