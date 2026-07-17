@@ -136,15 +136,47 @@ public class DynamicDictService {
 
     /**
      * 构建 SQL 查询语句
+     * <p>
+     * Doris 对 SELECT DISTINCT 的 ORDER BY 有严格限制：ORDER BY 的列必须出现在 SELECT 列表中。
+     * 如果 ORDER BY 列不在 valueColumn / labelColumn 中，则通过子查询包装，
+     * 将排序列加入内层 DISTINCT 的 SELECT 列表，外层只投影 value 和 label。
      */
     private String buildQuerySQL(DynamicDictReq req) {
         String valueColumn = req.getValueColumn();
         String labelColumn = req.getLabelColumn();
 
+        // 解析 ORDER BY：提取列名和排序方向
+        String orderByColumnOnly = null;
+        String orderByFull = null;
+        if (FuncUtil.isNotEmpty(req.getOrderBy())) {
+            orderByFull = req.getOrderBy().trim();
+            if (!ORDER_BY_PATTERN.matcher(orderByFull).matches()) {
+                throw new RuntimeException("排序参数格式不合法: " + orderByFull);
+            }
+            String[] parts = orderByFull.split("\\s+");
+            orderByColumnOnly = parts[0];
+        }
+
+        // 判断是否需要子查询：当 orderBy 列不在 SELECT DISTINCT 的列中时，需要子查询
+        boolean needSubquery = orderByColumnOnly != null
+                && !orderByColumnOnly.equals(valueColumn)
+                && !orderByColumnOnly.equals(labelColumn);
+
         StringBuilder sql = new StringBuilder();
+
+        // 子查询包装
+        if (needSubquery) {
+            sql.append("SELECT `value`, `label` FROM (");
+        }
+
         sql.append("SELECT DISTINCT ");
         sql.append("`").append(valueColumn).append("` AS `value`, ");
         sql.append("`").append(labelColumn).append("` AS `label`");
+
+        // 当需要子查询时，将排序列也加入 DISTINCT 的 SELECT 列表
+        if (needSubquery) {
+            sql.append(", ").append("`").append(orderByColumnOnly).append("`");
+        }
 
         // FROM
         String qualifiedTable = buildQualifiedTable(req.getDatabase(), req.getTableName());
@@ -175,13 +207,14 @@ public class DynamicDictService {
             sql.append(" WHERE ").append(String.join(" AND ", whereClauses));
         }
 
+        // 关闭子查询
+        if (needSubquery) {
+            sql.append(") t");
+        }
+
         // ORDER BY
-        if (FuncUtil.isNotEmpty(req.getOrderBy())) {
-            String orderBy = req.getOrderBy().trim();
-            if (!ORDER_BY_PATTERN.matcher(orderBy).matches()) {
-                throw new RuntimeException("排序参数格式不合法: " + orderBy);
-            }
-            sql.append(" ORDER BY ").append(orderBy);
+        if (orderByFull != null) {
+            sql.append(" ORDER BY ").append(orderByFull);
         } else {
             sql.append(" ORDER BY `").append(valueColumn).append("` ASC");
         }
