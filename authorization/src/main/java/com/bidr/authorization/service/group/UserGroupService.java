@@ -11,6 +11,7 @@ import com.bidr.authorization.vo.group.GroupRes;
 import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +76,29 @@ public class UserGroupService {
     public List<GroupTypeRes> getGroupType(String name) {
         List<AcGroupType> groupTypes = acGroupTypeService.getGroupTypeByName(name);
         return Resp.convert(groupTypes, GroupTypeRes.class);
+    }
+
+    /**
+     * 新增用户组类型
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void addGroupType(AcGroupType req) {
+        Validator.assertTrue(!acGroupTypeService.existedById(req.getId()),
+                ErrCodeSys.PA_DATA_HAS_EXIST, "用户组类型");
+        acGroupTypeService.insert(req);
+    }
+
+    /**
+     * 删除用户组类型
+     * <p>
+     * 校验：该类型下不存在任何用户组时才允许删除，避免产生孤儿用户组数据
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteGroupType(String id) {
+        long groupCount = acGroupService.countGroupByType(id);
+        Validator.assertTrue(groupCount == 0, ErrCodeSys.SYS_ERR_MSG,
+                "该类型下存在 " + groupCount + " 个用户组，无法删除");
+        acGroupTypeService.deleteById(id);
     }
 
     public void deleteGroup(String id) {

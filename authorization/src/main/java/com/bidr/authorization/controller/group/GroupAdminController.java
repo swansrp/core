@@ -2,6 +2,7 @@ package com.bidr.authorization.controller.group;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcGroup;
+import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.vo.group.GroupRes;
 import com.bidr.authorization.vo.group.GroupTypeRes;
@@ -38,6 +39,20 @@ public class GroupAdminController extends BaseAdminTreeController<AcGroup, Group
     @RequestMapping(value = "/type", method = RequestMethod.GET)
     public List<GroupTypeRes> getGroupType(String name) {
         return userGroupService.getGroupType(name);
+    }
+
+    @ApiOperation(value = "新增用户组类型")
+    @RequestMapping(value = "/type/add", method = RequestMethod.POST)
+    public void addGroupType(@RequestBody AcGroupType req) {
+        userGroupService.addGroupType(req);
+        Resp.notice("新增用户组类型成功");
+    }
+
+    @ApiOperation(value = "删除用户组类型")
+    @RequestMapping(value = "/type/delete", method = RequestMethod.POST)
+    public void deleteGroupType(@RequestBody IdReqVO vo) {
+        userGroupService.deleteGroupType(String.valueOf(vo.getId()));
+        Resp.notice("删除用户组类型成功");
     }
 
 

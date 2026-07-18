@@ -40,8 +40,11 @@ public class AcGroupManager implements CommandLineRunner {
                 if (Enum.class.isAssignableFrom(clazz) && Group.class.isAssignableFrom(clazz)) {
                     for (Group enumItem : clazz.getEnumConstants()) {
                         AcGroupType item = buildAcGroupType(enumItem);
-                        acGroupTypeService.deleteById(item);
-                        acGroupTypeService.insert(item);
+                        // 增量插入：仅当该 groupType 不存在时才创建，
+                        // 已存在的（含前端动态创建的）保持不动，避免重启时被清空
+                        if (!acGroupTypeService.existedById(item.getId())) {
+                            acGroupTypeService.insert(item);
+                        }
                     }
                 }
             }
