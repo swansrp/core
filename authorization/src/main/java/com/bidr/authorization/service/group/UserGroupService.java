@@ -60,7 +60,9 @@ public class UserGroupService {
     }
 
     public List<GroupRes> getList(String groupType) {
-        List<AcGroup> groups = acGroupService.getGroupByType(groupType);
+        List<AcGroup> groups = (groupType == null || groupType.isEmpty())
+                ? acGroupService.getAllGroups()
+                : acGroupService.getGroupByType(groupType);
         return Resp.convert(groups, GroupRes.class);
     }
 
