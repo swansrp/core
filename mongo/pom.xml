@@ -34,7 +34,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <kernel.version>20260720174754-56</kernel.version>
+                <kernel.version>20260720201522-57</kernel.version>
             </properties>
         </profile>
     </profiles>
