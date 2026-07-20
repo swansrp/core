@@ -41,4 +41,10 @@ public class AcGroupService extends BaseSqlRepo<AcGroupDao, AcGroup> {
         wrapper.eq(AcGroup::getType, type).isNull(AcGroup::getPid);
         return super.selectOne(wrapper);
     }
+
+    public List<AcGroup> getAllGroups() {
+        LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper()
+                .orderByAsc(AcGroup::getDisplayOrder);
+        return super.select(wrapper);
+    }
 }
