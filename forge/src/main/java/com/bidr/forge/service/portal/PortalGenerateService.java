@@ -314,6 +314,18 @@ public class PortalGenerateService {
      * 为Dataset字段构建PortalColumn配置
      */
     private List<SysPortalColumn> buildPortalColumnsForDataset(Long portalId, List<SysDatasetColumn> datasetColumns) {
+        return buildPortalColumnsForDataset(portalId, datasetColumns, null);
+    }
+
+    /**
+     * 构建Dataset的Portal字段配置
+     *
+     * @param portalId         Portal ID
+     * @param datasetColumns   Dataset字段列表
+     * @param existingColumnMap 当前Portal已有的列配置（按property索引），为null时全部走全库统计
+     */
+    private List<SysPortalColumn> buildPortalColumnsForDataset(Long portalId, List<SysDatasetColumn> datasetColumns,
+                                                               Map<String, SysPortalColumn> existingColumnMap) {
         List<SysPortalColumn> portalColumns = new ArrayList<>();
         int displayOrder = 0;
 
@@ -322,10 +334,6 @@ public class PortalGenerateService {
             if (CommonConst.NO.equals(datasetColumn.getIsVisible())) {
                 continue;
             }
-
-            SysPortalColumn portalColumn = new SysPortalColumn();
-            portalColumn.setRoleId(PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
-            portalColumn.setPortalId(portalId);
 
             // 使用columnAlias作为property
             String columnAlias = datasetColumn.getColumnAlias();
@@ -339,10 +347,27 @@ public class PortalGenerateService {
             // 2. 如果无下划线，首字母小写，保留后续大小写 (TodayTime -> todayTime, projectLeadDept -> projectLeadDept)
             String property = StringUtil.firstLowerCamelCase(columnAlias);
 
+            // 如果当前Portal已有该字段配置，直接复用（保留用户手动调整），仅更新displayOrder
+            if (existingColumnMap != null && existingColumnMap.containsKey(property)) {
+                SysPortalColumn existing = existingColumnMap.get(property);
+                existing.setId(null);
+                existing.setPortalId(portalId);
+                existing.setRoleId(PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
+                existing.setDbField(datasetColumn.getColumnAlias());
+                existing.setDisplayOrder(displayOrder++);
+                portalColumns.add(existing);
+                continue;
+            }
+
+            // 新字段：走全库统计逻辑
+            SysPortalColumn portalColumn = new SysPortalColumn();
+            portalColumn.setRoleId(PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
+            portalColumn.setPortalId(portalId);
+
             // 查询已有的PortalColumn配置，用于统计最频繁的字段值
-            List<SysPortalColumn> existingColumns = sysPortalColumnService.lambdaQuery().eq(SysPortalColumn::getProperty, property).list();
+            List<SysPortalColumn> globalColumns = sysPortalColumnService.lambdaQuery().eq(SysPortalColumn::getProperty, property).list();
             // 预计算所有字段的最高频率值
-            ColumnDefaults defaults = buildColumnDefaults(existingColumns);
+            ColumnDefaults defaults = buildColumnDefaults(globalColumns);
 
             portalColumn.setProperty(property);
             portalColumn.setDbField(datasetColumn.getColumnAlias());
@@ -610,6 +635,7 @@ public class PortalGenerateService {
     /**
      * 刷新Dataset对应的Portal配置
      * 根据Dataset的最新字段配置重新生成Portal字段
+     * 原则：当前Portal已有的同名字段配置直接保留，仅新增字段走全库统计
      *
      * @param portalName Portal名称
      * @param roleId     角色ID
@@ -643,13 +669,23 @@ public class PortalGenerateService {
         List<SysDatasetColumn> columns = sysDatasetColumnService.getByDatasetId(datasetId);
         Validator.assertTrue(FuncUtil.isNotEmpty(columns), ErrCodeSys.SYS_ERR_MSG, "Dataset字段配置为空");
 
+        // 刷新前，先查出当前Portal已有的列配置，按property建立索引
+        List<SysPortalColumn> currentColumns = sysPortalColumnService.getPropertyListByPortalId(portal.getId(), roleId);
+        Map<String, SysPortalColumn> existingColumnMap = new HashMap<>();
+        if (FuncUtil.isNotEmpty(currentColumns)) {
+            for (SysPortalColumn col : currentColumns) {
+                existingColumnMap.put(col.getProperty(), col);
+            }
+        }
+
         // 删除旧的Portal字段配置
         sysPortalColumnService.deleteByPortalId(portal.getId());
 
-        // 重新创建Portal字段配置
-        List<SysPortalColumn> portalColumns = buildPortalColumnsForDataset(portal.getId(), columns);
+        // 重新创建Portal字段配置（已有配置直接保留，新字段走全库统计）
+        List<SysPortalColumn> portalColumns = buildPortalColumnsForDataset(portal.getId(), columns, existingColumnMap);
         sysPortalColumnService.insert(portalColumns);
 
-        log.info("成功刷新Portal[{}]的Dataset配置，Dataset ID: {}", portalName, datasetId);
+        log.info("成功刷新Portal[{}]的Dataset配置，Dataset ID: {}，保留已有配置: {}个，新增: {}个",
+                portalName, datasetId, existingColumnMap.size(), portalColumns.size() - existingColumnMap.size());
     }
 }
