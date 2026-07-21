@@ -86,8 +86,8 @@ public class SystemDictController {
 
     @ApiOperation("获取动态字典配置列表")
     @GetMapping("/dynamic/config")
-    public List<SysDynamicDictConfig> getDynamicDictConfigList() {
-        return dynamicDictService.getConfigList();
+    public List<SysDynamicDictConfig> getDynamicDictConfigList(@RequestParam(required = false) String keyword) {
+        return dynamicDictService.getConfigList(keyword);
     }
 
     @ApiOperation("删除动态字典配置")

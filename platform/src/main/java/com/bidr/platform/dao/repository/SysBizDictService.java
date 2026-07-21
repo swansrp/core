@@ -74,13 +74,19 @@ public class SysBizDictService extends BaseSqlRepo<SysBizDictDao, SysBizDict> {
 
     /**
      * 获取所有树形字典的dictCode列表（parent_dict_code == dict_code 的去重集合）
+     *
+     * @param keyword 模糊搜索关键字（匹配dictName或dictCode），可为null
      */
-    public List<SysBizDict> getTreeDictCodes() {
+    public List<SysBizDict> getTreeDictCodes(String keyword) {
         LambdaQueryWrapper<SysBizDict> wrapper = super.getQueryWrapper();
         wrapper.select(SysBizDict::getDictCode, SysBizDict::getDictName);
         wrapper.isNull(SysBizDict::getBizId);
         wrapper.eq(SysBizDict::getValid, CommonConst.YES);
         wrapper.apply("parent_dict_code = dict_code");
+        wrapper.and(FuncUtil.isNotEmpty(keyword), w -> w
+                .like(SysBizDict::getDictName, keyword)
+                .or()
+                .like(SysBizDict::getDictCode, keyword));
         wrapper.groupBy(SysBizDict::getDictCode, SysBizDict::getDictName);
         return super.list(wrapper);
     }

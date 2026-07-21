@@ -367,9 +367,11 @@ public class DynamicDictService {
 
     /**
      * 获取所有动态字典配置列表
+     *
+     * @param keyword 模糊搜索关键字（匹配dictName或dictCode），可为null
      */
-    public List<SysDynamicDictConfig> getConfigList() {
-        return configService.getAllValidConfigs();
+    public List<SysDynamicDictConfig> getConfigList(String keyword) {
+        return configService.getAllValidConfigs(keyword);
     }
 
     /**
@@ -402,7 +404,7 @@ public class DynamicDictService {
      * 再调用 dictCacheService.refresh() 刷新内存缓存。
      */
     public void refreshDynamicDictData() {
-        List<SysDynamicDictConfig> configs = configService.getAllValidConfigs();
+        List<SysDynamicDictConfig> configs = configService.getAllValidConfigs(null);
         if (FuncUtil.isEmpty(configs)) {
             return;
         }

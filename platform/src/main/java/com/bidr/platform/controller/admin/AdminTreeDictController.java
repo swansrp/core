@@ -58,8 +58,8 @@ public class AdminTreeDictController {
 
     @ApiOperation("获取所有业务树形字典列表")
     @GetMapping("/biz/list")
-    public List<DictRes> getBizTreeDictList() {
-        return bizDictTreeCacheService.getTreeDictList();
+    public List<DictRes> getBizTreeDictList(@RequestParam(required = false) String keyword) {
+        return bizDictTreeCacheService.getTreeDictList(keyword);
     }
 
     @ApiOperation("刷新业务树形字典缓存")

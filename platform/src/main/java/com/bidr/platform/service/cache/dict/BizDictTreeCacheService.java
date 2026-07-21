@@ -53,9 +53,11 @@ public class BizDictTreeCacheService {
 
     /**
      * 获取所有树形字典的编码和名称列表
+     *
+     * @param keyword 模糊搜索关键字（匹配dictName或dictCode），可为null
      */
-    public List<DictRes> getTreeDictList() {
-        List<SysBizDict> treeDictCodes = sysBizDictService.getTreeDictCodes();
+    public List<DictRes> getTreeDictList(String keyword) {
+        List<SysBizDict> treeDictCodes = sysBizDictService.getTreeDictCodes(keyword);
         List<DictRes> resList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(treeDictCodes)) {
             for (SysBizDict dict : treeDictCodes) {
@@ -86,7 +88,7 @@ public class BizDictTreeCacheService {
      * 刷新所有树形字典缓存
      */
     public void refreshAll() {
-        List<SysBizDict> treeDictCodes = sysBizDictService.getTreeDictCodes();
+        List<SysBizDict> treeDictCodes = sysBizDictService.getTreeDictCodes(null);
         if (FuncUtil.isNotEmpty(treeDictCodes)) {
             for (SysBizDict dict : treeDictCodes) {
                 try {

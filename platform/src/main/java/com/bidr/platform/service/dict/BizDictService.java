@@ -169,7 +169,10 @@ public class BizDictService {
      */
     public List<BizDictRes> searchByDictName(String dictName) {
         MPJLambdaWrapper<SysBizDict> wrapper = sysBizDictService.getMPJLambdaWrapper();
-        wrapper.like(FuncUtil.isNotEmpty(dictName), SysBizDict::getDictName, dictName);
+        wrapper.and(FuncUtil.isNotEmpty(dictName), w -> w
+                .like(SysBizDict::getDictName, dictName)
+                .or()
+                .like(SysBizDict::getDictCode, dictName));
         wrapper.eq(SysBizDict::getValid, CommonConst.YES);
         wrapper.orderByAsc(SysBizDict::getSort);
         List<SysBizDict> list = sysBizDictService.select(wrapper);
