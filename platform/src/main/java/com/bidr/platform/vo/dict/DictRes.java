@@ -15,4 +15,6 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class DictRes extends KeyValueResVO {
     private String show;
+    private String parentValue;
+    private String parentDictCode;
 }

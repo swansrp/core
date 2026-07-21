@@ -1,25 +1,21 @@
 package com.bidr.platform.controller.admin;
 
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.vo.common.KeyValueResVO;
-import com.bidr.platform.config.portal.AdminPortal;
-import com.bidr.platform.dao.entity.SysDict;
+import com.bidr.platform.bo.tree.TreeDict;
+import com.bidr.platform.service.cache.dict.BizDictTreeCacheService;
 import com.bidr.platform.service.dict.TreeDictService;
+import com.bidr.platform.vo.dict.DictRes;
 import com.bidr.platform.vo.params.QuerySysConfigReq;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
- * Title: AdminDictController
+ * Title: AdminTreeDictController
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
@@ -32,17 +28,38 @@ import java.util.List;
 public class AdminTreeDictController {
 
     private final TreeDictService treeDictService;
+    private final BizDictTreeCacheService bizDictTreeCacheService;
 
-    @ApiOperation("根据字典中文名模糊查询")
+    @ApiOperation("获取所有代码驱动树形字典")
     @RequestMapping(path = {"/all"}, method = {RequestMethod.GET})
     public List<KeyValueResVO> getAllTreeDict() {
         return treeDictService.getAll();
     }
 
-    @ApiOperation("刷新缓存")
+    @ApiOperation("刷新代码驱动树形字典缓存")
     @RequestMapping(path = {"/refresh"}, method = {RequestMethod.POST})
     public void refresh(@RequestBody QuerySysConfigReq req) {
         treeDictService.refresh();
         Resp.notice("系统树形字典修改已生效");
+    }
+
+    // ==================== 业务树形字典（sys_biz_dict 自引用树） ====================
+
+    @ApiOperation("获取业务树形字典（树结构）")
+    @GetMapping("/biz")
+    public List<TreeDict> getBizTreeDict(@RequestParam String dictCode) {
+        return bizDictTreeCacheService.getTreeDict(dictCode);
+    }
+
+    @ApiOperation("获取所有业务树形字典列表")
+    @GetMapping("/biz/list")
+    public List<DictRes> getBizTreeDictList() {
+        return bizDictTreeCacheService.getTreeDictList();
+    }
+
+    @ApiOperation("刷新业务树形字典缓存")
+    @PostMapping("/biz/refresh")
+    public List<TreeDict> refreshBizTreeDict(@RequestParam String dictCode) {
+        return bizDictTreeCacheService.refreshSingle(dictCode);
     }
 }

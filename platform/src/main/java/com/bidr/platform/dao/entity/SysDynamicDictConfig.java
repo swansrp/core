@@ -56,6 +56,14 @@ public class SysDynamicDictConfig {
     @ApiModelProperty(value = "排序方式")
     private String orderBy;
 
+    @TableField(value = "pid_column")
+    @ApiModelProperty(value = "父级ID列名（有值则为树形字典模式）")
+    private String pidColumn;
+
+    @TableField(value = "id_column")
+    @ApiModelProperty(value = "主键列名（树形模式下的ID列，默认取value_column）")
+    private String idColumn;
+
     @TableField(value = "conditions")
     @ApiModelProperty(value = "筛选条件（JSON格式，List<DynamicDictCondition>）")
     private String conditions;

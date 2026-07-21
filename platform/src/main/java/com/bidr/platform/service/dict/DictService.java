@@ -10,6 +10,7 @@ import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.platform.dao.repository.SysBizDictService;
 import com.bidr.platform.dao.repository.SysDictService;
 import com.bidr.platform.dao.repository.SysDictTypeService;
+import com.bidr.platform.service.cache.dict.BizDictTreeCacheService;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.vo.dict.AddDictItemReq;
 import com.bidr.platform.vo.dict.AddDictReq;
@@ -41,6 +42,7 @@ public class DictService {
     private final SysDictTypeService sysDictTypeService;
     private final SysBizDictService sysBizDictService;
     private final DynamicDictService dynamicDictService;
+    private final BizDictTreeCacheService bizDictTreeCacheService;
 
     public List<KeyValueResVO> getNameList(String name) {
         List<SysDictType> sysDictList = sysDictTypeService.getSysDictByTitle(name);
@@ -166,5 +168,7 @@ public class DictService {
         dynamicDictService.refreshDynamicDictData();
         // 再刷新内存缓存
         dictCacheService.refresh();
+        // 刷新树形字典缓存
+        bizDictTreeCacheService.refreshAll();
     }
 }

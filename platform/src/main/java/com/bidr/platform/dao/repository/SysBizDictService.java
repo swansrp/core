@@ -58,5 +58,31 @@ public class SysBizDictService extends BaseSqlRepo<SysBizDictDao, SysBizDict> {
         entity.setDictName(dictName);
         super.update(entity, wrapper);
     }
+
+    /**
+     * 获取树形字典项（parent_dict_code == dict_code 的自引用字典）
+     */
+    public List<SysBizDict> getTreeDictItemsByCode(String dictCode) {
+        LambdaQueryWrapper<SysBizDict> wrapper = super.getQueryWrapper();
+        wrapper.isNull(SysBizDict::getBizId);
+        wrapper.eq(SysBizDict::getDictCode, dictCode);
+        wrapper.eq(SysBizDict::getParentDictCode, dictCode);
+        wrapper.eq(SysBizDict::getValid, CommonConst.YES);
+        wrapper.orderByAsc(SysBizDict::getSort);
+        return super.list(wrapper);
+    }
+
+    /**
+     * 获取所有树形字典的dictCode列表（parent_dict_code == dict_code 的去重集合）
+     */
+    public List<SysBizDict> getTreeDictCodes() {
+        LambdaQueryWrapper<SysBizDict> wrapper = super.getQueryWrapper();
+        wrapper.select(SysBizDict::getDictCode, SysBizDict::getDictName);
+        wrapper.isNull(SysBizDict::getBizId);
+        wrapper.eq(SysBizDict::getValid, CommonConst.YES);
+        wrapper.apply("parent_dict_code = dict_code");
+        wrapper.groupBy(SysBizDict::getDictCode, SysBizDict::getDictName);
+        return super.list(wrapper);
+    }
     // 仅包含业务逻辑方法
 }

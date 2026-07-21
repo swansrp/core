@@ -327,6 +327,8 @@ public class DynamicDictService {
         config.setValueColumn(req.getValueColumn());
         config.setLabelColumn(req.getLabelColumn());
         config.setOrderBy(req.getOrderBy());
+        config.setPidColumn(req.getPidColumn());
+        config.setIdColumn(req.getIdColumn());
 
         // 序列化条件为 JSON
         if (FuncUtil.isNotEmpty(req.getConditions())) {
@@ -396,6 +398,19 @@ public class DynamicDictService {
      * 刷新单个配置：执行SQL → 写入 sys_biz_dict
      */
     private void refreshSingleConfig(SysDynamicDictConfig config) {
+        boolean isTreeMode = FuncUtil.isNotEmpty(config.getPidColumn());
+
+        if (isTreeMode) {
+            refreshTreeConfig(config);
+        } else {
+            refreshFlatConfig(config);
+        }
+    }
+
+    /**
+     * 平铺模式刷新（原有逻辑）
+     */
+    private void refreshFlatConfig(SysDynamicDictConfig config) {
         // 构建 DynamicDictReq
         DynamicDictReq req = new DynamicDictReq();
         req.setDataSource(config.getDataSource());
@@ -440,6 +455,113 @@ public class DynamicDictService {
 
         log.debug("动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(),
                 FuncUtil.isNotEmpty(results) ? results.size() : 0);
+    }
+
+    /**
+     * 树形模式刷新：从源表读取 id/pid/label，写入 sys_biz_dict 并设置 parent_dict_code 自引用
+     */
+    private void refreshTreeConfig(SysDynamicDictConfig config) {
+        String idColumn = FuncUtil.isNotEmpty(config.getIdColumn()) ? config.getIdColumn() : config.getValueColumn();
+        String pidColumn = config.getPidColumn();
+        String labelColumn = config.getLabelColumn();
+
+        // 安全校验
+        validateIdentifier(idColumn, "ID列名");
+        validateIdentifier(pidColumn, "父级ID列名");
+        validateIdentifier(labelColumn, "label列名");
+
+        // 构建树形查询SQL
+        String sql = buildTreeQuerySQL(config, idColumn, pidColumn, labelColumn);
+
+        // 切换数据源
+        boolean needSwitch = FuncUtil.isNotEmpty(config.getDataSource());
+        if (needSwitch) {
+            jdbcConnectService.switchDataSource(config.getDataSource());
+        }
+
+        List<Map<String, Object>> rows;
+        try {
+            rows = jdbcConnectService.query(sql, new HashMap<>());
+        } finally {
+            if (needSwitch) {
+                jdbcConnectService.resetToDefaultDataSource();
+            }
+        }
+
+        // 删除旧的业务字典数据
+        LambdaQueryWrapper<SysBizDict> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysBizDict::getDictCode, config.getDictCode());
+        wrapper.isNull(SysBizDict::getBizId);
+        sysBizDictService.remove(wrapper);
+
+        // 插入新的树形业务字典数据
+        if (FuncUtil.isNotEmpty(rows)) {
+            List<SysBizDict> bizDictList = new ArrayList<>();
+            int sort = 0;
+            for (Map<String, Object> row : rows) {
+                SysBizDict bizDict = new SysBizDict();
+                bizDict.setDictCode(config.getDictCode());
+                bizDict.setDictName(config.getDictName());
+                bizDict.setValue(String.valueOf(row.get("value")));
+                Object labelVal = row.get("label");
+                bizDict.setLabel(labelVal != null ? String.valueOf(labelVal) : "");
+                // 树形自引用：parent_dict_code = dict_code
+                bizDict.setParentDictCode(config.getDictCode());
+                // parent_value = 源表的pid值（根节点pid为null）
+                Object pidVal = row.get("parent_value");
+                bizDict.setParentValue(pidVal != null ? String.valueOf(pidVal) : null);
+                bizDict.setSort(sort++);
+                bizDict.setValid(CommonConst.YES);
+                bizDictList.add(bizDict);
+            }
+            sysBizDictService.saveBatch(bizDictList);
+        }
+
+        log.debug("树形动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(),
+                FuncUtil.isNotEmpty(rows) ? rows.size() : 0);
+    }
+
+    /**
+     * 构建树形查询SQL
+     */
+    private String buildTreeQuerySQL(SysDynamicDictConfig config, String idColumn, String pidColumn, String labelColumn) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ");
+        sql.append("`").append(idColumn).append("` AS `value`, ");
+        sql.append("`").append(labelColumn).append("` AS `label`, ");
+        sql.append("`").append(pidColumn).append("` AS `parent_value`");
+        sql.append(" FROM ").append(buildQualifiedTable(config.getDatabaseName(), config.getTableName()));
+
+        // WHERE 条件
+        List<String> whereClauses = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(config.getConditions())) {
+            List<DynamicDictCondition> conditions = JsonUtil.readJson(
+                    config.getConditions(), List.class, DynamicDictCondition.class);
+            if (FuncUtil.isNotEmpty(conditions)) {
+                for (DynamicDictCondition cond : conditions) {
+                    if (FuncUtil.isEmpty(cond.getColumn())) continue;
+                    validateIdentifier(cond.getColumn(), "条件列名");
+                    String clause = buildConditionClause(cond);
+                    if (clause != null) whereClauses.add(clause);
+                }
+            }
+        }
+        // 过滤 value 为空的记录
+        whereClauses.add("`" + idColumn + "` IS NOT NULL");
+        whereClauses.add("`" + idColumn + "` != ''");
+
+        if (!whereClauses.isEmpty()) {
+            sql.append(" WHERE ").append(String.join(" AND ", whereClauses));
+        }
+
+        // ORDER BY
+        if (FuncUtil.isNotEmpty(config.getOrderBy())) {
+            sql.append(" ORDER BY ").append(config.getOrderBy());
+        } else {
+            sql.append(" ORDER BY `").append(idColumn).append("` ASC");
+        }
+
+        return sql.toString();
     }
 
     // ==================== 工具方法 ====================

@@ -10,6 +10,7 @@ import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.bo.tree.TreeDict;
 import com.bidr.platform.config.aop.RedisPublish;
 import com.bidr.platform.constant.dict.IDynamicTree;
+import com.bidr.platform.service.cache.dict.BizDictTreeCacheService;
 import com.bidr.platform.service.cache.dict.DictCacheProvider;
 import org.apache.commons.collections4.CollectionUtils;
 import org.reflections.Reflections;
@@ -32,6 +33,8 @@ import java.util.*;
 public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
     @Resource
     private WebApplicationContext webApplicationContext;
+    @Resource
+    private BizDictTreeCacheService bizDictTreeCacheService;
     @Value("${my.base-package}")
     private String basePackage;
 
@@ -98,5 +101,16 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
     @RedisPublish
     public void refresh(Class<? extends IDynamicTree> clazz) {
         buildCacheData(getAllCache(), clazz);
+    }
+
+    /**
+     * 统一获取树形字典：先查代码驱动树，没有则 fallback 到 biz 树
+     */
+    public List<TreeDict> getTree(String dictName) {
+        List<TreeDict> result = getCache(dictName);
+        if (result == null || result.isEmpty()) {
+            result = bizDictTreeCacheService.getTreeDict(dictName);
+        }
+        return result;
     }
 }

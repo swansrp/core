@@ -104,6 +104,8 @@ public class DictCacheService implements CommandLineRunner {
                     res.setValue(dict.getValue());
                     res.setLabel(dict.getLabel());
                     res.setShow(CommonConst.YES);
+                    res.setParentValue(dict.getParentValue());
+                    res.setParentDictCode(dict.getParentDictCode());
                     resList.add(res);
                 });
             }

@@ -25,10 +25,9 @@ public class SystemTreeDictController {
     @Resource
     private DictTreeCacheService dictTreeCacheService;
 
-
     @RequestMapping(path = {""}, method = {RequestMethod.GET})
     @ApiOperation(value = "获取树形字典")
     public List<TreeDict> getTree(String dictName) {
-        return dictTreeCacheService.getCache(dictName);
+        return dictTreeCacheService.getTree(dictName);
     }
 }
