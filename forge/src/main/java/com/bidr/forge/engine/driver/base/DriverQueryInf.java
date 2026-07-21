@@ -7,7 +7,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -98,7 +98,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             jdbcConnectService.switchDataSource(dataSource);
         }
         try {
-            Map<String, Object> parameters = new HashMap<>();
+            Map<String, Object> parameters = new LinkedHashMap<>();
             // 优化：一次解析生成 SELECT 和 COUNT
             SqlBuilder.SqlParts sqlParts = builder.buildSqlParts(req, aliasMap, parameters);
 
@@ -143,7 +143,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             jdbcConnectService.switchDataSource(dataSource);
         }
         try {
-            Map<String, Object> parameters = new HashMap<>();
+            Map<String, Object> parameters = new LinkedHashMap<>();
 
             // 不分页查询：复制请求并移除分页参数
             AdvancedQueryReq noPagingReq = new AdvancedQueryReq();
@@ -206,7 +206,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             jdbcConnectService.switchDataSource(dataSource);
         }
         try {
-            Map<String, Object> parameters = new HashMap<>();
+            Map<String, Object> parameters = new LinkedHashMap<>();
             String countSql = builder.buildCount(req, aliasMap, parameters);
             Long result = jdbcConnectService.queryForObject(countSql, parameters, Long.class);
             return result == null ? 0L : result;

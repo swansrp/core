@@ -161,7 +161,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         }
 
         try {
-            Map<String, Object> parameters = new HashMap<>();
+            Map<String, Object> parameters = new LinkedHashMap<>();
             MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
             String insertSql = builder.buildInsert(data, aliasMap, parameters);
             return jdbcConnectService.update(insertSql, parameters);
@@ -245,7 +245,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         try {
             MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
             Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
-            Map<String, Object> parameters = new HashMap<>();
+            Map<String, Object> parameters = new LinkedHashMap<>();
 
             String updateSql = builder.buildUpdate(data, aliasMap, parameters);
             return jdbcConnectService.update(updateSql, parameters);
@@ -275,7 +275,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
         try {
             MatrixSqlBuilder builder = new MatrixSqlBuilder(matrixColumns, matrixColumns.getColumns());
-            Map<String, Object> parameters = new HashMap<>();
+            Map<String, Object> parameters = new LinkedHashMap<>();
 
             String deleteSql = builder.buildDelete(id, parameters);
             return jdbcConnectService.update(deleteSql, parameters);

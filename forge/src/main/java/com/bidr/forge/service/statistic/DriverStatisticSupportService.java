@@ -125,7 +125,7 @@ public class DriverStatisticSupportService {
         String outerSelectSql = String.join(", ", outerSelectParts);
 
         // 2. 构建 FROM 和 WHERE 部分
-        Map<String, Object> parameters = new HashMap<>();
+        Map<String, Object> parameters = new LinkedHashMap<>();
         BaseSqlBuilder builder = ctx.getConditionBuilder();
         // 使用 buildQueryClauses 获取 WHERE/GROUP BY/HAVING，不包含 ORDER BY
         String whereSql = builder.buildQueryClauses(req, aliasMap, parameters, false);
@@ -171,7 +171,7 @@ public class DriverStatisticSupportService {
         String outerSelectSql = String.join(", ", outerSelectParts);
 
         BaseSqlBuilder builder = ctx.getConditionBuilder();
-        Map<String, Object> parameters = new HashMap<>();
+        Map<String, Object> parameters = new LinkedHashMap<>();
 
         // 2. 无条件：直接用 ctx.getFromSql()（保留 Dataset 默认 ORDER BY）
         if (FuncUtil.isEmpty(req.getCondition())) {
@@ -376,7 +376,7 @@ public class DriverStatisticSupportService {
 
         // 2: 构建 WHERE 条件（参数化）
         // 2.1 创建参数 map，交由 buildWhereSql 填充
-        Map<String, Object> parameters = new HashMap<>();
+        Map<String, Object> parameters = new LinkedHashMap<>();
         // 2.2 通过 buildWhereSql 获取 where 子句（不含 WHERE 前缀）
         String where = buildWhereSql(req, ctx, aliasMap, parameters);
 
@@ -477,7 +477,7 @@ public class DriverStatisticSupportService {
         Metric groupMetric = FuncUtil.isNotEmpty(metrics) ? metrics.get(0) : null;
 
         // 2: 构建 WHERE 条件并准备参数容器
-        Map<String, Object> parameters = new HashMap<>();
+        Map<String, Object> parameters = new LinkedHashMap<>();
         String where = buildWhereSql(req, ctx, aliasMap, parameters);
 
         // 3: 组装 SELECT 列（可包含 groupMetric 列 + 多个 case/count 列）

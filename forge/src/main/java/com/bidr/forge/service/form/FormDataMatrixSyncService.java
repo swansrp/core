@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -130,7 +130,7 @@ public class FormDataMatrixSyncService {
      * @param formData          表单数据
      */
     private void doSync(String tableName, String columnName, String dataSource, FormData formData) {
-        Map<String, Object> parameters = new HashMap<>();
+        Map<String, Object> parameters = new LinkedHashMap<>();
         parameters.put("value", formData.getValue());
         parameters.put("historyId", formData.getHistoryId());
         parameters.put("sectionInstanceId", formData.getSectionInstanceId());
