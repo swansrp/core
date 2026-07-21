@@ -46,9 +46,6 @@ public class DynamicDictReq {
     @ApiModelProperty(value = "父级ID列名（有值则为树形字典模式，从源表中读取父子关系）")
     private String pidColumn;
 
-    @ApiModelProperty(value = "主键列名（树形模式下的ID列，默认取valueColumn）")
-    private String idColumn;
-
     @ApiModelProperty(value = "筛选条件（可选，支持=、!=、IS NULL、IS NOT NULL、LIKE等操作符，多个条件之间为AND关系）")
     private List<DynamicDictCondition> conditions;
 }

@@ -134,6 +134,18 @@ public class BizDictService {
         return true;
     }
 
+    /**
+     * 删除整棵树形字典（删除指定dictCode下所有 parent_dict_code=dictCode 的记录）
+     */
+    public void deleteTreeDictByCode(String dictCode) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysBizDict> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(SysBizDict::getDictCode, dictCode);
+        wrapper.eq(SysBizDict::getParentDictCode, dictCode);
+        wrapper.isNull(SysBizDict::getBizId);
+        sysBizDictService.remove(wrapper);
+    }
+
     public BizDictVO getDictByCode(String dictName, String value) {
         return Resp.convert(sysBizDictService.getDictByCode(dictName, value), BizDictVO.class);
     }

@@ -12,7 +12,9 @@ import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.entity.SysDynamicDictConfig;
 import com.bidr.platform.dao.repository.SysBizDictService;
 import com.bidr.platform.dao.repository.SysDynamicDictConfigService;
+import com.bidr.platform.service.cache.dict.BizDictTreeCacheService;
 import com.bidr.platform.vo.dict.DynamicDictCondition;
+import com.bidr.platform.vo.dict.DynamicDictItemVO;
 import com.bidr.platform.vo.dict.DynamicDictReq;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,7 @@ public class DynamicDictService {
     private final JdbcConnectService jdbcConnectService;
     private final SysDynamicDictConfigService configService;
     private final SysBizDictService sysBizDictService;
+    private final BizDictTreeCacheService bizDictTreeCacheService;
 
     /**
      * 合法标识符正则：只允许字母、数字、下划线
@@ -84,7 +87,7 @@ public class DynamicDictService {
      * @param req 动态字典请求
      * @return 字典选项列表（value-label 键值对）
      */
-    public List<KeyValueResVO> generateDict(DynamicDictReq req) {
+    public List<DynamicDictItemVO> generateDict(DynamicDictReq req) {
         // 参数校验
         Validator.assertNotBlank(req.getTableName(), ErrCodeSys.PA_PARAM_NULL, "表名");
         Validator.assertNotBlank(req.getValueColumn(), ErrCodeSys.PA_PARAM_NULL, "value字段名");
@@ -94,6 +97,9 @@ public class DynamicDictService {
         validateTableName(req.getTableName());
         validateIdentifier(req.getValueColumn(), "value字段名");
         validateIdentifier(req.getLabelColumn(), "label字段名");
+        if (FuncUtil.isNotEmpty(req.getPidColumn())) {
+            validateIdentifier(req.getPidColumn(), "父ID字段名");
+        }
 
         String database = req.getDatabase();
         if (FuncUtil.isNotEmpty(database)) {
@@ -117,13 +123,18 @@ public class DynamicDictService {
             // 执行查询
             List<Map<String, Object>> rows = jdbcConnectService.query(sql, new HashMap<>());
 
-            // 转换为 KeyValueResVO 列表
+            // 转换为 DynamicDictItemVO 列表
+            boolean hasPid = FuncUtil.isNotEmpty(req.getPidColumn());
             return rows.stream()
                     .map(row -> {
-                        KeyValueResVO vo = new KeyValueResVO();
+                        DynamicDictItemVO vo = new DynamicDictItemVO();
                         vo.setValue(String.valueOf(row.get("value")));
                         Object labelVal = row.get("label");
                         vo.setLabel(labelVal != null ? String.valueOf(labelVal) : "");
+                        if (hasPid) {
+                            Object pidVal = row.get("pid");
+                            vo.setPid(pidVal != null ? String.valueOf(pidVal) : null);
+                        }
                         return vo;
                     })
                     .collect(Collectors.toList());
@@ -144,6 +155,8 @@ public class DynamicDictService {
     private String buildQuerySQL(DynamicDictReq req) {
         String valueColumn = req.getValueColumn();
         String labelColumn = req.getLabelColumn();
+        String pidColumn = req.getPidColumn();
+        boolean hasPid = FuncUtil.isNotEmpty(pidColumn);
 
         // 解析 ORDER BY：提取列名和排序方向
         String orderByColumnOnly = null;
@@ -160,18 +173,28 @@ public class DynamicDictService {
         // 判断是否需要子查询：当 orderBy 列不在 SELECT DISTINCT 的列中时，需要子查询
         boolean needSubquery = orderByColumnOnly != null
                 && !orderByColumnOnly.equals(valueColumn)
-                && !orderByColumnOnly.equals(labelColumn);
+                && !orderByColumnOnly.equals(labelColumn)
+                && !(hasPid && orderByColumnOnly.equals(pidColumn));
 
         StringBuilder sql = new StringBuilder();
 
         // 子查询包装
         if (needSubquery) {
-            sql.append("SELECT `value`, `label` FROM (");
+            sql.append("SELECT `value`, `label`");
+            if (hasPid) {
+                sql.append(", `pid`");
+            }
+            sql.append(" FROM (");
         }
 
         sql.append("SELECT DISTINCT ");
         sql.append("`").append(valueColumn).append("` AS `value`, ");
         sql.append("`").append(labelColumn).append("` AS `label`");
+
+        // 树形模式：加上 pid 列
+        if (hasPid) {
+            sql.append(", ").append("`").append(pidColumn).append("` AS `pid`");
+        }
 
         // 当需要子查询时，将排序列也加入 DISTINCT 的 SELECT 列表
         if (needSubquery) {
@@ -328,7 +351,6 @@ public class DynamicDictService {
         config.setLabelColumn(req.getLabelColumn());
         config.setOrderBy(req.getOrderBy());
         config.setPidColumn(req.getPidColumn());
-        config.setIdColumn(req.getIdColumn());
 
         // 序列化条件为 JSON
         if (FuncUtil.isNotEmpty(req.getConditions())) {
@@ -428,7 +450,7 @@ public class DynamicDictService {
         }
 
         // 执行查询
-        List<KeyValueResVO> results = generateDict(req);
+        List<DynamicDictItemVO> results = generateDict(req);
 
         // 删除旧的业务字典数据
         LambdaQueryWrapper<SysBizDict> wrapper = new LambdaQueryWrapper<>();
@@ -440,7 +462,7 @@ public class DynamicDictService {
         if (FuncUtil.isNotEmpty(results)) {
             List<SysBizDict> bizDictList = new ArrayList<>();
             int sort = 0;
-            for (KeyValueResVO item : results) {
+            for (DynamicDictItemVO item : results) {
                 SysBizDict bizDict = new SysBizDict();
                 bizDict.setDictCode(config.getDictCode());
                 bizDict.setDictName(config.getDictName());
@@ -461,7 +483,7 @@ public class DynamicDictService {
      * 树形模式刷新：从源表读取 id/pid/label，写入 sys_biz_dict 并设置 parent_dict_code 自引用
      */
     private void refreshTreeConfig(SysDynamicDictConfig config) {
-        String idColumn = FuncUtil.isNotEmpty(config.getIdColumn()) ? config.getIdColumn() : config.getValueColumn();
+        String idColumn = config.getValueColumn();
         String pidColumn = config.getPidColumn();
         String labelColumn = config.getLabelColumn();
 
@@ -519,6 +541,9 @@ public class DynamicDictService {
 
         log.debug("树形动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(),
                 FuncUtil.isNotEmpty(rows) ? rows.size() : 0);
+
+        // 刷新树形字典内存缓存
+        bizDictTreeCacheService.refreshSingle(config.getDictCode());
     }
 
     /**

@@ -32,5 +32,7 @@ public class SysDynamicDictConfigSchema extends BaseMybatisSchema<SysDynamicDict
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
                 "  UNIQUE KEY `uk_dict_code` (`dict_code`) USING BTREE\n" +
                 ") COMMENT='动态字典配置表';");
+        setUpgradeDDL(1, "ALTER TABLE `sys_dynamic_dict_config`\n" +
+                "  ADD COLUMN `pid_column` varchar(100) DEFAULT NULL COMMENT '父级ID列名（有值则为树形字典模式）' AFTER `order_by`;");
     }
 }

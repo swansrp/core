@@ -7,6 +7,7 @@ import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.service.dict.DynamicDictService;
 import com.bidr.platform.vo.dict.DeleteDynamicDictConfigReq;
+import com.bidr.platform.vo.dict.DynamicDictItemVO;
 import com.bidr.platform.vo.dict.DynamicDictReq;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.platform.vo.dict.DictRes;
@@ -72,7 +73,7 @@ public class SystemDictController {
      */
     @ApiOperation("动态生成字典选项（预览查询）")
     @PostMapping("/dynamic")
-    public List<KeyValueResVO> getDynamicDict(@RequestBody DynamicDictReq req) {
+    public List<DynamicDictItemVO> getDynamicDict(@RequestBody DynamicDictReq req) {
         return dynamicDictService.generateDict(req);
     }
 

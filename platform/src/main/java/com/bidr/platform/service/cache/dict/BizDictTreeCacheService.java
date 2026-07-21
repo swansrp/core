@@ -116,7 +116,7 @@ public class BizDictTreeCacheService {
         // 转换为 TreeDict 节点
         List<TreeDict> allNodes = items.stream().map(item -> {
             TreeDict node = new TreeDict();
-            node.setId(item.getValue());
+            node.setId(item.getId());
             node.setKey(item.getValue());
             node.setValue(item.getValue());
             node.setLabel(item.getLabel());
