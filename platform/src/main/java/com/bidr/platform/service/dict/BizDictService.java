@@ -12,6 +12,7 @@ import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.repository.SysBizDictService;
 import com.bidr.platform.vo.dict.BizDictRes;
 import com.bidr.platform.vo.dict.BizDictVO;
+import com.bidr.platform.vo.dict.TreeDictMoveReq;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;
@@ -108,6 +109,13 @@ public class BizDictService {
         sysBizDictService.insert(ReflectionUtil.copy(vo, SysBizDict.class));
     }
 
+    /**
+     * 统计树形字典指定父节点下的子节点数量
+     */
+    public int countTreeChildren(String dictCode, String parentValue) {
+        return sysBizDictService.countTreeChildren(dictCode, parentValue);
+    }
+
     public boolean updateDict(BizDictVO vo, String bizId) {
         validateBizId(bizId);
         SysBizDict existing = sysBizDictService.selectById(vo.getId());
@@ -132,6 +140,27 @@ public class BizDictService {
         validateExisting(bizId, existing);
         sysBizDictService.deleteById(id);
         return true;
+    }
+
+    /**
+     * 移动树形字典节点：更新被移动节点的 parentValue，并批量更新目标父节点下所有子节点的 sort
+     */
+    public void moveTreeNode(TreeDictMoveReq req) {
+        // 1. 更新被移动节点的 parentValue
+        SysBizDict moved = sysBizDictService.selectById(req.getMovedId());
+        Validator.assertNotNull(moved, ErrCodeSys.PA_DATA_NOT_EXIST, "字典");
+        moved.setParentValue(req.getParentValue());
+        sysBizDictService.updateById(moved);
+
+        // 2. 批量更新同级节点的 sort
+        if (FuncUtil.isNotEmpty(req.getSiblings())) {
+            for (TreeDictMoveReq.NodeSort item : req.getSiblings()) {
+                SysBizDict entity = new SysBizDict();
+                entity.setId(item.getId());
+                entity.setSort(item.getSort());
+                sysBizDictService.updateById(entity);
+            }
+        }
     }
 
     /**

@@ -90,5 +90,21 @@ public class SysBizDictService extends BaseSqlRepo<SysBizDictDao, SysBizDict> {
         wrapper.groupBy(SysBizDict::getDictCode, SysBizDict::getDictName);
         return super.list(wrapper);
     }
+    /**
+     * 统计树形字典指定父节点下的子节点数量
+     */
+    public int countTreeChildren(String dictCode, String parentValue) {
+        LambdaQueryWrapper<SysBizDict> wrapper = super.getQueryWrapper();
+        wrapper.isNull(SysBizDict::getBizId);
+        wrapper.eq(SysBizDict::getDictCode, dictCode);
+        wrapper.eq(SysBizDict::getParentDictCode, dictCode);
+        if (parentValue == null) {
+            wrapper.isNull(SysBizDict::getParentValue);
+        } else {
+            wrapper.eq(SysBizDict::getParentValue, parentValue);
+        }
+        wrapper.eq(SysBizDict::getValid, CommonConst.YES);
+        return (int) super.count(wrapper);
+    }
     // 仅包含业务逻辑方法
 }
