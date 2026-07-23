@@ -175,6 +175,17 @@ public class BizDictService {
         sysBizDictService.remove(wrapper);
     }
 
+    /**
+     * 删除整个业务字典（删除指定dictCode下所有 bizId=null 的记录）
+     */
+    public void deleteBizDictByCode(String dictCode) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysBizDict> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(SysBizDict::getDictCode, dictCode);
+        wrapper.isNull(SysBizDict::getBizId);
+        sysBizDictService.remove(wrapper);
+    }
+
     public BizDictVO getDictByCode(String dictName, String value) {
         return Resp.convert(sysBizDictService.getDictByCode(dictName, value), BizDictVO.class);
     }

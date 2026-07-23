@@ -1,5 +1,6 @@
 package com.bidr.platform.redis.aop.redisson;
 
+import com.bidr.kernel.exception.NoticeException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
@@ -64,6 +65,8 @@ public class RedissonLockAspect {
             } else {
                 log.info("获取 {} 锁失败", syncKey);
             }
+        } catch (NoticeException e) {
+            throw e;
         } catch (Exception e) {
             log.error("", e);
             throw e;

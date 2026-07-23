@@ -43,4 +43,16 @@ public class SysDynamicDictConfigService extends BaseSqlRepo<SysDynamicDictConfi
         wrapper.eq(SysDynamicDictConfig::getValid, CommonConst.YES);
         return super.getOne(wrapper);
     }
+
+    /**
+     * 根据字典编码获取配置（包含已软删除的记录）
+     * <p>
+     * 用于 saveOrUpdate 查重：dict_code 有唯一键 uk_dict_code，若仅查 valid=1 会遗漏软删除记录，
+     * 导致新增时撞唯一键。此方法不过滤 valid，确保能复用软删除记录。
+     */
+    public SysDynamicDictConfig getByDictCodeIncludeInvalid(String dictCode) {
+        LambdaQueryWrapper<SysDynamicDictConfig> wrapper = super.getQueryWrapper();
+        wrapper.eq(SysDynamicDictConfig::getDictCode, dictCode);
+        return super.getOne(wrapper);
+    }
 }

@@ -332,16 +332,17 @@ public class DynamicDictService {
         validateIdentifier(req.getValueColumn(), "value字段名");
         validateIdentifier(req.getLabelColumn(), "label字段名");
 
-        // 查找是否已存在同 dictCode 的配置
-        SysDynamicDictConfig existing = configService.getByDictCode(req.getDictCode());
+        // 查找是否已存在同 dictCode 的配置（包含软删除记录，避免撞唯一键 uk_dict_code）
+        SysDynamicDictConfig existing = configService.getByDictCodeIncludeInvalid(req.getDictCode());
         SysDynamicDictConfig config;
         if (existing != null) {
+            // 已存在（含软删除）→ 复用该记录，下方统一置 valid=1 重新激活
             config = existing;
         } else {
             config = new SysDynamicDictConfig();
-            config.setValid(CommonConst.YES);
         }
 
+        config.setValid(CommonConst.YES);
         config.setDictCode(req.getDictCode());
         config.setDictName(req.getDictName());
         config.setDataSource(req.getDataSource());

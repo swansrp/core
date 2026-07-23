@@ -162,6 +162,14 @@ public class SystemBizDictController {
         Resp.notice("批量删除成功");
     }
 
+    @ApiOperation("删除整个业务字典（含所有字典项）")
+    @PostMapping("/delete/dict")
+    public void deleteBizDict(@RequestParam String dictCode) {
+        Validator.assertNotBlank(dictCode, ErrCodeSys.PA_PARAM_NULL, "字典编码");
+        bizDictService.deleteBizDictByCode(dictCode);
+        Resp.notice("删除字典成功");
+    }
+
     /**
      * 根据字典名称模糊查询字典列表
      *
