@@ -3,6 +3,7 @@ package com.bidr.platform.controller;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.service.dict.BizDictService;
 import com.bidr.platform.vo.dict.BizDictRes;
@@ -87,6 +88,18 @@ public class SystemBizDictController {
     public void updateDictName(@RequestBody KeyValueResVO req) {
         bizDictService.updateDictName(req);
         Resp.notice("变更字典名成功");
+    }
+
+    /**
+     * 批量更新字典项排序
+     *
+     * @param orderList 字典项 id 与排序号列表
+     */
+    @ApiOperation("批量更新字典项排序")
+    @PostMapping("/order/update")
+    public void updateDictItemOrder(@RequestBody List<IdOrderReqVO> orderList) {
+        bizDictService.updateDictItemOrder(orderList);
+        Resp.notice("排序已保存");
     }
 
     /**

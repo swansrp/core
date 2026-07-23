@@ -7,6 +7,7 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.repository.SysBizDictService;
@@ -17,6 +18,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -122,6 +124,29 @@ public class BizDictService {
         validateExisting(bizId, existing);
         sysBizDictService.updateById(ReflectionUtil.copy(vo, SysBizDict.class));
         return true;
+    }
+
+    /**
+     * 批量更新字典项排序（一次事务提交所有 id-sort，保证原子性）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateDictItemOrder(List<IdOrderReqVO> orderList) {
+        if (FuncUtil.isEmpty(orderList)) {
+            return;
+        }
+        List<SysBizDict> entityList = new ArrayList<>();
+        for (IdOrderReqVO req : orderList) {
+            if (req.getId() == null || req.getShowOrder() == null) {
+                continue;
+            }
+            SysBizDict entity = new SysBizDict();
+            entity.setId(Long.parseLong(StringUtil.parse(req.getId())));
+            entity.setSort(req.getShowOrder());
+            entityList.add(entity);
+        }
+        if (FuncUtil.isNotEmpty(entityList)) {
+            sysBizDictService.updateById(entityList);
+        }
     }
 
     private void validateExisting(String bizId, SysBizDict existing) {

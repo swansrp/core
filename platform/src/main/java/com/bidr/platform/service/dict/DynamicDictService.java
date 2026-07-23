@@ -7,7 +7,6 @@ import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.entity.SysDynamicDictConfig;
 import com.bidr.platform.dao.repository.SysBizDictService;
@@ -47,16 +46,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DynamicDictService {
 
-    private final JdbcConnectService jdbcConnectService;
-    private final SysDynamicDictConfigService configService;
-    private final SysBizDictService sysBizDictService;
-    private final BizDictTreeCacheService bizDictTreeCacheService;
-
     /**
      * 合法标识符正则：只允许字母、数字、下划线
      */
     private static final Pattern VALID_IDENTIFIER = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
-
     /**
      * 合法全限定表名正则：允许 "标识符" 或 "标识符.标识符" 格式
      */
@@ -64,20 +57,22 @@ public class DynamicDictService {
             "^[a-zA-Z_][a-zA-Z0-9_]*$" +
                     "|^[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z_][a-zA-Z0-9_]*$"
     );
-
     /**
      * 合法排序方向后缀
      */
     private static final Pattern ORDER_BY_PATTERN = Pattern.compile(
             "^[a-zA-Z_][a-zA-Z0-9_]*(\\s+(ASC|DESC|asc|desc))?$"
     );
-
     /**
      * 支持的操作符
      */
     private static final Set<String> VALID_OPERATORS = new HashSet<>(Arrays.asList(
             "=", "!=", "IS NULL", "IS NOT NULL", "LIKE"
     ));
+    private final JdbcConnectService jdbcConnectService;
+    private final SysDynamicDictConfigService configService;
+    private final SysBizDictService sysBizDictService;
+    private final BizDictTreeCacheService bizDictTreeCacheService;
 
     // ==================== 动态查询 ====================
 
@@ -117,11 +112,12 @@ public class DynamicDictService {
         }
 
         try {
-            // 构建 SQL
-            String sql = buildQuerySQL(req);
+            // 构建 SQL（条件值使用命名参数占位，防止 SQL 注入）
+            Map<String, Object> params = new HashMap<>();
+            String sql = buildQuerySQL(req, params);
 
             // 执行查询
-            List<Map<String, Object>> rows = jdbcConnectService.query(sql, new HashMap<>());
+            List<Map<String, Object>> rows = jdbcConnectService.query(sql, params);
 
             // 转换为 DynamicDictItemVO 列表
             boolean hasPid = FuncUtil.isNotEmpty(req.getPidColumn());
@@ -152,7 +148,7 @@ public class DynamicDictService {
      * 如果 ORDER BY 列不在 valueColumn / labelColumn 中，则通过子查询包装，
      * 将排序列加入内层 DISTINCT 的 SELECT 列表，外层只投影 value 和 label。
      */
-    private String buildQuerySQL(DynamicDictReq req) {
+    private String buildQuerySQL(DynamicDictReq req, Map<String, Object> params) {
         String valueColumn = req.getValueColumn();
         String labelColumn = req.getLabelColumn();
         String pidColumn = req.getPidColumn();
@@ -215,7 +211,7 @@ public class DynamicDictService {
                     continue;
                 }
                 validateIdentifier(cond.getColumn(), "条件列名");
-                String clause = buildConditionClause(cond);
+                String clause = buildConditionClause(cond, params);
                 if (clause != null) {
                     whereClauses.add(clause);
                 }
@@ -248,7 +244,7 @@ public class DynamicDictService {
     /**
      * 构建单个条件的 SQL 片段
      */
-    private String buildConditionClause(DynamicDictCondition cond) {
+    private String buildConditionClause(DynamicDictCondition cond, Map<String, Object> params) {
         String operator = cond.getOperator();
         if (FuncUtil.isEmpty(operator)) {
             // 默认使用 = 操作符
@@ -267,26 +263,47 @@ public class DynamicDictService {
                 return col + " IS NULL";
             case "IS NOT NULL":
                 return col + " IS NOT NULL";
-            case "LIKE":
+            case "LIKE": {
                 Validator.assertNotBlank(cond.getValue(), ErrCodeSys.PA_PARAM_NULL, "LIKE条件值");
-                return col + " LIKE '" + escapeSqlValue(cond.getValue()) + "'";
+                String paramName = nextParamName(params);
+                params.put(paramName, cond.getValue());
+                return col + " LIKE :" + paramName;
+            }
             case "=":
-            case "!=":
+            case "!=": {
                 Validator.assertNotBlank(cond.getValue(), ErrCodeSys.PA_PARAM_NULL, operator + "条件值");
-                return col + " " + operator + " " + formatValue(cond.getValue());
+                String paramName = nextParamName(params);
+                params.put(paramName, convertValue(cond.getValue()));
+                return col + " " + operator + " :" + paramName;
+            }
             default:
                 return null;
         }
     }
 
     /**
-     * 格式化值：数字不加引号，字符串加单引号
+     * 生成唯一的命名参数占位名（基于当前参数数量递增）
      */
-    private String formatValue(String value) {
+    private String nextParamName(Map<String, Object> params) {
+        return "cond" + params.size();
+    }
+
+    /**
+     * 转换条件值类型：数字型字符串转为数值，其余保持字符串，
+     * 由 NamedParameterJdbcTemplate 负责安全绑定，避免 SQL 注入
+     */
+    private Object convertValue(String value) {
         if (isNumeric(value)) {
-            return value;
+            try {
+                if (value.contains(".")) {
+                    return Double.parseDouble(value);
+                }
+                return Long.parseLong(value);
+            } catch (NumberFormatException e) {
+                return value;
+            }
         }
-        return "'" + escapeSqlValue(value) + "'";
+        return value;
     }
 
     /**
@@ -302,13 +319,6 @@ public class DynamicDictService {
         } catch (NumberFormatException e) {
             return false;
         }
-    }
-
-    /**
-     * 转义SQL字符串中的单引号
-     */
-    private String escapeSqlValue(String value) {
-        return value.replace("'", "''");
     }
 
     // ==================== 配置 CRUD ====================
@@ -495,8 +505,9 @@ public class DynamicDictService {
         validateIdentifier(pidColumn, "父级ID列名");
         validateIdentifier(labelColumn, "label列名");
 
-        // 构建树形查询SQL
-        String sql = buildTreeQuerySQL(config, idColumn, pidColumn, labelColumn);
+        // 构建树形查询SQL（条件值使用命名参数占位，防止 SQL 注入）
+        Map<String, Object> params = new HashMap<>();
+        String sql = buildTreeQuerySQL(config, idColumn, pidColumn, labelColumn, params);
 
         // 切换数据源
         boolean needSwitch = FuncUtil.isNotEmpty(config.getDataSource());
@@ -506,7 +517,7 @@ public class DynamicDictService {
 
         List<Map<String, Object>> rows;
         try {
-            rows = jdbcConnectService.query(sql, new HashMap<>());
+            rows = jdbcConnectService.query(sql, params);
         } finally {
             if (needSwitch) {
                 jdbcConnectService.resetToDefaultDataSource();
@@ -552,7 +563,7 @@ public class DynamicDictService {
     /**
      * 构建树形查询SQL
      */
-    private String buildTreeQuerySQL(SysDynamicDictConfig config, String idColumn, String pidColumn, String labelColumn) {
+    private String buildTreeQuerySQL(SysDynamicDictConfig config, String idColumn, String pidColumn, String labelColumn, Map<String, Object> params) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ");
         sql.append("`").append(idColumn).append("` AS `value`, ");
@@ -569,7 +580,7 @@ public class DynamicDictService {
                 for (DynamicDictCondition cond : conditions) {
                     if (FuncUtil.isEmpty(cond.getColumn())) continue;
                     validateIdentifier(cond.getColumn(), "条件列名");
-                    String clause = buildConditionClause(cond);
+                    String clause = buildConditionClause(cond, params);
                     if (clause != null) whereClauses.add(clause);
                 }
             }
