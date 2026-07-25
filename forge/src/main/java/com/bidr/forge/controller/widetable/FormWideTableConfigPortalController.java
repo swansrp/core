@@ -6,6 +6,7 @@ import com.bidr.forge.dao.entity.FormSchemaAttribute;
 import com.bidr.forge.dao.repository.FormSchemaAttributeService;
 import com.bidr.forge.service.widetable.FormWideTableCollector;
 import com.bidr.forge.service.widetable.FormWideTableManager;
+import com.bidr.forge.service.widetable.WideTableCollectAsyncService;
 import com.bidr.forge.vo.widetable.FormWideTableConfigAttrVO;
 import com.bidr.forge.vo.widetable.FormWideTableConfigReq;
 import com.bidr.forge.vo.widetable.FormWideTableConfigVO;
@@ -14,6 +15,7 @@ import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -40,6 +42,7 @@ public class FormWideTableConfigPortalController extends BaseAdminController<For
 
     private final FormWideTableManager formWideTableManager;
     private final FormWideTableCollector formWideTableCollector;
+    private final WideTableCollectAsyncService wideTableCollectAsyncService;
     private final FormSchemaAttributeService formSchemaAttributeService;
     private final JdbcConnectService jdbcConnectService;
 
@@ -108,7 +111,7 @@ public class FormWideTableConfigPortalController extends BaseAdminController<For
     }
 
     /**
-     * 手动触发收集（测试用）
+     * 手动触发收集（增量，仅收集未同步的记录）
      */
     @ApiOperation("手动触发宽表数据收集")
     @PostMapping("/collect/{configId}")
@@ -118,6 +121,37 @@ public class FormWideTableConfigPortalController extends BaseAdminController<For
         result.put("collectedCount", count);
         Resp.notice("收集完成，共同步 " + count + " 条记录");
         return result;
+    }
+
+    /**
+     * 重新收集（全量：清除旧数据后重新收集所有记录）
+     */
+    @ApiOperation("重新收集宽表数据（全量）")
+    @PostMapping("/reCollect/{configId}")
+    public Map<String, Object> reCollect(@PathVariable Long configId) {
+        int count = formWideTableCollector.reCollect(configId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("collectedCount", count);
+        Resp.notice("重新收集完成，共同步 " + count + " 条记录");
+        return result;
+    }
+
+    /**
+     * 异步重新收集（带进度条）
+     */
+    @ApiOperation("异步重新收集宽表数据（带进度）")
+    @PostMapping("/reCollectAsync/{configId}")
+    public void reCollectAsync(@PathVariable Long configId) {
+        wideTableCollectAsyncService.reCollectAsync(configId);
+    }
+
+    /**
+     * 查询收集进度
+     */
+    @ApiOperation("查询宽表收集进度")
+    @GetMapping("/collectProgress")
+    public PortalUploadProgressRes collectProgress() {
+        return wideTableCollectAsyncService.getProgress();
     }
 
     /**

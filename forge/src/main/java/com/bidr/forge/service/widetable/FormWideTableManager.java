@@ -337,41 +337,16 @@ public class FormWideTableManager {
 
     /**
      * 更新物理表列
-     * - draft 状态: DROP + CREATE 重建表（无数据丢失风险）
-     * - active/inactive 状态: ALTER TABLE 增删列（保留已收集数据）
+     * 统一采用 DROP + CREATE 重建策略，配合 reCollect 全量重收集确保列结构与配置一致
      */
     private void updatePhysicalTableColumns(FormWideTableConfig config, List<FormWideTableConfigAttr> newAttrs) {
-        if ("draft".equals(config.getStatus())) {
-            // draft 状态: 重建表
-            try {
-                dropPhysicalTable(config.getTableName());
-                String ddl = generateDDL(config.getTableName(), config.getTitle(), newAttrs);
-                createPhysicalTable(ddl);
-            } catch (Exception e) {
-                log.warn("重建物理表失败: {}", config.getTableName(), e);
-            }
-        } else {
-            // active/inactive 状态: 增量 ALTER TABLE
-            try {
-                String tableName = config.getTableName();
-                
-                // 为每个新字段执行 ADD COLUMN（如果列不存在）
-                for (FormWideTableConfigAttr attr : newAttrs) {
-                    String alterSql = "ALTER TABLE `" + tableName + "` ADD COLUMN `" 
-                            + attr.getColumnName() + "` " + attr.getColumnType() 
-                            + " DEFAULT NULL COMMENT '" + attr.getColumnLabel() + "'";
-                    try {
-                        jdbcConnectService.executeUpdate(alterSql, null);
-                    } catch (Exception e) {
-                        // 列已存在时会有异常，忽略
-                        log.debug("列已存在或添加失败: {}", attr.getColumnName());
-                    }
-                }
-                
-                log.info("物理表增量更新完成: {}，共 {} 个字段", tableName, newAttrs.size());
-            } catch (Exception e) {
-                log.warn("增量更新物理表失败: {}", config.getTableName(), e);
-            }
+        try {
+            dropPhysicalTable(config.getTableName());
+            String ddl = generateDDL(config.getTableName(), config.getTitle(), newAttrs);
+            createPhysicalTable(ddl);
+            log.info("物理表重建完成: {}，共 {} 个动态字段", config.getTableName(), newAttrs.size());
+        } catch (Exception e) {
+            log.warn("重建物理表失败: {}", config.getTableName(), e);
         }
     }
 

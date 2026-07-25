@@ -81,6 +81,38 @@ public class FormWideTableCollector {
     }
 
     /**
+     * 重新收集：清除同步日志和物理表数据后全量重新收集
+     * <p>
+     * 适用于字段配置变更后，需要刷新所有已收集数据的场景。
+     *
+     * @param configId 宽表配置 ID
+     * @return 收集的记录数
+     */
+    public int reCollect(Long configId) {
+        FormWideTableConfig config = formWideTableManager.getConfigById(configId);
+        if (config == null) {
+            log.warn("宽表配置不存在: {}", configId);
+            return 0;
+        }
+
+        // 1. 清除该配置的所有同步日志
+        LambdaQueryWrapper<FormWideTableSyncLog> delLogWrapper = syncLogService.getQueryWrapper();
+        delLogWrapper.eq(FormWideTableSyncLog::getConfigId, configId);
+        syncLogService.delete(delLogWrapper);
+
+        // 2. 清空物理宽表数据
+        if (FuncUtil.isNotEmpty(config.getTableName())) {
+            String truncateSql = "TRUNCATE TABLE `" + config.getTableName() + "`";
+            jdbcConnectService.executeUpdate(truncateSql, null);
+        }
+
+        log.info("宽表重新收集: 已清除同步日志和物理表数据, configId={}", configId);
+
+        // 3. 执行全量收集
+        return collect(configId);
+    }
+
+    /**
      * 收集所有 active 配置
      *
      * @return 总收集记录数
