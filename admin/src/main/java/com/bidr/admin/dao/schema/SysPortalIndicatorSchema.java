@@ -31,5 +31,7 @@ public class SysPortalIndicatorSchema extends BaseMybatisSchema<SysPortalIndicat
                 "  PRIMARY KEY (`id`) USING BTREE,\n" +
                 "  KEY `group_id` (`group_id`)\n" +
                 ") COMMENT='统计指标';");
+
+        setUpgradeDDL(1, "ALTER TABLE `sys_portal_indicator` ADD COLUMN `color` varchar(20) DEFAULT NULL COMMENT '图表颜色' AFTER `item_name`;");
     }
 }

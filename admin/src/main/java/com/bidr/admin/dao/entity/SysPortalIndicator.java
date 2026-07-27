@@ -46,6 +46,13 @@ public class SysPortalIndicator {
     private String itemName;
 
     /**
+     * 图表颜色
+     */
+    @TableField(value = "color")
+    @ApiModelProperty(value = "图表颜色")
+    private String color;
+
+    /**
      * 条件json
      */
     @TableField(value = "`condition`")

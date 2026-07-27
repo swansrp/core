@@ -28,8 +28,10 @@ public class SysPortalIndicatorGroupService extends BaseSqlRepo<SysPortalIndicat
         wrapper.selectAs(SysPortalIndicatorGroup::getPid, IndicatorRes::getPid);
         wrapper.selectAs(SysPortalIndicatorGroup::getDisplayOrder, IndicatorRes::getDisplayOrder);
         wrapper.selectCollection(SysPortalIndicator.class, IndicatorRes::getItems,
-                map -> map.result(SysPortalIndicator::getItemName,
+                map -> map.result(SysPortalIndicator::getId, IndicatorItem::getId)
+                        .result(SysPortalIndicator::getItemName,
                                 IndicatorItem::getTitle).result(SysPortalIndicator::getItemValue, IndicatorItem::getKey)
+                        .result(SysPortalIndicator::getColor, IndicatorItem::getColor)
                         .result(SysPortalIndicator::getCondition,
                                 IndicatorItem::getCondition)
                         .result(SysPortalIndicator::getDynamicColumn, IndicatorItem::getDynamicColumns));

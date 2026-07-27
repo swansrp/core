@@ -31,6 +31,9 @@ public class PortalIndicatorVO extends BaseVO {
     @ApiModelProperty(value = "指标项名称")
     private String itemName;
 
+    @ApiModelProperty(value = "图表颜色")
+    private String color;
+
     @PortalTextAreaField
     @ApiModelProperty(value = "条件json")
     private String condition;

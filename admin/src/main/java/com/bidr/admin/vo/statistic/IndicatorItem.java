@@ -11,8 +11,10 @@ import lombok.Data;
  */
 @Data
 public class IndicatorItem {
+    private Long id;
     private String key;
     private String title;
+    private String color;
     private String condition;
     private String dynamicColumns;
 }

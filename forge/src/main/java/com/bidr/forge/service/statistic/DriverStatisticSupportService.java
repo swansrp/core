@@ -369,6 +369,7 @@ public class DriverStatisticSupportService {
         // 1.1 获取 metricColumn 列表并校验非空
         List<Metric> metricColumns = req.getMetricColumn();
         Validator.assertNotEmpty(metricColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "分类指标");
+        Validator.assertNotEmpty(req.getStatisticColumn(), ErrCodeSys.PA_DATA_NOT_EXIST, "统计字段");
 
         // 1.2 取第一个 metric 作为分组列（当前仅支持一层分组），并校验其 column 字段
         Metric metric = metricColumns.get(0);
@@ -471,6 +472,7 @@ public class DriverStatisticSupportService {
         // 1: 读取并校验自定义条件
         List<MetricCondition> metricConditions = req.getMetricCondition();
         Validator.assertNotEmpty(metricConditions, ErrCodeSys.PA_DATA_NOT_EXIST, "自定义指标");
+        Validator.assertNotEmpty(req.getStatisticColumn(), ErrCodeSys.PA_DATA_NOT_EXIST, "统计字段");
 
         // 1.1: 读取可选的 groupMetric（即 metricColumn 的第一个元素）
         List<Metric> metrics = req.getMetricColumn();
