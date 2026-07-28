@@ -1,6 +1,7 @@
 package com.bidr.platform.service.dict;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.jdbc.JdbcConnectService;
@@ -465,15 +466,9 @@ public class DynamicDictService {
         // 执行查询
         List<DynamicDictItemVO> results = generateDict(req);
 
-        // 删除旧的业务字典数据
-        LambdaQueryWrapper<SysBizDict> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysBizDict::getDictCode, config.getDictCode());
-        wrapper.isNull(SysBizDict::getBizId);
-        sysBizDictService.remove(wrapper);
-
-        // 插入新的业务字典数据
+        // 组装最新字典数据
+        List<SysBizDict> bizDictList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(results)) {
-            List<SysBizDict> bizDictList = new ArrayList<>();
             int sort = 0;
             for (DynamicDictItemVO item : results) {
                 SysBizDict bizDict = new SysBizDict();
@@ -485,11 +480,12 @@ public class DynamicDictService {
                 bizDict.setValid(CommonConst.YES);
                 bizDictList.add(bizDict);
             }
-            sysBizDictService.saveBatch(bizDictList);
         }
 
-        log.debug("动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(),
-                FuncUtil.isNotEmpty(results) ? results.size() : 0);
+        // 与现有数据增量比对同步
+        syncBizDictData(config, bizDictList);
+
+        log.debug("动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(), bizDictList.size());
     }
 
     /**
@@ -524,15 +520,9 @@ public class DynamicDictService {
             }
         }
 
-        // 删除旧的业务字典数据
-        LambdaQueryWrapper<SysBizDict> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysBizDict::getDictCode, config.getDictCode());
-        wrapper.isNull(SysBizDict::getBizId);
-        sysBizDictService.remove(wrapper);
-
-        // 插入新的树形业务字典数据
+        // 组装最新树形字典数据
+        List<SysBizDict> bizDictList = new ArrayList<>();
         if (FuncUtil.isNotEmpty(rows)) {
-            List<SysBizDict> bizDictList = new ArrayList<>();
             int sort = 0;
             for (Map<String, Object> row : rows) {
                 SysBizDict bizDict = new SysBizDict();
@@ -550,14 +540,79 @@ public class DynamicDictService {
                 bizDict.setValid(CommonConst.YES);
                 bizDictList.add(bizDict);
             }
-            sysBizDictService.saveBatch(bizDictList);
         }
 
-        log.debug("树形动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(),
-                FuncUtil.isNotEmpty(rows) ? rows.size() : 0);
+        // 与现有数据增量比对同步
+        syncBizDictData(config, bizDictList);
+
+        log.debug("树形动态字典配置[{}]刷新完成，共{}条数据", config.getDictCode(), bizDictList.size());
 
         // 刷新树形字典内存缓存
         bizDictTreeCacheService.refreshSingle(config.getDictCode());
+    }
+
+    /**
+     * 将最新字典数据与 sys_biz_dict 中现有数据增量比对同步（以 value 为业务键）：
+     * 新增的插入、有变化的更新、已消失的删除，避免全删全插导致 id 变化和查询空窗
+     */
+    private void syncBizDictData(SysDynamicDictConfig config, List<SysBizDict> latestList) {
+        // 查询现有数据
+        LambdaQueryWrapper<SysBizDict> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysBizDict::getDictCode, config.getDictCode());
+        wrapper.isNull(SysBizDict::getBizId);
+        List<SysBizDict> existingList = sysBizDictService.list(wrapper);
+
+        // 现有数据按 value 索引（同 value 的重复记录保留第一条，其余待删除）
+        Map<String, SysBizDict> existingMap = new HashMap<>();
+        List<Long> deleteIds = new ArrayList<>();
+        for (SysBizDict existing : existingList) {
+            if (existingMap.putIfAbsent(existing.getValue(), existing) != null) {
+                deleteIds.add(existing.getId());
+            }
+        }
+
+        // 比对：新增的收集待插入，已存在且有差异的按 id 更新
+        List<SysBizDict> insertList = new ArrayList<>();
+        for (SysBizDict latest : latestList) {
+            SysBizDict existing = existingMap.remove(latest.getValue());
+            if (existing == null) {
+                insertList.add(latest);
+            } else if (isDictItemChanged(existing, latest)) {
+                // 显式 set 各字段，保证 null 值（如树形根节点 parentValue）也能覆盖
+                LambdaUpdateWrapper<SysBizDict> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(SysBizDict::getId, existing.getId());
+                updateWrapper.set(SysBizDict::getDictName, latest.getDictName());
+                updateWrapper.set(SysBizDict::getLabel, latest.getLabel());
+                updateWrapper.set(SysBizDict::getSort, latest.getSort());
+                updateWrapper.set(SysBizDict::getParentDictCode, latest.getParentDictCode());
+                updateWrapper.set(SysBizDict::getParentValue, latest.getParentValue());
+                updateWrapper.set(SysBizDict::getValid, latest.getValid());
+                sysBizDictService.update(updateWrapper);
+            }
+        }
+
+        // 源数据中已不存在的记录删除
+        for (SysBizDict existing : existingMap.values()) {
+            deleteIds.add(existing.getId());
+        }
+        if (FuncUtil.isNotEmpty(deleteIds)) {
+            sysBizDictService.removeBatchByIds(deleteIds);
+        }
+        if (FuncUtil.isNotEmpty(insertList)) {
+            sysBizDictService.saveBatch(insertList);
+        }
+    }
+
+    /**
+     * 判断字典项是否有变化（value 为业务键不参与比对）
+     */
+    private boolean isDictItemChanged(SysBizDict existing, SysBizDict latest) {
+        return !Objects.equals(existing.getDictName(), latest.getDictName())
+                || !Objects.equals(existing.getLabel(), latest.getLabel())
+                || !Objects.equals(existing.getSort(), latest.getSort())
+                || !Objects.equals(existing.getParentDictCode(), latest.getParentDictCode())
+                || !Objects.equals(existing.getParentValue(), latest.getParentValue())
+                || !Objects.equals(existing.getValid(), latest.getValid());
     }
 
     /**
