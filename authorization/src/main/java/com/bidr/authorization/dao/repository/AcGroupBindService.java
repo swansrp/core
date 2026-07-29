@@ -45,6 +45,26 @@ public class AcGroupBindService extends BaseSqlRepo<AcGroupBindMapper, AcGroupBi
     }
 
     /**
+     * 按多个 groupId + bindType 查询去重后的 attachValue 列表
+     *
+     * @param groupIds 用户组id集合
+     * @param bindType 绑定类型
+     * @return 去重后的 attachValue 列表，无数据时返回空列表
+     */
+    public List<String> listAttachValues(Collection<Long> groupIds, String bindType) {
+        if (FuncUtil.isEmpty(groupIds)) {
+            return new ArrayList<>();
+        }
+        return list(getQueryWrapper()
+                .in(AcGroupBind::getGroupId, groupIds)
+                .eq(AcGroupBind::getBindType, bindType))
+                .stream()
+                .map(AcGroupBind::getAttachValue)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 按 groupId + bindType + attachValue 查询单条
      */
     public AcGroupBind getOneBind(Object entityId, Object attachId, String bindType) {
