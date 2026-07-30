@@ -15,6 +15,7 @@ import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.holder.TokenHolder;
+import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.user.CreateUserService;
@@ -29,6 +30,7 @@ import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +55,9 @@ public class LoginServiceImpl implements LoginService {
     private final AcUserRoleMenuService acUserRoleMenuService;
     private final CreateUserService creatUserService;
     private final HttpServletRequest request;
+
+    @Autowired(required = false)
+    private CustomerNumberHandler customerNumberHandler;
 
     @Override
     public LoginRes login(AcUser user) {
@@ -156,17 +161,31 @@ public class LoginServiceImpl implements LoginService {
             if (FuncUtil.isNotEmpty(phoneNumberUser)) {
                 if (!wechatUser.getUserId().equals(phoneNumberUser.getUserId())) {
                     wechatUser = creatUserService.mergeWechatPhoneNumber(wechatId, nickName, phoneNumberUser, avatar);
+                } else {
+                    // 同一用户重复绑定 同样需要刷新customerNumber
+                    fillBindPhoneNumber(wechatUser, phoneNumber);
                 }
             } else {
                 // 有手机号但是没有手机号用户 说明是微信手机号绑定
-                if (FuncUtil.isNotEmpty(phoneNumber)) {
-                    wechatUser.setCustomerNumber(phoneNumber);
-                    wechatUser.setUserName(phoneNumber);
-                    wechatUser.setPhoneNumber(phoneNumber);
-                }
+                fillBindPhoneNumber(wechatUser, phoneNumber);
             }
         }
         return buildLoginRes(wechatUser);
+    }
+
+    private void fillBindPhoneNumber(AcUser wechatUser, String phoneNumber) {
+        if (FuncUtil.isEmpty(phoneNumber)) {
+            return;
+        }
+        wechatUser.setPhoneNumber(phoneNumber);
+        wechatUser.setUserName(phoneNumber);
+        // customerNumber生成规则由项目CustomerNumberHandler决定 未定义时保持序列号不变
+        if (FuncUtil.isNotEmpty(customerNumberHandler)) {
+            String customerNumber = customerNumberHandler.getCustomerNumber(wechatUser);
+            if (FuncUtil.isNotEmpty(customerNumber)) {
+                wechatUser.setCustomerNumber(customerNumber);
+            }
+        }
     }
 
     @Override

@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.util.Map;
 
 /**
  * Title: AccountService
@@ -128,6 +129,21 @@ public class SyncAccountService {
         Validator.assertNotNull(map, ErrCodeSys.PA_DATA_NOT_EXIST, "微信用户");
         map.setPhone(phoneNumber);
         mmOpenidMapService.updateById(map);
-        return loginService.loginOrRegByWechatPhoneNumber(map.getUnionId(), nickName, phoneNumber, map.getAvatar());
+        Map<String, Object> oldTokenValue = tokenService.getTokenValue();
+        LoginRes res = loginService.loginOrRegByWechatPhoneNumber(map.getUnionId(), nickName, phoneNumber, map.getAvatar());
+        transferWechatTokenItems(oldTokenValue);
+        return res;
+    }
+
+    private void transferWechatTokenItems(Map<String, Object> oldTokenValue) {
+        // 登录重签token后 把原会话的微信信息带到新token 避免OPEN_ID丢失导致后续绑定失效
+        Map<String, Object> tokenValue = tokenService.getTokenValue();
+        for (WechatTokenItem item : WechatTokenItem.values()) {
+            Object value = oldTokenValue.get(item.name());
+            if (value != null) {
+                tokenValue.put(item.name(), value);
+            }
+        }
+        tokenService.setTokenValue(tokenValue);
     }
 }
