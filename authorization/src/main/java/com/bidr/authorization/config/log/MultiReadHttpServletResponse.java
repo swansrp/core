@@ -13,7 +13,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
 /**
- * 多次读写BODY用HTTP RESPONSE - 解决流只能读一次问题
+ * 多次读写BODY用HTTP RESPONSE - 解决流只能读一次问题。
+ * 采用 tee 方式：写入时同时写缓存与真实响应，flush 直接透传，
+ * 保证 SSE 等流式响应能实时逐块到达客户端（旧实现提交后 flush 丢弃后续内容）。
  * @author Sharp
  */
 public class MultiReadHttpServletResponse extends HttpServletResponseWrapper {
@@ -63,16 +65,18 @@ public class MultiReadHttpServletResponse extends HttpServletResponseWrapper {
         @Override
         public void write(int b) throws IOException {
             this.outputStream.write(b);
+            this.response.getOutputStream().write(b);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            this.outputStream.write(b, off, len);
+            this.response.getOutputStream().write(b, off, len);
         }
 
         @Override
         public void flush() throws IOException {
-            if (!this.response.isCommitted()) {
-                byte[] body = this.outputStream.toByteArray();
-                ServletOutputStream outputStream = this.response.getOutputStream();
-                outputStream.write(body);
-                outputStream.flush();
-            }
+            this.response.getOutputStream().flush();
         }
     }
 }

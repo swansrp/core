@@ -122,14 +122,25 @@ public class SseStreamingResponseHandler implements StreamingResponseHandler<AiM
     }
 
     /**
-     * 发送单个 SSE 事件，客户端已断开时静默跳过
+     * 发送单个 SSE 事件，客户端已断开时静默跳过。
+     * <p>
+     * 内容含换行时必须逐行拆成多条 {@code data:} 行：SSE 协议中空行表示事件结束、
+     * 无 {@code data:} 前缀的行会被丢弃，直接发送多行文本会导致事件被截断。
+     * 客户端（EventSource / 标准帧解析）会把多条 data 行用 {@code \n} 拼回原文。
+     * </p>
      */
     private void send(String eventName, String data) {
         if (clientGone.get()) {
             return;
         }
         try {
-            emitter.send(SseEmitter.event().name(eventName).data(data == null ? "" : data));
+            SseEmitter.SseEventBuilder event = SseEmitter.event().name(eventName);
+            String content = data == null ? "" : data;
+            // -1 保留末尾空行，确保拼回后与原文一致
+            for (String line : content.split("\n", -1)) {
+                event.data(line);
+            }
+            emitter.send(event);
         } catch (Exception e) {
             // 写入失败通常意味着客户端已断开，置标记停止后续写入
             clientGone.set(true);

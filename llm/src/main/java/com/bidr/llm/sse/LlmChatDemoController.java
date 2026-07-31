@@ -1,5 +1,6 @@
 package com.bidr.llm.sse;
 
+import com.bidr.kernel.config.anno.IgnoreAuth;
 import com.bidr.llm.store.StreamAnswerState;
 import com.bidr.llm.store.StreamAnswerStore;
 import dev.langchain4j.data.message.AiMessage;
@@ -13,13 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
@@ -83,6 +78,7 @@ public class LlmChatDemoController {
      * @param prompt 提示词
      * @return SSE 事件流
      */
+    @IgnoreAuth
     @GetMapping(value = "/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatByGet(@RequestParam("prompt") String prompt) {
         return startChatStream(prompt);
@@ -94,6 +90,7 @@ public class LlmChatDemoController {
      * @param request 聊天请求
      * @return SSE 事件流
      */
+    @IgnoreAuth
     @PostMapping(value = "/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatByPost(@RequestBody ChatRequest request) {
         return startChatStream(request.getPrompt());
@@ -124,6 +121,7 @@ public class LlmChatDemoController {
      * @param request 聊天请求
      * @return streamId
      */
+    @IgnoreAuth
     @PostMapping(value = "/chat/poll/start", produces = MediaType.APPLICATION_JSON_VALUE)
     public String startPollChat(@RequestBody ChatRequest request) {
         String streamId = UUID.randomUUID().toString();
@@ -141,6 +139,7 @@ public class LlmChatDemoController {
      * @param streamId 流标识
      * @return 当前状态快照（content + finish），流不存在/已过期时返回 null
      */
+    @IgnoreAuth
     @GetMapping(value = "/chat/poll/{streamId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public StreamAnswerState pollChat(@PathVariable("streamId") String streamId) {
         return requireStore().getState(streamId);
@@ -156,6 +155,7 @@ public class LlmChatDemoController {
      * @param request 回调请求（streamId 放请求体，贴近真实三方回调形态）
      * @return 当前状态快照，供组装三方应答报文
      */
+    @IgnoreAuth
     @PostMapping(value = "/chat/callback", produces = MediaType.APPLICATION_JSON_VALUE)
     public StreamAnswerState callbackChat(@RequestBody CallbackRequest request) {
         return requireStore().getState(request.getStreamId());

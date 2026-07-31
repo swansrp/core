@@ -26,8 +26,11 @@ public class AuthorizationConfigureAdapter implements WebMvcConfigurer {
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
+        // 忽略 Accept 头统一按默认类型协商；text/event-stream 需在列表中，
+        // 否则 produces = text/event-stream 的 SSE 端点在 HandlerMapping 阶段即抛 HttpMediaTypeNotAcceptableException
         configurer.ignoreAcceptHeader(true)
-                .defaultContentType(new MediaType("application", "json", StandardCharsets.UTF_8), MediaType.TEXT_PLAIN);
+                .defaultContentType(new MediaType("application", "json", StandardCharsets.UTF_8), MediaType.TEXT_PLAIN,
+                        MediaType.TEXT_EVENT_STREAM);
     }
 
     @Override
