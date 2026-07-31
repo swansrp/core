@@ -28,6 +28,7 @@
         <module>forge</module>
         <module>kafka</module>
         <module>td</module>
+        <module>llm</module>
     </modules>
     <packaging>pom</packaging>
 
