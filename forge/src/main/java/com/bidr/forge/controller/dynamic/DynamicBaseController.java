@@ -1,10 +1,12 @@
 package com.bidr.forge.controller.dynamic;
 
 
+import com.bidr.admin.controller.inf.PortalSqlInf;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.holder.PortalConfigContext;
 import com.bidr.forge.engine.PortalDataMode;
+import com.bidr.forge.engine.builder.SqlBuilder;
 import com.bidr.forge.engine.driver.DatasetDriver;
 import com.bidr.forge.engine.driver.MatrixDriver;
 import com.bidr.forge.engine.driver.PortalDriver;
@@ -22,6 +24,7 @@ import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
 
 import javax.annotation.Resource;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -29,7 +32,7 @@ import java.util.Map;
  * @since 2025/11/27 13:35
  */
 
-public class DynamicBaseController {
+public class DynamicBaseController implements PortalSqlInf {
 
     @Resource
     protected MatrixDriver matrixDriver;
@@ -59,6 +62,19 @@ public class DynamicBaseController {
 
     protected Long getRoleId() {
         return PortalConfigContext.getPortalConfigRoleId();
+    }
+
+    /**
+     * 获取指定Portal的基础查询SQL（不含条件与分页）
+     * <p>动态Portal多个配置共享本 Bean，需按portalName路由到对应驱动（Dataset/Matrix），
+     * 由驱动的SqlBuilder基于已保存的表/列配置拼装SQL</p>
+     */
+    @Override
+    public String getPortalSql(String portalName) {
+        PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        Map<String, String> aliasMap = driver.buildAliasMap(portalName, getRoleId());
+        SqlBuilder builder = driver.getSqlBuilder(portalName, getRoleId());
+        return builder.buildSelect(new AdvancedQueryReq(), aliasMap, new LinkedHashMap<>());
     }
 
     /**
