@@ -4,6 +4,7 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import com.bidr.admin.config.*;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
+import com.bidr.admin.controller.inf.PortalSqlInf;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
@@ -643,8 +644,14 @@ public class PortalConfigService implements LoginFillTokenInf {
 
     public String getPortalSql(String name) {
         SysPortal sysPortal = sysPortalService.getByName(name, DEFAULT_CONFIG_ROLE_ID);
-        AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(sysPortal.getBean());
+        Validator.assertNotNull(sysPortal, ErrCodeSys.PA_DATA_NOT_EXIST, name);
+        Object bean = BeanUtil.getBean(sysPortal.getBean());
         Validator.assertNotNull(bean, ErrCodeSys.PA_DATA_NOT_EXIST, name);
-        return bean.getPortalSql();
+        // 动态Portal（Matrix/Dataset）多个配置共享同一个Bean，无法从Bean本身区分，
+        // 需要按Portal名称反查对应驱动生成SQL；传统Portal每个配置对应独立Bean，走原有逻辑
+        if (bean instanceof PortalSqlInf) {
+            return ((PortalSqlInf) bean).getPortalSql(name);
+        }
+        return ((AdminControllerInf<?, ?>) bean).getPortalSql();
     }
 }
