@@ -193,11 +193,19 @@ public interface MybatisPlusTableInitializerInf {
                     if (targetVersion > currentVersion) {
                         LoggerFactory.getLogger(getClass())
                                 .info("执行表 {} 升级 v{} -> v{}", tableName, currentVersion, targetVersion);
-                        if (!shouldSkip(metaData, sql)) {
-                            String effectiveSql = filterDdlSql(metaData, sql);
-                            if (FuncUtil.isNotEmpty(effectiveSql)) {
-                                stmt.executeUpdate(effectiveSql);
+                        try {
+                            if (!shouldSkip(metaData, sql)) {
+                                String effectiveSql = filterDdlSql(metaData, sql);
+                                if (FuncUtil.isNotEmpty(effectiveSql)) {
+                                    stmt.executeUpdate(effectiveSql);
+                                }
                             }
+                        } catch (SQLException e) {
+                            // 升级失败时不更新版本号，保证版本号与真实表结构一致，中断后续升级
+                            LoggerFactory.getLogger(getClass())
+                                    .error("表 {} 升级 v{} -> v{} 执行失败，版本号保持不变，SQL: {}",
+                                            tableName, currentVersion, targetVersion, sql, e);
+                            throw e;
                         }
                         stmt.executeUpdate(
                                 "INSERT INTO sys_table_version(table_name, version) VALUES ('" + tableName + "', " +
