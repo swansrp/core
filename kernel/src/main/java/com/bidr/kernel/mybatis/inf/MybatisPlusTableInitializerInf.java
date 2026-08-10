@@ -364,6 +364,23 @@ public interface MybatisPlusTableInitializerInf {
     }
 
     /**
+     * 从 ALTER TABLE 语句中解析所有要新增的列名。
+     * 支持复合语句（如 "MODIFY COLUMN `a` ..., ADD COLUMN `b` ..."）。
+     *
+     * @param rawSql 原始 SQL 语句
+     * @return 要新增的列名列表
+     */
+    default List<String> parseAddColumnNames(String rawSql) {
+        List<String> columns = new ArrayList<>();
+        Pattern pattern = Pattern.compile("ADD\\s+COLUMN\\s+`?(\\w+)`?", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(rawSql);
+        while (matcher.find()) {
+            columns.add(matcher.group(1));
+        }
+        return columns;
+    }
+
+    /**
      * 过滤 DDL SQL，移除已经不存在的列，避免执行失败。
      * <p>
      * 主要用于处理多列 DROP COLUMN 语句：当部分列已被删除时，
@@ -440,8 +457,19 @@ public interface MybatisPlusTableInitializerInf {
 
             // ADD COLUMN
             if (sql.contains("ADD COLUMN")) {
-                String column = parts.length > 5 ? stripIdent(parts[5]) : "";
-                return columnExists(metaData, table, column);
+                // 复合语句（如 MODIFY COLUMN 与 ADD COLUMN 混排）时，
+                // 按空格分词取固定下标会误取其他子句的列名，
+                // 改为正则解析所有 ADD COLUMN 子句，仅当全部列已存在时才跳过。
+                List<String> addColumns = parseAddColumnNames(rawSql);
+                if (addColumns.isEmpty()) {
+                    return false;
+                }
+                for (String col : addColumns) {
+                    if (!columnExists(metaData, table, col)) {
+                        return false;
+                    }
+                }
+                return true;
             }
 
             // DROP COLUMN
