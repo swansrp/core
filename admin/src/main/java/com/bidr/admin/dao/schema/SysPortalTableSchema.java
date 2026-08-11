@@ -28,5 +28,9 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
                 "\tADD COLUMN `filter_columns` VARCHAR(500) NULL DEFAULT NULL COMMENT '要排除显示的列' AFTER `padding_td`;\n");
         setUpgradeDDL(2, "ALTER TABLE `sys_portal_table`\n" +
                 "\tADD COLUMN `download_able` CHAR(1) NOT NULL DEFAULT '1' COMMENT '是否允许下载' AFTER `filter_columns`;\n");
+        setUpgradeDDL(3, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `pivot_mode` CHAR(1) NOT NULL DEFAULT '0' COMMENT '是否透视报表模式' AFTER `download_able`,\n" +
+                "\tADD COLUMN `group_by_fields` VARCHAR(500) NULL DEFAULT NULL COMMENT '透视行维度字段(逗号分隔)' AFTER `pivot_mode`,\n" +
+                "\tADD COLUMN `pivot_measures` VARCHAR(2000) NULL DEFAULT NULL COMMENT '透视度量列配置JSON' AFTER `group_by_fields`;\n");
     }
 }

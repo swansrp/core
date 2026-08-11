@@ -74,6 +74,27 @@ public class SysPortalTable {
     private String downloadAble;
 
     /**
+     * 是否透视报表模式
+     */
+    @TableField(value = "pivot_mode")
+    @ApiModelProperty(value = "是否透视报表模式")
+    private String pivotMode;
+
+    /**
+     * 透视行维度字段(逗号分隔)
+     */
+    @TableField(value = "group_by_fields")
+    @ApiModelProperty(value = "透视行维度字段(逗号分隔)")
+    private String groupByFields;
+
+    /**
+     * 透视度量列配置JSON
+     */
+    @TableField(value = "pivot_measures")
+    @ApiModelProperty(value = "透视度量列配置JSON")
+    private String pivotMeasures;
+
+    /**
      * 状态
      */
     @TableField(value = "status")

@@ -16,7 +16,7 @@ import java.util.Map;
  * @since 2025/4/28 14:53
  */
 public interface AdminStatisticControllerInf<ENTITY, VO> extends AdminStatisticCountInf<ENTITY, VO>, AdminStatisticSummaryInf<ENTITY, VO>
-        , AdminStatisticMetricInf<ENTITY, VO> {
+        , AdminStatisticMetricInf<ENTITY, VO>, AdminStatisticPivotInf<ENTITY, VO> {
 
     /**
      * 统计个数
@@ -67,6 +67,14 @@ public interface AdminStatisticControllerInf<ENTITY, VO> extends AdminStatisticC
      * @return 指标统计数据
      */
     List<StatisticRes> advancedStatistic(@RequestBody AdvancedStatisticReq req);
+
+    /**
+     * 透视聚合查询
+     *
+     * @param req 透视请求
+     * @return 聚合后的平铺行数据
+     */
+    List<Map<String, Object>> pivot(@RequestBody AdvancedPivotReq req);
 
 
 }

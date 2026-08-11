@@ -221,6 +221,13 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
     }
 
     @Override
+    @ApiOperation("透视聚合查询")
+    @RequestMapping(value = {"/pivot", "/pivot/**"}, method = RequestMethod.POST)
+    public List<Map<String, Object>> pivot(@RequestBody AdvancedPivotReq req) {
+        return pivotByAdvancedReq(req);
+    }
+
+    @Override
 
     @SneakyThrows
     @ApiOperation("数据导出")

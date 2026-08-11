@@ -67,6 +67,24 @@ public class PortalTableVO extends BaseVO {
     private String downloadAble;
 
     /**
+     * 是否透视报表模式
+     */
+    @ApiModelProperty(value = "是否透视报表模式")
+    private String pivotMode;
+
+    /**
+     * 透视行维度字段(逗号分隔)
+     */
+    @ApiModelProperty(value = "透视行维度字段(逗号分隔)")
+    private String groupByFields;
+
+    /**
+     * 透视度量列配置JSON
+     */
+    @ApiModelProperty(value = "透视度量列配置JSON")
+    private String pivotMeasures;
+
+    /**
      * 状态
      */
     @ApiModelProperty(value = "状态")
