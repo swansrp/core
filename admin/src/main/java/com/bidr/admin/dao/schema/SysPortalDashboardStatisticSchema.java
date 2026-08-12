@@ -37,5 +37,10 @@ public class SysPortalDashboardStatisticSchema extends BaseMybatisSchema<SysPort
                 "ALTER TABLE `sys_portal_dashboard_statistic` \n" +
                         " ADD COLUMN `sub_title` varchar(20) DEFAULT NULL COMMENT '副标题' after `title`,\n" +
                         " ADD COLUMN `description` varchar(50) DEFAULT NULL COMMENT '描述' after `sub_title`;");
+        // 列默认值改为 0，避免新建指标时数据库自动填 2（MODIFY 变更 NOT NULL 约束，确保升级不被跳过）
+        setUpgradeDDL(4,
+                "ALTER TABLE `sys_portal_dashboard_statistic` \n" +
+                        " MODIFY COLUMN `default_x_grid` INT NOT NULL DEFAULT 0 COMMENT '默认宽度（0表示未自定义，按图表类型推导）',\n" +
+                        " MODIFY COLUMN `default_y_grid` INT NOT NULL DEFAULT 0 COMMENT '默认高度（0表示未自定义，按图表类型推导）';");
     }
 }
