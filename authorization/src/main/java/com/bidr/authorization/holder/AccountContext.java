@@ -63,6 +63,18 @@ public class AccountContext {
         }
     }
 
+    /**
+     * 当前登录人展示名：人名（token 的 NICK_NAME）优先，空则回落工号
+     */
+    public static String getDisplayName() {
+        AccountInfo accountInfo = get();
+        if (FuncUtil.isNotEmpty(accountInfo)) {
+            return FuncUtil.isNotEmpty(accountInfo.getName()) ? accountInfo.getName() : accountInfo.getCustomerNumber();
+        } else {
+            return StringUtil.EMPTY;
+        }
+    }
+
     public static AccountInfo get() {
         return ACCOUNT_INFO_HOLDER.get();
     }

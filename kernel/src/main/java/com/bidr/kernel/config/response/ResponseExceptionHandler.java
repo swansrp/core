@@ -68,7 +68,9 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
         log.error("", ex);
         // 发布异常事件
         publishExceptionEvent(ex);
-        ServiceException serviceException = new ServiceException(ex.getMessage(), ex);
+        // msg 即原始异常信息，走单参构造避免与 cause 信息重复拼接
+        ServiceException serviceException = new ServiceException(ex.getMessage());
+        serviceException.initCause(ex);
         serviceException.setErrCode(ErrCodeSys.SYS_ERR);
         // 保留原始调用栈
         serviceException.setStackTrace(ex.getStackTrace());
@@ -121,7 +123,8 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
                 applicationContext.publishEvent(new ServiceExceptionEvent((ServiceException) ex, request));
             } else {
                 // 其他异常包装为 ServiceException 事件
-                ServiceException serviceException = new ServiceException(ex.getMessage(), ex);
+                ServiceException serviceException = new ServiceException(ex.getMessage());
+                serviceException.initCause(ex);
                 serviceException.setErrCode(ErrCodeSys.SYS_ERR);
                 // 保留原始调用栈
                 serviceException.setStackTrace(ex.getStackTrace());
