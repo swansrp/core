@@ -17,10 +17,51 @@
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <langchain4j.version>0.33.0</langchain4j.version>
-        <redis.version>${jarVersion}</redis.version>
     </properties>
 
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
+                <platform.version>${jarVersion}</platform.version>
+                <redis.version>${jarVersion}</redis.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>20260811165602-64</kernel.version>
+                <platform.version>20260811165602-64</platform.version>
+                <redis.version>20260811165602-64</redis.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <dependencies>
+        <!-- 系统参数契约（Param/@MetaParam）：LlmParam 据此声明数据库参数 key -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <!-- 系统参数读取为可选能力：类路径上有 core/platform 时数据库参数（sys_config）才优先生效，否则回落 llm.* yaml -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
+            <optional>true</optional>
+        </dependency>
         <!-- Redis 流式回答存储为可选能力：类路径上有 core/redis 时才装配 RedisStreamAnswerStore -->
         <dependency>
             <groupId>com.bidr</groupId>

@@ -2,17 +2,18 @@ package com.bidr.llm.config;
 
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
-import com.bidr.llm.provider.DefaultModelConfigProvider;
+import com.bidr.llm.provider.DbAwareModelConfigProvider;
 import com.bidr.llm.provider.ModelConfigProvider;
+import com.bidr.platform.service.cache.SysConfigCacheService;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.StringUtils;
 
@@ -27,8 +28,10 @@ import java.net.Proxy;
  * 在用户 Bean 之后处理，配合 {@link ConditionalOnMissingBean} 保证"业务自定义即覆盖默认"的顺序可靠。
  * 三个默认 Bean：
  * <ul>
- * <li>{@link ModelConfigProvider}：从 {@code llm.*} yaml 读取单一模型配置，仅在配置了
- * {@code llm.api-key} 且业务未自定义 Provider 时装配；</li>
+ * <li>{@link ModelConfigProvider}：{@code llm.*} yaml 与数据库系统参数（{@code LlmParam}，
+ * sys_config）合一读取——数据库有效值优先、yaml 回落，业务未自定义 Provider 时装配；
+ * 密钥不再要求配置于 yaml（数据库或 yaml 任一有有效值即可，见
+ * {@link DbAwareModelConfigProvider}）；</li>
  * <li>{@link ChatLanguageModel} / {@link StreamingChatLanguageModel}：基于上述
  * Provider 构建的
  * 可热刷新模型，业务未自定义同类型 Bean 时装配。</li>
@@ -69,15 +72,15 @@ public class LlmDefaultAutoConfiguration {
     private int proxyPort;
 
     /**
-     * 默认模型配置提供者：仅当配置了 {@code llm.api-key} 且业务未自定义 Provider 时生效
+     * 默认模型配置提供者：数据库系统参数（{@code LlmParam}）有效值优先，回落 {@code llm.*} yaml；
+     * 未配置密钥不阻断装配，首次调用时由 {@link DbAwareModelConfigProvider} 抛出操作指引
      */
     @Bean
-    @ConditionalOnProperty(prefix = "llm", name = "api-key")
     @ConditionalOnMissingBean(ModelConfigProvider.class)
-    public ModelConfigProvider defaultModelConfigProvider() {
-        log.info("装配默认 ModelConfigProvider（来源 llm.* yaml，baseUrl={}, modelName={}），业务未自定义时生效",
+    public ModelConfigProvider defaultModelConfigProvider(ObjectProvider<SysConfigCacheService> sysConfigProvider) {
+        log.info("装配默认 ModelConfigProvider（数据库系统参数优先，回落 llm.* yaml；yaml baseUrl={}, modelName={}），业务未自定义时生效",
                 baseUrl, modelName);
-        return new DefaultModelConfigProvider(baseUrl, apiKey, modelName, timeoutSeconds);
+        return new DbAwareModelConfigProvider(baseUrl, apiKey, modelName, timeoutSeconds, sysConfigProvider);
     }
 
     /**

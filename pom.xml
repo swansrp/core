@@ -29,6 +29,7 @@
         <module>kafka</module>
         <module>td</module>
         <module>llm</module>
+        <module>insight</module>
     </modules>
     <packaging>pom</packaging>
 
