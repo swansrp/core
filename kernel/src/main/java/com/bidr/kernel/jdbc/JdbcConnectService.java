@@ -1,10 +1,12 @@
 package com.bidr.kernel.jdbc;
 
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import com.bidr.kernel.mybatis.log.MybatisLogFormatter;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,14 +32,64 @@ public class JdbcConnectService {
 
     private final DataSource dataSource;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    /** 动态数据源解析器（如 forge 数据源管理），未提供实现时为空 */
+    private final ObjectProvider<DynamicDataSourceResolver> dataSourceResolvers;
 
     /**
      * 切换数据源（push 进栈）。
      * 注意：DynamicDataSourceContextHolder 是一个栈结构，切换后务必在 finally/close 中恢复，
      * 否则会污染当前线程后续的 MyBatis / JDBC 调用。
+     * 名称解析优先级：yml 静态定义（spring.datasource.dynamic.datasource）优先，
+     * 未定义时才询问 DynamicDataSourceResolver 动态注册（懒加载，注册一次后复用）；
+     * 路由中残留的死池（refresh 销毁旧池与懒注册的竞态）会先注销再重建。
+     * 空名称视为不切换（上下文栈 push null 会抛 NPE）
      */
     public void switchDataSource(String dataSourceName) {
+        if (FuncUtil.isEmpty(dataSourceName)) {
+            return;
+        }
+        ensureRegistered(dataSourceName);
         DynamicDataSourceContextHolder.push(dataSourceName);
+    }
+
+    /** yml 未静态定义时，尝试经解析器动态注册（静态定义永远优先，不会被覆盖） */
+    private void ensureRegistered(String name) {
+        if (!(dataSource instanceof DynamicRoutingDataSource)) {
+            return;
+        }
+        DynamicRoutingDataSource routing = (DynamicRoutingDataSource) dataSource;
+        DataSource registered = routing.getDataSources().get(name);
+        if (registered != null && isAlive(registered)) {
+            return;
+        }
+        if (registered != null) {
+            // refresh 销毁旧池与懒注册的竞态可能把死池留在路由，先注销再重建
+            routing.removeDataSource(name);
+            log.warn("数据源 [{}] 已失效，注销后尝试重新注册", name);
+        }
+        for (DynamicDataSourceResolver resolver : dataSourceResolvers) {
+            DataSource resolved = resolver.resolve(name);
+            if (resolved == null) {
+                continue;
+            }
+            // 并发下可能已被其他线程注册，addDataSource 幂等前再校验一次
+            if (!routing.getDataSources().containsKey(name)) {
+                routing.addDataSource(name, resolved);
+                log.info("动态注册数据源: {}", name);
+            }
+            return;
+        }
+        log.warn("数据源 [{}] 未在 yml 定义且无解析器提供，将回落 primary 数据源查询", name);
+    }
+
+    /** 任一解析器判定失效即视为死池（解析器对不认识的数据源恒返回存活） */
+    private boolean isAlive(DataSource registered) {
+        for (DynamicDataSourceResolver resolver : dataSourceResolvers) {
+            if (!resolver.isAlive(registered)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
