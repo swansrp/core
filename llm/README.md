@@ -19,6 +19,12 @@ com.bidr.llm
 ├── sse
 │   ├── SseStreamingResponseHandler  langchain4j 流式回调 → SseEmitter 桥接器（真 SSE 推流）
 │   └── LlmChatDemoController        三种拿数据方式的内置示例接口（可用 llm.chat-sse.enabled=false 关闭）
+├── parse
+│   ├── FileMarkdownService          文件 → Markdown 统一入口（url/file/路径/InputStream，自动装配）
+│   ├── VisionModelConfig            多模态模型配置 DTO（外部显式传入时使用）
+│   └── converter                    docx/xlsx/pptx/html → Markdown 转换器（POI/Jsoup）
+├── provider
+│   └── DbAwareModelConfigProvider   sys_config 数据库配置 → yaml → 默认模型的三级回落实现（支持 VISION purpose）
 └── store
     ├── StreamAnswerStore            流式回答状态存储接口
     ├── StreamAnswerState            回答状态快照（content/finish/extra）
@@ -271,6 +277,58 @@ const timer = setInterval(async () => {
 
 注意：`spring-webmvc` 在本模块中是 optional 依赖，仅 Web 应用可使用本能力（应用自身必有 spring-web，无需额外加依赖）。若前后端之间有 Nginx，需为 SSE 路径关闭缓冲（`proxy_buffering off`），否则流会被攒包。
 
+### 8. 文件解析为 Markdown（parse）
+
+把用户上传的各种文件拆成文字喂给 LLM 的统一入口：传入 **url / File / 文件路径 / InputStream** 任意一种，返回 **Markdown** 文本。
+
+```java
+@Autowired
+private FileMarkdownService fileMarkdownService;
+
+// 本地路径或 http(s) 地址（自动识别）
+String md = fileMarkdownService.toMarkdown("D:/upload/合同.docx");
+String md2 = fileMarkdownService.toMarkdown("https://oss.example.com/report.pdf");
+
+// File / Path
+String md3 = fileMarkdownService.toMarkdown(file);
+
+// InputStream（必须带文件名，用于识别格式）
+String md4 = fileMarkdownService.toMarkdown(inputStream, "清单.xlsx");
+```
+
+支持的格式与处理方式：
+
+| 类型 | 处理 |
+|---|---|
+| md/txt/csv/json/xml/sql/yml/properties/log 等纯文本 | 直接读取（UTF-8 严格解码，失败回落 GBK） |
+| html/htm | Jsoup 按语义转 Markdown（标题/列表/表格/代码块，剔除 script） |
+| docx | POI XWPF：标题样式 → `#` 级标题，列表 → `-` 项，表格 → Markdown 表格 |
+| xlsx/xls | POI：每 Sheet 一个 Markdown 表格，首行视为表头，单 Sheet 上限 1000 行 |
+| pptx/ppt | POI：每页一个二级标题，文本框与表格按顺序输出 |
+| doc | POI WordExtractor 纯文本提取 |
+| pdf | PDFBox 逐页提取；某页文本过少判定为扫描页 → 渲染 PNG → **多模态模型转录** |
+| png/jpg/jpeg/gif/webp/bmp | 直接走**多模态模型**转录 |
+| 未知扩展名 | 二进制检测（NUL 字节）：文本则按文本读，否则拒绝 |
+
+**多模态模型配置**（扫描件/图片解析用）三级回落，与现有 LLM 调用机制一致：
+
+1. **调用时显式传入**（最高优先级）：
+
+```java
+VisionModelConfig vision = VisionModelConfig.builder()
+        .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+        .apiKey("sk-xxx")
+        .modelName("qwen-vl-max")
+        .timeoutSeconds(180)
+        .build();
+String md = fileMarkdownService.toMarkdown(file, vision);
+```
+
+2. **sys_config 数据库参数**（经 `ModelConfigProvider`）：`VISION_BASE_URL` / `VISION_API_KEY` / `VISION_MODEL_NAME` / `VISION_TIMEOUT_SECONDS`，已注册为 `LlmParam`，系统参数页可直接维护；任一项留空则该项继续回落下一级。
+3. **yaml 默认**：`llm.vision.*`（见下表），其中 base-url/api-key/model-name 留空时回落默认模型配置（`llm.*`）。
+
+内置约束：单文件上限 100MB；PDF 走多模态的页数上限 50 页（超出部分跳过并注明）；渲染 DPI 150。
+
 ## yaml 配置项
 
 | 键 | 默认值 | 说明 |
@@ -285,6 +343,10 @@ const timer = setInterval(async () => {
 | `llm.stream-answer.finished-ttl-seconds` | 300 | 流结束后的短过期时间（秒） |
 | `llm.stream-answer.min-write-interval-ms` | 300 | 中间态写入节流间隔（毫秒），0 表示不节流 |
 | `llm.chat-sse.enabled` | true | 内置示例接口 `LlmChatDemoController` 的开关 |
+| `llm.vision.base-url` | 空 | 多模态模型服务地址；留空回落默认模型地址 |
+| `llm.vision.api-key` | 空 | 多模态模型密钥；留空回落默认模型密钥 |
+| `llm.vision.model-name` | 空 | 多模态模型名（须支持图片输入，如 qwen-vl-max）；留空回落默认模型 |
+| `llm.vision.timeout-seconds` | 180 | 多模态模型调用超时（秒） |
 
 `llm.proxy.*` 与框架全局 REST 代理（`my.rest.proxy.*`）相互独立，可单独为大模型调用开代理。
 

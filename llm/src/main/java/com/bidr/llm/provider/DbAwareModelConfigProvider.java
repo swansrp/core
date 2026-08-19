@@ -25,10 +25,20 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class DbAwareModelConfigProvider implements ModelConfigProvider {
 
+    /**
+     * 多模态（视觉）模型用途标识：扫描件/图片转 Markdown 时使用，
+     * 配置按 VISION_* 系统参数 → llm.vision.* yaml → 默认模型配置逐级回落
+     */
+    public static final String PURPOSE_VISION = "VISION";
+
     private final String yamlBaseUrl;
     private final String yamlApiKey;
     private final String yamlModelName;
     private final long yamlTimeoutSeconds;
+    private final String yamlVisionBaseUrl;
+    private final String yamlVisionApiKey;
+    private final String yamlVisionModelName;
+    private final long yamlVisionTimeoutSeconds;
 
     /**
      * platform 可选依赖：服务不可用（未引入 core/platform）时 getIfAvailable 返回 null，全部回落 yaml
@@ -37,22 +47,47 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
 
     public DbAwareModelConfigProvider(String yamlBaseUrl, String yamlApiKey, String yamlModelName,
                                       long yamlTimeoutSeconds,
+                                      String yamlVisionBaseUrl, String yamlVisionApiKey,
+                                      String yamlVisionModelName, long yamlVisionTimeoutSeconds,
                                       ObjectProvider<SysConfigCacheService> sysConfigProvider) {
         this.yamlBaseUrl = yamlBaseUrl;
         this.yamlApiKey = yamlApiKey;
         this.yamlModelName = yamlModelName;
         this.yamlTimeoutSeconds = yamlTimeoutSeconds;
+        this.yamlVisionBaseUrl = yamlVisionBaseUrl;
+        this.yamlVisionApiKey = yamlVisionApiKey;
+        this.yamlVisionModelName = yamlVisionModelName;
+        this.yamlVisionTimeoutSeconds = yamlVisionTimeoutSeconds;
         this.sysConfigProvider = sysConfigProvider;
     }
 
     @Override
     public String getBaseUrl(String purposeType) {
+        if (PURPOSE_VISION.equals(purposeType)) {
+            String dbValue = dbValue(LlmParam.VISION_BASE_URL);
+            if (StringUtils.hasText(dbValue)) {
+                return dbValue;
+            }
+            if (StringUtils.hasText(yamlVisionBaseUrl)) {
+                return yamlVisionBaseUrl;
+            }
+        }
         String dbValue = dbValue(LlmParam.BASE_URL);
         return StringUtils.hasText(dbValue) ? dbValue : yamlBaseUrl;
     }
 
     @Override
     public String getApiKey(String purposeType, Long userId) {
+        if (PURPOSE_VISION.equals(purposeType)) {
+            String visionKey = dbValue(LlmParam.VISION_API_KEY);
+            if (isRealKey(visionKey)) {
+                return visionKey;
+            }
+            if (isRealKey(yamlVisionApiKey)) {
+                return yamlVisionApiKey;
+            }
+            // 多模态未单独配密钥时回落默认模型密钥（同网关场景）
+        }
         String dbKey = dbValue(LlmParam.API_KEY);
         if (isRealKey(dbKey)) {
             return dbKey;
@@ -66,30 +101,52 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
 
     @Override
     public String getModelName(String purposeType) {
+        if (PURPOSE_VISION.equals(purposeType)) {
+            String dbValue = dbValue(LlmParam.VISION_MODEL_NAME);
+            if (StringUtils.hasText(dbValue)) {
+                return dbValue;
+            }
+            if (StringUtils.hasText(yamlVisionModelName)) {
+                return yamlVisionModelName;
+            }
+        }
         String dbValue = dbValue(LlmParam.MODEL_NAME);
         return StringUtils.hasText(dbValue) ? dbValue : yamlModelName;
     }
 
     @Override
     public long getTimeoutSeconds(String purposeType) {
-        String dbValue = dbValue(LlmParam.TIMEOUT_SECONDS);
-        if (StringUtils.hasText(dbValue)) {
-            try {
-                long parsed = Long.parseLong(dbValue);
-                if (parsed > 0) {
-                    return parsed;
-                }
-            } catch (NumberFormatException ignored) {
-                // 非法值回落 yaml
+        if (PURPOSE_VISION.equals(purposeType)) {
+            Long visionTimeout = parsePositiveLong(dbValue(LlmParam.VISION_TIMEOUT_SECONDS));
+            if (visionTimeout != null) {
+                return visionTimeout;
             }
+            return yamlVisionTimeoutSeconds;
         }
-        return yamlTimeoutSeconds;
+        Long timeout = parsePositiveLong(dbValue(LlmParam.TIMEOUT_SECONDS));
+        return timeout != null ? timeout : yamlTimeoutSeconds;
     }
 
     @Override
     public String getConfigSignatureWithoutKey(String purposeType) {
-        // 动态取当前生效值拼接：数据库参数变化时签名随之变化，触发底层模型重建
-        return getBaseUrl(purposeType) + "|" + getModelName(purposeType) + "|" + getTimeoutSeconds(purposeType);
+        // 动态取当前生效值拼接：数据库参数变化时签名随之变化，触发底层模型重建；含 purpose 区分用途
+        return purposeType + "|" + getBaseUrl(purposeType) + "|" + getModelName(purposeType)
+                + "|" + getTimeoutSeconds(purposeType);
+    }
+
+    /**
+     * 解析正整数（去空白）；非法或非正值返回 null 由调用方回落 yaml
+     */
+    private Long parsePositiveLong(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            long parsed = Long.parseLong(value.trim());
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package com.bidr.llm.config;
 
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
+import com.bidr.llm.parse.FileMarkdownService;
 import com.bidr.llm.provider.DbAwareModelConfigProvider;
 import com.bidr.llm.provider.ModelConfigProvider;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -38,6 +39,8 @@ import java.net.Proxy;
  * </ul>
  * 默认不做用户隔离（{@code userIdSupplier = () -> null}），因为 core 层不依赖 authorization；
  * 业务如需按用户区分 Key，自行注册 {@link ModelConfigProvider} 或模型 Bean 覆盖即可。
+ * 另装配 {@link FileMarkdownService}：文件 → Markdown 解析入口（扫描件/图片走
+ * 多模态模型，配置同现有 LLM 机制：调用传入或数据库 sys_config 优先）。
  * </p>
  *
  * @author Sharp
@@ -62,6 +65,14 @@ public class LlmDefaultAutoConfiguration {
     private String modelName;
     @Value("${llm.timeout-seconds:120}")
     private long timeoutSeconds;
+    @Value("${llm.vision.base-url:}")
+    private String visionBaseUrl;
+    @Value("${llm.vision.api-key:}")
+    private String visionApiKey;
+    @Value("${llm.vision.model-name:}")
+    private String visionModelName;
+    @Value("${llm.vision.timeout-seconds:180}")
+    private long visionTimeoutSeconds;
     @Value("${llm.chat.max-attempts:1}")
     private int maxAttempts;
     @Value("${llm.proxy.enable:false}")
@@ -80,7 +91,8 @@ public class LlmDefaultAutoConfiguration {
     public ModelConfigProvider defaultModelConfigProvider(ObjectProvider<SysConfigCacheService> sysConfigProvider) {
         log.info("装配默认 ModelConfigProvider（数据库系统参数优先，回落 llm.* yaml；yaml baseUrl={}, modelName={}），业务未自定义时生效",
                 baseUrl, modelName);
-        return new DbAwareModelConfigProvider(baseUrl, apiKey, modelName, timeoutSeconds, sysConfigProvider);
+        return new DbAwareModelConfigProvider(baseUrl, apiKey, modelName, timeoutSeconds,
+                visionBaseUrl, visionApiKey, visionModelName, visionTimeoutSeconds, sysConfigProvider);
     }
 
     /**
@@ -102,6 +114,18 @@ public class LlmDefaultAutoConfiguration {
     @ConditionalOnMissingBean(StreamingChatLanguageModel.class)
     public StreamingChatLanguageModel defaultStreamingChatLanguageModel(ModelConfigProvider provider) {
         return new RefreshableStreamingChatModel(provider, PURPOSE_DEFAULT, buildProxy(), () -> null);
+    }
+
+    /**
+     * 文件解析服务：任意文件（url/File/路径/InputStream）→ Markdown；
+     * 扫描件与图片需多模态模型，配置解析顺序：调用时传入 VisionModelConfig →
+     * {@link ModelConfigProvider}（purpose = VISION，数据库系统参数优先）；
+     * 无 Provider 的应用也可自行 new FileMarkdownService(null) 后纯靠调用传参使用
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider) {
+        return new FileMarkdownService(configProvider.getIfAvailable());
     }
 
     /**

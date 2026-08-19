@@ -84,6 +84,31 @@
             <artifactId>langchain4j</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
+        <!-- 文档解析为 Markdown（parse 包）：Office 新格式 docx/xlsx/pptx；
+             版本与 jxls-poi 带入的 POI 4.1.2 对齐，避免 4/5 两代 schema jar 混版冲突 -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+        <!-- 文档解析：Office 旧格式 doc/ppt 文本提取（4.1.2 含 WordExtractor/PowerPointExtractor） -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+        <!-- 文档解析：PDF 文本提取，扫描页渲染为图片后交多模态模型转录 -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.31</version>
+        </dependency>
+        <!-- 文档解析：HTML 转 Markdown -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-open-ai</artifactId>

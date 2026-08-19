@@ -43,7 +43,31 @@ public enum LlmParam implements Param {
      * 模型调用超时（秒）
      */
     TIMEOUT_SECONDS("大模型超时(秒)", "120",
-            "模型调用超时时间（秒）；非法值回落应用配置 llm.timeout-seconds");
+            "模型调用超时时间（秒）；非法值回落应用配置 llm.timeout-seconds"),
+
+    /**
+     * 多模态（视觉）模型服务地址：扫描件/图片转 Markdown 用；留空回落默认模型地址
+     */
+    VISION_BASE_URL("多模态模型服务地址", "",
+            "具备视觉理解能力的模型端点（如 qwen-vl 系列），用于扫描件/图片解析；留空回落默认模型地址"),
+
+    /**
+     * 多模态模型密钥：留空回落默认模型密钥
+     */
+    VISION_API_KEY("多模态模型密钥", "",
+            "留空回落默认大模型密钥"),
+
+    /**
+     * 多模态模型名：须支持图片输入（如 qwen-vl-max）；留空回落默认模型
+     */
+    VISION_MODEL_NAME("多模态模型", "",
+            "须支持图片输入的模型名（如 qwen-vl-max）；留空回落默认模型"),
+
+    /**
+     * 多模态模型调用超时（秒）：图片转录耗时较长，默认高于文本模型
+     */
+    VISION_TIMEOUT_SECONDS("多模态超时(秒)", "180",
+            "多模态模型调用超时时间（秒）；非法值回落应用配置 llm.vision.timeout-seconds");
 
     private final String title;
     private final String defaultValue;
