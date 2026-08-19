@@ -1,6 +1,7 @@
 package com.bidr.llm.model;
 
 import com.bidr.llm.provider.ModelConfigProvider;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -64,6 +65,25 @@ public class RefreshableChatModel implements ChatLanguageModel {
         // 确保当前线程的 delegate 是最新的
         ensureFreshDelegate();
         return currentDelegate.get().generate(messages);
+    }
+
+    /**
+     * 带工具清单的生成（function calling 入口）：接口默认实现抛 UnsupportedOperationException，
+     * AiServices 工具循环经此委托到底层模型
+     */
+    @Override
+    public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+        ensureFreshDelegate();
+        return currentDelegate.get().generate(messages, toolSpecifications);
+    }
+
+    /**
+     * 带单个强制工具的生成（function calling 入口），语义同 {@link #generate(List, List)}
+     */
+    @Override
+    public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification toolSpecification) {
+        ensureFreshDelegate();
+        return currentDelegate.get().generate(messages, toolSpecification);
     }
 
     /**

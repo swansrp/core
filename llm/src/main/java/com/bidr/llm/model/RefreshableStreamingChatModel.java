@@ -1,6 +1,7 @@
 package com.bidr.llm.model;
 
 import com.bidr.llm.provider.ModelConfigProvider;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.model.StreamingResponseHandler;
@@ -61,6 +62,26 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
         // 确保底层代理模型为最新配置
         ensureFreshDelegate();
         currentDelegate.get().generate(messages, handler);
+    }
+
+    /**
+     * 带工具清单的流式生成：接口默认实现抛 UnsupportedOperationException，补齐委托以支持工具调用型上游
+     */
+    @Override
+    public void generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications,
+                         StreamingResponseHandler<AiMessage> handler) {
+        ensureFreshDelegate();
+        currentDelegate.get().generate(messages, toolSpecifications, handler);
+    }
+
+    /**
+     * 带单个强制工具的流式生成，语义同 {@link #generate(List, List, StreamingResponseHandler)}
+     */
+    @Override
+    public void generate(List<ChatMessage> messages, ToolSpecification toolSpecification,
+                         StreamingResponseHandler<AiMessage> handler) {
+        ensureFreshDelegate();
+        currentDelegate.get().generate(messages, toolSpecification, handler);
     }
 
     // 检查配置签名是否变化，若变化则重新构建模型
