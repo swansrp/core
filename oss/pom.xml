@@ -41,9 +41,9 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20260811165602-64</kernel.version>
-                <platform.version>20260811165602-64</platform.version>
-                <authorization.version>20260811165602-64</authorization.version>
+                <kernel.version>20260824171707-65</kernel.version>
+                <platform.version>20260824171707-65</platform.version>
+                <authorization.version>20260824171707-65</authorization.version>
             </properties>
         </profile>
     </profiles>
