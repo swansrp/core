@@ -17,4 +17,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ApiTrace {
     boolean response() default true;
+
+    /** 是否记录访问日志（请求行/响应行）：false 整体隔绝，供高频轮询类接口降噪 */
+    boolean log() default true;
 }

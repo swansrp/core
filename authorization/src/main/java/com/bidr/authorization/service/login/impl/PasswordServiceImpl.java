@@ -14,7 +14,6 @@ import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.email.service.EmailService;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.utils.DateUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.Md5Util;
 import com.bidr.kernel.utils.RandomUtil;

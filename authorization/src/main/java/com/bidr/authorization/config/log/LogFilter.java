@@ -17,12 +17,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUploadBase;
 import org.apache.tomcat.util.http.fileupload.servlet.ServletRequestContext;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -44,6 +47,10 @@ import static com.bidr.platform.config.log.LogMdcConstant.*;
 @Slf4j
 @Component
 public class LogFilter extends OncePerRequestFilter {
+
+    /** 预解析 handler 用（@ApiTrace(log=false) 判定）；非强制注入，缺失时回落默认记录 */
+    @Autowired(required = false)
+    private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -68,6 +75,16 @@ public class LogFilter extends OncePerRequestFilter {
 
             if (recordIgnore(request) || HttpMethod.OPTIONS.matches(request.getMethod())) {
                 MDC.put(LOG_SILENT, "1");
+                // 线程级静默：dispatch 后同线程回调（ServletRequestHandledEvent→BeanUtil 访问日志）
+                // 经 DynamicLogFilter 统一 DENY；下一个请求入口防御性重置
+                LogSuppressor.suppressLogs(true);
+                filterChain.doFilter(temRequest, temResponse);
+                return;
+            }
+            // @ApiTrace(log=false) 高频轮询类接口：访问日志整体隔绝（请求行/响应行均不落）
+            if (apiLogSilent(request)) {
+                MDC.put(LOG_SILENT, "1");
+                LogSuppressor.suppressLogs(true);
                 filterChain.doFilter(temRequest, temResponse);
                 return;
             }
@@ -145,6 +162,28 @@ public class LogFilter extends OncePerRequestFilter {
 
     private boolean recordIgnore(HttpServletRequest httpServletRequest) {
         return HttpUtil.systemRequest(httpServletRequest);
+    }
+
+    /** dispatch 前预解析 handler 判定 @ApiTrace(log=false)：方法注解优先于类注解；
+     *  解析失败/无 handler 回落默认记录，不影响请求本身 */
+    private boolean apiLogSilent(HttpServletRequest request) {
+        if (requestMappingHandlerMapping == null) {
+            return false;
+        }
+        try {
+            HandlerExecutionChain chain = requestMappingHandlerMapping.getHandler(request);
+            if (chain != null && chain.getHandler() instanceof HandlerMethod) {
+                HandlerMethod handlerMethod = (HandlerMethod) chain.getHandler();
+                ApiTrace anno = handlerMethod.getMethodAnnotation(ApiTrace.class);
+                if (anno == null) {
+                    anno = handlerMethod.getBeanType().getAnnotation(ApiTrace.class);
+                }
+                return anno != null && !anno.log();
+            }
+        } catch (Exception e) {
+            log.debug("ApiTrace(log) 判定失败，按默认记录: {}", e.getMessage());
+        }
+        return false;
     }
 
     private boolean isFileDownload(HttpServletRequest httpServletRequest) {

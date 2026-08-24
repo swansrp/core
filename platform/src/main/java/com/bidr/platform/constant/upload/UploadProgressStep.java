@@ -16,5 +16,7 @@ public enum UploadProgressStep {
     VALIDATE,
     SAVE,
     SUCCESS,
-    FAILED
+    FAILED,
+    /** 被用户主动停止（或执行实例失联）的终态：已完成部分成果保留，可重新发起继续 */
+    STOPPED
 }

@@ -139,7 +139,7 @@ public class HybridDynamicMemoryCacheManager extends DynamicMemoryCacheManager {
         if (redisAvailable) {
             try {
                 String redisKey = buildRedisKey(cacheName, objKey);
-                // 获取该缓存的过期时间（分钟）
+                // 获取该缓存的过期时间（分钟）：与本地同口径，未注册回落 24h
                 Integer expiredMinutes = getCacheExpiredMinutes(cacheName);
                 if (expiredMinutes != null && expiredMinutes > 0) {
                     redisTemplate.opsForValue().set(redisKey, obj, expiredMinutes, TimeUnit.MINUTES);
@@ -154,21 +154,6 @@ public class HybridDynamicMemoryCacheManager extends DynamicMemoryCacheManager {
                 log.warn("写入 Redis 缓存失败: {}.{} - {}", cacheName, objKey, e.getMessage());
                 redisAvailable = false;
             }
-        }
-    }
-
-    /**
-     * 获取缓存的过期时间
-     */
-    private Integer getCacheExpiredMinutes(String cacheName) {
-        try {
-            java.lang.reflect.Field field = DynamicMemoryCacheManager.class.getDeclaredField("CACHE_EXPIREDMINUTES_CACHE");
-            field.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Map<String, Integer> expiredMap = (Map<String, Integer>) field.get(this);
-            return expiredMap.get(cacheName);
-        } catch (Exception e) {
-            return null;
         }
     }
 

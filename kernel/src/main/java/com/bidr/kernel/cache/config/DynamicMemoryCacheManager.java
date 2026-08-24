@@ -252,6 +252,13 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
     }
 
     /**
+     * 已注册缓存的过期时间（分钟）；未注册返回 null（调用方自决兜底）
+     */
+    public Integer getCacheExpiredMinutes(String cacheName) {
+        return CACHE_EXPIRED_MINUTES_CACHE.get(cacheName);
+    }
+
+    /**
      * 设置锁提供者
      *
      * @param lockProvider 锁提供者
