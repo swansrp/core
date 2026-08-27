@@ -1,0 +1,404 @@
+[
+  {
+    "name": "om_year",
+    "display_name": "快照年份",
+    "aliases": [
+      "年份",
+      "年度",
+      "年",
+      "统计年份"
+    ],
+    "expression": "dw_ads.ads_om_project_detail_dyf.dy",
+    "type": "time",
+    "note": "经营明细表的年快照分区。用户说'2026年'→ 过滤 dy=2026；未指定时 SQL 生成器默认取该表最新快照年"
+  },
+  {
+    "name": "pm_year",
+    "display_name": "采购快照年份",
+    "aliases": [
+      "采购年份"
+    ],
+    "expression": "dw_ads.ads_pm_tcpc_detail_pmp_dyf.dy",
+    "type": "time",
+    "note": "采购明细表的年快照分区，当前仅有 2026 数据"
+  },
+  {
+    "name": "region_area1",
+    "display_name": "一级经营区域",
+    "aliases": [
+      "区域",
+      "一级区域",
+      "大区",
+      "经营区域"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.area1_name",
+    "type": "categorical",
+    "hierarchy": {
+      "children": [
+        "region_area2"
+      ]
+    },
+    "note": "取值：华北/中南/华东/西南/西北/新疆/西藏区域公司、海外区域公司（直接存名称）"
+  },
+  {
+    "name": "region_area2",
+    "display_name": "二级经营区域",
+    "aliases": [
+      "二级区域"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.area2_name",
+    "type": "categorical",
+    "hierarchy": {
+      "parent": "region_area1"
+    },
+    "note": "国内同一级区域；海外细分为非洲/南亚/东南亚/美大公司等"
+  },
+  {
+    "name": "province",
+    "display_name": "归属省份",
+    "aliases": [
+      "省份",
+      "省"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.bprov_name",
+    "type": "categorical"
+  },
+  {
+    "name": "busi_entity",
+    "display_name": "二级经营主体",
+    "aliases": [
+      "经营主体",
+      "事业部",
+      "责任主体"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.busi_entity2_name",
+    "type": "categorical",
+    "note": "如新能源事业部、华北公司、勘察院等"
+  },
+  {
+    "name": "business_plate",
+    "display_name": "业务板块",
+    "aliases": [
+      "板块",
+      "业务线"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.business_plate",
+    "type": "categorical",
+    "value_domain": "business_plate"
+  },
+  {
+    "name": "manage_mode",
+    "display_name": "经营模式",
+    "aliases": [
+      "经营方式"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.manage_mode",
+    "type": "categorical",
+    "value_domain": "manage_mode"
+  },
+  {
+    "name": "manage_level",
+    "display_name": "经营级别",
+    "aliases": [
+      "经营层级",
+      "一级经营/二级经营/三级经营"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.manage_level",
+    "type": "categorical",
+    "value_domain": "manage_level"
+  },
+  {
+    "name": "manage_status",
+    "display_name": "经营状态",
+    "expression": "dw_dim.dim_om_project_dyf.manage_status",
+    "type": "categorical",
+    "value_domain": "manage_status"
+  },
+  {
+    "name": "manage_stage",
+    "display_name": "经营阶段",
+    "expression": "dw_dim.dim_om_project_dyf.manage_stage",
+    "type": "categorical",
+    "value_domain": "manage_stage"
+  },
+  {
+    "name": "bid_status",
+    "display_name": "投标状态",
+    "expression": "dw_dim.dim_om_project_dyf.bid_status",
+    "type": "categorical",
+    "value_domain": "bid_status"
+  },
+  {
+    "name": "sign_status",
+    "display_name": "项目签订状态",
+    "aliases": [
+      "签订状态",
+      "合同状态",
+      "签约状态"
+    ],
+    "expression": "dw_ads.ads_om_project_detail_dyf.project_sign_status",
+    "type": "categorical",
+    "value_domain": "sign_status"
+  },
+  {
+    "name": "is_important_bid",
+    "display_name": "是否重点投标",
+    "aliases": [
+      "重点投标",
+      "是否重点"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.is_important_bid",
+    "type": "categorical",
+    "value_domain": "is_important_bid"
+  },
+  {
+    "name": "om_project",
+    "display_name": "经营项目",
+    "aliases": [
+      "项目",
+      "项目名称",
+      "经营项目名称"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.project_name",
+    "type": "categorical",
+    "note": "按经营项目名称分组/过滤"
+  },
+  {
+    "name": "tpc_type",
+    "display_name": "采购类型",
+    "expression": "dw_ads.ads_pm_tcpc_detail_pmp_dyf.tpc_type",
+    "type": "categorical",
+    "value_domain": "tpc_type"
+  },
+  {
+    "name": "pmp_classify",
+    "display_name": "生产项目分类",
+    "aliases": [
+      "项目分类"
+    ],
+    "expression": "dw_dim.dim_pm_project_dyf.pmp_classify",
+    "type": "categorical",
+    "value_domain": "pmp_classify"
+  },
+  {
+    "name": "pmp_state",
+    "display_name": "生产项目状态",
+    "aliases": [
+      "项目状态"
+    ],
+    "expression": "dw_dim.dim_pm_project_dyf.pmp_state",
+    "type": "categorical",
+    "value_domain": "pmp_state"
+  },
+  {
+    "name": "pmp_project",
+    "display_name": "生产项目",
+    "aliases": [
+      "生产项目名称"
+    ],
+    "expression": "dw_dim.dim_pm_project_dyf.pmp_name",
+    "type": "categorical",
+    "note": "按生产项目名称分组/过滤"
+  },
+  {
+    "name": "user_year",
+    "display_name": "员工快照年份",
+    "aliases": [
+      "员工年份"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.dy",
+    "type": "time",
+    "note": "员工表的年快照分区，当前仅有 2025/2026 数据"
+  },
+  {
+    "name": "obs_year",
+    "display_name": "岗位人员快照年份",
+    "aliases": [
+      "岗位年份"
+    ],
+    "expression": "dw_dwd.dwd_pm_obs_dyf.dy",
+    "type": "time",
+    "note": "岗位人员表的年快照分区，当前仅有 2025/2026 数据"
+  },
+  {
+    "name": "user_no",
+    "display_name": "员工工号",
+    "aliases": [
+      "工号"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.user_no",
+    "type": "categorical",
+    "note": "全数仓人员统一关联键"
+  },
+  {
+    "name": "user_name",
+    "display_name": "员工姓名",
+    "aliases": [
+      "姓名",
+      "人员姓名",
+      "员工"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.user_name",
+    "type": "categorical",
+    "note": "按员工姓名分组/过滤；重名时建议结合工号确认"
+  },
+  {
+    "name": "user_sex",
+    "display_name": "性别",
+    "aliases": [
+      "员工性别"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.user_sex",
+    "type": "categorical",
+    "value_domain": "user_sex"
+  },
+  {
+    "name": "user_status",
+    "display_name": "员工状态",
+    "aliases": [
+      "在职状态",
+      "是否在职"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.user_status",
+    "type": "categorical",
+    "value_domain": "user_status"
+  },
+  {
+    "name": "user_sub_status",
+    "display_name": "员工子状态",
+    "expression": "dw_dim.dim_pub_user_dyf.user_sub_status",
+    "type": "categorical",
+    "value_domain": "user_sub_status"
+  },
+  {
+    "name": "user_type",
+    "display_name": "用工类型",
+    "expression": "dw_dim.dim_pub_user_dyf.user_type",
+    "type": "categorical",
+    "value_domain": "user_type"
+  },
+  {
+    "name": "hr_user_type",
+    "display_name": "HR用工类型",
+    "aliases": [
+      "HR用工"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.hr_user_type",
+    "type": "categorical",
+    "value_domain": "hr_user_type"
+  },
+  {
+    "name": "dept_name",
+    "display_name": "部门",
+    "aliases": [
+      "所在部门",
+      "所属部门",
+      "单位"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.dept_name",
+    "type": "categorical",
+    "note": "员工主职部门名称"
+  },
+  {
+    "name": "hr_edu_name",
+    "display_name": "HR学历",
+    "aliases": [
+      "学历"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.hr_edu_name",
+    "type": "categorical"
+  },
+  {
+    "name": "hr_job_grade_name",
+    "display_name": "HR职级",
+    "aliases": [
+      "职级"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.hr_job_grade_name",
+    "type": "categorical"
+  },
+  {
+    "name": "professional_type_name",
+    "display_name": "职称类型",
+    "aliases": [
+      "职称"
+    ],
+    "expression": "dw_dim.dim_pub_user_dyf.professional_type_name",
+    "type": "categorical"
+  },
+  {
+    "name": "post_seq_name",
+    "display_name": "岗位序列",
+    "expression": "dw_dim.dim_pub_user_dyf.post_seq_name",
+    "type": "categorical"
+  },
+  {
+    "name": "position_name",
+    "display_name": "项目岗位",
+    "aliases": [
+      "岗位",
+      "项目角色",
+      "任职岗位"
+    ],
+    "expression": "dw_dwd.dwd_pm_obs_dyf.position_name",
+    "type": "categorical",
+    "note": "生产项目岗位名称，如专业负责人/设计项目经理/设总/总包项目经理等"
+  },
+  {
+    "name": "appoint_status",
+    "display_name": "任免状态",
+    "aliases": [
+      "是否在岗",
+      "当前任职"
+    ],
+    "expression": "dw_dwd.dwd_pm_obs_dyf.appoint_status",
+    "type": "categorical",
+    "value_domain": "appoint_status"
+  },
+  {
+    "name": "appoint_type",
+    "display_name": "任职类型",
+    "expression": "dw_dwd.dwd_pm_obs_dyf.appoint_type",
+    "type": "categorical",
+    "note": "取值 0/1，业务含义待确认，谨慎使用"
+  },
+  {
+    "name": "obs_phase",
+    "display_name": "岗位阶段",
+    "aliases": [
+      "项目阶段",
+      "设计阶段"
+    ],
+    "expression": "dw_dwd.dwd_pm_obs_dyf.phase_code",
+    "type": "categorical",
+    "value_domain": "obs_phase",
+    "note": "岗位所属项目阶段；岗位与阶段无关时编码为 -1"
+  },
+  {
+    "name": "om_project_code",
+    "display_name": "经营项目编码",
+    "aliases": [
+      "项目编码"
+    ],
+    "expression": "dw_dim.dim_om_project_dyf.project_code",
+    "type": "categorical",
+    "note": "经营项目敏感名称 project_name 的对应编码，多步编排中间值传递用本维度"
+  },
+  {
+    "name": "pmp_project_code",
+    "display_name": "生产项目编码",
+    "aliases": [
+      "生产项目编码"
+    ],
+    "expression": "dw_dim.dim_pm_project_dyf.pmp_code",
+    "type": "categorical",
+    "note": "生产项目敏感名称 pmp_name 的对应编码，多步编排中间值传递用本维度"
+  },
+  {
+    "name": "dept_code",
+    "display_name": "部门编码",
+    "expression": "dw_dim.dim_pub_user_dyf.dept_code",
+    "type": "categorical",
+    "note": "部门敏感名称 dept_name 的对应编码，多步编排中间值传递用本维度"
+  }
+]

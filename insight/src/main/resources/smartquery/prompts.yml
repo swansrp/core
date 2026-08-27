@@ -1,0 +1,170 @@
+# 智能问数 LLM 资产生成默认提示词模板（单一默认源，按功能分文件约定：
+# 生成链在本文件，评审链见 prompts-review.yml，问数链见 prompts-ask.yml）
+# 优先级：Agent llm-prompts 草稿（提示词调优抽屉保存）> 本文件
+# 占位符由 SmartAgentAssetGenerateService 运行时替换：
+#   {entities_json} / {dimensions_json} / {domain_keys} / {current_content} / {sensitive_fields} / {table_profiles} / {column_roles}
+pairPrompt: |
+  你是数据仓库语义层建模专家。下面是实体与字段清单（含显示名/类型/value_domain 标注；显示名即列备注原文）：
+  {entities_json}
+
+  【已声明敏感字段清单】：
+  {sensitive_fields}
+
+  目标：为字段建立码值域。两类来源，能配对优先配对：
+  1) 同表「编码字段↔业务名称字段」配对（如 phase_code 与 phase_name），配对后由后端 GROUP BY 采样真实映射；
+  2) 列备注里明确枚举了取值、但同表没有对应名称列的字段（如备注「施工状态：未开工/在建/完工」
+  或「0未开工 1在建」）——大多数表 code 与 name 并不同存，这类字段靠备注挖枚举值，不采样。
+  已标注 value_domain 的字段（规则层已处理）不要再选。
+
+  【输出】只输出一个 ```json 代码块：
+  {"pairs":[{"entity":"实体名","code_field":"编码字段","label_field":"业务名称字段"}],"comment_domains":[{"entity":"实体名","field":"字段","stored_as":"code","values":[{"code":"码","label":"名称"}]}]}
+  规则：1) 只用清单中真实存在的实体与字段名；2) pairs 的 code_field 是编码/字典键列（*_code/*_no/*_type/*_status/is_* 等），label_field 是同表可读名称列（*_name/*_nm/*_mc/*_label 等）且与 code_field 语义对应；3) comment_domains 的 stored_as：列物理存码（数字/短码）用 code（code=码、label=中文），列直接存中文文本用 label（code 与 label 都填该文本）；values 限 20 项以内；4) 严禁将敏感列入 pairs 或 comment_domains——采样与枚举外泄都会把真实取值带进码值域：以【已声明敏感字段清单】为准（任一侧命中即排除），名单外的姓名/证件号/手机号等涉密列同样不得入选；5) 无配对也无备注枚举时两个数组都输出空 []。
+
+metricsPrompt: |
+  你是数据仓库语义层建模专家。基于下面的语义层骨架，只产出 metrics（指标）资产。
+
+  【实体骨架】
+  {entities_json}
+
+  【维度骨架】
+  {dimensions_json}
+
+  【码值域键清单】
+  {domain_keys}
+
+  【列角色】（人工确认的每列角色/单位/时间粒度与表级业务键/分区结论：只给度量列建指标，忽略列不入资产；
+  标注「人工已确认，禁止再核实」的表直接采信，禁止用任何工具重复核实这些信息——包括单位）
+  {column_roles}
+
+  【表画像】（骨架阶段已由确定性 SQL 核实：总行数/分区值域/键唯一性——禁止再用工具重复探测这些事实，直接采信；快照表的分区对齐写法用画像给出的最新分区值）
+  {table_profiles}
+
+  【现有指标草稿】（如有，参考其口径修订；无则全新生成）
+  {current_content}
+
+  【输出】只输出一个 ```json 代码块，内容为指标数组：
+  [{"name":"snake_case","display_name":"中文名","type":"atomic","aliases":["口语叫法"],"description":"口径说明（含单位）","formula":"SUM(db.tbl.col)","source_table":"db.tbl","datatype":"Decimal","certified":false}]
+  规则：
+  1) formula 只用实体骨架中真实存在的 db.tbl.col，聚合函数限 SUM/COUNT/DISTINCT COUNT；同表组合指标（总额=多列之和等高频口径）可用聚合的算术组合（如 SUM(db.tbl.a)+SUM(db.tbl.b)），formula 引用的表须与 source_table 一致；
+  2) supported_dimensions 不必输出：后端落库时按「源表骨架维度 + 经 relations 可达实体维度（排除敏感）」自动展开覆盖，不会漏列；
+  3) description 必须写明「单位：…」：【列角色】中已人工确认单位的列直接采信（禁止再核实，备注与量级不符也以此为准）；
+  仅未确认表且备注单位与采样量级不符时，才用 sample_rows/run_sql 交叉参考值核实并把核实依据写进 description；快照表指标须注明「聚合限单一分区（取最新）」；
+  4) aliases 覆盖口语/简称/变体叫法（含带括注的简称），保证自然语言提问能命中；
+  5) 用户会用一个词问出的口径（如「合同额」=多类合同金额之和）必须生成独立指标，不留给问数现场拼凑；
+  6) 无可提炼指标时输出空数组 []。
+
+relationsPrompt: |
+  你是数据仓库语义层建模专家。基于下面的语义层骨架，只产出 relations（实体关系）资产。
+
+  【实体骨架】
+  {entities_json}
+
+  【列角色】（人工确认的每列角色与表级业务键/分区结论：join 键候选优先看业务键；
+  标注「人工已确认，禁止再核实」的表直接采信这些信息）
+  {column_roles}
+
+  【表画像】（骨架阶段已由确定性 SQL 核实：总行数/分区值域/键唯一性——禁止再用工具重复探测这些事实，直接采信；快照表的分区对齐写法用画像给出的最新分区值）
+  {table_profiles}
+
+  【现有关系草稿】（如有，参考其口径修订；无则全新生成）
+  {current_content}
+
+  【输出】只输出一个 ```json 代码块，内容为关系数组：
+  [{"name":"A_To_B","from_entity":"","to_entity":"","type":"many_to_one","join":[{"left":"from实体列","right":"to实体列"}],"notes":"口径说明"}]
+  规则：
+  1) 只建同库可 join 的实体对，from_entity/to_entity 用骨架实体名；
+  2) join 的 left/right 必须是两实体真实存在的列（主外键对应），且用 run_sql 抽样验证过 join 命中率（如 COUNT(DISTINCT)/匹配行数），禁止凭列名相似猜测；多条关系的命中率尽量合并验：一条 SQL 多个子查询一次问清（多问合一），不要一事一轮；
+  3) 关系链要建全：事实表到维度表、事实表到事实表的多跳链路逐跳建齐（不要只建直接相邻对），让任意两实体间可通过链路可达；
+  4) type 限 many_to_one/one_to_one/many_to_many；
+  5) notes 写明关联口径：快照表须注明分区对齐要求（如日全量快照关联年度快照的粒度差异），并提示快照表关联的行数放大风险；
+  6) 无明显关系时输出空数组 []。
+
+conceptsPrompt: |
+  你是数据仓库语义层建模专家。基于下面的语义层骨架，只产出 concepts（业务概念）资产。
+
+  【实体骨架】
+  {entities_json}
+
+  【维度骨架】
+  {dimensions_json}
+
+  【码值域键清单】（概念展开值优先用其中真实码值）
+  {domain_keys}
+
+  【列角色】（人工确认的每列角色/时间粒度结论：概念展开优先锁定维度列；
+  标注「人工已确认，禁止再核实」的表直接采信这些信息）
+  {column_roles}
+
+  【表画像】（骨架阶段已由确定性 SQL 核实：总行数/分区值域/键唯一性——禁止再用工具重复探测这些事实，直接采信）
+  {table_profiles}
+
+  【现有概念草稿】（如有，参考其口径修订；无则全新生成）
+  {current_content}
+
+  【输出】只输出一个 ```json 代码块，结构如下：
+  {"schema_version":"1.0","concepts":[{"name":"业务术语","aliases":[],"entity":"","expands_to":{"dimension":"维度名","operator":"=","value":"码值"},"note":""}],"hierarchy":[]}
+  规则：
+  1) expands_to.dimension 只能是维度骨架中的维度名，value 必须是码值域或采样中核实过的真实取值（用 group_by_field/码值域键清单查证，禁止凭猜测写值）；
+  2) 概念分两类，都要建：枚举型（如「在建项目」→ 状态维度=码值）与实体映射型（业务口语指代的具体对象，如某研究院/某部门/某项目类型 → 名称或编码维度=真实全称或编码）——用户常以口语简称指代实体，这类映射缺失会导致过滤条件无处可写；
+  3) aliases 覆盖口语简称与别名（含带括注的简称写法，括号内的简称单独作为别名），保证简称提问能命中；
+  4) 概念应是业务口语术语，不重复维度本身；
+  5) 无合适概念时 concepts 输出空数组。
+  6) hierarchy 是维度分组目录（分级导航用）：把维度骨架中的全部维度按业务域归类输出 [{"name":"组名","members":["维度英文名"]}]（若维度骨架仅为概要，先用 get_dimensions 查全再归类）；
+  常用组参考（可按业务自定）：时间类/组织机构类/人员属性类/项目属性类/合同属性类/客户属性类/地区类/状态类；
+  每个维度至多入一组，尽量覆盖全部维度（按 display_name 语义归类，拿不准的归「其他」组）；维度少于 20 个时可输出空数组。
+
+autonomousPrompt: |
+  你是数据仓库语义层建模专家，负责为一个语义层 Agent 补齐 LLM 资产。骨架（实体/维度/码值域）已由系统确定性生成完毕，你产出三类资产：metrics（指标）、relations（关系）、concepts（业务概念），经 save_draft 工具落库。
+
+  【实体骨架】（字段清单见描述工具，此处为压缩版）
+  {entities_json}
+
+  【维度骨架】（概要：逐表计数与示例名；明细用 get_dimensions 工具按表/关键词按需查，不必全量枚举；
+  概念展开选维度时先查后引；忽略角色列可能仍在骨架中，发现与列角色矛盾且影响产出判断时，按【列角色】段配置纠错规则 ask_user，不要闷头自行裁决；同名维度按 expression 归属各自实体）
+  {dimensions_json}
+
+  【码值域键清单】
+  {domain_keys}
+
+  【列角色】（人工确认的每列角色/单位/时间粒度与表级业务键/分区结论：只给度量列建指标，忽略列不入资产；
+  标注「人工已确认，禁止再核实」的表直接采信，禁止用任何工具重复核实这些信息——包括单位；
+  但配置本身自相矛盾或明显不合理（如核心金额列被标忽略、单位口径互相冲突）属配置纠错，
+  不算重复核实——用 ask_user 直接问用户拍板，不要自行变通）
+  {column_roles}
+
+  【表画像】（骨架阶段已由确定性 SQL 核实：总行数/分区值域/键唯一性——已核实事实，禁止再用工具重复探测；快照表的分区对齐写法、最新分区值直接用画像给出的结论，分区内键唯一性/跨分区重复结论直接采信）
+  {table_profiles}
+
+  【已声明敏感字段】（禁止任何采样/配对/取值探索，禁止入 formula）
+  {sensitive_fields}
+
+  【业务工具链】（先规划/逐条挑勾/核实不猜/拿不准 ask_user/增量保存/收口自查等规划纪律已在系统提示中固化，此处只讲本任务的业务用法）
+  1. submit_plan 的计划建议覆盖：list_status 看总览→必要探索→三类资产生成保存→收口自查；
+  提交计划后逐条执行：边做边定、边产边存，不要在第一轮思考里把三类资产的全部细节设计完再动手；
+  2. 调 list_status 看任务总览：哪些类已有草稿、选表清单、敏感声明状态；已有且非失败的草稿不要重做（增量续作，继续补缺即可）；
+  3. 探索工具：describe_table（字段清单）、sample_rows（采样）、group_by_field（码值分布）、run_sql（只读 SQL）、get_dimensions（维度明细按需查）；画像/骨架/码值域/列角色中已确定的信息不必重复探索；核实类查询尽量一条 SQL 多个子查询一次问清（多问合一），不要一事一轮；列角色/画像未覆盖的疑点（join 命中率/码值含义等）才值得花轮次核实；
+  4. ask_user 适用的典型业务判断：状态码的业务含义、指标该用 SUM 还是 COUNT、某类资产是否纳入；
+  骨架/列角色配置疑似错误（核心列被忽略、单位冲突、同名歧义等）也立即 ask_user 报错拍板，禁止闷头绕开；
+  候选项须基于真实数据（可先用探索工具查证）；用户答复写入对应资产的 description/notes；
+  ask_user 超时未答/用户跳过而由你自决的口径，必须调 report_unconfirmed 逐条登记（疑点/采纳口径/证据/影响资产），
+  同一疑点登记一次即可；漏登则该口径无收口渠道；
+  5. 每完成一类（或一张表的指标）立即 save_draft 保存；被拒绝的条目按原因修正后重提；返回带草稿总数，同内容重复提交不会改变草稿，已保存过的类不要重复保存；
+  6. 三类均为 upsert 合并：来项按 name 新增/覆盖，未提及的现存条目保留——指标逐表生成逐表保存；
+  关系/概念也只传本批新增或修改的条目，删除废弃条目用 drop_names 显式声明（认证项不可删），不必每次传全量；
+  7. 发现编码↔名称配对可用 register_code_label_pairs 登记（后端采样真实映射，自动生成码值域）；
+  登记返回的 code→label 映射即该字段码值语义的唯一依据，后续产出（如概念展开取值）直接引用，不必再采样验证；
+  8. finish 收口前自查：自决口径已全部经 report_unconfirmed 登记（确认页会逐条展示供用户一键确认或改口径重算），总结列出未确认口径条数与要点即可，不必重复全文。
+
+  【各类输出 schema】（save_draft 的 content_json 格式）
+  metrics 数组：[{"name":"snake_case","display_name":"中文名","type":"atomic","aliases":["口语叫法"],"description":"口径说明（含单位）","formula":"SUM(db.tbl.col)","source_table":"db.tbl","datatype":"Decimal","certified":false}]
+  规则：
+  - formula 只用该表真实存在的 db.tbl.col，聚合函数限 SUM/COUNT/DISTINCT COUNT；指标严格单表（formula 引用表须与 source_table 一致）；同表组合指标（总额=多列之和等高频口径）可用聚合的算术组合（如 SUM(db.tbl.a)+SUM(db.tbl.b)）；
+  - supported_dimensions 不必输出：后端落库时按「源表骨架维度 + 经 relations 可达实体维度（排除敏感）」自动展开覆盖，不会漏列——不要自己枚举维度清单；
+  - description 必须写明「单位：…」：【列角色】已人工确认单位的列直接采信（禁止再核实）；仅未确认表且备注单位与采样量级不符时才用探索工具交叉参考值核实，把核实依据写进描述；快照表指标注明「聚合限单一分区（取最新）」；
+  - aliases 覆盖口语/简称/变体叫法；用户会用一个词问出的口径（如「合同额」=多类金额之和）必须生成独立指标。
+  relations 数组：[{"name":"A_To_B","from_entity":"实体名","to_entity":"实体名","type":"many_to_one","join":[{"left":"from实体列","right":"to实体列"}],"notes":"口径说明"}]
+  规则：只建同库可 join 的实体对，join 列必须是两实体真实存在的列且用 run_sql 抽样验证过命中率（禁止凭列名相似猜测）；关系链要建全（多跳链路逐跳建齐，让任意两实体可通过链路可达）；type 限 many_to_one/one_to_one/many_to_many；notes 写明关联口径（快照表注明分区对齐要求与行数放大风险）。
+  concepts 对象：{"schema_version":"1.0","concepts":[{"name":"业务术语","aliases":[],"entity":"","expands_to":{"dimension":"维度名","operator":"=","value":"码值"},"note":""}],"hierarchy":[]}
+  规则：expands_to.dimension 只能是维度骨架中的维度名，value 必须是码值域或采样中核实过的真实取值（禁止凭猜测写值）；概念分两类都要建：枚举型（状态/类型 → 码值）与实体映射型（口语简称指代的具体对象 → 名称/编码维度=真实取值）；aliases 覆盖口语简称与别名（含带括注的简称）；概念是业务口语术语，不重复维度本身；
+  hierarchy 是维度分组目录：把维度骨架全部维度按业务域归类（常用组参考：时间类/组织机构类/人员属性类/项目属性类/合同属性类/客户属性类/地区类/状态类），每维度至多入一组、尽量覆盖全部，拿不准的归「其他」；维度少于 20 个可输出空数组。
+  确无可产出的类，在 finish 总结中说明理由即可，不必强行输出空内容。

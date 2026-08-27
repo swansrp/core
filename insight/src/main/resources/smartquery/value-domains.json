@@ -1,0 +1,770 @@
+{
+  "schema_version": "1.0",
+  "domains": {
+    "manage_mode": {
+      "entity": "OmProject",
+      "field": "manage_mode",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "传统"
+        },
+        {
+          "code": "1",
+          "label": "总包"
+        }
+      ]
+    },
+    "manage_level": {
+      "entity": "OmProject",
+      "field": "manage_level",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "一级经营",
+          "aliases": [
+            "一级"
+          ]
+        },
+        {
+          "code": "2",
+          "label": "二级经营",
+          "aliases": [
+            "二级"
+          ]
+        },
+        {
+          "code": "3",
+          "label": "三级经营",
+          "aliases": [
+            "三级"
+          ]
+        }
+      ]
+    },
+    "manage_status": {
+      "entity": "OmProject",
+      "field": "manage_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "活跃"
+        },
+        {
+          "code": "2",
+          "label": "暂缓"
+        },
+        {
+          "code": "3",
+          "label": "中止"
+        },
+        {
+          "code": "4",
+          "label": "成功转化",
+          "aliases": [
+            "已转化",
+            "转化成功"
+          ]
+        }
+      ]
+    },
+    "manage_stage": {
+      "entity": "OmProject",
+      "field": "manage_stage",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "项目信息"
+        },
+        {
+          "code": "2",
+          "label": "项目跟踪",
+          "aliases": [
+            "跟踪"
+          ]
+        },
+        {
+          "code": "3",
+          "label": "项目投标",
+          "aliases": [
+            "投标中"
+          ]
+        },
+        {
+          "code": "4",
+          "label": "合同签订",
+          "aliases": [
+            "已签约",
+            "签约"
+          ]
+        }
+      ]
+    },
+    "business_plate": {
+      "entity": "OmProject",
+      "field": "business_plate",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "水利水电"
+        },
+        {
+          "code": "2",
+          "label": "新能源"
+        },
+        {
+          "code": "3",
+          "label": "生态环境"
+        },
+        {
+          "code": "4",
+          "label": "建筑市政"
+        },
+        {
+          "code": "5",
+          "label": "智慧工程"
+        },
+        {
+          "code": "6",
+          "label": "其他"
+        }
+      ]
+    },
+    "undertake_form": {
+      "entity": "OmProject",
+      "field": "undertake_form",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "公司独立承担",
+          "aliases": [
+            "独立承担"
+          ]
+        },
+        {
+          "code": "2",
+          "label": "与合作单位联合承担（联合体签署）",
+          "aliases": [
+            "联合体"
+          ]
+        },
+        {
+          "code": "3",
+          "label": "与合作单位联合承担（独立签署）"
+        }
+      ]
+    },
+    "bid_status": {
+      "entity": "OmProject",
+      "field": "bid_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "00",
+          "label": "未挂网"
+        },
+        {
+          "code": "01",
+          "label": "已开始执行"
+        },
+        {
+          "code": "02",
+          "label": "未中标"
+        },
+        {
+          "code": "03",
+          "label": "已中标",
+          "aliases": [
+            "中标"
+          ]
+        },
+        {
+          "code": "04",
+          "label": "已挂网"
+        },
+        {
+          "code": "05",
+          "label": "放弃投标"
+        },
+        {
+          "code": "06",
+          "label": "已报名"
+        },
+        {
+          "code": "08",
+          "label": "已投标"
+        },
+        {
+          "code": "09",
+          "label": "已缴保证金"
+        }
+      ]
+    },
+    "product_status": {
+      "entity": "OmProject",
+      "field": "product_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "未进入生产"
+        },
+        {
+          "code": "2",
+          "label": "进入生产"
+        },
+        {
+          "code": "3",
+          "label": "暂停生产"
+        },
+        {
+          "code": "4",
+          "label": "终止生产"
+        },
+        {
+          "code": "5",
+          "label": "完成生产"
+        }
+      ]
+    },
+    "region_type_om": {
+      "entity": "OmProject",
+      "field": "region_type",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "国内"
+        },
+        {
+          "code": "1",
+          "label": "海外"
+        }
+      ]
+    },
+    "is_important_bid": {
+      "entity": "OmProject",
+      "field": "is_important_bid",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "非重点"
+        },
+        {
+          "code": "1",
+          "label": "重点",
+          "aliases": [
+            "重点项目",
+            "重点投标"
+          ]
+        }
+      ]
+    },
+    "valid_status": {
+      "entity": "OmProject",
+      "field": "valid_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "无效"
+        },
+        {
+          "code": "1",
+          "label": "有效"
+        }
+      ]
+    },
+    "region_type_pm": {
+      "entity": "PmProject",
+      "field": "region_type",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "国内"
+        },
+        {
+          "code": "1",
+          "label": "海外"
+        }
+      ]
+    },
+    "produce_mode": {
+      "entity": "PmProject",
+      "field": "produce_mode",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "只有设计"
+        },
+        {
+          "code": "1",
+          "label": "只有总包"
+        },
+        {
+          "code": "2",
+          "label": "既有总包，又有设计"
+        }
+      ]
+    },
+    "pmp_classify": {
+      "entity": "PmProject",
+      "field": "pmp_classify",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "01",
+          "label": "规划"
+        },
+        {
+          "code": "02",
+          "label": "勘测设计"
+        },
+        {
+          "code": "03",
+          "label": "专题专项"
+        },
+        {
+          "code": "04",
+          "label": "总承包"
+        },
+        {
+          "code": "05",
+          "label": "监理"
+        }
+      ]
+    },
+    "pmp_state": {
+      "entity": "PmProject",
+      "field": "pmp_state",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "立项"
+        },
+        {
+          "code": "1",
+          "label": "执行"
+        },
+        {
+          "code": "2",
+          "label": "已结束",
+          "aliases": [
+            "完结",
+            "完成"
+          ]
+        },
+        {
+          "code": "3",
+          "label": "暂停"
+        },
+        {
+          "code": "4",
+          "label": "终止"
+        }
+      ]
+    },
+    "pmp_scale": {
+      "entity": "PmProject",
+      "field": "pmp_scale",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "0",
+          "label": "大",
+          "aliases": [
+            "大型"
+          ]
+        },
+        {
+          "code": "1",
+          "label": "中",
+          "aliases": [
+            "中型"
+          ]
+        },
+        {
+          "code": "2",
+          "label": "小",
+          "aliases": [
+            "小型"
+          ]
+        }
+      ]
+    },
+    "sign_status": {
+      "entity": "OmProjectContractDetail",
+      "field": "project_sign_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "01",
+          "label": "往年新签"
+        },
+        {
+          "code": "02",
+          "label": "当年新签",
+          "aliases": [
+            "新签"
+          ]
+        },
+        {
+          "code": "03",
+          "label": "当年签订中",
+          "aliases": [
+            "签订中"
+          ]
+        },
+        {
+          "code": "04",
+          "label": "无效合同"
+        },
+        {
+          "code": "05",
+          "label": "当年中标待签",
+          "aliases": [
+            "中标待签"
+          ]
+        },
+        {
+          "code": "06",
+          "label": "当年基本落实",
+          "aliases": [
+            "基本落实"
+          ]
+        },
+        {
+          "code": "07",
+          "label": "跟踪中"
+        },
+        {
+          "code": "09",
+          "label": "其他"
+        }
+      ]
+    },
+    "tpc_type": {
+      "entity": "TcpcDetailPmp",
+      "field": "tpc_type",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "01",
+          "label": "综合采购"
+        },
+        {
+          "code": "02",
+          "label": "专业采购"
+        }
+      ]
+    },
+    "user_sex": {
+      "entity": "PubUser",
+      "field": "user_sex",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "男"
+        },
+        {
+          "code": "2",
+          "label": "女"
+        },
+        {
+          "code": "3",
+          "label": "未知"
+        }
+      ]
+    },
+    "user_status": {
+      "entity": "PubUser",
+      "field": "user_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "在职",
+          "aliases": [
+            "在岗",
+            "在职员工"
+          ]
+        },
+        {
+          "code": "0",
+          "label": "离职",
+          "aliases": [
+            "已离职"
+          ]
+        }
+      ]
+    },
+    "user_sub_status": {
+      "entity": "PubUser",
+      "field": "user_sub_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "01",
+          "label": "正常在职"
+        },
+        {
+          "code": "02",
+          "label": "返聘在职"
+        },
+        {
+          "code": "03",
+          "label": "待离职在职"
+        },
+        {
+          "code": "04",
+          "label": "异常在职"
+        }
+      ]
+    },
+    "user_type": {
+      "entity": "PubUser",
+      "field": "user_type",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "01",
+          "label": "合同制"
+        },
+        {
+          "code": "02",
+          "label": "外聘"
+        },
+        {
+          "code": "03",
+          "label": "返聘"
+        },
+        {
+          "code": "04",
+          "label": "劳务用工（内）"
+        },
+        {
+          "code": "05",
+          "label": "劳务用工（外）"
+        },
+        {
+          "code": "06",
+          "label": "分公司合同制"
+        },
+        {
+          "code": "07",
+          "label": "分公司外聘"
+        },
+        {
+          "code": "08",
+          "label": "分公司借调"
+        }
+      ]
+    },
+    "hr_user_type": {
+      "entity": "PubUser",
+      "field": "hr_user_type",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "01",
+          "label": "合同制"
+        },
+        {
+          "code": "02",
+          "label": "劳务派遣"
+        },
+        {
+          "code": "03",
+          "label": "返聘"
+        },
+        {
+          "code": "04",
+          "label": "劳务用工（内）"
+        },
+        {
+          "code": "05",
+          "label": "劳务用工（外）"
+        },
+        {
+          "code": "06",
+          "label": "外包"
+        },
+        {
+          "code": "07",
+          "label": "外聘"
+        },
+        {
+          "code": "08",
+          "label": "借调"
+        },
+        {
+          "code": "09",
+          "label": "临时"
+        },
+        {
+          "code": "10",
+          "label": "联合培养实习生"
+        },
+        {
+          "code": "11",
+          "label": "签订三方实习生"
+        },
+        {
+          "code": "12",
+          "label": "专项工作实习生"
+        },
+        {
+          "code": "13",
+          "label": "顶岗实习生"
+        },
+        {
+          "code": "14",
+          "label": "分公司合同制"
+        },
+        {
+          "code": "15",
+          "label": "分公司劳务派遣"
+        },
+        {
+          "code": "17",
+          "label": "退休"
+        },
+        {
+          "code": "18",
+          "label": "分公司返聘"
+        },
+        {
+          "code": "19",
+          "label": "参股公司合同制"
+        },
+        {
+          "code": "20",
+          "label": "参股公司劳务派遣"
+        }
+      ]
+    },
+    "appoint_status": {
+      "entity": "PmObsPosition",
+      "field": "appoint_status",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "1",
+          "label": "当前任职",
+          "aliases": [
+            "在岗",
+            "在任",
+            "现任"
+          ]
+        },
+        {
+          "code": "0",
+          "label": "已免职",
+          "aliases": [
+            "免职",
+            "离任"
+          ]
+        }
+      ]
+    },
+    "obs_phase": {
+      "entity": "PmObsPosition",
+      "field": "phase_code",
+      "stored_as": "code",
+      "values": [
+        {
+          "code": "PS",
+          "label": "规划"
+        },
+        {
+          "code": "TP",
+          "label": "项目建议书"
+        },
+        {
+          "code": "PF",
+          "label": "预可研"
+        },
+        {
+          "code": "FF",
+          "label": "融资可研"
+        },
+        {
+          "code": "FS",
+          "label": "可行性研究",
+          "aliases": [
+            "可研"
+          ]
+        },
+        {
+          "code": "PE",
+          "label": "项目评估"
+        },
+        {
+          "code": "SS",
+          "label": "规模论证"
+        },
+        {
+          "code": "SD",
+          "label": "方案"
+        },
+        {
+          "code": "BS",
+          "label": "投标设计"
+        },
+        {
+          "code": "PD",
+          "label": "初步设计",
+          "aliases": [
+            "初设"
+          ]
+        },
+        {
+          "code": "BD",
+          "label": "基本设计"
+        },
+        {
+          "code": "TD",
+          "label": "招标设计"
+        },
+        {
+          "code": "CD",
+          "label": "施工图设计",
+          "aliases": [
+            "施工图"
+          ]
+        },
+        {
+          "code": "DD",
+          "label": "详细设计"
+        },
+        {
+          "code": "WD",
+          "label": "车间图设计"
+        },
+        {
+          "code": "AD",
+          "label": "竣工图设计"
+        },
+        {
+          "code": "IS",
+          "label": "实施方案"
+        },
+        {
+          "code": "OS",
+          "label": "其他"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,574 @@
+[
+  {
+    "name": "contract_amount",
+    "display_name": "合同额",
+    "type": "atomic",
+    "aliases": [
+      "合同金额",
+      "签约金额",
+      "签约额"
+    ],
+    "description": "传统+总包合同金额合计（签订成功后才有值）。快照口径：取指定快照年（dy）的值，未指定时取最新快照年。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_contract_amt_001 + dw_ads.ads_om_project_detail_dyf.total_contract_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "bid_status",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal",
+    "certified": true
+  },
+  {
+    "name": "contract_amount_tradi",
+    "display_name": "传统合同额",
+    "type": "atomic",
+    "aliases": [
+      "传统合同金额",
+      "传统签约金额"
+    ],
+    "description": "传统模式合同金额（签订成功后才有值）。快照口径同合同额。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_contract_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_status",
+      "manage_stage",
+      "bid_status",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "manage_level",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "contract_amount_total",
+    "display_name": "总包合同额",
+    "type": "atomic",
+    "aliases": [
+      "总包合同金额",
+      "总包签约金额"
+    ],
+    "description": "总包模式合同金额（签订成功后才有值）。快照口径同合同额。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.total_contract_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_status",
+      "manage_stage",
+      "bid_status",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "manage_level",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "new_contract_amount",
+    "display_name": "新签合同额",
+    "type": "atomic",
+    "aliases": [
+      "新增合同额",
+      "新签合同金额",
+      "新增合同金额"
+    ],
+    "description": "传统+总包新增合同额合计（快照年内新增，签订成功后才有值）。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_inc_contract_amt_004 + dw_ads.ads_om_project_detail_dyf.total_inc_contract_amt_004)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "bid_status",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "estimate_amount",
+    "display_name": "预估金额",
+    "type": "atomic",
+    "aliases": [
+      "预估合同额",
+      "预计金额"
+    ],
+    "description": "传统+总包预估金额合计（签订中取合同值）。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_estimate_amt_001 + dw_ads.ads_om_project_detail_dyf.total_estimate_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "bid_status",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "current_year_payin_amount",
+    "display_name": "当年到款",
+    "type": "atomic",
+    "aliases": [
+      "当年到款金额",
+      "当年回款",
+      "当年收款"
+    ],
+    "description": "传统+总包当年到款金额合计（快照年内到款）。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_current_year_payin_amt_001 + dw_ads.ads_om_project_detail_dyf.total_current_year_payin_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "pre_years_payin_amount",
+    "display_name": "往年到款",
+    "type": "atomic",
+    "aliases": [
+      "往年到款金额",
+      "历史到款"
+    ],
+    "description": "传统+总包往年到款金额合计（快照年之前的到款）。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_pre_years_payin_amt_001 + dw_ads.ads_om_project_detail_dyf.total_pre_years_payin_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "receivable_amount",
+    "display_name": "应收金额",
+    "type": "atomic",
+    "aliases": [
+      "应收款",
+      "应收账款"
+    ],
+    "description": "传统+总包应收金额合计。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_receivable_payin_amt_002 + dw_ads.ads_om_project_detail_dyf.total_receivable_payin_amt_002)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "remaining_contract_amount",
+    "display_name": "剩余合同额",
+    "type": "atomic",
+    "aliases": [
+      "剩余合同金额",
+      "合同余额"
+    ],
+    "description": "传统+总包剩余合同金额合计（公式=合同金额-所有到款金额）。",
+    "formula": "SUM(dw_ads.ads_om_project_detail_dyf.tradi_remaining_contract_amt_001 + dw_ads.ads_om_project_detail_dyf.total_remaining_contract_amt_001)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "sign_status",
+      "is_important_bid",
+      "om_project",
+      "om_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "om_project_count",
+    "display_name": "经营项目数",
+    "type": "atomic",
+    "aliases": [
+      "项目数量",
+      "项目个数",
+      "项目数"
+    ],
+    "description": "经营项目个数（COUNT DISTINCT 项目编码，明细表一个项目可能对应多份合同）。",
+    "formula": "COUNT(DISTINCT dw_ads.ads_om_project_detail_dyf.project_code)",
+    "source_table": "dw_ads.ads_om_project_detail_dyf",
+    "supported_dimensions": [
+      "om_year",
+      "region_area1",
+      "region_area2",
+      "province",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "manage_status",
+      "manage_stage",
+      "bid_status",
+      "sign_status",
+      "is_important_bid"
+    ],
+    "datatype": "Integer"
+  },
+  {
+    "name": "tpc_contract_amount",
+    "display_name": "采购合同金额",
+    "type": "atomic",
+    "aliases": [
+      "采购合同额",
+      "采购金额"
+    ],
+    "description": "采购合同明细金额合计（传统采购）。当前仅有 2026 快照年数据。",
+    "formula": "SUM(dw_ads.ads_pm_tcpc_detail_pmp_dyf.tpc_amt_003)",
+    "source_table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "supported_dimensions": [
+      "pm_year",
+      "tpc_type",
+      "pmp_classify",
+      "pmp_state",
+      "pmp_project",
+      "om_project",
+      "region_area1",
+      "region_area2",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "province",
+      "om_project_code",
+      "pmp_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "tpc_new_sign_amount",
+    "display_name": "当年新签采购合同金额",
+    "type": "atomic",
+    "aliases": [
+      "新签采购合同金额",
+      "新签采购额"
+    ],
+    "description": "快照年内新签采购合同金额合计。",
+    "formula": "SUM(dw_ads.ads_pm_tcpc_detail_pmp_dyf.tpc_new_sign_amt_003)",
+    "source_table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "supported_dimensions": [
+      "pm_year",
+      "tpc_type",
+      "pmp_classify",
+      "pmp_state",
+      "pmp_project",
+      "om_project",
+      "region_area1",
+      "region_area2",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "province",
+      "om_project_code",
+      "pmp_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "tpc_inc_amount",
+    "display_name": "当年新增采购合同金额",
+    "type": "atomic",
+    "aliases": [
+      "新增采购合同金额",
+      "新增采购额"
+    ],
+    "description": "快照年内新增采购合同金额合计。",
+    "formula": "SUM(dw_ads.ads_pm_tcpc_detail_pmp_dyf.tpc_inc_amt_004)",
+    "source_table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "supported_dimensions": [
+      "pm_year",
+      "tpc_type",
+      "pmp_classify",
+      "pmp_state",
+      "pmp_project",
+      "om_project",
+      "region_area1",
+      "region_area2",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "province",
+      "om_project_code",
+      "pmp_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "payment_apply_amount",
+    "display_name": "付款申请金额",
+    "type": "atomic",
+    "aliases": [
+      "付款申请总额",
+      "申请付款金额"
+    ],
+    "description": "有效的付款申请总金额合计。",
+    "formula": "SUM(dw_ads.ads_pm_tcpc_detail_pmp_dyf.payment_apply_amt_004)",
+    "source_table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "supported_dimensions": [
+      "pm_year",
+      "tpc_type",
+      "pmp_classify",
+      "pmp_state",
+      "pmp_project",
+      "om_project",
+      "region_area1",
+      "region_area2",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "province",
+      "om_project_code",
+      "pmp_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "payment_amount",
+    "display_name": "已付款金额",
+    "type": "atomic",
+    "aliases": [
+      "已付款",
+      "实际付款金额",
+      "支付金额"
+    ],
+    "description": "已付款总金额合计。",
+    "formula": "SUM(dw_ads.ads_pm_tcpc_detail_pmp_dyf.payment_amt_004)",
+    "source_table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "supported_dimensions": [
+      "pm_year",
+      "tpc_type",
+      "pmp_classify",
+      "pmp_state",
+      "pmp_project",
+      "om_project",
+      "region_area1",
+      "region_area2",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "province",
+      "om_project_code",
+      "pmp_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "payment_inc_amount",
+    "display_name": "当年新增付款金额",
+    "type": "atomic",
+    "aliases": [
+      "新增付款金额",
+      "当年付款金额"
+    ],
+    "description": "快照年内新增付款金额合计。",
+    "formula": "SUM(dw_ads.ads_pm_tcpc_detail_pmp_dyf.payment_inc_amt_006)",
+    "source_table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "supported_dimensions": [
+      "pm_year",
+      "tpc_type",
+      "pmp_classify",
+      "pmp_state",
+      "pmp_project",
+      "om_project",
+      "region_area1",
+      "region_area2",
+      "busi_entity",
+      "business_plate",
+      "manage_mode",
+      "manage_level",
+      "province",
+      "om_project_code",
+      "pmp_project_code"
+    ],
+    "datatype": "Decimal"
+  },
+  {
+    "name": "user_count",
+    "display_name": "员工人数",
+    "type": "atomic",
+    "aliases": [
+      "人数",
+      "员工数",
+      "职工人数",
+      "在册人数"
+    ],
+    "description": "员工人数，按员工表行数统计（同一 dy 快照内 user_no 唯一）。",
+    "formula": "COUNT(dw_dim.dim_pub_user_dyf.user_no)",
+    "source_table": "dw_dim.dim_pub_user_dyf",
+    "supported_dimensions": [
+      "user_year",
+      "user_sex",
+      "user_status",
+      "user_sub_status",
+      "user_type",
+      "hr_user_type",
+      "dept_name",
+      "hr_edu_name",
+      "hr_job_grade_name",
+      "professional_type_name",
+      "post_seq_name",
+      "dept_code"
+    ],
+    "datatype": "Integer"
+  },
+  {
+    "name": "obs_user_count",
+    "display_name": "岗位任职人数",
+    "type": "atomic",
+    "aliases": [
+      "在岗人数",
+      "项目人数",
+      "任职人数",
+      "班子人数"
+    ],
+    "description": "生产项目岗位任职的去重人数（COUNT DISTINCT user_no）。默认口径为当前任职（appoint_status=1），查历史任免需显式放开。同一人任多个岗位/项目只计一次。",
+    "formula": "COUNT(DISTINCT dw_dwd.dwd_pm_obs_dyf.user_no)",
+    "source_table": "dw_dwd.dwd_pm_obs_dyf",
+    "supported_dimensions": [
+      "obs_year",
+      "position_name",
+      "appoint_status",
+      "appoint_type",
+      "obs_phase",
+      "pmp_project",
+      "pmp_classify",
+      "pmp_state",
+      "user_name",
+      "dept_name",
+      "hr_user_type",
+      "user_sex",
+      "user_status",
+      "professional_type_name",
+      "pmp_project_code",
+      "dept_code"
+    ],
+    "datatype": "Integer"
+  },
+  {
+    "name": "obs_position_record_count",
+    "display_name": "岗位任职记录数",
+    "type": "atomic",
+    "aliases": [
+      "任职记录数",
+      "岗位数",
+      "任免记录数"
+    ],
+    "description": "生产项目岗位任职记录条数（COUNT *）。一个项目多个岗位多人各计一条；默认口径为当前任职（appoint_status=1）。",
+    "formula": "COUNT(dw_dwd.dwd_pm_obs_dyf.user_no)",
+    "source_table": "dw_dwd.dwd_pm_obs_dyf",
+    "supported_dimensions": [
+      "obs_year",
+      "position_name",
+      "appoint_status",
+      "appoint_type",
+      "obs_phase",
+      "pmp_project",
+      "pmp_classify",
+      "pmp_state",
+      "user_name",
+      "dept_name",
+      "hr_user_type",
+      "user_sex",
+      "user_status",
+      "professional_type_name",
+      "pmp_project_code",
+      "dept_code"
+    ],
+    "datatype": "Integer"
+  }
+]

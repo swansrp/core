@@ -1,0 +1,235 @@
+{
+  "g1_title_distribution": {
+    "semantic_query": {
+      "query_type": "metric",
+      "metrics": [
+        "user_count"
+      ],
+      "dimensions": [
+        "professional_type_name"
+      ],
+      "filters": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "dimension": "user_status",
+            "operator": "=",
+            "value": "在岗"
+          }
+        ]
+      }
+    },
+    "validation": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    },
+    "gen": {
+      "sql": "SELECT t0.`professional_type_name` AS `professional_type_name`,\n       COUNT(t0.`user_no`) AS `user_count`\nFROM `dw_dim`.`dim_pub_user_dyf` AS t0\nWHERE t0.`dy` = (SELECT MAX(dy) FROM `dw_dim`.`dim_pub_user_dyf`)\n  AND t0.`user_status` = %s\nGROUP BY t0.`professional_type_name`\nLIMIT %s",
+      "params": [
+        "1",
+        100
+      ],
+      "columns": [
+        {
+          "alias": "professional_type_name",
+          "kind": "dimension",
+          "display": "职称类型"
+        },
+        {
+          "alias": "user_count",
+          "kind": "metric",
+          "display": "员工人数"
+        }
+      ],
+      "notes": [
+        "未指定快照年份，默认取最新快照年（dw_dim.dim_pub_user_dyf 的 MAX(dy)）",
+        "过滤值 '在岗' 已按值域映射为存储码值 '1'"
+      ],
+      "translate": {}
+    }
+  },
+  "g2_payment_top30": {
+    "semantic_query": {
+      "query_type": "metric",
+      "metrics": [
+        "payment_amount"
+      ],
+      "dimensions": [
+        "om_project_code"
+      ],
+      "order_by": [
+        {
+          "field": "payment_amount",
+          "direction": "desc"
+        }
+      ],
+      "limit": 30
+    },
+    "validation": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    },
+    "gen": {
+      "sql": "SELECT t1.`project_code` AS `om_project_code`,\n       SUM(t0.`payment_amt_004`) AS `payment_amount`\nFROM `dw_ads`.`ads_pm_tcpc_detail_pmp_dyf` AS t0\nLEFT JOIN `dw_dim`.`dim_om_project_dyf` AS t1 ON t0.`project_code` = t1.`project_code` AND t0.`dy` = t1.`dy`\nWHERE t0.`dy` = (SELECT MAX(dy) FROM `dw_ads`.`ads_pm_tcpc_detail_pmp_dyf`)\nGROUP BY t1.`project_code`\nORDER BY `payment_amount` DESC\nLIMIT %s",
+      "params": [
+        30
+      ],
+      "columns": [
+        {
+          "alias": "om_project_code",
+          "kind": "dimension",
+          "display": "经营项目编码"
+        },
+        {
+          "alias": "payment_amount",
+          "kind": "metric",
+          "display": "已付款金额"
+        }
+      ],
+      "notes": [
+        "未指定快照年份，默认取最新快照年（dw_ads.ads_pm_tcpc_detail_pmp_dyf 的 MAX(dy)）"
+      ],
+      "translate": {}
+    }
+  },
+  "g3_scope_advanced_payment": {
+    "semantic_query": {
+      "query_type": "metric",
+      "metrics": [
+        "current_year_payin_amount",
+        "pre_years_payin_amount"
+      ],
+      "dimensions": [
+        "om_project_code"
+      ],
+      "scope_filter": {
+        "metric": "payment_amount",
+        "dimension": "om_project_code",
+        "op": "in",
+        "filters": {
+          "operator": "AND",
+          "conditions": [
+            {
+              "dimension": "manage_mode",
+              "operator": "=",
+              "value": "传统"
+            }
+          ]
+        },
+        "having": {
+          "operator": "AND",
+          "conditions": [
+            {
+              "metric": "payment_amount",
+              "operator": ">",
+              "value": 0
+            }
+          ]
+        }
+      },
+      "order_by": [
+        {
+          "field": "current_year_payin_amount",
+          "direction": "desc"
+        }
+      ]
+    },
+    "validation": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    },
+    "gen": {
+      "sql": "SELECT t1.`project_code` AS `om_project_code`,\n       SUM(t0.`tradi_current_year_payin_amt_001` + t0.`total_current_year_payin_amt_001`) AS `current_year_payin_amount`,\n       SUM(t0.`tradi_pre_years_payin_amt_001` + t0.`total_pre_years_payin_amt_001`) AS `pre_years_payin_amount`\nFROM `dw_ads`.`ads_om_project_detail_dyf` AS t0\nLEFT JOIN `dw_dim`.`dim_om_project_dyf` AS t1 ON t0.`project_code` = t1.`project_code` AND t0.`dy` = t1.`dy`\nWHERE t0.`dy` = (SELECT MAX(dy) FROM `dw_ads`.`ads_om_project_detail_dyf`)\n  AND t1.`project_code` IN (\nSELECT st1.`project_code`\nFROM `dw_ads`.`ads_pm_tcpc_detail_pmp_dyf` AS st0\nLEFT JOIN `dw_dim`.`dim_om_project_dyf` AS st1 ON st0.`project_code` = st1.`project_code` AND st0.`dy` = st1.`dy`\nWHERE st0.`dy` = (SELECT MAX(dy) FROM `dw_ads`.`ads_pm_tcpc_detail_pmp_dyf`)\n  AND st1.`manage_mode` = %s\nGROUP BY st1.`project_code`\nHAVING SUM(st0.`payment_amt_004`) > %s\n)\nGROUP BY t1.`project_code`\nORDER BY `current_year_payin_amount` DESC\nLIMIT %s",
+      "params": [
+        "0",
+        0,
+        100
+      ],
+      "columns": [
+        {
+          "alias": "om_project_code",
+          "kind": "dimension",
+          "display": "经营项目编码"
+        },
+        {
+          "alias": "current_year_payin_amount",
+          "kind": "metric",
+          "display": "当年到款"
+        },
+        {
+          "alias": "pre_years_payin_amount",
+          "kind": "metric",
+          "display": "往年到款"
+        }
+      ],
+      "notes": [
+        "未指定快照年份，默认取最新快照年（dw_ads.ads_om_project_detail_dyf 的 MAX(dy)）",
+        "未指定快照年份，默认取最新快照年（dw_ads.ads_pm_tcpc_detail_pmp_dyf 的 MAX(dy)）",
+        "过滤值 '传统' 已按值域映射为存储码值 '0'",
+        "跨事实表范围过滤：主查询经 om_project_code 半连接（IN 子查询）圈定于指标 'payment_amount' 满足条件的项目"
+      ],
+      "translate": {}
+    }
+  },
+  "g4_list_projects": {
+    "semantic_query": {
+      "query_type": "list",
+      "entity": "OmProject",
+      "fields": [
+        "project_code",
+        "manage_stage"
+      ],
+      "filters": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "dimension": "manage_mode",
+            "operator": "=",
+            "value": "传统"
+          }
+        ]
+      },
+      "order_by": [
+        {
+          "field": "project_code",
+          "direction": "asc"
+        }
+      ],
+      "limit": 50
+    },
+    "validation": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    },
+    "gen": {
+      "sql": "SELECT DISTINCT t0.`project_code` AS `project_code`,\n       t0.`manage_stage` AS `manage_stage`\nFROM `dw_dim`.`dim_om_project_dyf` AS t0\nWHERE t0.`dy` = (SELECT MAX(dy) FROM `dw_dim`.`dim_om_project_dyf`)\n  AND t0.`manage_mode` = %s\nORDER BY `project_code` ASC\nLIMIT %s",
+      "params": [
+        "0",
+        50
+      ],
+      "columns": [
+        {
+          "alias": "project_code",
+          "kind": "field",
+          "display": "项目编码"
+        },
+        {
+          "alias": "manage_stage",
+          "kind": "field",
+          "display": "经营阶段"
+        }
+      ],
+      "notes": [
+        "未指定快照年份，默认取最新快照年",
+        "过滤值 '传统' 已按值域映射为存储码值 '0'"
+      ],
+      "translate": {
+        "manage_stage": "_entity_field:OmProject.manage_stage"
+      }
+    }
+  }
+}

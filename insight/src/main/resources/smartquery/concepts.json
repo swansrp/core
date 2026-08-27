@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "concepts": [
+    {
+      "name": "当年新签项目",
+      "aliases": ["当年新签", "新签项目"],
+      "entity": "OmProjectContractDetail",
+      "expands_to": { "dimension": "sign_status", "operator": "=", "value": "当年新签" },
+      "note": "快照年内新签订的项目合同（签订状态=02）"
+    },
+    {
+      "name": "往年新签项目",
+      "aliases": ["往年新签"],
+      "entity": "OmProjectContractDetail",
+      "expands_to": { "dimension": "sign_status", "operator": "=", "value": "往年新签" },
+      "note": "往年新签的项目合同（签订状态=01）"
+    },
+    {
+      "name": "跟踪中项目",
+      "aliases": ["跟踪中", "在跟踪项目"],
+      "entity": "OmProjectContractDetail",
+      "expands_to": { "dimension": "sign_status", "operator": "=", "value": "跟踪中" },
+      "note": "签订状态为跟踪中（07）"
+    },
+    {
+      "name": "重点项目",
+      "aliases": ["重点投标项目"],
+      "entity": "OmProject",
+      "expands_to": { "dimension": "is_important_bid", "operator": "=", "value": "重点" },
+      "note": "是否重点投标=1"
+    },
+    {
+      "name": "活跃项目",
+      "entity": "OmProject",
+      "expands_to": { "dimension": "manage_status", "operator": "=", "value": "活跃" },
+      "note": "经营状态=活跃（1）"
+    }
+  ],
+  "hierarchy": [
+    {
+      "child": "region_area2",
+      "parent": "region_area1",
+      "relation": "二级经营区域归属一级经营区域（海外区域二级细分为非洲/南亚/东南亚/美大等公司）"
+    }
+  ]
+}

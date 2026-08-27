@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "default_policy": "allow_all",
+  "users": {
+    "demo": {
+      "label": "POC 演示用户（全量权限）",
+      "metrics": { "allow": ["*"], "deny": [] },
+      "row_filters": {},
+      "column_filters": { "mask": {}, "hide": [] },
+      "time_scope": { "max_history_days": 0 },
+      "rate_limits": { "queries_per_minute": 10, "max_rows_per_query": 1000 }
+    }
+  }
+}

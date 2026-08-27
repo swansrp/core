@@ -1,0 +1,87 @@
+{
+ "domains": {
+  "data_type": {
+   "entity": "SchedulePlan",
+   "field": "data_type",
+   "stored_as": "code",
+   "values": [
+    {"code": "0", "label": "总控", "aliases": ["总控计划"]},
+    {"code": "1", "label": "分类", "aliases": ["分类项"]},
+    {"code": "2", "label": "子项", "aliases": ["子项目"]}
+   ]
+  },
+  "qbs_type": {
+   "entity": "QualityQbs",
+   "field": "type",
+   "stored_as": "code",
+   "note": "数据库字段注释有误，实际含义以本值域为准",
+   "values": [
+    {"code": "1", "label": "合同工程", "aliases": ["合同"]},
+    {"code": "2", "label": "单位工程", "aliases": []},
+    {"code": "3", "label": "分部工程", "aliases": []},
+    {"code": "4", "label": "单元工程", "aliases": ["单元"]}
+   ]
+  },
+  "qbs_result": {
+   "entity": "QualityQbs",
+   "field": "result",
+   "stored_as": "code",
+   "values": [
+    {"code": "1", "label": "优良", "aliases": ["优"]},
+    {"code": "2", "label": "合格", "aliases": ["通过"]},
+    {"code": "3", "label": "未验评", "aliases": ["未验", "待验评"]}
+   ]
+  },
+  "if_last_level": {
+   "entity": "SchedulePlan",
+   "field": "if_last_level",
+   "stored_as": "code",
+   "values": [
+    {"code": "1", "label": "是", "aliases": ["末级", "末级节点"]},
+    {"code": "2", "label": "否", "aliases": ["非末级"]}
+   ]
+  },
+  "hazard_type": {
+   "entity": "ProjectHazard",
+   "field": "type",
+   "stored_as": "code",
+   "values": [
+    {"code": "1", "label": "重大危险源", "aliases": ["重大"]},
+    {"code": "2", "label": "较大危险源", "aliases": ["较大"]},
+    {"code": "3", "label": "一般危险源", "aliases": ["一般"]}
+   ]
+  },
+  "hazard_confirm_status": {
+   "entity": "ProjectHazard",
+   "field": "confirm_status",
+   "stored_as": "code",
+   "values": [
+    {"code": "1", "label": "已确认", "aliases": ["确认", "在册", "现有", "当前"]},
+    {"code": "2", "label": "已解除确认", "aliases": ["解除", "已解除", "销号"]}
+   ]
+  },
+  "hazard_level": {
+   "entity": "ProjectHazard",
+   "field": "level",
+   "stored_as": "label",
+   "values": [
+    {"code": "低风险", "label": "低风险", "aliases": ["低"]},
+    {"code": "一般风险", "label": "一般风险", "aliases": []},
+    {"code": "较大风险", "label": "较大风险", "aliases": []},
+    {"code": "重大风险", "label": "重大风险", "aliases": ["高"]}
+   ]
+  },
+  "hazard_class": {
+   "entity": "ProjectHazard",
+   "field": "type_class",
+   "stored_as": "label",
+   "values": [
+    {"code": "施工作业类", "label": "施工作业类", "aliases": ["施工作业"]},
+    {"code": "机械设备类", "label": "机械设备类", "aliases": ["机械设备"]},
+    {"code": "设施场所类", "label": "设施场所类", "aliases": ["设施场所"]},
+    {"code": "作业环境类", "label": "作业环境类", "aliases": ["作业环境"]},
+    {"code": "其他类", "label": "其他类", "aliases": ["其他"]}
+   ]
+  }
+ }
+}

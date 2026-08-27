@@ -1,0 +1,595 @@
+[
+  {
+    "name": "SchedulePlan",
+    "kind": "entity",
+    "aliases": [
+      "进度计划",
+      "计划",
+      "WBS",
+      "施工进度计划"
+    ],
+    "table": "fpim.icms_schedule_plan",
+    "listable": true,
+    "summary": "进度计划 WBS 树：level=1 总控计划（全项目）→ level=2 年度施工进度计划（2025/2026）→ 施工标 → 单位/分部/分项工程；投资/工程量字段父子层级均存值，聚合指标仅取末级（if_last_level=1）避免重复累计；年度口径查询用 full_path_name 锚定（如 contains '/2026年施工进度计划'）；默认仅统计启用且已审核数据"
+  },
+  {
+    "name": "QualityQbs",
+    "kind": "entity",
+    "aliases": [
+      "质量验评（QBS）",
+      "验评",
+      "质量验评",
+      "QBS",
+      "分部工程验评"
+    ],
+    "table": "fpim.icms_quality_qbs",
+    "listable": true,
+    "summary": "质量验评 QBS 树（合同工程→单位工程→分部工程→单元工程）；验评结果仅末级单元工程（type=4）有效，验评率/优良率口径均以单元工程为基数；默认仅统计启用且已审核数据"
+  },
+  {
+    "name": "InvestMonthly",
+    "kind": "entity",
+    "aliases": [
+      "月度投资",
+      "月度投资执行单",
+      "当月投资",
+      "投资完成"
+    ],
+    "table": "fpim.icms_invest_monthly",
+    "listable": true,
+    "summary": "月度投资执行单：一行 = 某单位某月完成投资；year/month 为整数年度与月份，finish_price 为当月完成投资（万元）；按单位（标段）pro_unit_name 填报；默认仅统计启用且已审核数据"
+  },
+  {
+    "name": "ProjectHazard",
+    "kind": "entity",
+    "aliases": [
+      "危险源",
+      "危险源管理",
+      "安全风险",
+      "隐患"
+    ],
+    "table": "fpim.icms_project_hazard",
+    "listable": true,
+    "summary": "危险源台账：一行 = 一个危险源；project 为施工项目（如明挖施工/填筑工程），type 为危险源分级（1重大/2较大/3一般），type_class 为类别（施工作业类等），level 为风险等级文本；confirm_status 确认状态：1=当前确认在册，2=已解除确认（cancel_confirm_time 为解除时间）；find_time 为发现时间；各责任人字段均为姓名文本；默认仅统计启用且已审核数据"
+  },
+  {
+    "name": "qbs_node_count",
+    "kind": "metric",
+    "aliases": [
+      "QBS节点数",
+      "验评节点数",
+      "质量分解数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "质量验评 QBS 树节点总数（含合同工程/单位工程/分部工程/单元工程各层级），源表 icms_quality_qbs，默认仅统计启用且已审核数据"
+  },
+  {
+    "name": "qbs_unit_eng_count",
+    "kind": "metric",
+    "aliases": [
+      "单元工程数",
+      "单元工程个数",
+      "单元工程总数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "单元工程（type=4）总数，验评统计的分母基数，源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_evaluated_count",
+    "kind": "metric",
+    "aliases": [
+      "已验评数",
+      "已验评单元工程数",
+      "验评完成数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "已完成验评的单元工程数（type=4 且验评结果为优良或合格），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_good_count",
+    "kind": "metric",
+    "aliases": [
+      "优良数",
+      "优良单元工程数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "验评结果为优良的单元工程数（type=4 且 result=1），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_qualified_count",
+    "kind": "metric",
+    "aliases": [
+      "合格数",
+      "合格单元工程数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "验评结果为合格的单元工程数（type=4 且 result=2），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_unevaluated_count",
+    "kind": "metric",
+    "aliases": [
+      "未验评数",
+      "未验评单元工程数",
+      "待验评数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "尚未验评的单元工程数（type=4 且 result=3 或为空），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_evaluated_rate",
+    "kind": "metric",
+    "aliases": [
+      "验评率",
+      "验评完成率"
+    ],
+    "entity": "QualityQbs",
+    "summary": "已验评单元工程数 / 单元工程总数（0~1 小数，展示时转百分比），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_good_rate",
+    "kind": "metric",
+    "aliases": [
+      "优良率",
+      "优良品率"
+    ],
+    "entity": "QualityQbs",
+    "summary": "优良单元工程数 / 已验评单元工程数（0~1 小数，展示时转百分比），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_qualified_rate",
+    "kind": "metric",
+    "aliases": [
+      "合格率",
+      "合格品率"
+    ],
+    "entity": "QualityQbs",
+    "summary": "合格单元工程数 / 已验评单元工程数（0~1 小数，展示时转百分比；与优良率互补，两者之和为 100%），源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_unit_work_count",
+    "kind": "metric",
+    "aliases": [
+      "单位工程数",
+      "单位工程个数",
+      "单位工程总数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "单位工程（type=2）总数，源表 icms_quality_qbs"
+  },
+  {
+    "name": "qbs_section_work_count",
+    "kind": "metric",
+    "aliases": [
+      "分部工程数",
+      "分部工程个数",
+      "分部工程总数"
+    ],
+    "entity": "QualityQbs",
+    "summary": "分部工程（type=3）总数，源表 icms_quality_qbs"
+  },
+  {
+    "name": "plan_task_count",
+    "kind": "metric",
+    "aliases": [
+      "计划节点数",
+      "计划条目数",
+      "WBS节点数"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "进度计划 WBS 节点总数（含各层级），源表 icms_schedule_plan，默认仅统计启用且已审核数据"
+  },
+  {
+    "name": "plan_leaf_invest",
+    "kind": "metric",
+    "aliases": [
+      "末级节点投资金额",
+      "计划投资金额",
+      "末级投资"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "进度计划末级节点（if_last_level=1）投资金额合计（万元）；WBS 树父子层级均存投资金额，仅取末级避免重复累计，源表 icms_schedule_plan"
+  },
+  {
+    "name": "plan_leaf_work_num",
+    "kind": "metric",
+    "aliases": [
+      "末级节点工程数量",
+      "计划工程数量"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "进度计划末级节点（if_last_level=1）工程数量合计，仅取末级避免父子层级重复累计，源表 icms_schedule_plan"
+  },
+  {
+    "name": "plan_leaf_finish_work_num",
+    "kind": "metric",
+    "aliases": [
+      "末级节点已完成数量",
+      "计划已完成数量"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "进度计划末级节点（if_last_level=1）已完成数量合计，仅取末级避免父子层级重复累计，源表 icms_schedule_plan"
+  },
+  {
+    "name": "plan_duration_avg",
+    "kind": "metric",
+    "aliases": [
+      "平均原定工期",
+      "平均工期"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "草稿口径：进度计划原定工期算术平均（天，含各层级节点，树结构加权口径待业务确认）"
+  },
+  {
+    "name": "plan_project_invest",
+    "kind": "metric",
+    "aliases": [
+      "工程总投资",
+      "总体投资",
+      "项目总投资",
+      "工程总体投资"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "工程总投资（万元）：取总控计划根节点（level=1）的投资金额，全项目唯一；展示时可按需换算亿元"
+  },
+  {
+    "name": "plan_year_invest",
+    "kind": "metric",
+    "aliases": [
+      "年度计划投资",
+      "年度投资",
+      "年度总体投资"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "年度施工进度计划投资（万元）：取 level=2 年度根节点投资金额；查具体年份时用 plan_wbs_name 或 plan_full_path 过滤（如 '2026年施工进度计划'）"
+  },
+  {
+    "name": "plan_time_progress_rate",
+    "kind": "metric",
+    "aliases": [
+      "计划完成比例",
+      "计划进度比例",
+      "工期进度比例",
+      "计划完成率"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "计划完成比例 = 已历时工期 / 总工期（节点计划开始至计划完成，截至当前日期，截断在 0~1，仅取 level≤1/2 根节点）；查询时须用 plan_wbs_name 或 plan_full_path 锁定单个根节点（总控计划或年度计划）；0~1 小数，展示时转百分比"
+  },
+  {
+    "name": "plan_actual_finish_rate",
+    "kind": "metric",
+    "aliases": [
+      "实际完成比例",
+      "实际已完成比例",
+      "投资完成比例"
+    ],
+    "entity": "SchedulePlan",
+    "summary": "实际完成比例 = 子树内末级节点已完成估投合计 / 根节点投资；**必须**用 plan_full_path contains 锚定年度根节点（如 '/2026年施工进度计划'，不带尾斜杠，否则会漏掉根节点自身）；不带年度锚定的全局口径依赖反馈明细表（尚未迁入），禁止无过滤使用；0~1 小数，展示时转百分比"
+  },
+  {
+    "name": "invest_finish_month",
+    "kind": "metric",
+    "aliases": [
+      "当月完成投资",
+      "月度投资",
+      "月度完成投资",
+      "完成投资金额"
+    ],
+    "entity": "InvestMonthly",
+    "summary": "月度投资执行单当月完成投资合计（万元）；按 year/month/单位汇总；注意与计划表已完成估投（finish_estimate）为两套独立口径，数值不一致属正常；源表 icms_invest_monthly"
+  },
+  {
+    "name": "hazard_count",
+    "kind": "metric",
+    "aliases": [
+      "危险源数",
+      "危险源个数",
+      "危险源总数"
+    ],
+    "entity": "ProjectHazard",
+    "summary": "危险源台账记录总数（含已解除确认），源表 icms_project_hazard"
+  },
+  {
+    "name": "hazard_confirmed_count",
+    "kind": "metric",
+    "aliases": [
+      "当前在册危险源数",
+      "现有危险源数",
+      "已确认危险源数",
+      "在册危险源"
+    ],
+    "entity": "ProjectHazard",
+    "summary": "当前确认在册（confirm_status=1，未解除确认）的危险源数；用户问“现在/当前有多少危险源”时用此指标"
+  },
+  {
+    "name": "hazard_major_count",
+    "kind": "metric",
+    "aliases": [
+      "重大危险源数",
+      "重大危险源个数"
+    ],
+    "entity": "ProjectHazard",
+    "summary": "重大危险源（type=1）数量，源表 icms_project_hazard"
+  },
+  {
+    "name": "hazard_general_count",
+    "kind": "metric",
+    "aliases": [
+      "一般危险源数",
+      "一般危险源个数"
+    ],
+    "entity": "ProjectHazard",
+    "summary": "一般危险源（type=3）数量，源表 icms_project_hazard"
+  },
+  {
+    "name": "plan_project",
+    "kind": "dimension",
+    "aliases": [
+      "项目",
+      "项目名称",
+      "项目"
+    ],
+    "summary": "项目"
+  },
+  {
+    "name": "plan_paragraph",
+    "kind": "dimension",
+    "aliases": [
+      "标段",
+      "标段名称"
+    ],
+    "summary": "标段"
+  },
+  {
+    "name": "plan_wbs_name",
+    "kind": "dimension",
+    "aliases": [
+      "计划名称",
+      "WBS名称",
+      "名称"
+    ],
+    "summary": "计划名称"
+  },
+  {
+    "name": "plan_level",
+    "kind": "dimension",
+    "aliases": [
+      "级次",
+      "层级"
+    ],
+    "summary": "级次"
+  },
+  {
+    "name": "plan_data_type",
+    "kind": "dimension",
+    "aliases": [
+      "数据类型",
+      "分类子项"
+    ],
+    "summary": "数据类型"
+  },
+  {
+    "name": "plan_owner",
+    "kind": "dimension",
+    "aliases": [
+      "责任人",
+      "负责人"
+    ],
+    "summary": "责任人"
+  },
+  {
+    "name": "plan_start_date",
+    "kind": "dimension",
+    "aliases": [
+      "计划开始日期",
+      "计划开始",
+      "开始日期"
+    ],
+    "summary": "计划开始日期"
+  },
+  {
+    "name": "plan_if_last_level",
+    "kind": "dimension",
+    "aliases": [
+      "是否末级",
+      "末级节点"
+    ],
+    "summary": "是否末级"
+  },
+  {
+    "name": "plan_full_path",
+    "kind": "dimension",
+    "aliases": [
+      "计划全路径",
+      "全路径",
+      "上级路径",
+      "年度计划归属",
+      "所属年度计划"
+    ],
+    "summary": "计划全路径"
+  },
+  {
+    "name": "qbs_project",
+    "kind": "dimension",
+    "aliases": [
+      "验评项目",
+      "项目名称",
+      "项目"
+    ],
+    "summary": "验评项目"
+  },
+  {
+    "name": "qbs_unit",
+    "kind": "dimension",
+    "aliases": [
+      "施工单位",
+      "单位名称",
+      "参建单位"
+    ],
+    "summary": "施工单位"
+  },
+  {
+    "name": "qbs_type",
+    "kind": "dimension",
+    "aliases": [
+      "QBS类型",
+      "验评类型",
+      "工程类型"
+    ],
+    "summary": "QBS类型"
+  },
+  {
+    "name": "qbs_result",
+    "kind": "dimension",
+    "aliases": [
+      "验评结果",
+      "验评结论"
+    ],
+    "summary": "验评结果"
+  },
+  {
+    "name": "qbs_level",
+    "kind": "dimension",
+    "aliases": [
+      "验评级次",
+      "层级"
+    ],
+    "summary": "验评级次"
+  },
+  {
+    "name": "qbs_result_date",
+    "kind": "dimension",
+    "aliases": [
+      "验评时间",
+      "验评日期"
+    ],
+    "summary": "验评时间"
+  },
+  {
+    "name": "qbs_wbs_name",
+    "kind": "dimension",
+    "aliases": [
+      "验评名称",
+      "名称",
+      "分部工程名称",
+      "单元工程名称"
+    ],
+    "summary": "验评名称"
+  },
+  {
+    "name": "qbs_full_path",
+    "kind": "dimension",
+    "aliases": [
+      "验评全路径",
+      "全路径",
+      "上级路径",
+      "所属分部工程"
+    ],
+    "summary": "验评全路径"
+  },
+  {
+    "name": "invest_year",
+    "kind": "dimension",
+    "aliases": [
+      "投资年度",
+      "年度",
+      "年份"
+    ],
+    "summary": "投资年度"
+  },
+  {
+    "name": "invest_month",
+    "kind": "dimension",
+    "aliases": [
+      "投资月份",
+      "月度",
+      "月份"
+    ],
+    "summary": "投资月份"
+  },
+  {
+    "name": "invest_unit",
+    "kind": "dimension",
+    "aliases": [
+      "投资单位",
+      "单位名称",
+      "标段单位",
+      "填报单位"
+    ],
+    "summary": "投资单位"
+  },
+  {
+    "name": "hazard_project",
+    "kind": "dimension",
+    "aliases": [
+      "施工项目",
+      "施工类别",
+      "项目类别"
+    ],
+    "summary": "施工项目"
+  },
+  {
+    "name": "hazard_type_class",
+    "kind": "dimension",
+    "aliases": [
+      "危险源类别",
+      "类别"
+    ],
+    "summary": "危险源类别"
+  },
+  {
+    "name": "hazard_level",
+    "kind": "dimension",
+    "aliases": [
+      "风险等级",
+      "风险级别"
+    ],
+    "summary": "风险等级"
+  },
+  {
+    "name": "hazard_unit",
+    "kind": "dimension",
+    "aliases": [
+      "危险源所属标段",
+      "标段单位",
+      "责任单位"
+    ],
+    "summary": "危险源所属标段"
+  },
+  {
+    "name": "hazard_find_time",
+    "kind": "dimension",
+    "aliases": [
+      "发现时间",
+      "发现日期"
+    ],
+    "summary": "发现时间"
+  },
+  {
+    "name": "hazard_confirm_status",
+    "kind": "dimension",
+    "aliases": [
+      "确认状态",
+      "在册状态"
+    ],
+    "summary": "确认状态"
+  },
+  {
+    "name": "hazard_source",
+    "kind": "dimension",
+    "aliases": [
+      "危险源名称",
+      "危险源"
+    ],
+    "summary": "危险源名称"
+  },
+  {
+    "name": "hazard_produce_duty",
+    "kind": "dimension",
+    "aliases": [
+      "生产负责人",
+      "生产责任人"
+    ],
+    "summary": "生产负责人"
+  }
+]

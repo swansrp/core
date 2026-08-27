@@ -1,0 +1,996 @@
+[
+  {
+    "name": "OmProject",
+    "display_name": "经营项目",
+    "description": "经营项目主数据（按年全量快照，dy 为快照年份）。一行一个经营项目在某年的快照，包含经营模式/状态/阶段、业务板块、区域、经营主体、预估金额等属性。",
+    "table": "dw_dim.dim_om_project_dyf",
+    "primary_key": [
+      "dy",
+      "project_code"
+    ],
+    "aliases": [
+      "经营项目",
+      "经营平台项目",
+      "项目主数据"
+    ],
+    "base_entity": false,
+    "listable": true,
+    "display_fields": [
+      "project_code",
+      "project_name",
+      "manage_stage",
+      "manage_status",
+      "business_plate",
+      "area1_name",
+      "busi_entity2_name",
+      "owner_user_name",
+      "tradi_estimate_amt",
+      "total_estimate_amt"
+    ],
+    "grain_note": "同一 project_code 在每个 dy 快照年各出现一次，查询必须固定 dy（未指定时取最新快照年）",
+    "fields": [
+      {
+        "name": "dy",
+        "display_name": "快照年份",
+        "type": "Integer"
+      },
+      {
+        "name": "project_code",
+        "display_name": "项目编码",
+        "type": "String"
+      },
+      {
+        "name": "project_name",
+        "display_name": "项目名称",
+        "type": "String",
+        "sensitive": true,
+        "code_field": "project_code"
+      },
+      {
+        "name": "customer_no",
+        "display_name": "客户编码",
+        "type": "String"
+      },
+      {
+        "name": "manage_mode",
+        "display_name": "经营模式",
+        "type": "String",
+        "value_domain": "manage_mode"
+      },
+      {
+        "name": "manage_level",
+        "display_name": "经营级别",
+        "type": "String",
+        "value_domain": "manage_level"
+      },
+      {
+        "name": "manage_status",
+        "display_name": "经营状态",
+        "type": "String",
+        "value_domain": "manage_status"
+      },
+      {
+        "name": "manage_stage",
+        "display_name": "经营阶段",
+        "type": "String",
+        "value_domain": "manage_stage"
+      },
+      {
+        "name": "business_plate",
+        "display_name": "业务板块",
+        "type": "String",
+        "value_domain": "business_plate"
+      },
+      {
+        "name": "undertake_form",
+        "display_name": "承担形式",
+        "type": "String",
+        "value_domain": "undertake_form"
+      },
+      {
+        "name": "bid_status",
+        "display_name": "投标状态",
+        "type": "String",
+        "value_domain": "bid_status"
+      },
+      {
+        "name": "product_status",
+        "display_name": "项目生产状态",
+        "type": "String",
+        "value_domain": "product_status"
+      },
+      {
+        "name": "region_type",
+        "display_name": "地域类型",
+        "type": "String",
+        "value_domain": "region_type_om"
+      },
+      {
+        "name": "is_important_bid",
+        "display_name": "是否重点投标",
+        "type": "String",
+        "value_domain": "is_important_bid"
+      },
+      {
+        "name": "valid_status",
+        "display_name": "有效状态",
+        "type": "String",
+        "value_domain": "valid_status"
+      },
+      {
+        "name": "bprov_name",
+        "display_name": "归属省份",
+        "type": "String"
+      },
+      {
+        "name": "area1_code",
+        "display_name": "一级经营区域编码",
+        "type": "String"
+      },
+      {
+        "name": "area1_name",
+        "display_name": "一级经营区域",
+        "type": "String"
+      },
+      {
+        "name": "area2_code",
+        "display_name": "二级经营区域编码",
+        "type": "String"
+      },
+      {
+        "name": "area2_name",
+        "display_name": "二级经营区域",
+        "type": "String"
+      },
+      {
+        "name": "busi_entity2_name",
+        "display_name": "二级经营主体",
+        "type": "String"
+      },
+      {
+        "name": "owner_user_name",
+        "display_name": "经营负责人",
+        "type": "String"
+      },
+      {
+        "name": "manager_user_name",
+        "display_name": "项目经理",
+        "type": "String"
+      },
+      {
+        "name": "tradi_estimate_amt",
+        "display_name": "传统预估金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_estimate_amt",
+        "display_name": "总包预估金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "success_rate",
+        "display_name": "成单概率",
+        "type": "Decimal"
+      },
+      {
+        "name": "project_cdt",
+        "display_name": "项目创建时间",
+        "type": "Date"
+      },
+      {
+        "name": "estimate_sign_dt",
+        "display_name": "预计签单日期",
+        "type": "Date"
+      }
+    ]
+  },
+  {
+    "name": "PmProject",
+    "display_name": "生产项目",
+    "description": "生产项目主数据（按年全量快照，dy 为快照年份）。一行一个生产项目在某年的快照，关联经营项目（project_code），包含项目分类/状态/规模、客户、总投资等属性。",
+    "table": "dw_dim.dim_pm_project_dyf",
+    "primary_key": [
+      "dy",
+      "pmp_code"
+    ],
+    "aliases": [
+      "生产项目",
+      "项目管理项目"
+    ],
+    "base_entity": false,
+    "listable": true,
+    "display_fields": [
+      "pmp_code",
+      "pmp_name",
+      "project_code",
+      "project_name",
+      "customer_name",
+      "pmp_classify",
+      "pmp_state",
+      "total_investment"
+    ],
+    "grain_note": "同一 pmp_code 在每个 dy 快照年各出现一次，查询必须固定 dy（未指定时取最新快照年）",
+    "fields": [
+      {
+        "name": "dy",
+        "display_name": "快照年份",
+        "type": "Integer"
+      },
+      {
+        "name": "pmp_code",
+        "display_name": "生产项目编码",
+        "type": "String"
+      },
+      {
+        "name": "pmp_name",
+        "display_name": "生产项目名称",
+        "type": "String",
+        "sensitive": true,
+        "code_field": "pmp_code"
+      },
+      {
+        "name": "project_code",
+        "display_name": "经营项目编码",
+        "type": "String"
+      },
+      {
+        "name": "project_name",
+        "display_name": "经营项目名称",
+        "type": "String"
+      },
+      {
+        "name": "contract_code",
+        "display_name": "经营合同编码",
+        "type": "String"
+      },
+      {
+        "name": "customer_no",
+        "display_name": "客户编码",
+        "type": "String"
+      },
+      {
+        "name": "customer_name",
+        "display_name": "客户名称",
+        "type": "String",
+        "sensitive": true,
+        "code_field": "customer_no"
+      },
+      {
+        "name": "country_name",
+        "display_name": "所在国家",
+        "type": "String"
+      },
+      {
+        "name": "region_type",
+        "display_name": "地域类型",
+        "type": "String",
+        "value_domain": "region_type_pm"
+      },
+      {
+        "name": "produce_mode",
+        "display_name": "生产模式",
+        "type": "String",
+        "value_domain": "produce_mode"
+      },
+      {
+        "name": "pmp_classify",
+        "display_name": "项目分类",
+        "type": "String",
+        "value_domain": "pmp_classify"
+      },
+      {
+        "name": "pmp_state",
+        "display_name": "项目状态",
+        "type": "String",
+        "value_domain": "pmp_state"
+      },
+      {
+        "name": "pmp_scale",
+        "display_name": "项目规模",
+        "type": "String",
+        "value_domain": "pmp_scale"
+      },
+      {
+        "name": "pmp_level",
+        "display_name": "项目级别",
+        "type": "String"
+      },
+      {
+        "name": "is_start",
+        "display_name": "是否已启动",
+        "type": "String"
+      },
+      {
+        "name": "total_investment",
+        "display_name": "项目总投资",
+        "type": "Decimal"
+      },
+      {
+        "name": "pmp_start_dt",
+        "display_name": "生产项目启动时间",
+        "type": "Date"
+      }
+    ]
+  },
+  {
+    "name": "OmProjectContractDetail",
+    "display_name": "经营项目合同明细",
+    "description": "经营项目合同维度经营指标明细（按年全量快照，dy 为快照年份）。一行一个经营项目×合同在某年的快照，含合同额/新签合同额/预估金额/到款/应收/剩余合同额等金额，金额分传统（tradi_）与总包（total_）两套口径。",
+    "table": "dw_ads.ads_om_project_detail_dyf",
+    "primary_key": [
+      "dy",
+      "project_code",
+      "contract_code"
+    ],
+    "aliases": [
+      "项目合同明细",
+      "经营明细"
+    ],
+    "base_entity": true,
+    "grain": "一行一个经营项目×合同在某快照年的记录；同一项目可有多份合同，项目数统计需 COUNT(DISTINCT project_code)",
+    "listable": true,
+    "display_fields": [
+      "project_code",
+      "contract_code",
+      "project_sign_status",
+      "tradi_contract_amt_001",
+      "total_contract_amt_001",
+      "tradi_current_year_payin_amt_001",
+      "total_current_year_payin_amt_001"
+    ],
+    "fields": [
+      {
+        "name": "dy",
+        "display_name": "快照年份",
+        "type": "Integer"
+      },
+      {
+        "name": "project_code",
+        "display_name": "项目编码",
+        "type": "String"
+      },
+      {
+        "name": "contract_code",
+        "display_name": "合同编码",
+        "type": "String"
+      },
+      {
+        "name": "customer_no",
+        "display_name": "客户编码",
+        "type": "String"
+      },
+      {
+        "name": "project_sign_status",
+        "display_name": "项目签订状态",
+        "type": "String",
+        "value_domain": "sign_status"
+      },
+      {
+        "name": "tradi_estimate_amt_001",
+        "display_name": "传统预估金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_estimate_amt_001",
+        "display_name": "总包预估金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tradi_contract_amt_001",
+        "display_name": "传统合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_contract_amt_001",
+        "display_name": "总包合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tradi_inc_contract_amt_004",
+        "display_name": "传统新增合同额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_inc_contract_amt_004",
+        "display_name": "总包新增合同额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tradi_current_year_payin_amt_001",
+        "display_name": "传统当年到款金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_current_year_payin_amt_001",
+        "display_name": "总包当年到款金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tradi_pre_years_payin_amt_001",
+        "display_name": "传统往年到款金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_pre_years_payin_amt_001",
+        "display_name": "总包往年到款金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tradi_receivable_payin_amt_002",
+        "display_name": "传统应收金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_receivable_payin_amt_002",
+        "display_name": "总包应收金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tradi_remaining_contract_amt_001",
+        "display_name": "传统剩余合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "total_remaining_contract_amt_001",
+        "display_name": "总包剩余合同金额",
+        "type": "Decimal"
+      }
+    ]
+  },
+  {
+    "name": "TcpcDetailPmp",
+    "display_name": "传统采购合同明细",
+    "description": "传统采购合同明细（按生产项目×采购类型，年全量快照，dy 为快照年份）。一行一个生产项目×采购类型在某年的快照，含采购合同额、付款申请、已付款等金额。",
+    "table": "dw_ads.ads_pm_tcpc_detail_pmp_dyf",
+    "primary_key": [
+      "dy",
+      "pmp_code",
+      "tpc_type"
+    ],
+    "aliases": [
+      "采购明细",
+      "采购合同明细"
+    ],
+    "base_entity": true,
+    "grain": "一行一个生产项目×采购类型在某快照年的记录",
+    "listable": true,
+    "display_fields": [
+      "pmp_code",
+      "project_code",
+      "contract_code",
+      "tpc_type",
+      "tpc_amt_003",
+      "payment_apply_amt_004",
+      "payment_amt_004"
+    ],
+    "fields": [
+      {
+        "name": "dy",
+        "display_name": "快照年份",
+        "type": "Integer"
+      },
+      {
+        "name": "pmp_code",
+        "display_name": "生产项目编码",
+        "type": "String"
+      },
+      {
+        "name": "project_code",
+        "display_name": "经营项目编码",
+        "type": "String"
+      },
+      {
+        "name": "contract_code",
+        "display_name": "经营合同编码",
+        "type": "String"
+      },
+      {
+        "name": "tpc_type",
+        "display_name": "采购类型",
+        "type": "String",
+        "value_domain": "tpc_type"
+      },
+      {
+        "name": "tpc_amt_003",
+        "display_name": "采购合同明细金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tpc_inc_amt_004",
+        "display_name": "当年新增采购合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tpc_new_sign_amt_003",
+        "display_name": "当年新签采购合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "tpc_signing_amt_003",
+        "display_name": "签订中的采购合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "plan_amt_003",
+        "display_name": "计划签订的采购合同金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "payment_apply_amt_004",
+        "display_name": "有效付款申请总金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "payment_applying_amt_004",
+        "display_name": "审批中付款申请金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "payment_apply_inc_amt_004",
+        "display_name": "当年新增付款申请金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "payment_apply_unpay_amt_003",
+        "display_name": "已申请未支付金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "payment_amt_004",
+        "display_name": "已付款总金额",
+        "type": "Decimal"
+      },
+      {
+        "name": "payment_inc_amt_006",
+        "display_name": "当年新增付款金额",
+        "type": "Decimal"
+      }
+    ]
+  },
+  {
+    "name": "PubUser",
+    "display_name": "员工",
+    "description": "员工基本信息维表（按年全量快照，dy 为快照年份）。一行一个员工在某年的快照。user_no（员工工号）是全数仓人员关联的统一键：其他表涉及人的字段均存 user_no，需要人员姓名/部门/用工类型等信息时来本表关联。",
+    "table": "dw_dim.dim_pub_user_dyf",
+    "primary_key": [
+      "dy",
+      "user_no"
+    ],
+    "aliases": [
+      "员工",
+      "人员",
+      "用户",
+      "职工"
+    ],
+    "base_entity": false,
+    "listable": true,
+    "display_fields": [
+      "user_no",
+      "user_name",
+      "dept_name",
+      "hr_user_type_name",
+      "user_status_name",
+      "main_job_title"
+    ],
+    "grain_note": "同一 user_no 在每个 dy 快照年各出现一次（当前仅 2025/2026 快照），查询必须固定 dy（未指定时取最新快照年）",
+    "fields": [
+      {
+        "name": "dy",
+        "display_name": "快照年份",
+        "type": "Integer"
+      },
+      {
+        "name": "user_no",
+        "display_name": "员工工号",
+        "type": "String"
+      },
+      {
+        "name": "user_id",
+        "display_name": "用户ID",
+        "type": "String"
+      },
+      {
+        "name": "user_code",
+        "display_name": "用户编码",
+        "type": "String"
+      },
+      {
+        "name": "user_name",
+        "display_name": "员工姓名",
+        "type": "String",
+        "sensitive": true,
+        "code_field": "user_no"
+      },
+      {
+        "name": "user_sname",
+        "display_name": "员工简称",
+        "type": "String"
+      },
+      {
+        "name": "user_sex",
+        "display_name": "性别",
+        "type": "Integer",
+        "value_domain": "user_sex"
+      },
+      {
+        "name": "user_birthday",
+        "display_name": "生日",
+        "type": "Date"
+      },
+      {
+        "name": "native_place",
+        "display_name": "籍贯",
+        "type": "String"
+      },
+      {
+        "name": "ethnicity",
+        "display_name": "民族编码",
+        "type": "String"
+      },
+      {
+        "name": "ethnicity_name",
+        "display_name": "民族",
+        "type": "String"
+      },
+      {
+        "name": "political",
+        "display_name": "政治面貌编码",
+        "type": "String"
+      },
+      {
+        "name": "political_name",
+        "display_name": "政治面貌",
+        "type": "String"
+      },
+      {
+        "name": "user_type",
+        "display_name": "用工类型",
+        "type": "String",
+        "value_domain": "user_type"
+      },
+      {
+        "name": "edu_type",
+        "display_name": "学历类型编码",
+        "type": "String"
+      },
+      {
+        "name": "edu_type_name",
+        "display_name": "学历类型",
+        "type": "String"
+      },
+      {
+        "name": "top_school",
+        "display_name": "最高学校",
+        "type": "String"
+      },
+      {
+        "name": "top_major",
+        "display_name": "最高学校的专业",
+        "type": "String"
+      },
+      {
+        "name": "retirement_date",
+        "display_name": "法定退休日期",
+        "type": "Date"
+      },
+      {
+        "name": "professional_type",
+        "display_name": "职称类型编码",
+        "type": "String"
+      },
+      {
+        "name": "professional_type_name",
+        "display_name": "职称类型",
+        "type": "String"
+      },
+      {
+        "name": "design_job_grade",
+        "display_name": "规划设计职级编码",
+        "type": "String"
+      },
+      {
+        "name": "design_job_grade_name",
+        "display_name": "规划设计职级",
+        "type": "String"
+      },
+      {
+        "name": "main_job_title",
+        "display_name": "当前职务（主职）",
+        "type": "String"
+      },
+      {
+        "name": "job_title",
+        "display_name": "当前职务（含兼职）",
+        "type": "String"
+      },
+      {
+        "name": "job_title_begin_date",
+        "display_name": "当前职务开始日期",
+        "type": "Date"
+      },
+      {
+        "name": "user_status",
+        "display_name": "员工状态",
+        "type": "String",
+        "value_domain": "user_status"
+      },
+      {
+        "name": "user_sub_status",
+        "display_name": "员工子状态",
+        "type": "String",
+        "value_domain": "user_sub_status"
+      },
+      {
+        "name": "start_work_date",
+        "display_name": "开始工作日期",
+        "type": "Date"
+      },
+      {
+        "name": "join_com_date",
+        "display_name": "入职日期",
+        "type": "Date"
+      },
+      {
+        "name": "exit_com_date",
+        "display_name": "离职日期",
+        "type": "Date"
+      },
+      {
+        "name": "base_post_code",
+        "display_name": "基础岗位编码",
+        "type": "String"
+      },
+      {
+        "name": "base_post_name",
+        "display_name": "基础岗位名称",
+        "type": "String"
+      },
+      {
+        "name": "standard_post_code",
+        "display_name": "标准岗位编码",
+        "type": "String"
+      },
+      {
+        "name": "standard_post_name",
+        "display_name": "标准岗位名称",
+        "type": "String"
+      },
+      {
+        "name": "post_seq_code",
+        "display_name": "岗位序列编码",
+        "type": "String"
+      },
+      {
+        "name": "post_seq_name",
+        "display_name": "岗位序列",
+        "type": "String"
+      },
+      {
+        "name": "hr_user_type",
+        "display_name": "HR用工类型",
+        "type": "String",
+        "value_domain": "hr_user_type"
+      },
+      {
+        "name": "hr_talent_project",
+        "display_name": "HR公司人才工程编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_talent_project_name",
+        "display_name": "HR公司人才工程",
+        "type": "String"
+      },
+      {
+        "name": "hr_professional",
+        "display_name": "HR最高职称编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_professional_name",
+        "display_name": "HR最高职称",
+        "type": "String"
+      },
+      {
+        "name": "hr_professional_grade",
+        "display_name": "HR最高等级职称编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_professional_grade_name",
+        "display_name": "HR最高等级职称",
+        "type": "String"
+      },
+      {
+        "name": "hr_edu",
+        "display_name": "HR学历编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_edu_name",
+        "display_name": "HR学历",
+        "type": "String"
+      },
+      {
+        "name": "hr_edu_grade",
+        "display_name": "HR学历层级编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_edu_grade_name",
+        "display_name": "HR学历层级",
+        "type": "String"
+      },
+      {
+        "name": "hr_degree",
+        "display_name": "HR学位编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_degree_name",
+        "display_name": "HR学位",
+        "type": "String"
+      },
+      {
+        "name": "hr_cadre",
+        "display_name": "HR干部级别编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_cadre_name",
+        "display_name": "HR干部级别",
+        "type": "String"
+      },
+      {
+        "name": "hr_salary_grade",
+        "display_name": "HR薪级",
+        "type": "String"
+      },
+      {
+        "name": "hr_job_grade",
+        "display_name": "HR职级编码",
+        "type": "String"
+      },
+      {
+        "name": "hr_job_grade_name",
+        "display_name": "HR职级",
+        "type": "String"
+      },
+      {
+        "name": "user_office",
+        "display_name": "办公室",
+        "type": "String"
+      },
+      {
+        "name": "dept_code",
+        "display_name": "部门编码",
+        "type": "String"
+      },
+      {
+        "name": "dept_name",
+        "display_name": "部门",
+        "type": "String",
+        "sensitive": true,
+        "code_field": "dept_code"
+      },
+      {
+        "name": "pt_key",
+        "display_name": "分区键",
+        "type": "Integer"
+      },
+      {
+        "name": "dw_cdt",
+        "display_name": "数仓创建时间",
+        "type": "Datetime"
+      }
+    ]
+  },
+  {
+    "name": "PmObsPosition",
+    "display_name": "生产项目岗位人员",
+    "description": "生产项目岗位人员任免表（按年全量快照，dy 为快照年份）。一行一个生产项目×员工×岗位×阶段在某年的任免记录。一个项目有多个岗位多人，一个员工可在多个项目任职。默认口径：统计/查询『在岗人员』时过滤 appoint_status=1（当前任职），除非用户明确要查历史任免。",
+    "table": "dw_dwd.dwd_pm_obs_dyf",
+    "primary_key": [
+      "dy",
+      "pmp_code",
+      "user_no",
+      "position_code",
+      "phase_code"
+    ],
+    "aliases": [
+      "项目岗位人员",
+      "岗位人员",
+      "项目人员",
+      "项目班子"
+    ],
+    "base_entity": true,
+    "grain": "一行一个生产项目×员工×岗位×阶段在某快照年的任免记录；存在少量四键重复记录，统计人数必须 COUNT(DISTINCT user_no)，统计岗位任职记录数用 COUNT(*)",
+    "listable": true,
+    "display_fields": [
+      "pmp_code",
+      "user_no",
+      "position_name",
+      "phase_name",
+      "appoint_status"
+    ],
+    "fields": [
+      {
+        "name": "dy",
+        "display_name": "快照年份",
+        "type": "Integer"
+      },
+      {
+        "name": "pmp_code",
+        "display_name": "生产项目编码",
+        "type": "String"
+      },
+      {
+        "name": "user_no",
+        "display_name": "员工工号",
+        "type": "String"
+      },
+      {
+        "name": "position_code",
+        "display_name": "岗位编码",
+        "type": "String"
+      },
+      {
+        "name": "position_name",
+        "display_name": "岗位名称",
+        "type": "String"
+      },
+      {
+        "name": "appoint_status",
+        "display_name": "任免状态",
+        "type": "String",
+        "value_domain": "appoint_status"
+      },
+      {
+        "name": "appoint_type",
+        "display_name": "任职类型",
+        "type": "String"
+      },
+      {
+        "name": "phase_code",
+        "display_name": "阶段编码",
+        "type": "String",
+        "value_domain": "obs_phase"
+      },
+      {
+        "name": "phase_name",
+        "display_name": "阶段名称",
+        "type": "String"
+      },
+      {
+        "name": "majors",
+        "display_name": "专业编码列表",
+        "type": "String"
+      },
+      {
+        "name": "appoint_dt_fk",
+        "display_name": "任职时间",
+        "type": "Integer"
+      },
+      {
+        "name": "dismiss_dt_fk",
+        "display_name": "免职时间",
+        "type": "Integer"
+      },
+      {
+        "name": "dw_cdt",
+        "display_name": "数仓创建时间",
+        "type": "Datetime"
+      },
+      {
+        "name": "appointment_doc_no",
+        "display_name": "任职文号",
+        "type": "String"
+      },
+      {
+        "name": "dismissal_doc_no",
+        "display_name": "免职文号",
+        "type": "String"
+      }
+    ]
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "OmContractDetail_To_OmProject",
+    "from_entity": "OmProjectContractDetail",
+    "to_entity": "OmProject",
+    "type": "many_to_one",
+    "join": [{ "left": "project_code", "right": "project_code" }],
+    "notes": "N:1 关系（同一 dy 快照内），JOIN 不会扇出，可安全聚合；JOIN 时两表 dy 必须对齐"
+  },
+  {
+    "name": "TcpcDetail_To_PmProject",
+    "from_entity": "TcpcDetailPmp",
+    "to_entity": "PmProject",
+    "type": "many_to_one",
+    "join": [{ "left": "pmp_code", "right": "pmp_code" }],
+    "notes": "N:1 关系（同一 dy 快照内），JOIN 不会扇出，可安全聚合；JOIN 时两表 dy 必须对齐"
+  },
+  {
+    "name": "TcpcDetail_To_OmProject",
+    "from_entity": "TcpcDetailPmp",
+    "to_entity": "OmProject",
+    "type": "many_to_one",
+    "join": [{ "left": "project_code", "right": "project_code" }],
+    "notes": "N:1 关系（同一 dy 快照内），采购明细可经经营项目编码关联经营项目维度（区域/板块等）；JOIN 时两表 dy 必须对齐"
+  },
+  {
+    "name": "PmObsPosition_To_PmProject",
+    "from_entity": "PmObsPosition",
+    "to_entity": "PmProject",
+    "type": "many_to_one",
+    "join": [{ "left": "pmp_code", "right": "pmp_code" }],
+    "notes": "N:1 关系（同一 dy 快照内），JOIN 不会扇出；约 4% 岗位记录的 pmp_code 在生产项目表无对应（孤儿记录），INNER/LEFT JOIN 均不扇出，可安全聚合；JOIN 时两表 dy 必须对齐"
+  },
+  {
+    "name": "PmObsPosition_To_PubUser",
+    "from_entity": "PmObsPosition",
+    "to_entity": "PubUser",
+    "type": "many_to_one",
+    "join": [{ "left": "user_no", "right": "user_no" }],
+    "notes": "N:1 关系（同一 dy 快照内，user_no 在员工表同年唯一），JOIN 不会扇出，可安全聚合；用于给岗位人员补充姓名/部门/用工类型等员工属性；JOIN 时两表 dy 必须对齐"
+  }
+]
