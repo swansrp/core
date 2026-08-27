@@ -9,7 +9,7 @@ import com.bidr.llm.flow.LlmHistoryMessage;
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
 import com.bidr.llm.provider.ModelConfigProvider;
-import com.bidr.llm.sse.FlowSseSender;
+import com.bidr.llm.sse.SseEventSender;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -176,7 +176,7 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
      */
     private void startStreaming(FlowGraph.FlowNode node, FlowContext context, String rendered,
                                 String role, boolean includeHistory, String userVar, String outputVar) {
-        FlowSseSender sender = context.getSseSender();
+        SseEventSender sender = context.getSseSender();
         if (sender == null) {
             throw new IllegalStateException("stream=true 的 llm 结点需要 SSE 上下文（流式链路）");
         }
@@ -193,7 +193,7 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
                         synchronized (buffer) {
                             buffer.append(token);
                         }
-                        sender.send(FlowSseSender.EVENT_DELTA, token);
+                        sender.send(SseEventSender.EVENT_DELTA, token);
                     }
 
                     @Override
@@ -215,7 +215,7 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
                     public void onError(Throwable error) {
                         log.warn("流程流式生成失败", error);
                         String message = error == null ? "生成失败" : String.valueOf(error.getMessage());
-                        sender.send(FlowSseSender.EVENT_ERROR, message);
+                        sender.send(SseEventSender.EVENT_ERROR, message);
                         sender.complete();
                         // 轨迹收尾：挂起结点补记失败原因，整条轨迹标记 error
                         engineProvider.getObject().markTraceError(context, nodeId, message);

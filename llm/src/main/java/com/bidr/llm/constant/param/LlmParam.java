@@ -46,6 +46,13 @@ public enum LlmParam implements Param {
             "模型调用超时时间（秒）；非法值回落应用配置 llm.timeout-seconds"),
 
     /**
+     * Agent 长任务超时（秒）：维护问数 / 自主生成等长编排单次 LLM 调用可达数十秒至数分钟，
+     * 流式模型同样受 callTimeout 全调用上限截断（langchain4j 0.33），故默认高于默认模型超时
+     */
+    AGENT_TIMEOUT_SECONDS("Agent长任务超时(秒)", "600",
+            "维护问数/自主生成等长任务 LLM 调用超时（秒）；非法值回落应用配置 llm.agent.timeout-seconds"),
+
+    /**
      * 多模态（视觉）模型服务地址：扫描件/图片转 Markdown 用；留空回落默认模型地址
      */
     VISION_BASE_URL("多模态模型服务地址", "",

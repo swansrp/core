@@ -1,5 +1,6 @@
 package com.bidr.llm.config;
 
+import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
 import com.bidr.llm.parse.FileMarkdownService;
@@ -41,6 +42,8 @@ import java.net.Proxy;
  * 业务如需按用户区分 Key，自行注册 {@link ModelConfigProvider} 或模型 Bean 覆盖即可。
  * 另装配 {@link FileMarkdownService}：文件 → Markdown 解析入口（扫描件/图片走
  * 多模态模型，配置同现有 LLM 机制：调用传入或数据库 sys_config 优先）。
+ * 另装配 {@link LiveModelFactory}：流式进度模型（自建 SSE 客户端+同步回落）装配工厂，
+ * 长链路业务（问数/资产生成/AI 补全等）经它统一取流式模型，代理/重试口径随 Bean 固化。
  * </p>
  *
  * @author Sharp
@@ -73,6 +76,8 @@ public class LlmDefaultAutoConfiguration {
     private String visionModelName;
     @Value("${llm.vision.timeout-seconds:180}")
     private long visionTimeoutSeconds;
+    @Value("${llm.agent.timeout-seconds:600}")
+    private long agentTimeoutSeconds;
     @Value("${llm.chat.max-attempts:1}")
     private int maxAttempts;
     @Value("${llm.proxy.enable:false}")
@@ -92,7 +97,8 @@ public class LlmDefaultAutoConfiguration {
         log.info("装配默认 ModelConfigProvider（数据库系统参数优先，回落 llm.* yaml；yaml baseUrl={}, modelName={}），业务未自定义时生效",
                 baseUrl, modelName);
         return new DbAwareModelConfigProvider(baseUrl, apiKey, modelName, timeoutSeconds,
-                visionBaseUrl, visionApiKey, visionModelName, visionTimeoutSeconds, sysConfigProvider);
+                visionBaseUrl, visionApiKey, visionModelName, visionTimeoutSeconds,
+                agentTimeoutSeconds, sysConfigProvider);
     }
 
     /**
@@ -129,12 +135,30 @@ public class LlmDefaultAutoConfiguration {
     }
 
     /**
-     * 构建大模型调用的 HTTP 代理（未启用或配置不全时返回 null）
+     * 流式进度模型工厂：「自建 SSE 流式客户端 + 同步回落」双通道模型的统一装配点
+     * （原先散落在问数维护/资产生成两处业务服务的同构 buildLiveModel 归一）；
+     * 代理与重试口径随 Bean 构造固化（llm.proxy.* / llm.chat.max-attempts 同源），
+ * Provider 缺失时由调用方懒回落同步模型（无流式进度）
      */
-    private Proxy buildProxy() {
+    @Bean
+    @ConditionalOnMissingBean
+    public LiveModelFactory liveModelFactory(ObjectProvider<ModelConfigProvider> configProvider) {
+        return new LiveModelFactory(configProvider.getIfAvailable(),
+                proxyEnable, proxyHost, proxyPort, maxAttempts);
+    }
+
+    /**
+     * 构建大模型调用的 HTTP 代理（未启用或配置不全时返回 null）；
+     * 静态版供业务自建模型实例（如 Agent 长任务用途流式模型）复用同口径代理配置
+     */
+    public static Proxy buildProxy(boolean proxyEnable, String proxyHost, int proxyPort) {
         if (!proxyEnable || !StringUtils.hasText(proxyHost) || proxyPort <= 0) {
             return null;
         }
         return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
+    }
+
+    private Proxy buildProxy() {
+        return buildProxy(proxyEnable, proxyHost, proxyPort);
     }
 }

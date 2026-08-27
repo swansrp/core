@@ -3,7 +3,7 @@ package com.bidr.llm.flow;
 import com.bidr.llm.flow.executor.FlowNodeExecutor;
 import com.bidr.llm.flow.trace.FlowTrace;
 import com.bidr.llm.flow.trace.FlowTraceRecorder;
-import com.bidr.llm.sse.FlowSseSender;
+import com.bidr.llm.sse.SseEventSender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -45,6 +45,12 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class FlowEngine {
+
+    /**
+     * 停止收口标记：notifyListeners 的 error 参数携带本值时表示「用户停止」而非失败，
+     * 业务收口回调据此区分处理（如进度置 STOPPED 而非 FAILED）
+     */
+    public static final String STOP_SIGNAL = "STOPPED";
 
     /**
      * 单链路执行步数上限（防 graph 环导致的死循环，校验之外的双保险）
@@ -252,6 +258,19 @@ public class FlowEngine {
                 if (++steps > MAX_STEPS) {
                     throw new IllegalStateException("流程执行步数超过 " + MAX_STEPS + "，疑似存在环路");
                 }
+                // 停止检查点：命中即收口——轨迹标记 stopped、收口回调携带停止标记、不再执行后续结点；
+                // 流式挂起结点挂起后由模型回调线程 resume 续跑，同样经过本检查收口
+                if (executeSelf && context.isStopRequested()) {
+                    log.info("流程收到停止请求，收口退出, flowKey={}", context.getTraceId());
+                    traceRecorder.finishTrace(context.getTraceId(), "stopped", "用户停止");
+                    notifyListeners(context, STOP_SIGNAL);
+                    SseEventSender stopSender = context.getSseSender();
+                    if (stopSender != null) {
+                        stopSender.send(SseEventSender.EVENT_ERROR, "已停止生成");
+                        stopSender.complete();
+                    }
+                    return;
+                }
                 if (executeSelf) {
                     if (Boolean.FALSE.equals(current.getEnabled())) {
                         recordNodeEvent(context, current, "skipped", 0, "enabled=false 跳过", null);
@@ -393,9 +412,9 @@ public class FlowEngine {
         String message = error.getMessage() == null ? "流程执行失败" : error.getMessage();
         traceRecorder.finishTrace(context.getTraceId(), "error", message);
         notifyListeners(context, message);
-        FlowSseSender sender = context.getSseSender();
+        SseEventSender sender = context.getSseSender();
         if (sender != null) {
-            sender.send(FlowSseSender.EVENT_ERROR, message);
+            sender.send(SseEventSender.EVENT_ERROR, message);
             sender.complete();
             return;
         }

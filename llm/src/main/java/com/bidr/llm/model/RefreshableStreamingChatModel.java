@@ -36,6 +36,8 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
     private final String purposeType;
     private final Proxy proxy;
     private final Supplier<Long> userIdSupplier;
+    /** SSE 原文日志开关（logRequests/logResponses）：长任务可观测性用，DEBUG 级输出含 reasoning_content 事件 */
+    private final boolean verbose;
 
     /**
      * 按用户缓存模型实例：key = userId_configSignature_apiKey, value = StreamingChatLanguageModel
@@ -51,10 +53,19 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
                                          String purposeType,
                                          Proxy proxy,
                                          Supplier<Long> userIdSupplier) {
+        this(configProvider, purposeType, proxy, userIdSupplier, false);
+    }
+
+    public RefreshableStreamingChatModel(ModelConfigProvider configProvider,
+                                         String purposeType,
+                                         Proxy proxy,
+                                         Supplier<Long> userIdSupplier,
+                                         boolean verbose) {
         this.configProvider = configProvider;
         this.purposeType = purposeType;
         this.proxy = proxy;
         this.userIdSupplier = userIdSupplier;
+        this.verbose = verbose;
     }
 
     @Override
@@ -116,8 +127,8 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
                 .modelName(configProvider.getModelName(purposeType))
                 .timeout(Duration.ofSeconds(configProvider.getTimeoutSeconds(purposeType)))
                 .proxy(proxy)
-                .logRequests(false)
-                .logResponses(false)
+                .logRequests(verbose)
+                .logResponses(verbose)
                 .build();
     }
 }

@@ -1,10 +1,11 @@
 package com.bidr.llm.flow;
 
-import com.bidr.llm.sse.FlowSseSender;
+import com.bidr.llm.sse.SseEventSender;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 
 /**
  * Title: FlowContext
@@ -52,7 +53,7 @@ public class FlowContext {
     /**
      * SSE 事件发送器（流式链路必填，同步链路为 null）
      */
-    private final FlowSseSender sseSender;
+    private final SseEventSender sseSender;
 
     /**
      * output 结点映射出的响应变量（链路结束由调用方读取）
@@ -80,7 +81,26 @@ public class FlowContext {
      */
     private String conversationId;
 
-    public FlowContext(FlowSseSender sseSender) {
+    /**
+     * 停止检查（可空）：引擎每结点执行前轮询，true 即收口——轨迹标记 stopped、
+     * 收口回调携带 {@link FlowEngine#STOP_SIGNAL}、不再执行后续结点；业务接分布式停止键
+     */
+    private BooleanSupplier stopSupplier;
+
+    /** 当前链路是否收到停止请求（未接停止检查时恒 false） */
+    public boolean isStopRequested() {
+        return stopSupplier != null && stopSupplier.getAsBoolean();
+    }
+
+    public BooleanSupplier getStopSupplier() {
+        return stopSupplier;
+    }
+
+    public void setStopSupplier(BooleanSupplier stopSupplier) {
+        this.stopSupplier = stopSupplier;
+    }
+
+    public FlowContext(SseEventSender sseSender) {
         this.sseSender = sseSender;
     }
 
@@ -134,7 +154,7 @@ public class FlowContext {
         return output;
     }
 
-    public FlowSseSender getSseSender() {
+    public SseEventSender getSseSender() {
         return sseSender;
     }
 

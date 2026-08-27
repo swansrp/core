@@ -31,6 +31,12 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
      */
     public static final String PURPOSE_VISION = "VISION";
 
+    /**
+     * Agent 长任务用途标识：维护问数 / 自主生成等长编排使用，
+     * 仅超时独立配置（AGENT_TIMEOUT_SECONDS → llm.agent.timeout-seconds），地址/密钥/模型回落默认
+     */
+    public static final String PURPOSE_AGENT = "AGENT";
+
     private final String yamlBaseUrl;
     private final String yamlApiKey;
     private final String yamlModelName;
@@ -39,6 +45,7 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
     private final String yamlVisionApiKey;
     private final String yamlVisionModelName;
     private final long yamlVisionTimeoutSeconds;
+    private final long yamlAgentTimeoutSeconds;
 
     /**
      * platform 可选依赖：服务不可用（未引入 core/platform）时 getIfAvailable 返回 null，全部回落 yaml
@@ -49,6 +56,7 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
                                       long yamlTimeoutSeconds,
                                       String yamlVisionBaseUrl, String yamlVisionApiKey,
                                       String yamlVisionModelName, long yamlVisionTimeoutSeconds,
+                                      long yamlAgentTimeoutSeconds,
                                       ObjectProvider<SysConfigCacheService> sysConfigProvider) {
         this.yamlBaseUrl = yamlBaseUrl;
         this.yamlApiKey = yamlApiKey;
@@ -58,6 +66,7 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
         this.yamlVisionApiKey = yamlVisionApiKey;
         this.yamlVisionModelName = yamlVisionModelName;
         this.yamlVisionTimeoutSeconds = yamlVisionTimeoutSeconds;
+        this.yamlAgentTimeoutSeconds = yamlAgentTimeoutSeconds;
         this.sysConfigProvider = sysConfigProvider;
     }
 
@@ -122,6 +131,13 @@ public class DbAwareModelConfigProvider implements ModelConfigProvider {
                 return visionTimeout;
             }
             return yamlVisionTimeoutSeconds;
+        }
+        if (PURPOSE_AGENT.equals(purposeType)) {
+            Long agentTimeout = parsePositiveLong(dbValue(LlmParam.AGENT_TIMEOUT_SECONDS));
+            if (agentTimeout != null) {
+                return agentTimeout;
+            }
+            return yamlAgentTimeoutSeconds;
         }
         Long timeout = parsePositiveLong(dbValue(LlmParam.TIMEOUT_SECONDS));
         return timeout != null ? timeout : yamlTimeoutSeconds;

@@ -277,6 +277,58 @@ const timer = setInterval(async () => {
 
 注意：`spring-webmvc` 在本模块中是 optional 依赖，仅 Web 应用可使用本能力（应用自身必有 spring-web，无需额外加依赖）。若前后端之间有 Nginx，需为 SSE 路径关闭缓冲（`proxy_buffering off`），否则流会被攒包。
 
+### 7.1 通用 SSE 事件发送器（SseEventSender，前身 FlowSseSender）
+
+任何 SSE 链路（编排/工具循环/单次长生成，不限 flow 形态）的推送不直接裸用 `SseEmitter`，统一经
+`SseEventSender`：逐行拆发（换行不截断事件）、线程安全（心跳线程与业务执行线程可并发写）、断连
+静默跳过、重复 complete 静默。七事件协议常量定义在本类，流式结点与前端按名分发：
+
+| 事件 | data | 说明 |
+|---|---|---|
+| `conv` | 对话标识 | 流式链路发起时先于 delta 下发，新对话在此创建并回传 |
+| `delta` | token 增量片段 | 前端按序拼接 |
+| `tick` | 活性心跳（如已耗时秒数） | 周期推送，前端分辨「死了还是想着」；data 由心跳供给函数计算 |
+| `spec` / `msgid` / `done` / `error` | 见类注释 | 编排指令/消息标识/正文完成/失败 |
+
+**活性心跳（AI 接口禁裸转圈的框架机制）**：思考类模型首应答 token 可达 10s+，期间业务线程
+阻塞在网关读上无法自发信号——`startHeartbeat(intervalSeconds, dataSupplier)` 用独立 daemon
+线程周期推 `tick`，是唯一活性证明；连接 complete/断开后自动停跳，返回句柄可提前停。
+
+```java
+// 典型接入（资产编辑页 AI 补全网形态）：后台线程生成，心跳+增量+终态三路下推
+SseEventSender sender = new SseEventSender(emitter);
+long begin = System.currentTimeMillis();
+sender.startHeartbeat(2, () -> String.valueOf((System.currentTimeMillis() - begin) / 1000));
+executor.submit(() -> {
+    try {
+        JsonNode node = doGenerate(partial -> sender.send(SseEventSender.EVENT_DELTA, partial));
+        sender.send(SseEventSender.EVENT_DONE, node.toString());
+    } catch (Exception e) {
+        sender.send(SseEventSender.EVENT_ERROR, e.getMessage());
+    } finally {
+        sender.complete();   // 连带停跳
+    }
+});
+```
+
+### 7.2 流式进度模型工厂（LiveModelFactory Bean）
+
+「自建 SSE 客户端（解析 reasoning_content，绕开 langchain4j 0.33 流式缺陷）+ 同步回落」双通道
+模型的统一装配点，代理/重试口径随 Bean 固化（`llm.proxy.*` / `llm.chat.max-attempts` 同源）；
+网关不支持 stream 时首应答 token 前自动降级同步重试而非整链报错。业务侧只注入 live 回调与用途：
+
+```java
+@Autowired
+private LiveModelFactory liveModelFactory;
+
+// AGENT 用途独立长超时；live 回调收流式帧；无 Provider 时懒回落同步模型（无进度）
+ChatLanguageModel model = liveModelFactory.build(
+        DbAwareModelConfigProvider.PURPOSE_AGENT,
+        partial -> pushLive(partial),
+        () -> requireSyncModel());
+String answer = model.generate(prompt);
+```
+
 ### 8. 文件解析为 Markdown（parse）
 
 把用户上传的各种文件拆成文字喂给 LLM 的统一入口：传入 **url / File / 文件路径 / InputStream** 任意一种，返回 **Markdown** 文本。
@@ -347,6 +399,7 @@ String md = fileMarkdownService.toMarkdown(file, vision);
 | `llm.vision.api-key` | 空 | 多模态模型密钥；留空回落默认模型密钥 |
 | `llm.vision.model-name` | 空 | 多模态模型名（须支持图片输入，如 qwen-vl-max）；留空回落默认模型 |
 | `llm.vision.timeout-seconds` | 180 | 多模态模型调用超时（秒） |
+| `llm.agent.timeout-seconds` | 600 | Agent 长任务（维护问数/自主生成）LLM 调用超时（秒）；系统参数「Agent长任务超时(秒)」优先 |
 
 `llm.proxy.*` 与框架全局 REST 代理（`my.rest.proxy.*`）相互独立，可单独为大模型调用开代理。
 
