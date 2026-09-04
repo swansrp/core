@@ -7,6 +7,7 @@ import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -35,7 +36,7 @@ public class AcRoleManager implements CommandLineRunner {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void run(String... args) {
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<? extends SystemRole>> roleSet = reflections.getSubTypesOf(SystemRole.class);
 
         if (FuncUtil.isEmpty(roleSet)) {

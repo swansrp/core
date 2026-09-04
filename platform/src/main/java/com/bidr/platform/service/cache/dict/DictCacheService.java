@@ -22,6 +22,7 @@ import com.bidr.platform.dao.repository.SysDictTypeService;
 import com.bidr.platform.vo.dict.DictRes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -153,7 +154,7 @@ public class DictCacheService implements CommandLineRunner {
                                 false));
             }
         }
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaDict.class);
 
         for (Class<?> clazz : metaDictClass) {

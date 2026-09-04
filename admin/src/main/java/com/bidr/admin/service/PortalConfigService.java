@@ -44,6 +44,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -102,7 +103,7 @@ public class PortalConfigService implements LoginFillTokenInf {
     @PostConstruct
     @Transactional(rollbackFor = Exception.class)
     public void init() {
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<?>> portalControllerList = reflections.getTypesAnnotatedWith(AdminPortal.class);
         Map<Class<?>, Collection<Field>> map;
         if (FuncUtil.isNotEmpty(portalControllerList)) {

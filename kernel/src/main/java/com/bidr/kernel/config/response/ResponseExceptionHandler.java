@@ -8,6 +8,7 @@ import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.exception.RepeatSubmitException;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.kernel.utils.PackageScanUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.beans.factory.annotation.Value;
@@ -156,7 +157,7 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
         if (!applicationContext.containsBean(responseResultProperty.getFormatBean())) {
-            return returnType.getDeclaringClass().getName().startsWith(basePackage) && !responseResultProperty.getClassWhiteList().contains(returnType.getDeclaringClass().getName());
+            return PackageScanUtil.inBasePackage(returnType.getDeclaringClass().getName(), basePackage) && !responseResultProperty.getClassWhiteList().contains(returnType.getDeclaringClass().getName());
         } else {
             return false;
         }

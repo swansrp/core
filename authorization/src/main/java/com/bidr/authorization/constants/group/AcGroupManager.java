@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.repository.AcGroupTypeService;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -33,7 +34,7 @@ public class AcGroupManager implements CommandLineRunner {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void run(String... args) {
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<? extends Group>> groupList = reflections.getSubTypesOf(Group.class);
         if (FuncUtil.isNotEmpty(groupList)) {
             for (Class<? extends Group> clazz : groupList) {

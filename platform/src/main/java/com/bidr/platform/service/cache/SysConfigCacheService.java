@@ -10,6 +10,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.constant.err.ConfigErrorCode;
 import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.dao.repository.SysConfigService;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -45,7 +46,7 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
     @SuppressWarnings("rawtypes")
     private void addDefaultParameter(List<SysConfig> list) {
         Map<String, SysConfig> map = ReflectionUtil.reflectToMap(list, "configKey");
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<?>> metaParamClass = reflections.getTypesAnnotatedWith(MetaParam.class);
         List<SysConfig> sysConfigList = new ArrayList<>();
         for (Class<?> clazz : metaParamClass) {

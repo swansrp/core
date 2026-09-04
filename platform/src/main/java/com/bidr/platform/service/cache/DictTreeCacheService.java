@@ -13,6 +13,7 @@ import com.bidr.platform.constant.dict.IDynamicTree;
 import com.bidr.platform.service.cache.dict.BizDictTreeCacheService;
 import com.bidr.platform.service.cache.dict.DictCacheProvider;
 import org.apache.commons.collections4.CollectionUtils;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +42,7 @@ public class DictTreeCacheService extends DynamicMemoryCache<List<TreeDict>> {
     @Override
     protected Map<String, List<TreeDict>> getCacheData() {
         Map<String, List<TreeDict>> map = new HashMap<>();
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaTreeDict.class);
         for (Class<?> clazz : metaDictClass) {
             buildCacheData(map, clazz);

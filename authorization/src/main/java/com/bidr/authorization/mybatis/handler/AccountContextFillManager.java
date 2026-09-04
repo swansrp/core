@@ -5,6 +5,7 @@ import com.bidr.authorization.mybatis.anno.AccountContextFill;
 import com.bidr.authorization.mybatis.anno.AutoFillOperator;
 import com.bidr.authorization.mybatis.anno.AutoFillTimestamp;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -74,7 +75,7 @@ public class AccountContextFillManager implements CommandLineRunner {
     }
 
     private Set<Class<?>> scanEntityClasses() {
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         return reflections.getTypesAnnotatedWith(TableName.class);
     }
 
