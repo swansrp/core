@@ -11,6 +11,7 @@ import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
+import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -98,13 +99,14 @@ public class CaptchaServiceImpl implements CaptchaService, CommandLineRunner {
     }
 
     public void init() {
-        Reflections reflections = new Reflections(basePackage);
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<? extends ICaptchaVerification>> msgVerificationClass = reflections.getSubTypesOf(
                 ICaptchaVerification.class);
         for (Class<? extends ICaptchaVerification> clazz : msgVerificationClass) {
             if (Enum.class.isAssignableFrom(clazz)) {
+                boolean isMsgVerification = IMsgVerification.class.isAssignableFrom(clazz);
                 for (ICaptchaVerification enumItem : clazz.getEnumConstants()) {
-                    if (IMsgVerification.class.isAssignableFrom(clazz)) {
+                    if (isMsgVerification) {
                         CAPTCHA_CODE_TYPE_MAP.put(enumItem.name() + "_CAPTCHA", enumItem);
                     } else {
                         CAPTCHA_CODE_TYPE_MAP.put(enumItem.name(), enumItem);
