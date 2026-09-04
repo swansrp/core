@@ -4,6 +4,7 @@ import com.bidr.oss.service.BaseOssService;
 import com.bidr.oss.service.impl.OssAliServiceImpl;
 import com.bidr.oss.service.impl.OssLocalServiceImpl;
 import com.bidr.oss.service.impl.OssMinioServiceImpl;
+import com.bidr.oss.service.impl.OssVolcanoServiceImpl;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -26,7 +27,8 @@ public enum OssServiceTypeDict {
      */
     LOCAL("0", "本机", OssServiceTypeDictInjector.ossLocalService),
     MINIO("1", "MINIO", OssServiceTypeDictInjector.ossMinioService),
-    ALI("2", "阿里云", OssServiceTypeDictInjector.ossAliService);
+    ALI("2", "阿里云", OssServiceTypeDictInjector.ossAliService),
+    VOLCANO("3", "火山引擎", OssServiceTypeDictInjector.ossVolcanoService);
 
     private final String value;
     private final String label;
@@ -37,18 +39,22 @@ public enum OssServiceTypeDict {
         private static OssLocalServiceImpl ossLocalService;
         private static OssMinioServiceImpl ossMinioService;
         private static OssAliServiceImpl ossAliService;
+        private static OssVolcanoServiceImpl ossVolcanoService;
         @Resource
         private OssLocalServiceImpl ossLocalServiceImpl;
         @Resource
         private OssMinioServiceImpl ossMinioServiceImpl;
         @Resource
         private OssAliServiceImpl ossAliServiceImpl;
+        @Resource
+        private OssVolcanoServiceImpl ossVolcanoServiceImpl;
 
         @PostConstruct
         private void postConstruct() {
             OssServiceTypeDictInjector.ossLocalService = ossLocalServiceImpl;
             OssServiceTypeDictInjector.ossMinioService = ossMinioServiceImpl;
             OssServiceTypeDictInjector.ossAliService = ossAliServiceImpl;
+            OssServiceTypeDictInjector.ossVolcanoService = ossVolcanoServiceImpl;
         }
     }
 }
