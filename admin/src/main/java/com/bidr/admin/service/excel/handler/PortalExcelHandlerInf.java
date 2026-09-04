@@ -59,6 +59,8 @@ public interface PortalExcelHandlerInf {
 
     /**
      * 根据配置生成excel表头
+     * <p>表头以portal配置列的显示名为准，列数与列序必须和数据有效性校验、导入解析保持一致，
+     * 不依赖vo上的{@link ExcelProperty}注解（portal链路的vo通常没有该注解）</p>
      *
      * @param portal  配置
      * @param voClazz 目标类
@@ -68,12 +70,8 @@ public interface PortalExcelHandlerInf {
         List<List<String>> head = new ArrayList<>();
         if (FuncUtil.isNotEmpty(portal.getColumns())) {
             for (SysPortalColumn column : portal.getColumns()) {
-                if (ReflectionUtil.existedField(voClazz, column.getProperty())) {
-                    Field field = ReflectionUtil.getField(voClazz, column.getProperty());
-                    if (field.getAnnotation(ExcelProperty.class) != null) {
-                        head.add(Arrays.asList(field.getAnnotation(ExcelProperty.class).value()));
-                    }
-                }
+                head.add(Arrays.asList(FuncUtil.isNotEmpty(column.getDisplayName()) ? column.getDisplayName()
+                        : column.getProperty()));
             }
         }
         return head;

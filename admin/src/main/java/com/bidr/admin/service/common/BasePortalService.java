@@ -531,8 +531,13 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     protected void handleExcelInsert(InputStream is, PortalWithColumnsRes portal) {
-        EasyExcel.read(is, getVoClass(), new PortalExcelInsertListener(portal, this, this, this, 3000)).sheet()
-                .headRowNumber(1).doRead();
+        // 与模板导出、导入修改保持一致：按portal配置列序解析，
+        // 避免 EasyExcel 按 vo 字段声明顺序映射列导致与模板列序不一致而错位
+        EasyExcel.read(is).sheet().registerReadListener(
+                        new PortalExcelInsertListener<Map<Integer, String>>(portal, this,
+                                (PortalExcelParseHandlerInf<ENTITY, Map<Integer, String>>) this::parseCommonEntity, this,
+                                3000))
+                .head(buildExcelHead(portal, getVoClass())).doRead();
     }
 
 
