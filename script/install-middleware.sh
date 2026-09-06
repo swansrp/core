@@ -33,10 +33,12 @@
 set -u
 
 #----------------------- 可修改参数 -----------------------
-MYSQL_PASSWORD='plsintec@mysql'
-REDIS_PASSWORD='plsintec@redis'
-ES_PASSWORD='plsintec@es'
-XXLJOB_ACCESS_TOKEN='plsintec-token'
+# 密码类参数不落仓库，必须经环境变量显式传入，例如：
+#   MYSQL_PASSWORD='xxx' REDIS_PASSWORD='yyy' ES_PASSWORD='zzz' XXLJOB_ACCESS_TOKEN='ttt' bash install-middleware.sh
+: "${MYSQL_PASSWORD:?please export MYSQL_PASSWORD first}"
+: "${REDIS_PASSWORD:?please export REDIS_PASSWORD first}"
+: "${ES_PASSWORD:?please export ES_PASSWORD first}"
+: "${XXLJOB_ACCESS_TOKEN:?please export XXLJOB_ACCESS_TOKEN first}"
 PUBLIC_IP=$(curl -s -m 10 ifconfig.me || curl -s -m 10 ip.sb)
 MIRRORS="docker.m.daocloud.io dockerproxy.net docker.1ms.run hub.rat.dev docker.xuanyuan.me"
 

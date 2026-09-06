@@ -45,6 +45,27 @@ public abstract class BaseOssService implements ObjectStorageService {
         } else {
             fileName = formatFileName(fileName);
         }
+        return concatObjectName(folder, type, fileName);
+    }
+
+    /**
+     * 生成对象名（分片上传初始化时无完整文件体，按原始文件名生成随机对象名）
+     *
+     * @param request      请求
+     * @param originalName 原始文件名（含后缀）
+     * @param folder       文件夹
+     * @param type         文件类型
+     * @return 对象名
+     */
+    public String buildObjectName(HttpServletRequest request, String originalName, String folder, String type) {
+        String fileName = buildFileName(originalName, HttpUtil.getRemoteIp(request));
+        return concatObjectName(folder, type, fileName);
+    }
+
+    /**
+     * 按项目名/文件夹/类型/日期拼接对象名
+     */
+    private String concatObjectName(String folder, String type, String fileName) {
         OssTypeDict ossType = getFileType(fileName, type);
         String fileType = ossType.name().toLowerCase();
         String folderName = BeanUtil.getProperty("my.project.name");
@@ -112,8 +133,16 @@ public abstract class BaseOssService implements ObjectStorageService {
     }
 
     public String getKey(String url) {
-        String[] s = url.split(bucketName);
-        return url.substring(s[0].length() + bucketName.length() + 1).split("\\?")[0];
+        String path = url.split("\\?")[0];
+        // path-style（endpoint/bucket/key）：bucket 为路径段
+        int idx = path.indexOf(bucketName + OssConst.SEP);
+        if (idx >= 0) {
+            return path.substring(idx + bucketName.length() + 1);
+        }
+        // 虚拟主机式（bucket.endpoint/key，如 TOS 签名地址）：bucket 在子域名，取 host 后路径
+        int schemeEnd = path.indexOf("//");
+        int pathStart = path.indexOf('/', schemeEnd + 2);
+        return pathStart >= 0 ? path.substring(pathStart + 1) : path;
     }
 
 }

@@ -19,7 +19,12 @@ public enum OssParam implements Param {
     /**
      *
      */
-    OSS_SERVER_TYPE("对象服务器类型", "1", "Local Minio Ali");
+    OSS_SERVER_TYPE("对象服务器类型", "1", "Local Minio Ali"),
+    /**
+     * kkFileView 在线预览服务地址：不同客户部署地址不同，由系统参数下发前端；
+     * 支持本机反代相对路径（如 /kkfileview/onlinePreview?url=）或完整外链，0/空 = 关闭预览入口
+     */
+    OSS_PREVIEW_URL("在线预览服务地址", "0", "kkFileView onlinePreview 地址，如 /kkfileview/onlinePreview?url=；0 或空 = 关闭预览");
 
 
     private final String title;

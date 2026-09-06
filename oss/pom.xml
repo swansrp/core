@@ -70,6 +70,12 @@
             <artifactId>minio</artifactId>
             <version>8.5.2</version>
         </dependency>
+        <!-- 火山引擎 TOS 官方 SDK（TOS 不支持 S3 path-style，minio 客户端无法对接） -->
+        <dependency>
+            <groupId>com.volcengine</groupId>
+            <artifactId>ve-tos-java-sdk</artifactId>
+            <version>2.8.6</version>
+        </dependency>
         <!-- ali -->
         <dependency>
             <groupId>com.aliyun.oss</groupId>
