@@ -107,6 +107,15 @@ public interface ObjectStorageService {
     void delete(Long id);
 
     /**
+     * 按访问地址删除对象（回收站超期清理等场景；
+     * 不支持物理删除的实现保持空实现，上层降级为仅删记录并告警）
+     *
+     * @param url 存储访问地址（与 record/buildAccessUrl 生成的一致）
+     */
+    default void deleteObject(String url) {
+    }
+
+    /**
      * 根据url获取访问url
      *
      * @param url

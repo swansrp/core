@@ -48,6 +48,13 @@ public class OssMinioServiceImpl extends BaseOssService {
     }
 
     @Override
+    public void deleteObject(String url) {
+        String key = getKey(url);
+        log.info("deleteObject == {}", key);
+        minioTemplate.removeObject(bucketName, key);
+    }
+
+    @Override
     public String getReadUrl(String url) {
         String key = getKey(url);
         log.info("getReadUrl == {}", key);

@@ -10,6 +10,7 @@ import com.volcengine.tos.TOSV2ClientBuilder;
 import com.volcengine.tos.model.object.AbortMultipartUploadInput;
 import com.volcengine.tos.model.object.CompleteMultipartUploadV2Input;
 import com.volcengine.tos.model.object.CreateMultipartUploadInput;
+import com.volcengine.tos.model.object.DeleteObjectInput;
 import com.volcengine.tos.model.object.ListPartsInput;
 import com.volcengine.tos.model.object.ListPartsOutput;
 import com.volcengine.tos.model.object.ObjectMetaRequestOptions;
@@ -103,6 +104,14 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     @Override
     public void delete(Long id) {
 
+    }
+
+    @Override
+    @SneakyThrows
+    public void deleteObject(String url) {
+        String key = getKey(url);
+        log.info("deleteObject == {}", key);
+        client().deleteObject(new DeleteObjectInput().setBucket(bucketName).setKey(key));
     }
 
     @Override
