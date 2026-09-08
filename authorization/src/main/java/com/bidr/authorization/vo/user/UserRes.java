@@ -1,8 +1,8 @@
 package com.bidr.authorization.vo.user;
 
 import com.bidr.authorization.dao.entity.AcDept;
-import com.diboot.core.binding.annotation.BindField;
-import com.diboot.core.data.copy.Accept;
+import com.bidr.kernel.config.response.Accept;
+import com.bidr.kernel.config.response.BindRepo;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -23,7 +23,7 @@ public class UserRes {
     private String name;
     @Accept(name = "deptId")
     private String department;
-    @BindField(entity = AcDept.class, field = "name", condition = "this.department = dept_id")
+    @BindRepo(entity = AcDept.class, matchField = "deptId", sourceField = "department")
     private String deptName;
     @Accept(name = "avatar")
     private String pictureLink;

@@ -1,9 +1,7 @@
 package com.bidr.authorization.vo.user;
 
 import com.bidr.authorization.dao.entity.AcDept;
-import com.bidr.authorization.dao.entity.AcRole;
-import com.diboot.core.binding.annotation.BindField;
-import com.diboot.core.binding.annotation.BindFieldList;
+import com.bidr.kernel.config.response.BindRepo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -28,7 +26,7 @@ public class UserInfoRes {
     @ApiModelProperty(value = "用户姓名")
     private String name;
 
-    @BindField(entity = AcDept.class, field = "name", condition = "this.deptId = dept_id")
+    @BindRepo(entity = AcDept.class, matchField = "deptId", sourceField = "deptId")
     private String deptName;
 
     @ApiModelProperty(value = "部门ID")
@@ -52,7 +50,6 @@ public class UserInfoRes {
     @ApiModelProperty(value = "头像地址")
     private String avatar;
 
-    @BindFieldList(entity = AcRole.class, field = "roleId", condition = "this.userId = ac_user_role.user_id and ac_user_role.role_id = role_id")
     private List<Long> roleList;
 
 }

@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
+import com.bidr.authorization.dao.repository.AcUserRoleService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.token.TokenService;
@@ -37,13 +38,16 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     private final AcUserService acUserService;
     private final AcUserDeptService acUserDeptService;
+    private final AcUserRoleService acUserRoleService;
     private final TokenService tokenService;
 
     @Override
     public UserInfoRes getUserInfo() {
         Long userId = AccountContext.getUserId();
         AcUser user = acUserService.getById(userId);
-        return Resp.convert(user, UserInfoRes.class);
+        UserInfoRes res = Resp.convert(user, UserInfoRes.class);
+        res.setRoleList(acUserRoleService.getRoleIdsByUserId(userId));
+        return res;
     }
 
     @Override

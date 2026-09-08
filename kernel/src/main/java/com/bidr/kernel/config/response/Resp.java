@@ -8,7 +8,6 @@ import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.LambdaUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
-import com.diboot.core.binding.Binder;
 import lombok.Data;
 
 import java.lang.reflect.Field;
@@ -46,9 +45,11 @@ public class Resp {
      */
     public static <T, VO> VO convert(T entity, Class<VO> voClass) {
         if (entity != null) {
-            RespConvert.fieldConvert(entity, voClass);
-            RespConvert.customBindConvert(entity, voClass);
-            VO vo = Binder.convertAndBindRelations(entity, voClass);
+            VO vo = ReflectionUtil.copy(entity, voClass);
+            RespConvert.acceptConvert(vo, entity);
+            RespConvert.fieldConvert(vo, voClass);
+            RespConvert.customBindConvert(vo, voClass);
+            RespConvert.dictBindConvert(vo, voClass);
             RespConvert.fieldAfterConvert(vo, voClass);
             return vo;
         } else {
@@ -76,12 +77,7 @@ public class Resp {
             return convert(entityList, voClass, dictList, dictField, dataFiled,
                     (Class<T>) entityList.get(0).getClass());
         } else {
-            List<T> emptyList = Collections.emptyList();
-            RespConvert.fieldConvert(emptyList, voClass);
-            RespConvert.customBindConvert(emptyList, voClass);
-            List<VO> res = Binder.convertAndBindRelations(emptyList, voClass);
-            RespConvert.fieldAfterConvert(res, voClass);
-            return res;
+            return convert(Collections.emptyList(), voClass);
         }
     }
 
@@ -117,9 +113,10 @@ public class Resp {
             }
         }
         List<T> mergedList = new ArrayList<>(map.values());
-        RespConvert.fieldConvert(mergedList, voClass);
-        RespConvert.customBindConvert(mergedList, voClass);
-        List<VO> res = Binder.convertAndBindRelations(mergedList, voClass);
+        List<VO> res = toVoList(mergedList, voClass);
+        RespConvert.fieldConvert(res, voClass);
+        RespConvert.customBindConvert(res, voClass);
+        RespConvert.dictBindConvert(res, voClass);
         RespConvert.fieldAfterConvert(res, voClass);
         return res;
     }
@@ -134,20 +131,43 @@ public class Resp {
      * @return 目标数据列表
      */
     public static <T, VO> List<VO> convert(List<T> entityList, Class<VO> voClass) {
-        RespConvert.fieldConvert(entityList, voClass);
-        RespConvert.customBindConvert(entityList, voClass);
-        List<VO> res = Binder.convertAndBindRelations(entityList, voClass);
+        List<VO> res = toVoList(entityList, voClass);
+        RespConvert.fieldConvert(res, voClass);
+        RespConvert.customBindConvert(res, voClass);
+        RespConvert.dictBindConvert(res, voClass);
         RespConvert.fieldAfterConvert(res, voClass);
         return res;
     }
 
     public static <T, R> Page<R> convert(IPage<T> page, Class<R> clazz) {
         Page<R> res = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
-        RespConvert.fieldConvert(page.getRecords(), clazz);
-        RespConvert.customBindConvert(page.getRecords(), clazz);
-        List<R> targetList = Binder.convertAndBindRelations(page.getRecords(), clazz);
+        List<R> targetList = toVoList(page.getRecords(), clazz);
+        RespConvert.fieldConvert(targetList, clazz);
+        RespConvert.customBindConvert(targetList, clazz);
+        RespConvert.dictBindConvert(targetList, clazz);
         RespConvert.fieldAfterConvert(targetList, clazz);
         res.setRecords(targetList);
+        return res;
+    }
+
+    /**
+     * 实体列表 -> VO 列表（逐条同名属性拷贝）
+     *
+     * @param entityList 源数据列表
+     * @param voClass    目标数据类型
+     * @param <T>        源数据类型
+     * @param <VO>       目标数据类型
+     * @return 目标数据列表
+     */
+    private static <T, VO> List<VO> toVoList(List<T> entityList, Class<VO> voClass) {
+        List<VO> res = new ArrayList<>(FuncUtil.isEmpty(entityList) ? 0 : entityList.size());
+        if (FuncUtil.isNotEmpty(entityList)) {
+            for (T item : entityList) {
+                VO vo = ReflectionUtil.copy(item, voClass);
+                RespConvert.acceptConvert(vo, item);
+                res.add(vo);
+            }
+        }
         return res;
     }
 

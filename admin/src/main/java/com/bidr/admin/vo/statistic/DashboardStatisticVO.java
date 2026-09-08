@@ -1,8 +1,7 @@
 package com.bidr.admin.vo.statistic;
 
 import com.bidr.admin.config.*;
-import com.bidr.authorization.dao.entity.AcUser;
-import com.diboot.core.binding.annotation.BindField;
+import com.bidr.authorization.bind.annotation.BindUser;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -42,7 +41,7 @@ public class DashboardStatisticVO {
     @ApiModelProperty(value = "描述")
     private String description;
 
-    @BindField(entity = AcUser.class, field = "name", condition = "this.customerNumber = customer_number")
+    @BindUser("customerNumber")
     @ApiModelProperty(value = "所属人")
     private String customerNumber;
 

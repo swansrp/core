@@ -8,9 +8,9 @@ import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.authorization.dao.entity.AcRole;
+import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
-import com.diboot.core.binding.annotation.BindField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -33,7 +33,7 @@ public class PortalAssociateRes extends SysPortalAssociate {
     private Long roleId;
 
     @ApiModelProperty(value = "角色名称")
-    @BindField(entity = AcRole.class, field = "roleName", condition = "this.roleId = role_id")
+    @BindRepo(entity = AcRole.class, matchField = "roleId", extractField = "roleName", sourceField = "roleId")
     private String roleName;
 
     @PortalNameField
@@ -46,7 +46,8 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @ApiModelProperty(value = "实体id")
     private Long portalId;
 
-    @BindField(entity = SysPortal.class, field = "name", condition = "this.roleId = role_id and this.portalId = id")
+    @BindRepo(entity = SysPortal.class, matchField = "roleId", matchField2 = "id",
+            sourceField = "roleId", sourceField2 = "portalId", extractField = "name")
     @ApiModelProperty(value = "本实体英文名称")
     private String portalName;
 
@@ -58,7 +59,8 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @ApiModelProperty(value = "目标实体")
     private Long bindPortalId;
 
-    @BindField(entity = SysPortal.class, field = "name", condition = "this.roleId = role_id and this.bindPortalId = id")
+    @BindRepo(entity = SysPortal.class, matchField = "roleId", matchField2 = "id",
+            sourceField = "roleId", sourceField2 = "bindPortalId", extractField = "name")
     @ApiModelProperty(value = "目标实体英文名称")
     private String bindPortalName;
 
@@ -66,16 +68,16 @@ public class PortalAssociateRes extends SysPortalAssociate {
     @ApiModelProperty(value = "关联字段")
     private String bindProperty;
 
-    @BindField(entity = SysPortalColumn.class, field = "displayName",
-               condition = "this.portalId = portal_id and this.bindProperty = property")
+    @BindRepo(entity = SysPortalColumn.class, matchField = "portalId", matchField2 = "property",
+            sourceField = "portalId", sourceField2 = "bindProperty", extractField = "displayName")
     @ApiModelProperty(value = "关联字段名")
     private String bindPropertyName;
 
     @ApiModelProperty(value = "默认排序字段")
     private String bindSortProperty;
 
-    @BindField(entity = SysPortalColumn.class, field = "displayName",
-               condition = "this.portalId = portal_id and this.bindProperty = id")
+    @BindRepo(entity = SysPortalColumn.class, matchField = "portalId", matchField2 = "id",
+            sourceField = "portalId", sourceField2 = "bindProperty", extractField = "displayName")
     @ApiModelProperty(value = "默认排序字段名")
     private String bindSortPropertyName;
 

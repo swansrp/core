@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,12 +66,29 @@ public class BindRepoHandler {
         }
 
         String matchField = annotation.matchField();
+        String matchField2 = annotation.matchField2();
+        boolean dual = FuncUtil.isNotEmpty(matchField2);
         String extractField = annotation.extractField();
         String matchColumn = resolveColumnName(entityClass, matchField);
 
-        // 构建 WHERE matchColumn IN (sourceValues) [AND valid = '1']
+        // 构建 WHERE matchColumn IN (sourceValues) [AND matchColumn2 IN (...)] [AND valid = '1']
         QueryWrapper wrapper = new QueryWrapper();
-        wrapper.in(matchColumn, sourceValues);
+        if (dual) {
+            // 复合匹配：sourceValues 为 "v1||v2" 组合键，拆分为两列的值集合
+            Set<Object> values1 = new HashSet<>();
+            Set<Object> values2 = new HashSet<>();
+            for (Object combined : sourceValues) {
+                String[] parts = String.valueOf(combined).split("\\|\\|", -1);
+                values1.add(parts[0]);
+                if (parts.length > 1) {
+                    values2.add(parts[1]);
+                }
+            }
+            wrapper.in(matchColumn, values1);
+            wrapper.in(resolveColumnName(entityClass, matchField2), values2);
+        } else {
+            wrapper.in(matchColumn, sourceValues);
+        }
         if (ReflectionUtil.existedField(entityClass, VALID_FIELD)) {
             String validColumn = resolveColumnName(entityClass, VALID_FIELD);
             wrapper.eq(validColumn, CommonConst.YES);
@@ -88,11 +106,27 @@ public class BindRepoHandler {
         if (FuncUtil.isNotEmpty(entities)) {
             for (Object entity : entities) {
                 Object matchValue = ReflectionUtil.getValue(entity, matchField, Object.class);
+                Object key = matchValue;
+                if (dual) {
+                    Object matchValue2 = ReflectionUtil.getValue(entity, matchField2, Object.class);
+                    key = combinedKey(matchValue, matchValue2);
+                }
                 Object extractValue = ReflectionUtil.getValue(entity, extractField, Object.class);
-                result.put(matchValue, extractValue);
+                result.put(key, extractValue);
             }
         }
         return result;
+    }
+
+    /**
+     * 构造复合匹配键：v1 + "||" + v2（null 归一为空串）
+     *
+     * @param value1 第一匹配值
+     * @param value2 第二匹配值
+     * @return 组合键
+     */
+    private static String combinedKey(Object value1, Object value2) {
+        return (value1 == null ? "" : String.valueOf(value1)) + "||" + (value2 == null ? "" : String.valueOf(value2));
     }
 
     /**

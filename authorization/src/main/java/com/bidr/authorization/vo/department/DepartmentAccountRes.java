@@ -1,11 +1,9 @@
 package com.bidr.authorization.vo.department;
 
-import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcUserDept;
-import com.bidr.authorization.dao.entity.AcUserGroup;
-import com.diboot.core.binding.annotation.BindDict;
-import com.diboot.core.binding.annotation.BindField;
-import com.diboot.core.data.copy.Accept;
+import com.bidr.kernel.config.response.Accept;
+import com.bidr.kernel.config.response.BindDict;
+import com.bidr.kernel.config.response.BindRepo;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -30,12 +28,12 @@ public class DepartmentAccountRes {
 
     private Long deptId;
 
-    @BindField(entity = AcUserDept.class, field = "dataScope", condition = "this.deptId = dept_id and this.userId " +
-            "= user_id")
+    @BindRepo(entity = AcUserDept.class, matchField = "deptId", matchField2 = "userId",
+            sourceField = "deptId", sourceField2 = "userId")
     private String dataScope;
 
     @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")
-    @BindField(entity = AcUserDept.class, field = "dataScope", condition = "this.deptId = dept_id and this.userId " +
-            "= user_id")
+    @BindRepo(entity = AcUserDept.class, matchField = "deptId", matchField2 = "userId",
+            sourceField = "deptId", sourceField2 = "userId", extractField = "dataScope")
     private String dataScopeDisplay;
 }

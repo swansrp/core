@@ -2,9 +2,9 @@ package com.bidr.authorization.vo.group;
 
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcUserGroup;
-import com.diboot.core.binding.annotation.BindDict;
-import com.diboot.core.binding.annotation.BindField;
-import com.diboot.core.data.copy.Accept;
+import com.bidr.kernel.config.response.Accept;
+import com.bidr.kernel.config.response.BindDict;
+import com.bidr.kernel.config.response.BindRepo;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -26,7 +26,7 @@ public class GroupAccountRes {
     @JsonProperty("department")
     @Accept(name = "deptId")
     private String deptId;
-    @BindField(entity = AcDept.class, field = "name", condition = "this.deptId = dept_id")
+    @BindRepo(entity = AcDept.class, matchField = "deptId", sourceField = "deptId")
     private String deptName;
     @JsonProperty("pictureLink")
     @Accept(name = "avatar")
@@ -34,13 +34,13 @@ public class GroupAccountRes {
 
     private Long groupId;
 
-    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId " +
-            "= user_id")
+    @BindRepo(entity = AcUserGroup.class, matchField = "groupId", matchField2 = "userId",
+            sourceField = "groupId", sourceField2 = "userId")
     private String dataScope;
 
     @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")
-    @BindField(entity = AcUserGroup.class, field = "dataScope", condition = "this.groupId = group_id and this.userId " +
-            "= user_id")
+    @BindRepo(entity = AcUserGroup.class, matchField = "groupId", matchField2 = "userId",
+            sourceField = "groupId", sourceField2 = "userId", extractField = "dataScope")
     private String dataScopeDisplay;
 
 }

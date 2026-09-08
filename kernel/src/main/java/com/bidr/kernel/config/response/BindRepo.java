@@ -69,4 +69,21 @@ public @interface BindRepo {
      * @return 源字段名称
      */
     String sourceField();
+
+    /**
+     * 第二匹配字段（可选）—— 实体上与 matchField 联合定位的属性名，如复合唯一键场景
+     * <p>
+     * 如 @BindRepo(entity = AcUserDept.class, matchField = "deptId", matchField2 = "userId",
+     * sourceField = "deptId", sourceField2 = "userId") 表示按 (deptId, userId) 联合匹配 AcUserDept
+     *
+     * @return 实体第二匹配属性名，空表示不启用
+     */
+    String matchField2() default "";
+
+    /**
+     * 第二源字段名称（可选）—— VO 上与 sourceField 联合取值的属性名
+     *
+     * @return VO 第二源属性名，空表示不启用
+     */
+    String sourceField2() default "";
 }

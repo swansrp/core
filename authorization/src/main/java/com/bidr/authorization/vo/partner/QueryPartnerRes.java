@@ -1,9 +1,8 @@
 package com.bidr.authorization.vo.partner;
 
+import com.bidr.authorization.bind.annotation.BindUser;
 import com.bidr.authorization.dao.entity.AcPartner;
-import com.bidr.authorization.dao.entity.AcUser;
-import com.diboot.core.binding.annotation.BindDict;
-import com.diboot.core.binding.annotation.BindField;
+import com.bidr.kernel.config.response.BindDict;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -53,7 +52,7 @@ public class QueryPartnerRes extends AcPartner {
     @ApiModelProperty(value = "有效性")
     private String statusDisplay;
 
-    @BindField(entity = AcUser.class, field = "name", condition = "this.createBy = customer_number")
+    @BindUser("createBy")
     @ApiModelProperty(value = "创建者")
     @Size(max = 50, message = "创建者最大长度要小于 50")
     private String createBy;
@@ -63,7 +62,7 @@ public class QueryPartnerRes extends AcPartner {
     @ApiModelProperty(value = "创建时间")
     private Date createAt;
 
-    @BindField(entity = AcUser.class, field = "name", condition = "this.createBy = customer_number")
+    @BindUser("updateBy")
     @ApiModelProperty(value = "更新者")
     @Size(max = 50, message = "更新者最大长度要小于 50")
     private String updateBy;

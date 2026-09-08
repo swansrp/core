@@ -1,6 +1,6 @@
 package com.bidr.neo4j.vo.configuration;
 
-import com.diboot.core.binding.annotation.BindDict;
+import com.bidr.kernel.config.response.BindDict;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 

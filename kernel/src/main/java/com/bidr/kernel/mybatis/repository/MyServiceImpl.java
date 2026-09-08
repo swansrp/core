@@ -1,17 +1,17 @@
 package com.bidr.kernel.mybatis.repository;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.enums.SqlMethod;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
-import com.diboot.core.service.BaseService;
-import com.diboot.core.service.impl.BaseServiceImpl;
 import com.github.jeffreyning.mybatisplus.anno.MppMultiId;
 import com.github.jeffreyning.mybatisplus.service.IMppService;
 import com.github.yulichang.base.MPJBaseService;
@@ -28,8 +28,22 @@ import java.util.*;
  * @author Sharp
  * @since 2023/02/16 15:05
  */
-public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends BaseServiceImpl<K, T> implements IMppService<T>,
-        MPJBaseService<T>, BaseService<T> {
+public class MyServiceImpl<K extends MyBaseMapper<T>, T> extends ServiceImpl<K, T> implements IMppService<T>,
+        MPJBaseService<T> {
+
+    /**
+     * 获取当前 mapper（原由 diboot BaseService 提供）
+     */
+    public K getMapper() {
+        return baseMapper;
+    }
+
+    /**
+     * 是否存在记录（原由 diboot BaseService 提供，MP 3.5.2 的 IService 无此方法）
+     */
+    public boolean exists(Wrapper<T> wrapper) {
+        return super.count(wrapper) > 0;
+    }
 
     @Override
     public boolean saveOrUpdateByMultiId(T entity) {

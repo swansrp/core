@@ -4,8 +4,7 @@ import com.bidr.admin.config.PortalDisplayNoneField;
 import com.bidr.admin.config.PortalDisplayOnlyField;
 import com.bidr.admin.config.PortalNoFilterField;
 import com.bidr.admin.config.PortalSortField;
-import com.bidr.authorization.dao.entity.AcUser;
-import com.diboot.core.binding.annotation.BindField;
+import com.bidr.authorization.bind.annotation.BindUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModelProperty;
@@ -36,7 +35,7 @@ public class BaseVO {
     private String createBy;
 
     @PortalNoFilterField
-    @BindField(entity = AcUser.class, field = "name", condition = "this.createBy = customer_number")
+    @BindUser("createBy")
     @ApiModelProperty(value = "创建人")
     private String createName;
 
@@ -53,7 +52,7 @@ public class BaseVO {
     private String updateBy;
 
     @PortalNoFilterField
-    @BindField(entity = AcUser.class, field = "name", condition = "this.updateBy = customer_number")
+    @BindUser("updateBy")
     @ApiModelProperty(value = "更新人")
     private String updateName;
 

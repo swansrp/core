@@ -9,7 +9,7 @@
  */
 package com.bidr.sms.vo;
 
-import com.diboot.core.data.copy.Accept;
+import com.bidr.kernel.config.response.Accept;
 import lombok.Data;
 
 @Data

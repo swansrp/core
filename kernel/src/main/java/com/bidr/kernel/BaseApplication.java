@@ -22,6 +22,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @SpringBootApplication
 @EnableTransactionManagement
 @MapperScan({"${kernel.scan.mapper-packages:com.bidr.**.dao.**.mapper}"})
-@ComponentScan(basePackages = {"${kernel.scan.base-packages:com.bidr,com.diboot}"})
+@ComponentScan(basePackages = {"${kernel.scan.base-packages:com.bidr}"})
 public abstract class BaseApplication {
 }

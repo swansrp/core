@@ -150,6 +150,30 @@ public class RespConvert {
         }
     }
 
+    // ======================== @Accept 异名复制 ========================
+
+    /**
+     * @Accept 异名复制：从源对象读取 name 指定字段的值写入 VO 标注字段。
+     * 须在同名 copy 之后、其他绑定（@BindRepo 关联键可能依赖本步骤填充）之前执行。
+     */
+    public static void acceptConvert(Object vo, Object source) {
+        if (FuncUtil.isEmpty(vo) || FuncUtil.isEmpty(source)) {
+            return;
+        }
+        for (Field field : ReflectionUtil.getFields(vo.getClass())) {
+            Accept accept = field.getAnnotation(Accept.class);
+            if (accept == null) {
+                continue;
+            }
+            Object value = ReflectionUtil.getValue(source, accept.name(), Object.class);
+            if (value != null && !field.getType().isInstance(value)) {
+                // 源字段类型与目标字段不一致时（如 Long userId -> String id）转为字符串
+                value = String.valueOf(value);
+            }
+            ReflectionUtil.setValue(field, vo, value);
+        }
+    }
+
     // ======================== @BindRepo 字段绑定 ========================
 
     /**
@@ -157,6 +181,84 @@ public class RespConvert {
      */
     private static volatile BindRepoHandler cachedHandler;
     private static volatile boolean handlerInitialized = false;
+
+    // ======================== @BindDict 字典绑定 ========================
+
+    /**
+     * 缓存的 DictBinder SPI 实现，避免每次转换都扫描 Spring 容器
+     */
+    private static volatile DictBinder cachedDictBinder;
+    private static volatile boolean dictBinderInitialized = false;
+
+    /**
+     * 获取 DictBinder SPI 实现。
+     * 采用双重检查锁保证线程安全，仅在首次调用时扫描容器。
+     *
+     * @return DictBinder，可能为 null（上层未提供字典实现时跳过字典绑定）
+     */
+    private static DictBinder getDictBinder() {
+        if (!dictBinderInitialized) {
+            synchronized (RespConvert.class) {
+                if (!dictBinderInitialized) {
+                    String[] beanNames = BeanUtil.getBeanNamesForType(DictBinder.class);
+                    if (FuncUtil.isNotEmpty(beanNames)) {
+                        cachedDictBinder = (DictBinder) BeanUtil.getBean(beanNames[0]);
+                    }
+                    dictBinderInitialized = true;
+                }
+            }
+        }
+        return cachedDictBinder;
+    }
+
+    /**
+     * 单实体 @BindDict 字典绑定
+     *
+     * @param entity  实体
+     * @param voClass VO 类型
+     * @param <T>     实体类型
+     * @param <VO>    VO 类型
+     */
+    public static <T, VO> void dictBindConvert(T entity, Class<VO> voClass) {
+        if (FuncUtil.isEmpty(entity)) {
+            return;
+        }
+        List<T> list = new ArrayList<>(1);
+        list.add(entity);
+        dictBindConvert(list, voClass);
+    }
+
+    /**
+     * 列表 @BindDict 字典绑定。
+     * <p>
+     * 扫描 VO 上所有 @BindDict 字段，逐注解调用 {@link DictBinder} SPI 完成翻译回填。
+     *
+     * @param entityList 实体列表
+     * @param voClass    VO 类型
+     * @param <T>        实体类型
+     * @param <VO>       VO 类型
+     */
+    public static <T, VO> void dictBindConvert(List<T> entityList, Class<VO> voClass) {
+        if (FuncUtil.isEmpty(entityList)) {
+            return;
+        }
+        DictBinder dictBinder = getDictBinder();
+        if (dictBinder == null) {
+            return;
+        }
+        List<Field> fields = ReflectionUtil.getFields(voClass);
+        if (FuncUtil.isEmpty(fields)) {
+            return;
+        }
+        for (Field field : fields) {
+            BindDict bindDict = field.getAnnotation(BindDict.class);
+            if (bindDict == null) {
+                continue;
+            }
+            String sourceFieldName = FuncUtil.isNotEmpty(bindDict.field()) ? bindDict.field() : field.getName();
+            dictBinder.bindItemLabel(entityList, field.getName(), sourceFieldName, bindDict.type());
+        }
+    }
 
     /**
      * 获取 BindRepoHandler Bean。
@@ -226,12 +328,14 @@ public class RespConvert {
                 continue;
             }
             String sourceFieldName = bindRepo.sourceField();
+            String sourceField2Name = bindRepo.sourceField2();
+            boolean dual = FuncUtil.isNotEmpty(sourceField2Name);
 
-            // 收集所有实体的源字段值
+            // 收集所有实体的源字段值（复合匹配时为 "v1||v2" 组合键）
             Set<Object> sourceValues = new HashSet<>();
             for (T entity : entityList) {
                 if (FuncUtil.isNotEmpty(entity)) {
-                    Object value = ReflectionUtil.getValue(entity, sourceFieldName, Object.class);
+                    Object value = sourceValue(entity, sourceFieldName, sourceField2Name, dual);
                     if (FuncUtil.isNotEmpty(value)) {
                         sourceValues.add(value);
                     }
@@ -250,14 +354,38 @@ public class RespConvert {
             // 回写到每个实体
             for (T entity : entityList) {
                 if (FuncUtil.isNotEmpty(entity)) {
-                    Object value = ReflectionUtil.getValue(entity, sourceFieldName, Object.class);
+                    Object value = sourceValue(entity, sourceFieldName, sourceField2Name, dual);
                     if (FuncUtil.isNotEmpty(value)) {
                         Object converted = convertMap.get(value);
+                        if (converted != null && field.getType() == String.class && !(converted instanceof String)) {
+                            // extractField 原始类型与目标字段不一致时（如 Integer dataScope -> String 字段）转为字符串
+                            converted = String.valueOf(converted);
+                        }
                         ReflectionUtil.setValue(field, entity, converted);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * 读取源字段值；复合匹配时返回 "v1||v2" 组合键（与 {@link BindRepoHandler} 的键规则一致）
+     *
+     * @param entity           实体
+     * @param sourceFieldName  第一源字段名
+     * @param sourceField2Name 第二源字段名
+     * @param dual             是否复合匹配
+     * @param <T>              实体类型
+     * @return 匹配键
+     */
+    private static <T> Object sourceValue(T entity, String sourceFieldName, String sourceField2Name, boolean dual) {
+        Object value = ReflectionUtil.getValue(entity, sourceFieldName, Object.class);
+        if (dual) {
+            Object value2 = ReflectionUtil.getValue(entity, sourceField2Name, Object.class);
+            return (value == null ? "" : String.valueOf(value)) + "||"
+                    + (value2 == null ? "" : String.valueOf(value2));
+        }
+        return value;
     }
 
 }

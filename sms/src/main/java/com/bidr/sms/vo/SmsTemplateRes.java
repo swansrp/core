@@ -1,7 +1,7 @@
 package com.bidr.sms.vo;
 
+import com.bidr.kernel.config.response.BindDict;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
-import com.diboot.core.binding.annotation.BindDict;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

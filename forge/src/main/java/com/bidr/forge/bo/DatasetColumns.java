@@ -2,7 +2,6 @@ package com.bidr.forge.bo;
 
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
-import com.diboot.core.binding.annotation.BindEntityList;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -17,6 +16,5 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class DatasetColumns extends SysDataset {
-    @BindEntityList(entity = SysDatasetColumn.class, condition = "this.id=dataset_id")
     private List<SysDatasetColumn> columns;
 }

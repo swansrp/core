@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.dao.mapper.AcUserRoleDao;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.ReflectionUtil;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Title: AcUserRoleService
@@ -33,6 +36,14 @@ public class AcUserRoleService extends BaseSqlRepo<AcUserRoleDao, AcUserRole> {
     public boolean existedByRoleId(String id) {
         LambdaQueryWrapper<AcUserRole> wrapper = super.getQueryWrapper().eq(AcUserRole::getRoleId, id);
         return super.existed(wrapper);
+    }
+
+    /**
+     * 获取用户角色 id 列表（替代原 @BindFieldList 注解绑定）
+     */
+    public List<Long> getRoleIdsByUserId(Long userId) {
+        LambdaQueryWrapper<AcUserRole> wrapper = super.getQueryWrapper().eq(AcUserRole::getUserId, userId);
+        return ReflectionUtil.getFieldList(super.list(wrapper), AcUserRole::getRoleId);
     }
 }
 
