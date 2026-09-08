@@ -2,9 +2,11 @@ package com.bidr.admin.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.admin.dao.entity.SysPortal;
+import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.entity.SysPortalIndicator;
 import com.bidr.admin.dao.entity.SysPortalIndicatorGroup;
+import com.bidr.admin.dao.repository.SysPortalAssociateService;
 import com.bidr.admin.dao.repository.SysPortalColumnService;
 import com.bidr.admin.dao.repository.SysPortalIndicatorGroupService;
 import com.bidr.admin.dao.repository.SysPortalIndicatorService;
@@ -46,6 +48,7 @@ import java.util.*;
 public class PortalService {
     private final SysPortalService sysPortalService;
     private final SysPortalColumnService sysPortalColumnService;
+    private final SysPortalAssociateService sysPortalAssociateService;
     private final SysPortalIndicatorGroupService sysPortalIndicatorGroupService;
     private final SysPortalIndicatorService sysPortalIndicatorService;
     @Lazy
@@ -60,9 +63,52 @@ public class PortalService {
     }
 
     public PortalWithColumnsRes getPortalWithColumnsConfig(String name, Long roleId) {
-        SysPortal portal = sysPortalService.getByName(name, roleId);
+        // per-portal 绑定模式下角色可能只复制了部分 portal，无副本时回退默认配置
+        SysPortal portal = sysPortalService.getByNameOrDefault(name, roleId);
         Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
-        return Resp.convert(portal, PortalWithColumnsRes.class);
+        PortalWithColumnsRes res = Resp.convert(portal, PortalWithColumnsRes.class);
+        fillColumnsAndAssociates(Collections.singletonList(res));
+        return res;
+    }
+
+    /**
+     * 显式装载 PortalWithColumnsRes 的 columns/associates（替代原 @BindEntityList 注解绑定）。
+     * <p>
+     * columns 按 portal_id 批量查询后按 display_order 升序分组；
+     * associates 同理，且经 Resp.convert 转换时 PortalAssociateRes 上的 @BindRepo 字段翻译自动生效。
+     *
+     * @param voList 待填充的 VO 列表
+     */
+    private void fillColumnsAndAssociates(List<PortalWithColumnsRes> voList) {
+        if (FuncUtil.isEmpty(voList)) {
+            return;
+        }
+        Set<Long> portalIds = new HashSet<>();
+        for (PortalWithColumnsRes vo : voList) {
+            if (vo.getId() != null) {
+                portalIds.add(vo.getId());
+            }
+        }
+        if (FuncUtil.isEmpty(portalIds)) {
+            return;
+        }
+        LambdaQueryWrapper<SysPortalColumn> columnWrapper = new LambdaQueryWrapper<>();
+        columnWrapper.in(SysPortalColumn::getPortalId, portalIds).orderByAsc(SysPortalColumn::getDisplayOrder);
+        Map<Long, List<SysPortalColumn>> columnMap = new HashMap<>();
+        for (SysPortalColumn column : sysPortalColumnService.select(columnWrapper)) {
+            columnMap.computeIfAbsent(column.getPortalId(), k -> new ArrayList<>()).add(column);
+        }
+        LambdaQueryWrapper<SysPortalAssociate> associateWrapper = new LambdaQueryWrapper<>();
+        associateWrapper.in(SysPortalAssociate::getPortalId, portalIds).orderByAsc(SysPortalAssociate::getDisplayOrder);
+        Map<Long, List<PortalAssociateRes>> associateMap = new HashMap<>();
+        for (PortalAssociateRes associate : Resp.convert(sysPortalAssociateService.select(associateWrapper),
+                PortalAssociateRes.class)) {
+            associateMap.computeIfAbsent(associate.getPortalId(), k -> new ArrayList<>()).add(associate);
+        }
+        for (PortalWithColumnsRes vo : voList) {
+            vo.setColumns(columnMap.get(vo.getId()));
+            vo.setAssociates(associateMap.get(vo.getId()));
+        }
     }
 
     public PortalUpdateReq getPortalConfig(PortalReq req) {
@@ -125,6 +171,7 @@ public class PortalService {
         }
 
         List<PortalWithColumnsRes> portalWithColumnsResList = Resp.convert(portalList, PortalWithColumnsRes.class);
+        fillColumnsAndAssociates(portalWithColumnsResList);
         for (PortalWithColumnsRes portalWithColumns : portalWithColumnsResList) {
             if (!portalWithColumns.getBean().equals("dynamicPortalController")) {
                 AdminControllerInf<?, ?> bean = (AdminControllerInf<?, ?>) BeanUtil.getBean(portalWithColumns.getBean());
@@ -153,6 +200,7 @@ public class PortalService {
         SysPortal sourcePortal = sysPortalService.getById(req.getSourceConfigId());
         Validator.assertNotNull(sourcePortal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         PortalWithColumnsRes sourcePortalWithColumn = Resp.convert(sourcePortal, PortalWithColumnsRes.class);
+        fillColumnsAndAssociates(Collections.singletonList(sourcePortalWithColumn));
         List<IndicatorRes> indicatorResList = sysPortalIndicatorGroupService.getIndicator(sourcePortal.getName());
 
         // 清理目标portal的现有indicatorGroup和indicator数据

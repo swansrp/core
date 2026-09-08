@@ -73,7 +73,7 @@ public class PortalExcelValidationHandler extends ExcelValidationHandler {
     private List<String> getEntityConstraint(SysPortalColumn column) {
         List<String> constraint;
         SysPortal entityPortal = BeanUtil.getBean(SysPortalService.class)
-                .getByName(column.getReference(), PortalConfigContext.getPortalConfigRoleId());
+                .getByNameOrDefault(column.getReference(), PortalConfigContext.getPortalConfigRoleId());
         AdvancedQueryReq req = new AdvancedQueryReq();
         if (FuncUtil.isNotEmpty(column.getEntityCondition())) {
             AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(), AdvancedQuery.class);

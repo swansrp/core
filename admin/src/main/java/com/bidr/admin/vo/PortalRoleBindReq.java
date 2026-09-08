@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * Title: PortalRoleBindReq
@@ -20,4 +21,7 @@ public class PortalRoleBindReq {
 
     @ApiModelProperty("模版角色id")
     private Long templateRoleId;
+
+    @ApiModelProperty("指定复制的portal名称列表；为空时复制模版角色的全部配置")
+    private List<String> portalNames;
 }

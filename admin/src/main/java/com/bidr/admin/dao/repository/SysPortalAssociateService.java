@@ -23,4 +23,16 @@ public class SysPortalAssociateService extends BaseSqlRepo<SysPortalAssociateMap
         wrapper.eq(SysPortalAssociate::getRoleId, roleId);
         return select(wrapper);
     }
+
+    public boolean deleteByPortalId(Long portalId) {
+        LambdaQueryWrapper<SysPortalAssociate> wrapper = super.getQueryWrapper();
+        wrapper.eq(SysPortalAssociate::getPortalId, portalId);
+        return delete(wrapper);
+    }
+
+    public boolean deleteByRoleId(Long roleId) {
+        LambdaQueryWrapper<SysPortalAssociate> wrapper = super.getQueryWrapper();
+        wrapper.eq(SysPortalAssociate::getRoleId, roleId);
+        return delete(wrapper);
+    }
 }

@@ -21,6 +21,7 @@ import com.bidr.admin.service.excel.progress.PortalExcelUploadProgressInf;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.common.convert.Convert;
+import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.common.func.GetFunc;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.db.SqlConstant;
@@ -40,7 +41,6 @@ import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.vo.upload.PortalUploadProgressRes;
-import com.diboot.core.binding.annotation.BindField;
 import com.github.yulichang.toolkit.support.ColumnCache;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectCache;
@@ -119,9 +119,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 map.put(field.getName(), portalEntityField.field());
             }
         } else {
-            BindField bindField = field.getAnnotation(BindField.class);
-            if (FuncUtil.isNotEmpty(bindField)) {
-                map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+            BindRepo bindRepo = field.getAnnotation(BindRepo.class);
+            if (FuncUtil.isNotEmpty(bindRepo)) {
+                map.put(field.getName(), getAlias(bindRepo.entity(), bindRepo.extractField()));
             }
         }
     }
@@ -146,9 +146,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
                 }
             }
         } else {
-            BindField bindField = field.getAnnotation(BindField.class);
-            if (FuncUtil.isNotEmpty(bindField)) {
-                map.put(field.getName(), getAlias(bindField.entity(), bindField.field()));
+            BindRepo bindRepo = field.getAnnotation(BindRepo.class);
+            if (FuncUtil.isNotEmpty(bindRepo)) {
+                map.put(field.getName(), getAlias(bindRepo.entity(), bindRepo.extractField()));
             }
         }
     }
@@ -592,7 +592,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @SneakyThrows
     protected Object parseReferenceEntity(SysPortalColumn column, Map<String, Map<String, Object>> entityCache,
                                           String entityName) {
-        SysPortal entityPortal = sysPortalService.getByName(column.getReference(),
+        SysPortal entityPortal = sysPortalService.getByNameOrDefault(column.getReference(),
                 PortalConfigContext.getPortalConfigRoleId());
         if (FuncUtil.isEmpty(entityCache.get(column.getReference()))) {
             entityCache.put(column.getReference(), new HashMap(16));

@@ -21,6 +21,7 @@ import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.kernel.common.convert.Convert;
+import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
@@ -33,10 +34,6 @@ import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.SortVO;
 import com.bidr.platform.config.portal.AdminPortal;
-import com.diboot.core.binding.annotation.BindEntity;
-import com.diboot.core.binding.annotation.BindEntityList;
-import com.diboot.core.binding.annotation.BindField;
-import com.diboot.core.binding.annotation.BindFieldList;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiModel;
@@ -250,7 +247,7 @@ public class PortalConfigService implements LoginFillTokenInf {
             for (String field : propertyListSaved) {
                 columnMap.remove(field);
             }
-            sysPortalColumnService.deleteEntities(
+            sysPortalColumnService.removeByIds(
                     ReflectionUtil.getFieldList(columnMap.values(), SysPortalColumn::getId));
         }
     }
@@ -408,29 +405,15 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handleBindField(Field field, SysPortalColumn column) {
-        BindField bindFieldAnno = field.getAnnotation(BindField.class);
-        if (FuncUtil.isNotEmpty(bindFieldAnno)) {
+        BindRepo bindRepoAnno = field.getAnnotation(BindRepo.class);
+        if (FuncUtil.isNotEmpty(bindRepoAnno)) {
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
             column.setFilterAble(CommonConst.NO);
             column.setSortAble(CommonConst.NO);
         }
-        BindFieldList bindFieldList = field.getAnnotation(BindFieldList.class);
-        if (FuncUtil.isNotEmpty(bindFieldList)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-        BindEntity bindEntityAnno = field.getAnnotation(BindEntity.class);
-        if (FuncUtil.isNotEmpty(bindEntityAnno)) {
-            column.setAddShow(CommonConst.NO);
-            column.setEditShow(CommonConst.NO);
-            column.setFilterAble(CommonConst.NO);
-            column.setSortAble(CommonConst.NO);
-        }
-        BindEntityList bindFieldListAnno = field.getAnnotation(BindEntityList.class);
-        if (FuncUtil.isNotEmpty(bindFieldListAnno)) {
+        // 集合绑定字段（原 @BindFieldList/@BindEntityList 标记）不作为门户列展示
+        if (Collection.class.isAssignableFrom(field.getType())) {
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
             column.setFilterAble(CommonConst.NO);
@@ -532,35 +515,87 @@ public class PortalConfigService implements LoginFillTokenInf {
 
 
     @Transactional(rollbackFor = Exception.class)
-    public void bindRole(Long roleId, Long templateRoleId) {
+    public void bindRole(Long roleId, Long templateRoleId, List<String> portalNames) {
         if (FuncUtil.isEmpty(templateRoleId)) {
             templateRoleId = DEFAULT_CONFIG_ROLE_ID;
         }
-        List<PortalWithColumnsRes> templatePortalList = sysPortalService.getPortalWithColumnsByRoleId(templateRoleId);
-        Validator.assertNotEmpty(templatePortalList, ErrCodeSys.PA_DATA_NOT_EXIST, "模版配置");
         AcRole role = acRoleService.selectById(roleId);
         Validator.assertNotNull(role, ErrCodeSys.PA_DATA_NOT_EXIST, "角色");
-        unBindRole(roleId);
-        for (PortalWithColumnsRes portal : templatePortalList) {
-            portal.setId(null);
-            portal.setRoleId(roleId);
-            sysPortalService.insert(portal);
-            if (FuncUtil.isNotEmpty(portal.getColumns())) {
-                for (SysPortalColumn column : portal.getColumns()) {
-                    column.setPortalId(portal.getId());
-                    column.setRoleId(roleId);
-                    column.setId(null);
+        if (FuncUtil.isEmpty(portalNames)) {
+            // 全量绑定：清空该角色全部副本后复制模版全套
+            List<PortalWithColumnsRes> templatePortalList = sysPortalService.getPortalWithColumnsByRoleId(templateRoleId);
+            Validator.assertNotEmpty(templatePortalList, ErrCodeSys.PA_DATA_NOT_EXIST, "模版配置");
+            unBindRole(roleId);
+            for (PortalWithColumnsRes portal : templatePortalList) {
+                copyPortalToRole(portal.getName(), templateRoleId, roleId);
+            }
+        } else {
+            // 指定 portal：同步语义 —— 勾选集合作为角色副本的目标集合
+            // 新增：勾选了但角色没有 → 复制；删除：角色有但未勾选 → 删副本；
+            // 已有且勾选 → 保留现状（不覆盖已调整的配置）
+            Set<String> targetSet = new HashSet<>(portalNames);
+            for (SysPortal existing : sysPortalService.getByRoleId(roleId)) {
+                if (targetSet.remove(existing.getName())) {
+                    continue;
                 }
-                sysPortalColumnService.insert(portal.getColumns());
+                removePortalCopy(existing.getName(), roleId);
+            }
+            for (String portalName : targetSet) {
+                copyPortalToRole(portalName, templateRoleId, roleId);
             }
         }
         ROLE_BIND_PORTAL_MAP.put(roleId, role.getRoleName());
+    }
+
+    /**
+     * 复制单个 portal 配置（含列与关联表格）到目标角色。
+     */
+    private void copyPortalToRole(String portalName, Long templateRoleId, Long roleId) {
+        SysPortal templatePortal = sysPortalService.getByName(portalName, templateRoleId);
+        Validator.assertNotNull(templatePortal, ErrCodeSys.PA_DATA_NOT_EXIST, portalName + " 模版配置");
+        SysPortal portal = ReflectionUtil.copy(templatePortal, SysPortal.class);
+        portal.setId(null);
+        portal.setRoleId(roleId);
+        sysPortalService.insert(portal);
+        List<SysPortalColumn> columns =
+                sysPortalColumnService.getPropertyListByPortalId(templatePortal.getId(), templateRoleId);
+        if (FuncUtil.isNotEmpty(columns)) {
+            for (SysPortalColumn column : columns) {
+                column.setId(null);
+                column.setPortalId(portal.getId());
+                column.setRoleId(roleId);
+            }
+            sysPortalColumnService.insert(columns);
+        }
+        List<SysPortalAssociate> associates =
+                sysPortalAssociateService.getPropertyListByPortalId(templatePortal.getId(), templateRoleId);
+        if (FuncUtil.isNotEmpty(associates)) {
+            for (SysPortalAssociate associate : associates) {
+                associate.setId(null);
+                associate.setPortalId(portal.getId());
+                associate.setRoleId(roleId);
+            }
+            sysPortalAssociateService.insert(associates);
+        }
+    }
+
+    /**
+     * 删除该角色下指定 portal 的副本（含列与关联表格）。
+     */
+    private void removePortalCopy(String portalName, Long roleId) {
+        SysPortal copy = sysPortalService.getByName(portalName, roleId);
+        if (FuncUtil.isNotEmpty(copy)) {
+            sysPortalService.deleteById(copy.getId());
+            sysPortalColumnService.deleteByPortalId(copy.getId());
+            sysPortalAssociateService.deleteByPortalId(copy.getId());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void unBindRole(Long roleId) {
         sysPortalService.deleteByRoleId(roleId);
         sysPortalColumnService.deleteByRoleId(roleId);
+        sysPortalAssociateService.deleteByRoleId(roleId);
         ROLE_BIND_PORTAL_MAP.remove(roleId);
     }
 

@@ -104,7 +104,7 @@ public class AdminPortalController {
     @RequestMapping(path = {"/role/bind"}, method = {RequestMethod.POST})
     @ApiOperation(value = "初始化角色配置")
     public void bindRole(@RequestBody PortalRoleBindReq req) {
-        portalConfigService.bindRole(req.getRoleId(), req.getTemplateRoleId());
+        portalConfigService.bindRole(req.getRoleId(), req.getTemplateRoleId(), req.getPortalNames());
         Resp.notice("初始化角色配置成功");
     }
 

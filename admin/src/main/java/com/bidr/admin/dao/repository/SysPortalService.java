@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.admin.dao.mapper.SysPortalMapper;
+import com.bidr.admin.service.PortalConfigService;
 import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
@@ -28,6 +29,31 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper().eq(SysPortal::getName, name)
                 .eq(FuncUtil.isNotEmpty(roleId), SysPortal::getRoleId, roleId);
         return super.selectOne(wrapper);
+    }
+
+    /**
+     * 运行时取 portal 配置：优先角色副本，无副本回退默认配置（roleId=0）。
+     * <p>per-portal 绑定模式下角色可能只复制了部分 portal，
+     * 未复制的不应直接报不存在，而应回落到默认配置。</p>
+     */
+    public SysPortal getByNameOrDefault(String name, Long roleId) {
+        SysPortal portal = getByName(name, roleId);
+        if (FuncUtil.isEmpty(portal) && FuncUtil.isNotEmpty(roleId)
+                && !PortalConfigService.DEFAULT_CONFIG_ROLE_ID.equals(roleId)) {
+            portal = getByName(name, PortalConfigService.DEFAULT_CONFIG_ROLE_ID);
+        }
+        return portal;
+    }
+
+    /**
+     * 运行时解析生效 roleId：角色下无该 portal 副本时回退默认配置的 roleId。
+     */
+    private Long resolveRunRoleId(String portalName, Long roleId) {
+        if (FuncUtil.isNotEmpty(roleId) && !PortalConfigService.DEFAULT_CONFIG_ROLE_ID.equals(roleId)
+                && FuncUtil.isEmpty(getByName(portalName, roleId))) {
+            return PortalConfigService.DEFAULT_CONFIG_ROLE_ID;
+        }
+        return roleId;
     }
 
     public List<SysPortal> getByBeanName(String dbEntityClassName, String name) {
@@ -66,6 +92,7 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
     }
 
     public PortalWithColumnsRes getImportPortal(String portalName, Long roleId) {
+        roleId = resolveRunRoleId(portalName, roleId);
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper();
         wrapper.selectCollection(SysPortalColumn.class, PortalWithColumnsRes::getColumns);
         wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);
@@ -79,6 +106,7 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
     }
 
     public PortalWithColumnsRes getExportPortal(String portalName, Long roleId) {
+        roleId = resolveRunRoleId(portalName, roleId);
         MPJLambdaWrapper<SysPortal> wrapper = new MPJLambdaWrapper();
         wrapper.selectCollection(SysPortalColumn.class, PortalWithColumnsRes::getColumns);
         wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);
@@ -107,6 +135,12 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         return super.delete(wrapper);
     }
 
+    public List<SysPortal> getByRoleId(Long roleId) {
+        LambdaQueryWrapper<SysPortal> wrapper = super.getQueryWrapper()
+                .eq(SysPortal::getRoleId, roleId);
+        return super.select(wrapper);
+    }
+
     /**
      * 根据dataMode和referenceId删除Portal配置
      *
@@ -130,6 +164,7 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
     }
 
     public List<SysPortalColumn> getColumnsByPortalName(String portalName, Long roleId) {
+        roleId = resolveRunRoleId(portalName, roleId);
         MPJLambdaWrapper<SysPortal> wrapper = super.getMPJLambdaWrapper();
         wrapper.selectAll(SysPortalColumn.class);
         wrapper.leftJoin(SysPortalColumn.class, SysPortalColumn::getPortalId, SysPortal::getId);

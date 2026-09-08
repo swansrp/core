@@ -115,7 +115,7 @@ public class DynamicTreeController extends DynamicCrudController {
     @GetMapping("/{portalName}/tree/parent")
     public TreeDataItemVO getParent(@PathVariable String portalName, IdReqVO req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
-        SysPortal portal = sysPortalService.getByName(portalName, getRoleId());
+        SysPortal portal = sysPortalService.getByNameOrDefault(portalName, getRoleId());
         String idColumn = portal.getIdColumn();
         String pidColumn = portal.getPidColumn();
         String nameColumn = portal.getNameColumn();
@@ -145,7 +145,7 @@ public class DynamicTreeController extends DynamicCrudController {
     @ApiOperation("获取子节点")
     @GetMapping("/{portalName}/tree/children")
     public List<TreeDataItemVO> getChildren(@PathVariable String portalName, IdReqVO req) {
-        SysPortal portal = sysPortalService.getByName(portalName, getRoleId());
+        SysPortal portal = sysPortalService.getByNameOrDefault(portalName, getRoleId());
         String idColumn = portal.getIdColumn();
         String pidColumn = portal.getPidColumn();
         String nameColumn = portal.getNameColumn();

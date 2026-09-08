@@ -46,7 +46,7 @@ public class DynamicBaseController implements PortalSqlInf {
      * 根据portalName获取对应的驱动
      */
     protected PortalDriver<Map<String, Object>> getDriver(String portalName) {
-        SysPortal portal = sysPortalService.getByName(portalName, getRoleId());
+        SysPortal portal = sysPortalService.getByNameOrDefault(portalName, getRoleId());
         Validator.assertNotNull(portal, ErrCodeSys.SYS_ERR_MSG, "Portal配置不存在: " + portalName);
 
         String dataMode = portal.getDataMode();
