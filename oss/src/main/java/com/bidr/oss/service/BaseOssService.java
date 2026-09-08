@@ -139,10 +139,76 @@ public abstract class BaseOssService implements ObjectStorageService {
         if (idx >= 0) {
             return path.substring(idx + bucketName.length() + 1);
         }
-        // 虚拟主机式（bucket.endpoint/key，如 TOS 签名地址）：bucket 在子域名，取 host 后路径
+        // 虚拟主机式（bucket.endpoint/key，如 TOS/ALI 签名地址）：bucket 在子域名，取 host 后路径
         int schemeEnd = path.indexOf("//");
         int pathStart = path.indexOf('/', schemeEnd + 2);
         return pathStart >= 0 ? path.substring(pathStart + 1) : path;
+    }
+
+    // ===================== 各实现共享的工具方法（预签名下载/内联预览、Content-Type 推断） =====================
+
+    /** 构造 RFC 5987 编码的下载头（支持中文文件名） */
+    protected static String contentDisposition(String fileName) {
+        return "attachment; filename*=UTF-8''" + urlEncode(fileName);
+    }
+
+    /** 构造内联展示头（支持中文文件名；无文件名时仅声明 inline） */
+    protected static String inlineDisposition(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return "inline";
+        }
+        return "inline; filename*=UTF-8''" + urlEncode(fileName);
+    }
+
+    private static String urlEncode(String value) {
+        try {
+            return java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20");
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** 按扩展名推断浏览器内联展示用 MIME（仅覆盖可直接预览的类别，推断不到返回 null 不覆盖） */
+    protected static String contentTypeOf(String name) {
+        int dot = name == null ? -1 : name.lastIndexOf('.');
+        if (dot < 0 || dot == name.length() - 1) {
+            return null;
+        }
+        switch (name.substring(dot + 1).toLowerCase()) {
+            case "jpg": case "jpeg": return "image/jpeg";
+            case "png": return "image/png";
+            case "gif": return "image/gif";
+            case "webp": return "image/webp";
+            case "bmp": return "image/bmp";
+            case "mp4": case "m4v": return "video/mp4";
+            case "webm": return "video/webm";
+            case "mov": return "video/quicktime";
+            case "mp3": return "audio/mpeg";
+            case "wav": return "audio/wav";
+            case "flac": return "audio/flac";
+            case "aac": return "audio/aac";
+            case "ogg": return "audio/ogg";
+            case "m4a": return "audio/mp4";
+            case "pdf": return "application/pdf";
+            case "json": return "application/json";
+            case "xml": return "application/xml";
+            case "html": return "text/html";
+            case "css": return "text/css";
+            case "js": return "application/javascript";
+            case "txt": case "md": case "log": case "csv": case "ini": case "conf":
+            case "yml": case "yaml": case "java": case "py": case "sh": case "ts":
+                return "text/plain";
+            default: return null;
+        }
+    }
+
+    /** 对象存储 Content-Type：优先客户端上传类型，octet-stream/缺失时按扩展名推断 */
+    protected static String resolveContentType(String clientType, String objectName) {
+        if (clientType != null && !clientType.isEmpty() && !"application/octet-stream".equals(clientType)) {
+            return clientType;
+        }
+        String mime = contentTypeOf(objectName);
+        return mime != null ? mime : "application/octet-stream";
     }
 
 }

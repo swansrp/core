@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -212,6 +213,27 @@ public class MinioTemplate {
         GetPresignedObjectUrlArgs build = GetPresignedObjectUrlArgs.builder().bucket(bucketName).object(objectName)
                 .expiry(expiryDuration, unit).method(Method.GET).build();
         return getClient().getPresignedObjectUrl(build);
+    }
+
+    /**
+     * 获取对象的临时访问地址
+     *
+     * @param bucketName       桶名称
+     * @param objectName       对象名称
+     * @param expiryDuration   过期时长
+     * @param unit             时长单位
+     * @param extraQueryParams 额外签名查询参数（response-content-* 响应头覆盖；null/空表示不覆盖）
+     * @return http链接
+     */
+    @SneakyThrows
+    public String getObjectLink(String bucketName, String objectName, int expiryDuration, TimeUnit unit,
+                                Map<String, String> extraQueryParams) {
+        GetPresignedObjectUrlArgs.Builder builder = GetPresignedObjectUrlArgs.builder().bucket(bucketName)
+                .object(objectName).expiry(expiryDuration, unit).method(Method.GET);
+        if (extraQueryParams != null && !extraQueryParams.isEmpty()) {
+            builder.extraQueryParams(extraQueryParams);
+        }
+        return getClient().getPresignedObjectUrl(builder.build());
     }
 
     /**

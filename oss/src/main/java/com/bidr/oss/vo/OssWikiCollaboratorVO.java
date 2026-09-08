@@ -1,7 +1,6 @@
 package com.bidr.oss.vo;
 
-import com.bidr.authorization.dao.entity.AcUser;
-import com.diboot.core.binding.annotation.BindField;
+import com.bidr.authorization.bind.annotation.BindUser;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -24,7 +23,7 @@ public class OssWikiCollaboratorVO {
     @ApiModelProperty(value = "用户ID")
     private String userId;
 
-    @BindField(entity = AcUser.class, field = "name", condition = "this.userId=customer_number")
+    @BindUser("userId")
     @ApiModelProperty(value = "用户名称")
     private String userName;
 

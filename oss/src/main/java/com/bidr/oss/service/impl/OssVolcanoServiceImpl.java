@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.InputStream;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -166,66 +165,6 @@ public class OssVolcanoServiceImpl extends BaseOssService {
             input.setQuery(Collections.singletonMap("response-content-disposition", contentDisposition(downloadName)));
         }
         return client().preSignedURL(input).getSignedUrl();
-    }
-
-    /** 构造 RFC 5987 编码的下载头（支持中文文件名） */
-    @SneakyThrows
-    private String contentDisposition(String fileName) {
-        String encoded = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
-        return "attachment; filename*=UTF-8''" + encoded;
-    }
-
-    /** 构造内联展示头（支持中文文件名；无文件名时仅声明 inline） */
-    @SneakyThrows
-    private String inlineDisposition(String fileName) {
-        if (fileName == null || fileName.isEmpty()) {
-            return "inline";
-        }
-        String encoded = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
-        return "inline; filename*=UTF-8''" + encoded;
-    }
-
-    /** 按扩展名推断浏览器内联展示用 MIME（仅覆盖可直接预览的类别，推断不到返回 null 不覆盖） */
-    private static String contentTypeOf(String name) {
-        int dot = name == null ? -1 : name.lastIndexOf('.');
-        if (dot < 0 || dot == name.length() - 1) {
-            return null;
-        }
-        switch (name.substring(dot + 1).toLowerCase()) {
-            case "jpg": case "jpeg": return "image/jpeg";
-            case "png": return "image/png";
-            case "gif": return "image/gif";
-            case "webp": return "image/webp";
-            case "bmp": return "image/bmp";
-            case "mp4": case "m4v": return "video/mp4";
-            case "webm": return "video/webm";
-            case "mov": return "video/quicktime";
-            case "mp3": return "audio/mpeg";
-            case "wav": return "audio/wav";
-            case "flac": return "audio/flac";
-            case "aac": return "audio/aac";
-            case "ogg": return "audio/ogg";
-            case "m4a": return "audio/mp4";
-            case "pdf": return "application/pdf";
-            case "json": return "application/json";
-            case "xml": return "application/xml";
-            case "html": return "text/html";
-            case "css": return "text/css";
-            case "js": return "application/javascript";
-            case "txt": case "md": case "log": case "csv": case "ini": case "conf":
-            case "yml": case "yaml": case "java": case "py": case "sh": case "ts":
-                return "text/plain";
-            default: return null;
-        }
-    }
-
-    /** 对象存储 Content-Type：优先客户端上传类型，octet-stream/缺失时按扩展名推断 */
-    private static String resolveContentType(String clientType, String objectName) {
-        if (clientType != null && !clientType.isEmpty() && !"application/octet-stream".equals(clientType)) {
-            return clientType;
-        }
-        String mime = contentTypeOf(objectName);
-        return mime != null ? mime : "application/octet-stream";
     }
 
     // ===================== 分片上传（断点续传，TOS V2 接口） =====================

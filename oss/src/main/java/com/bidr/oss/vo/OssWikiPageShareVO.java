@@ -1,7 +1,5 @@
 package com.bidr.oss.vo;
 
-import com.bidr.authorization.dao.entity.AcUser;
-import com.diboot.core.binding.annotation.BindField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

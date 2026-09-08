@@ -1,7 +1,6 @@
 package com.bidr.oss.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.diboot.core.binding.annotation.BindDict;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -34,7 +33,6 @@ public class OssRes {
     @ApiModelProperty(value = "文件大小")
     private Long size;
 
-    //@BindDict(type = "OSS_TYPE_DICT")
     @ApiModelProperty(value = "文件存储类型OSS_TYPE_DICT")
     private String type;
 

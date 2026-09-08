@@ -1,7 +1,6 @@
 package com.bidr.oss.vo;
 
-import com.bidr.authorization.dao.entity.AcUser;
-import com.diboot.core.binding.annotation.BindField;
+import com.bidr.authorization.bind.annotation.BindUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -66,7 +65,7 @@ public class OssWikiPageVO {
     private String authorId;
 
     @ApiModelProperty(value = "作者名称")
-    @BindField(entity = AcUser.class, field = "name", condition = "this.authorId=customer_number")
+    @BindUser("authorId")
     private String authorName;
 
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")

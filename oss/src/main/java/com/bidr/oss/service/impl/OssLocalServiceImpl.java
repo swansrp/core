@@ -75,6 +75,27 @@ public class OssLocalServiceImpl extends BaseOssService {
 
     }
 
+    /**
+     * 按访问地址删除本地对象文件（回收站超期清理等场景）。
+     * 目标路径必须落在上传根目录内（防 key 携带 .. 逃逸误删任意文件）
+     */
+    @Override
+    public void deleteObject(String url) {
+        String key = getKey(url);
+        log.info("deleteObject == {}", key);
+        Path root = Paths.get(getUploadPath()).toAbsolutePath().normalize();
+        Path target = root.resolve(key).normalize();
+        if (!target.startsWith(root)) {
+            log.error("deleteObject 拒绝：目标路径逃逸上传根目录, key={}", key);
+            return;
+        }
+        try {
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            throw new ServiceException("删除本地文件失败", e);
+        }
+    }
+
     // ===================== 分片上传（断点续传） =====================
     // 临时分片落盘 {上传根}/.multipart/{uploadId}/part-{n}，complete 时按序合并为目标对象
 
