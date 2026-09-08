@@ -1,6 +1,6 @@
 package com.bidr.platform.redis.cache;
 
-import com.bidr.kernel.cache.lock.CacheLockProvider;
+import com.bidr.platform.cache.lock.CacheLockProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;

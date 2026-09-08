@@ -1,8 +1,8 @@
-package com.bidr.kernel.cache;
+package com.bidr.platform.cache;
 
-import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
-import com.bidr.kernel.cache.exception.DynamicMemoryCacheExpiredException;
-import com.bidr.kernel.cache.lock.CacheLockProvider;
+import com.bidr.platform.cache.config.DynamicMemoryCacheManager;
+import com.bidr.platform.cache.exception.DynamicMemoryCacheExpiredException;
+import com.bidr.platform.cache.lock.CacheLockProvider;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import com.bidr.kernel.utils.ReflectionUtil;

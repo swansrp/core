@@ -1,4 +1,4 @@
-package com.bidr.kernel.cache;
+package com.bidr.platform.cache;
 
 import org.springframework.boot.CommandLineRunner;
 

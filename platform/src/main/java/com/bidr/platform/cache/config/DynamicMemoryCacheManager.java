@@ -1,8 +1,8 @@
-package com.bidr.kernel.cache.config;
+package com.bidr.platform.cache.config;
 
-import com.bidr.kernel.cache.lock.CacheLockProvider;
-import com.diboot.core.cache.BaseMemoryCacheManager;
-import com.diboot.core.util.V;
+import com.bidr.platform.cache.BaseMemoryCacheManager;
+import com.bidr.platform.cache.lock.CacheLockProvider;
+import com.bidr.kernel.utils.FuncUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -200,7 +200,7 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
         boolean needed = true;
         String today = LocalDate.now().toString();
         if (CACHE_CLEAN_DATE_CACHE.containsKey(cacheName)) {
-            needed = V.notEquals(today, CACHE_CLEAN_DATE_CACHE.get(cacheName));
+            needed = FuncUtil.notEquals(today, CACHE_CLEAN_DATE_CACHE.get(cacheName));
         }
         if (needed) {
             log.debug("新的执行周期清理过期的本地缓存: {}", cacheName);
@@ -209,11 +209,10 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
         }
     }
 
-    @Override
     public synchronized void clearOutOfDateData(String cacheName) {
         Cache cache = getCache(cacheName);
         ConcurrentMap<Object, Object> cacheMap = (ConcurrentMap<Object, Object>) cache.getNativeCache();
-        if (V.isEmpty(cacheMap)) {
+        if (FuncUtil.isEmpty(cacheMap)) {
             log.debug("暂无缓存数据: {}", cacheName);
             return;
         }
@@ -239,7 +238,7 @@ public class DynamicMemoryCacheManager extends BaseMemoryCacheManager {
      */
     public boolean isExpired(String cacheName, Object objKey) {
         ConcurrentMap<Object, Long> timestampCache = CACHE_TIMESTAMP_CACHE.get(cacheName);
-        if (V.isEmpty(timestampCache)) {
+        if (FuncUtil.isEmpty(timestampCache)) {
             return false;
         }
         Long cacheTimestamp = timestampCache.get(objKey);

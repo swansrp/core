@@ -1,6 +1,6 @@
 package com.bidr.platform.service.cache;
 
-import com.bidr.kernel.cache.DynamicMemoryCache;
+import com.bidr.platform.cache.DynamicMemoryCache;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;

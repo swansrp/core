@@ -1,9 +1,9 @@
 package com.bidr.platform.redis.cache;
 
-import com.bidr.kernel.cache.DynamicMemoryCacheInf;
-import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
-import com.bidr.kernel.cache.config.MemoryCacheConfig;
-import com.bidr.kernel.cache.lock.CacheLockProvider;
+import com.bidr.platform.cache.DynamicMemoryCacheInf;
+import com.bidr.platform.cache.config.DynamicMemoryCacheManager;
+import com.bidr.platform.cache.config.MemoryCacheConfig;
+import com.bidr.platform.cache.lock.CacheLockProvider;
 import com.bidr.platform.redis.config.RedissonConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

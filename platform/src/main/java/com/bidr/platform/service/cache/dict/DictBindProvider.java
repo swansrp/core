@@ -1,14 +1,11 @@
 package com.bidr.platform.service.cache.dict;
 
+import com.bidr.kernel.config.response.DictBinder;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.platform.dao.entity.SysDict;
-import com.diboot.core.entity.Dictionary;
-import com.diboot.core.service.DictionaryServiceExtProvider;
-import com.diboot.core.vo.DictionaryVO;
-import com.diboot.core.vo.LabelValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,7 +15,8 @@ import java.util.List;
 
 /**
  * Title: DictBindProvider
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: {@link DictBinder} SPI 的平台字典实现，为 @BindDict 注解提供翻译数据源（走平台字典缓存）。
+ * Copyright: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
  * @since 2023/03/31 11:04
@@ -26,12 +24,12 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DictBindProvider implements DictionaryServiceExtProvider {
+public class DictBindProvider implements DictBinder {
 
     private final DictCacheService dictCacheService;
 
     @Override
-    public void bindItemLabel(List voList, String setFieldName, String getFieldName, String type) {
+    public void bindItemLabel(List<?> voList, String setFieldName, String getFieldName, String type) {
         if (FuncUtil.isNotEmpty(voList)) {
             for (Object vo : voList) {
                 Object value = ReflectionUtil.getValue(vo, getFieldName, Object.class);
@@ -57,30 +55,5 @@ public class DictBindProvider implements DictionaryServiceExtProvider {
                 }
             }
         }
-    }
-
-    @Override
-    public List<LabelValue> getLabelValueList(String dictType) {
-        return null;
-    }
-
-    @Override
-    public boolean existsDictType(String dictType) {
-        return FuncUtil.isNotEmpty(dictCacheService.getKeyValue(dictType));
-    }
-
-    @Override
-    public boolean createDictAndChildren(DictionaryVO dictionaryVO) {
-        return false;
-    }
-
-    @Override
-    public List<Dictionary> getDictDefinitionList() {
-        return null;
-    }
-
-    @Override
-    public List<DictionaryVO> getDictDefinitionVOList() {
-        return null;
     }
 }

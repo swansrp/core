@@ -1,6 +1,6 @@
 package com.bidr.platform.service.cache.dict;
 
-import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
+import com.bidr.platform.cache.config.DynamicMemoryCacheManager;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.dict.MetaDict;

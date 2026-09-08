@@ -1,4 +1,4 @@
-package com.bidr.kernel.cache.exception;
+package com.bidr.platform.cache.exception;
 
 /**
  * Title: DynamicMemoryCacheExpiredException

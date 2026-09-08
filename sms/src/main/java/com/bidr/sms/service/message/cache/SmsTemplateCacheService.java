@@ -1,6 +1,6 @@
 package com.bidr.sms.service.message.cache;
 
-import com.bidr.kernel.cache.DynamicMemoryCache;
+import com.bidr.platform.cache.DynamicMemoryCache;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.sms.dao.entity.SaSmsTemplate;
 import com.bidr.sms.dao.repository.SaSmsTemplateService;
