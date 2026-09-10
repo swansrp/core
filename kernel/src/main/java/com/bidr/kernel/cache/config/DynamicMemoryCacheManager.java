@@ -1,7 +1,7 @@
-package com.bidr.platform.cache.config;
+package com.bidr.kernel.cache.config;
 
-import com.bidr.platform.cache.BaseMemoryCacheManager;
-import com.bidr.platform.cache.lock.CacheLockProvider;
+import com.bidr.kernel.cache.BaseMemoryCacheManager;
+import com.bidr.kernel.cache.lock.CacheLockProvider;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

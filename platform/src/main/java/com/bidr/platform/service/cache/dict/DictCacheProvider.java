@@ -1,8 +1,8 @@
 package com.bidr.platform.service.cache.dict;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.bidr.platform.cache.DynamicMemoryCache;
-import com.bidr.platform.cache.config.DynamicMemoryCacheManager;
+import com.bidr.kernel.cache.DynamicMemoryCache;
+import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.Dict;
 import com.bidr.kernel.constant.err.ErrCodeSys;

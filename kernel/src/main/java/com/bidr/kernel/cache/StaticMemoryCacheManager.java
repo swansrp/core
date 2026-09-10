@@ -1,4 +1,4 @@
-package com.bidr.platform.cache;
+package com.bidr.kernel.cache;
 
 import org.springframework.cache.Cache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;

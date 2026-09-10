@@ -2,7 +2,7 @@ package com.bidr.insight.smartquery.service;
 
 import com.bidr.insight.smartquery.dao.entity.InsightAgentAsset;
 import com.bidr.insight.smartquery.dao.repository.InsightAgentAssetService;
-import com.bidr.platform.cache.DynamicMemoryCache;
+import com.bidr.kernel.cache.DynamicMemoryCache;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.config.aop.RedisPublish;
 import lombok.extern.slf4j.Slf4j;

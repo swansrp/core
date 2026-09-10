@@ -1,4 +1,4 @@
-package com.bidr.platform.cache;
+package com.bidr.kernel.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;

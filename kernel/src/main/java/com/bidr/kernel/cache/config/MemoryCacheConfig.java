@@ -1,8 +1,8 @@
-package com.bidr.platform.cache.config;
+package com.bidr.kernel.cache.config;
 
-import com.bidr.platform.cache.DynamicMemoryCacheInf;
-import com.bidr.platform.cache.MemoryCacheInf;
-import com.bidr.platform.cache.StaticMemoryCacheManager;
+import com.bidr.kernel.cache.DynamicMemoryCacheInf;
+import com.bidr.kernel.cache.MemoryCacheInf;
+import com.bidr.kernel.cache.StaticMemoryCacheManager;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

@@ -3,7 +3,7 @@ package com.bidr.forge.datasource.service;
 import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.bidr.forge.datasource.dao.entity.SysDataSource;
 import com.bidr.forge.datasource.dao.repository.SysDataSourceService;
-import com.bidr.platform.cache.DynamicMemoryCache;
+import com.bidr.kernel.cache.DynamicMemoryCache;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.jdbc.DynamicDataSourceResolver;
 import com.bidr.kernel.utils.FuncUtil;

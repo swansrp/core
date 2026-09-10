@@ -1,4 +1,4 @@
-package com.bidr.platform.cache.lock;
+package com.bidr.kernel.cache.lock;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

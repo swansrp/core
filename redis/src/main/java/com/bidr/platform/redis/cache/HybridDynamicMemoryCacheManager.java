@@ -1,6 +1,6 @@
 package com.bidr.platform.redis.cache;
 
-import com.bidr.platform.cache.config.DynamicMemoryCacheManager;
+import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.dao.DataAccessException;
