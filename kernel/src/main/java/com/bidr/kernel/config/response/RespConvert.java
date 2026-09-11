@@ -7,6 +7,8 @@ import com.bidr.kernel.utils.ReflectionUtil;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -327,6 +329,11 @@ public class RespConvert {
             if (bindRepo == null) {
                 continue;
             }
+            // condition 非空时优先走关联表达式引擎（支持任意字段数 + 任意级中间表 join）
+            if (FuncUtil.isNotEmpty(bindRepo.condition())) {
+                bindByCondition(handler, bindRepo, field, entityList);
+                continue;
+            }
             String sourceFieldName = bindRepo.sourceField();
             String sourceField2Name = bindRepo.sourceField2();
             boolean dual = FuncUtil.isNotEmpty(sourceField2Name);
@@ -342,6 +349,39 @@ public class RespConvert {
                 }
             }
             if (sourceValues.isEmpty()) {
+                continue;
+            }
+
+            // 非 List 字段但字段类型即实体类型 → 装载首个匹配的完整实体（BindEntity 形态）
+            boolean elementIsEntity = bindWholeEntity(field, bindRepo);
+            if (!List.class.isAssignableFrom(field.getType()) && elementIsEntity) {
+                Map<Object, List<Object>> listMap = handler.batchConvertList(bindRepo, sourceValues);
+                for (T entity : entityList) {
+                    if (FuncUtil.isNotEmpty(entity)) {
+                        Object value = sourceValue(entity, sourceFieldName, sourceField2Name, dual);
+                        if (FuncUtil.isNotEmpty(value)) {
+                            List<Object> bound = listMap.get(value);
+                            ReflectionUtil.setValue(field, entity, FuncUtil.isNotEmpty(bound) ? bound.get(0) : null);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // 字段类型为 List 时执行一对多绑定，否则执行单值绑定
+            if (List.class.isAssignableFrom(field.getType())) {
+                Map<Object, List<Object>> listMap = handler.batchConvertList(bindRepo, sourceValues);
+                for (T entity : entityList) {
+                    if (FuncUtil.isNotEmpty(entity)) {
+                        Object value = sourceValue(entity, sourceFieldName, sourceField2Name, dual);
+                        if (FuncUtil.isNotEmpty(value)) {
+                            List<Object> bound = listMap.get(value);
+                            // 元素类型非实体 → 装载 extractField 值列表（BindFieldList 形态）
+                            ReflectionUtil.setValue(field, entity,
+                                    toBoundValue(bound, bindRepo.extractField(), elementIsEntity));
+                        }
+                    }
+                }
                 continue;
             }
 
@@ -366,6 +406,92 @@ public class RespConvert {
                 }
             }
         }
+    }
+
+    /**
+     * condition 关联绑定：调用 {@link BindRepoHandler#batchConvertByCondition} 得到「源 VO → 目标实体列表」映射后回填。
+     * <p>
+     * 按字段形态分派：List 且元素为实体 → 装<b>全部匹配实体</b>；List 且元素为基本类型 →
+     * 装 <b>extractField 值列表</b>（BindFieldList 形态）；非 List 且字段类型为实体 → 装<b>首个完整实体</b>
+     * （BindEntity 形态）；其余非 List → 取首个目标实体的 {@code extractField} 值（类型不符时转 String）。
+     *
+     * @param handler    绑定处理器
+     * @param bindRepo   字段上的 @BindRepo 注解（condition 非空）
+     * @param field      目标字段
+     * @param entityList 源 VO 实体列表
+     * @param <T>        实体类型
+     */
+    private static <T> void bindByCondition(BindRepoHandler handler, BindRepo bindRepo, Field field, List<T> entityList) {
+        Map<Object, List<Object>> listMap = handler.batchConvertByCondition(bindRepo, entityList);
+        boolean isList = List.class.isAssignableFrom(field.getType());
+        boolean elementIsEntity = bindWholeEntity(field, bindRepo);
+        String extractField = bindRepo.extractField();
+        for (T entity : entityList) {
+            if (FuncUtil.isEmpty(entity)) {
+                continue;
+            }
+            List<Object> bound = listMap.get(entity);
+            if (isList) {
+                ReflectionUtil.setValue(field, entity, toBoundValue(bound, extractField, elementIsEntity));
+            } else if (elementIsEntity) {
+                // BindEntity 形态：字段类型即实体类型，装载首个完整实体
+                ReflectionUtil.setValue(field, entity, FuncUtil.isNotEmpty(bound) ? bound.get(0) : null);
+            } else {
+                Object value = null;
+                if (FuncUtil.isNotEmpty(bound)) {
+                    value = ReflectionUtil.getValue(bound.get(0), extractField, Object.class);
+                    if (value != null && field.getType() == String.class && !(value instanceof String)) {
+                        value = String.valueOf(value);
+                    }
+                }
+                ReflectionUtil.setValue(field, entity, value);
+            }
+        }
+    }
+
+    /**
+     * 判定绑定目标是否装载<b>完整实体</b>：List 字段取其元素类型、非 List 字段取字段类型本身，
+     * 该类型可由 {@code entity()} 赋值（同类/子类）时返回 true。
+     * <p>
+     * 四种形态分派：true + List → 装实体列表（一对多）；true + 非 List → 装首个完整实体（BindEntity）；
+     * false + List → 装 extractField 值列表（BindFieldList）；false + 非 List → 装 extractField 单值（BindField）。
+     * raw List（无泛型）或元素为 Object 时返回 false（List 场景退回装载实体列表的既有行为，保持兼容）。
+     */
+    private static boolean bindWholeEntity(Field field, BindRepo bindRepo) {
+        Class<?> elementType;
+        if (List.class.isAssignableFrom(field.getType())) {
+            Type generic = field.getGenericType();
+            if (generic instanceof ParameterizedType) {
+                Type[] args = ((ParameterizedType) generic).getActualTypeArguments();
+                elementType = args.length == 1 && args[0] instanceof Class ? (Class<?>) args[0] : null;
+            } else {
+                elementType = null;
+            }
+        } else {
+            elementType = field.getType();
+        }
+        return elementType != null && elementType != Object.class
+                && bindRepo.entity().isAssignableFrom(elementType);
+    }
+
+    /**
+     * 将匹配到的目标实体列表转换为字段落装值：实体元素直接透传（保持既有一对多行为）；
+     * 非实体元素映射为 {@code extractField} 值列表（BindFieldList 形态，null 值跳过）。
+     */
+    private static List<Object> toBoundValue(List<Object> bound, String extractField, boolean elementIsEntity) {
+        if (elementIsEntity) {
+            return bound != null ? bound : new ArrayList<>();
+        }
+        List<Object> values = new ArrayList<>();
+        if (FuncUtil.isNotEmpty(bound)) {
+            for (Object item : bound) {
+                Object v = ReflectionUtil.getValue(item, extractField, Object.class);
+                if (v != null) {
+                    values.add(v);
+                }
+            }
+        }
+        return values;
     }
 
     /**

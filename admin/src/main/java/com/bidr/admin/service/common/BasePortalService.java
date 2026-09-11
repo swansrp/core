@@ -96,6 +96,7 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public void run(String... args) {
         for (Field field : ReflectionUtil.getFields(getVoClass())) {
+            log.info(getVoClass().getSimpleName() + "." + field.getName());
             setAlias(field, aliasMap);
             setSummaryAlias(field, summaryAliasMap);
             setHavingField(field, havingFields);
@@ -120,7 +121,10 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             }
         } else {
             BindRepo bindRepo = field.getAnnotation(BindRepo.class);
-            if (FuncUtil.isNotEmpty(bindRepo)) {
+            // condition 关联绑定由多级 join 引擎装载（如 List 作答列表），无单一 表.列 可作排序/过滤别名，
+            // 且 extractField 未必是实体真实字段，启动期解析会直接失败——跳过（与迁移前 diboot 注解
+            // 不参与别名的行为一致）
+            if (FuncUtil.isNotEmpty(bindRepo) && FuncUtil.isEmpty(bindRepo.condition())) {
                 map.put(field.getName(), getAlias(bindRepo.entity(), bindRepo.extractField()));
             }
         }
@@ -147,7 +151,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
             }
         } else {
             BindRepo bindRepo = field.getAnnotation(BindRepo.class);
-            if (FuncUtil.isNotEmpty(bindRepo)) {
+            // 与 setAlias 同理：condition 关联绑定无单一 表.列 汇总别名，跳过
+            if (FuncUtil.isNotEmpty(bindRepo) && FuncUtil.isEmpty(bindRepo.condition())) {
                 map.put(field.getName(), getAlias(bindRepo.entity(), bindRepo.extractField()));
             }
         }
