@@ -96,7 +96,6 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     @Override
     public void run(String... args) {
         for (Field field : ReflectionUtil.getFields(getVoClass())) {
-            log.info(getVoClass().getSimpleName() + "." + field.getName());
             setAlias(field, aliasMap);
             setSummaryAlias(field, summaryAliasMap);
             setHavingField(field, havingFields);
