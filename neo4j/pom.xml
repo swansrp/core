@@ -34,8 +34,7 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-
-                <bidr.core.kernel.version>20260303142953-154</bidr.core.kernel.version>
+                <kernel.version>20260824171707-65</kernel.version>
             </properties>
         </profile>
     </profiles>
@@ -49,7 +48,7 @@
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
-            <version>${bidr.core.kernel.version}</version>
+            <version>${kernel.version}</version>
         </dependency>
     </dependencies>
 
