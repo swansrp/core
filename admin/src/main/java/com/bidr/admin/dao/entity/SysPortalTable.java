@@ -95,6 +95,13 @@ public class SysPortalTable {
     private String pivotMeasures;
 
     /**
+     * Tab成员JSON(仅宿主): [{tableId,label,order}]
+     */
+    @TableField(value = "tab_items")
+    @ApiModelProperty(value = "Tab成员JSON(仅宿主): [{tableId,label,order}]")
+    private String tabItems;
+
+    /**
      * 状态
      */
     @TableField(value = "status")

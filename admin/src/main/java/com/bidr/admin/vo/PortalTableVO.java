@@ -85,6 +85,12 @@ public class PortalTableVO extends BaseVO {
     private String pivotMeasures;
 
     /**
+     * Tab成员JSON(仅宿主): [{tableId,label,order}]
+     */
+    @ApiModelProperty(value = "Tab成员JSON(仅宿主): [{tableId,label,order}]")
+    private String tabItems;
+
+    /**
      * 状态
      */
     @ApiModelProperty(value = "状态")
