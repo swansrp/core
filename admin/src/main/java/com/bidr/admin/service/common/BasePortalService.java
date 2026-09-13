@@ -603,7 +603,9 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
         }
         Object result = entityCache.get(column.getReference()).get(entityName);
         if (FuncUtil.isEmpty(result)) {
-            AdminControllerInf bean = (AdminControllerInf) BeanUtil.getBean(Class.forName(entityPortal.getBean()));
+            // sys_portal.bean 存的是 Spring bean 短名(与 PortalService/PortalConfigService 的 getBean(String) 一致),
+            // 不能 Class.forName(全限定类名), 否则导入翻译参考实体时必报 ClassNotFoundException
+            AdminControllerInf bean = (AdminControllerInf) BeanUtil.getBean(entityPortal.getBean());
             Validator.assertNotNull(bean, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
             AdvancedQuery entityCondition = JsonUtil.readJson(column.getEntityCondition(), AdvancedQuery.class);
             AdvancedQueryReq req = new AdvancedQueryReq();

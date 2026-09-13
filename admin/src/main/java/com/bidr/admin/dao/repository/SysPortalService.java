@@ -99,7 +99,8 @@ public class SysPortalService extends BaseSqlRepo<SysPortalMapper, SysPortal> {
         wrapper.eq(SysPortal::getRoleId, roleId);
         wrapper.eq(SysPortalColumn::getRoleId, roleId);
         wrapper.eq(SysPortalColumn::getEnable, CommonConst.YES);
-        // wrapper.eq(SysPortalColumn::getAddShow, CommonConst.YES);
+        // 导入模板只含新增表单列(add_show), 聚合/联表展示列不进模板也不可导入
+        wrapper.eq(SysPortalColumn::getAddShow, CommonConst.YES);
         wrapper.eq(SysPortal::getName, portalName);
         wrapper.orderByAsc(SysPortalColumn::getDisplayOrder);
         return selectJoinOne(PortalWithColumnsRes.class, wrapper);
