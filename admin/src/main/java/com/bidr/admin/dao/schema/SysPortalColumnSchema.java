@@ -58,6 +58,9 @@ public class SysPortalColumnSchema extends BaseMybatisSchema<SysPortalColumn> {
                 ") COMMENT='系统表表头';");
 
         setUpgradeDDL(1, "ALTER TABLE `sys_portal_column` MODIFY COLUMN `reference` varchar(200) DEFAULT NULL COMMENT '字典或者跳转地址';");
+        // 注：display_name 固定 varchar(50)，不因为“启动同步写不进长文案”而放宽。
+        //     表头显示名由 PortalConfigService.normalizeDisplayName 收敛到 50 字（超宽只取注解文案主标题，
+        //     如“业务类型(字典XXX:一长串枚举)”只入库“业务类型”），枚举清单属于接口文档不属于表头。
 
         // 初始化Portal列配置数据 - AcUser(用户信息表)
         setInitData("INSERT INTO `sys_portal_column` (`id`, `role_id`, `portal_id`, `property`, `db_field`, `display_name`, `field_type`, `reference`, `entity_field`, `entity_condition`, `display_order`, `align`, `width`, `fixed`, `tooltip`, `enable`, `show`, `filter_able`, `sort_able`, `edit_able`, `display_group_name`, `detail_show`, `detail_size`, `detail_padding`, `add_show`, `add_size`, `add_padding`, `add_disabled`, `edit_show`, `edit_size`, `edit_padding`, `edit_disabled`, `required`, `min`, `max`, `default_value`) VALUES " +

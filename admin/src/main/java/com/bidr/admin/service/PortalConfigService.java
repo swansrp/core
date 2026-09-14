@@ -73,6 +73,14 @@ public class PortalConfigService implements LoginFillTokenInf {
     public static final Long DEFAULT_CONFIG_ROLE_ID = 0L;
     private static final Map<Class<?>, PortalFieldDict> FIELD_MAP = new HashMap<>();
     private static final Map<Long, String> ROLE_BIND_PORTAL_MAP = new HashMap<>();
+    /**
+     * 显示名称长度上限，与 sys_portal / sys_portal_column 的 display_name varchar(50) 对齐
+     */
+    private static final int DISPLAY_NAME_MAX_LEN = 50;
+    /**
+     * 主标题与补充说明的分隔符：注解文案常写成「名称:枚举清单」「名称(字典XXX)」，表头只要主标题
+     */
+    private static final char[] DISPLAY_NAME_BREAK_CHARS = {'(', '（', '[', '【', ':', '：', ';', '；', ',', '，'};
 
     static {
         FIELD_MAP.put(Boolean.class, PortalFieldDict.BOOLEAN);
@@ -201,7 +209,7 @@ public class PortalConfigService implements LoginFillTokenInf {
                 portal.setDisplayName(entityClass.getSimpleName());
             }
         }
-        portal.setDisplayName(portal.getDisplayName() + "(默认)");
+        portal.setDisplayName(normalizeDisplayName(portal.getDisplayName() + "(默认)"));
         RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
         if (FuncUtil.isNotEmpty(requestMapping)) {
             if (FuncUtil.isNotEmpty(requestMapping.value())) {
@@ -294,6 +302,37 @@ public class PortalConfigService implements LoginFillTokenInf {
         if (FuncUtil.isNotEmpty(excelProperty)) {
             column.setDisplayName(excelProperty.value()[0]);
         }
+        column.setDisplayName(normalizeDisplayName(column.getDisplayName()));
+    }
+
+    /**
+     * 显示名称归一化：不超列宽时原样返回（存量文案行为不变）；超宽说明注解文案带了枚举/字典清单，
+     * 只保留主标题，主标题仍超宽则按列宽硬截断。
+     * <p>
+     * 为什么必须在写入侧收敛而不是放宽列宽：本方法是 {@link #init()} 启动同步的一部分，
+     * 文案长度不可控（VO 的 @ApiModelProperty 要兼顾接口文档），一旦超出 display_name 列宽就抛
+     * Data truncation -&gt; @PostConstruct 失败 -&gt; 整个应用启动失败（2026-09-13 生产停约 15 分钟）。
+     * 表头显示名 50 字已足够，长度上限由框架自己保证，与业务注解写法无关。
+     */
+    private static String normalizeDisplayName(String displayName) {
+        if (FuncUtil.isEmpty(displayName) || displayName.length() <= DISPLAY_NAME_MAX_LEN) {
+            return displayName;
+        }
+        String name = displayName;
+        int cut = -1;
+        for (char breakChar : DISPLAY_NAME_BREAK_CHARS) {
+            int index = name.indexOf(breakChar);
+            if (index >= 0 && (cut < 0 || index < cut)) {
+                cut = index;
+            }
+        }
+        if (cut > 0) {
+            name = name.substring(0, cut).trim();
+        }
+        if (name.length() > DISPLAY_NAME_MAX_LEN) {
+            name = name.substring(0, DISPLAY_NAME_MAX_LEN);
+        }
+        return name;
     }
 
     private void handlePortalField(SysPortal portal, Field field, SysPortalColumn column) {
