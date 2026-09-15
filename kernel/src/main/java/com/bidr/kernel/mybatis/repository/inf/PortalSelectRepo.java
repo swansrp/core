@@ -274,12 +274,22 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                     wrapper.notBetween(FuncUtil.isNotEmpty(condition.getValue()), columnName, condition.getValue().get(0), condition.getValue().get(1));
                     break;
                 case CONTAIN:
-                    wrapper.nested(w -> w.apply(String.format("FIND_IN_SET('%s', %s) > 0", condition.getValue().get(0), columnName)));
+                    // {0} 参数化占位: 原写法值直拼 '%s', 值内单引号直接破坏 SQL(兼注入面), 行为不变
+                    wrapper.nested(w -> w.apply("FIND_IN_SET({0}, " + columnName + ") > 0", condition.getValue().get(0)));
                     break;
                 case CONTAIN_IN_OR:
                     wrapper.nested(w -> {
                         for (Object value : condition.getValue()) {
-                            w.or().apply(String.format("FIND_IN_SET('%s', %s) > 0", value, columnName));
+                            w.or().apply("FIND_IN_SET({0}, " + columnName + ") > 0", value);
+                        }
+                    });
+                    break;
+                // 多值字段多选"且"匹配(每个选中值都须命中): 此前未实现落 default 被静默丢弃,
+                // 现与 forge BaseSqlBuilder/AdminStatisticParseInf 的 17 实现对齐(嵌套内逐值 FIND_IN_SET, 默认 AND 连接)
+                case CONTAIN_IN_AND:
+                    wrapper.nested(w -> {
+                        for (Object value : condition.getValue()) {
+                            w.apply("FIND_IN_SET({0}, " + columnName + ") > 0", value);
                         }
                     });
                     break;
