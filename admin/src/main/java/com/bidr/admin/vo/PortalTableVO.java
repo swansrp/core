@@ -85,10 +85,28 @@ public class PortalTableVO extends BaseVO {
     private String pivotMeasures;
 
     /**
+     * 透视度量布局: col=度量作为列(默认), row=度量作为行
+     */
+    @ApiModelProperty(value = "透视度量布局: col=列 row=行")
+    private String pivotMeasureLayout;
+
+    /**
+     * 透视合计列位置: first=靠前 last=靠后(默认)
+     */
+    @ApiModelProperty(value = "透视合计列位置: first=靠前 last=靠后")
+    private String pivotTotalPos;
+
+    /**
      * Tab成员JSON(仅宿主): [{tableId,label,order}]
      */
     @ApiModelProperty(value = "Tab成员JSON(仅宿主): [{tableId,label,order}]")
     private String tabItems;
+
+    /**
+     * 默认排序JSON: [{property,type}] type 0=正序 1=倒序, 空数组=不排序
+     */
+    @ApiModelProperty(value = "默认排序JSON: [{property,type}]")
+    private String defaultSort;
 
     /**
      * 状态

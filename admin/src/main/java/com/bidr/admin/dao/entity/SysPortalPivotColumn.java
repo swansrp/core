@@ -65,4 +65,11 @@ public class SysPortalPivotColumn {
     @TableField(value = "status")
     @ApiModelProperty(value = "状态")
     private String status;
+
+    /**
+     * 父链路径JSON(叶子列的多层父表头 label 链, 自外向内; 仅 row 树形表头使用)
+     */
+    @TableField(value = "group_path")
+    @ApiModelProperty(value = "父链路径JSON")
+    private String groupPath;
 }

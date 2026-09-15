@@ -23,5 +23,8 @@ public class SysPortalPivotColumnSchema extends BaseMybatisSchema<SysPortalPivot
                 "  PRIMARY KEY (`id`),\n" +
                 "  KEY `table_id` (`table_id`)\n" +
                 ") COMMENT='透视报表父表头列配置';");
+
+        // 树形多层表头: 叶子列的父链路径(自外向内 label 数组 JSON), 仅 row 布局渲染消费
+        setUpgradeDDL(1, "ALTER TABLE `sys_portal_pivot_column` ADD COLUMN `group_path` longtext NULL COMMENT '父链路径JSON(叶子列多层父表头, 自外向内, 仅row树形表头使用)' AFTER `condition`;");
     }
 }

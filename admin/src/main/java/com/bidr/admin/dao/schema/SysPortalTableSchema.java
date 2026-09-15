@@ -40,5 +40,15 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
                 "\tMODIFY COLUMN `filter_columns` TEXT NULL COMMENT '要排除显示的列',\n" +
                 "\tMODIFY COLUMN `group_by_fields` TEXT NULL COMMENT '透视行维度字段(逗号分隔)',\n" +
                 "\tMODIFY COLUMN `pivot_measures` TEXT NULL COMMENT '透视度量列配置JSON';\n");
+        // 透视度量布局: col=度量作为列(默认,横向平铺), row=度量作为行(每度量一行,配合伪合并)
+        setUpgradeDDL(6, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `pivot_measure_layout` CHAR(4) NOT NULL DEFAULT 'col' COMMENT '透视度量布局: col=列 row=行' AFTER `pivot_measures`;\n");
+        // 报表默认排序: 报表页渲染时读此 JSON 作为排序依据(同 sys_portal.default_sort 结构)
+        // 普通报表直接下发给查询接口 sortList; 透视报表在聚合结果行上本地排(行维度取原值, 度量取跨透视列聚合值)
+        setUpgradeDDL(7, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `default_sort` VARCHAR(500) NULL DEFAULT NULL COMMENT '默认排序JSON: [{property,type}] type 0=正序 1=倒序' AFTER `tab_items`;\n");
+        // 透视合计列位置(仅 row 度量布局生效): first=透视列之前(紧跟指标列), last=透视列之后(默认)
+        setUpgradeDDL(8, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `pivot_total_pos` CHAR(5) NOT NULL DEFAULT 'last' COMMENT '透视合计列位置: first=靠前 last=靠后' AFTER `pivot_measure_layout`;\n");
     }
 }
