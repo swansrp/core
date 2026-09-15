@@ -21,6 +21,7 @@ import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.TreeDataItemVO;
 import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.statistic.AdvancedPivotReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.StatisticRes;
@@ -242,6 +243,44 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
         try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
             DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
             return driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
+        } finally {
+            // 双保险：确保离开本方法时恢复到进入本方法前的数据源
+            jdbcConnectService.restoreDataSource(prevDataSource);
+        }
+    }
+
+    @Override
+    public List<Map<String, Object>> pivot(AdvancedPivotReq req, String portalName, Long roleId) {
+        DatasetColumns datasetColumns = driverStatisticSupportService.getDatasetColumns(portalName);
+
+        // 保存当前线程进入本方法前的数据源（可能为空=默认），用于后续精确恢复
+        String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
+
+        // 1) 先在“进入方法前的数据源”里读取 Dataset 配置表（这些表一定在 ERP/默认库）
+        List<SysDatasetTable> datasets;
+        List<SysDatasetColumn> columns;
+        if (FuncUtil.isNotEmpty(prevDataSource)) {
+            try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(prevDataSource)) {
+                datasets = sysDatasetTableService.getByDatasetId(datasetColumns.getId());
+                columns = sysDatasetColumnService.getByDatasetId(datasetColumns.getId());
+            }
+        } else {
+            datasets = sysDatasetTableService.getByDatasetId(datasetColumns.getId());
+            columns = sysDatasetColumnService.getByDatasetId(datasetColumns.getId());
+        }
+
+        // 为统计查询构建特殊的别名映射，使用Dataset中定义的columnAlias作为键值
+        Map<String, String> aliasMap = buildStatisticAliasMap(columns);
+
+        // 2) 在 Dataset 指定的数据源中执行透视聚合 SQL
+        if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            return driverStatisticSupportService.pivot(jdbcConnectService, req, ctx, aliasMap);
+        }
+
+        try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            return driverStatisticSupportService.pivot(jdbcConnectService, req, ctx, aliasMap);
         } finally {
             // 双保险：确保离开本方法时恢复到进入本方法前的数据源
             jdbcConnectService.restoreDataSource(prevDataSource);

@@ -21,6 +21,7 @@ import com.bidr.kernel.vo.common.TreeDataResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.ConditionVO;
+import com.bidr.kernel.vo.portal.statistic.AdvancedPivotReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
 import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
 import com.bidr.kernel.vo.portal.statistic.StatisticRes;
@@ -337,6 +338,26 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         try {
             // 统一由 DriverStatisticSupportService 按 req.metricCondition 自动选择分支
             return driverStatisticSupportService.statistic(jdbcConnectService, req,
+                    new MatrixStatisticQueryContext(matrixColumns), aliasMap);
+        } finally {
+            jdbcConnectService.resetToDefaultDataSource();
+        }
+    }
+
+    @Override
+    public List<Map<String, Object>> pivot(AdvancedPivotReq req, String portalName, Long roleId) {
+        MatrixColumns matrixColumns = driverStatisticSupportService.getMatrixColumns(portalName);
+        Validator.assertNotNull(matrixColumns, ErrCodeSys.PA_DATA_NOT_EXIST, "矩阵配置");
+
+        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
+
+        // 切换数据源
+        if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
+            jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
+        }
+
+        try {
+            return driverStatisticSupportService.pivot(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
         } finally {
             jdbcConnectService.resetToDefaultDataSource();

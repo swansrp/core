@@ -133,4 +133,11 @@ public class DynamicQueryController extends DynamicBaseController {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         return driver.statistic(req, portalName, getRoleId());
     }
+
+    @ApiOperation("透视聚合查询")
+    @RequestMapping(value = {"/{portalName}/pivot", "/{portalName}/pivot/**"}, method = RequestMethod.POST)
+    public List<Map<String, Object>> pivot(@PathVariable String portalName, @RequestBody AdvancedPivotReq req) {
+        PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        return driver.pivot(req, portalName, getRoleId());
+    }
 }

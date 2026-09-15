@@ -10,7 +10,8 @@ package com.bidr.forge.engine.driver.statistic;
 public interface DriverStatisticInf extends 
         DriverStatisticCountInf, 
         DriverStatisticSummaryInf, 
-        DriverStatisticMetricInf {
+        DriverStatisticMetricInf,
+        DriverStatisticPivotInf {
     // 统合所有统计能力
     // 具体实现由 MatrixDriver 和 DatasetDriver 提供
 }

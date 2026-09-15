@@ -13,6 +13,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
+import com.bidr.kernel.vo.portal.SortVO;
 import com.bidr.kernel.vo.portal.statistic.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -246,6 +247,109 @@ public class DriverStatisticSupportService {
      */
     public DatasetColumns getDatasetColumns(String portalName) {
         return sysDatasetService.getDatasetColumnsByPortalName(portalName);
+    }
+
+    /**
+     * 透视聚合查询（动态Portal: Matrix/Dataset 通用）
+     * 按行维度列 GROUP BY，每个父表头列 × 每个度量列生成一个条件聚合表达式，
+     * 列别名为 ${父表头列标识}__${度量字段}（与前端 pivot.vue 取数约定一致）。
+     * 透视列条件为空时退化为纯度量聚合（不带 CASE WHEN）。
+     */
+    public List<Map<String, Object>> pivot(JdbcConnectService jdbc,
+                                           AdvancedPivotReq req,
+                                           StatisticQueryContext ctx,
+                                           Map<String, String> aliasMap) {
+        // 1: 校验行维度与度量（透视列可空=仅行维度；前端未配透视列时会下发 total 虚拟列，一般非空）
+        Validator.assertNotEmpty(req.getGroupColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "行维度列");
+        Validator.assertNotEmpty(req.getMeasures(), ErrCodeSys.PA_DATA_NOT_EXIST, "度量列");
+        List<MetricCondition> pivots = FuncUtil.isEmpty(req.getPivotColumns())
+                ? Collections.emptyList() : req.getPivotColumns();
+
+        BaseSqlBuilder builder = ctx.getConditionBuilder();
+        Map<String, Object> parameters = new LinkedHashMap<>();
+
+        // 2: SELECT 行维度列（别名=前端字段名）
+        List<String> selectParts = new ArrayList<>();
+        List<String> groupByParts = new ArrayList<>();
+        for (KeyValueResVO group : req.getGroupColumns()) {
+            Validator.assertTrue(FuncUtil.isNotEmpty(group.getValue()), ErrCodeSys.SYS_ERR_MSG, "行维度字段不能为空");
+            String groupDb = aliasMap.getOrDefault(group.getValue(), group.getValue());
+            String groupExpr = ctx.formatColumnExpression(groupDb);
+            selectParts.add(groupExpr + " AS `" + group.getValue() + "`");
+            groupByParts.add(groupExpr);
+        }
+
+        // 3: 透视列 × 度量列 的条件聚合
+        for (MetricCondition pivot : pivots) {
+            Validator.assertTrue(FuncUtil.isNotEmpty(pivot.getValue()), ErrCodeSys.SYS_ERR_MSG, "透视列标识不能为空");
+            for (PivotMeasure measure : req.getMeasures()) {
+                Validator.assertTrue(FuncUtil.isNotEmpty(measure.getField()), ErrCodeSys.SYS_ERR_MSG, "度量字段不能为空");
+                String measureDb = aliasMap.getOrDefault(measure.getField(), measure.getField());
+                String measureExpr = ctx.formatColumnExpression(measureDb);
+                // 条件表达式: 无条件=纯度量; 有条件=case when 条件 then 度量 else null end（null 对各聚合类型均安全）
+                String innerExpr = measureExpr;
+                if (FuncUtil.isNotEmpty(pivot.getCondition())) {
+                    String condSql = builder.buildWhereCondition(pivot.getCondition(), aliasMap, parameters);
+                    innerExpr = "case when " + (FuncUtil.isEmpty(condSql) ? "1=1" : condSql)
+                            + " then " + measureExpr + " else null end";
+                }
+                selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr)
+                        + " AS `" + pivot.getValue() + "__" + measure.getField() + "`");
+            }
+        }
+
+        // 4: 组装 SQL: FROM 上下文片段 + WHERE 主条件 + GROUP BY 行维度
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ").append(String.join(", ", selectParts))
+                .append(" FROM ").append(ctx.getFromSql());
+        if (FuncUtil.isNotEmpty(req.getCondition())) {
+            String whereSql = builder.buildWhereCondition(req.getCondition(), aliasMap, parameters);
+            if (FuncUtil.isNotEmpty(whereSql)) {
+                sql.append(" WHERE ").append(whereSql);
+            }
+        }
+        sql.append(" GROUP BY ").append(String.join(", ", groupByParts));
+
+        // 5: 外层排序（聚合结果排序: 列名为行维度字段或 ${列标识}__${度量字段} 别名, 直通反引号）
+        if (FuncUtil.isNotEmpty(req.getSortList())) {
+            List<String> orderParts = new ArrayList<>();
+            for (SortVO sort : req.getSortList()) {
+                if (FuncUtil.isEmpty(sort.getProperty())) {
+                    continue;
+                }
+                orderParts.add("`" + sort.getProperty() + "`" + (Integer.valueOf(1).equals(sort.getType()) ? " DESC" : " ASC"));
+            }
+            if (FuncUtil.isNotEmpty(orderParts)) {
+                sql.append(" ORDER BY ").append(String.join(", ", orderParts));
+            }
+        }
+
+        // 6: 执行
+        return jdbc.executeQuery(sql.toString(), parameters);
+    }
+
+    /**
+     * 构建单个透视单元格的聚合表达式
+     * 聚合语义对齐 kernel 的 AdminStatisticPivotInf.buildPivotAgg：
+     * else null 对 sum/count/avg/min/max/countDistinct 均安全（聚合函数自动忽略 NULL）
+     */
+    private static String buildPivotAggExpr(String agg, String innerExpr) {
+        if (FuncUtil.equals(agg, "count")) {
+            return "count(" + innerExpr + ")";
+        }
+        if (FuncUtil.equals(agg, "avg")) {
+            return "avg(" + innerExpr + ")";
+        }
+        if (FuncUtil.equals(agg, "min")) {
+            return "min(" + innerExpr + ")";
+        }
+        if (FuncUtil.equals(agg, "max")) {
+            return "max(" + innerExpr + ")";
+        }
+        if (FuncUtil.equals(agg, "countDistinct")) {
+            return "count(distinct " + innerExpr + ")";
+        }
+        return "sum(" + innerExpr + ")";
     }
 
     // 简要：指标为主时的结果组装
