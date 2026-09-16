@@ -30,10 +30,18 @@ FORCE_MODE=false
 PROJECT_CODE=""
 CHANGE_PORT_MODE=false
 NEW_PORT=""
+PACKAGE_INPUT=""
 
 # 解析所有参数
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --package|-p)
+            if [ -n "$2" ] && [[ $2 != -* ]]; then
+                PACKAGE_INPUT="$2"
+                shift
+            fi
+            shift
+            ;;
         --change-port)
             CHANGE_PORT_MODE=true
             if [ -n "$2" ] && [[ $2 != -* ]]; then
@@ -51,6 +59,7 @@ while [[ $# -gt 0 ]]; do
             echo "用法: $0 [选项] [项目编码]"
             echo "选项:"
             echo "  --force, -f              强制覆盖已存在的文件和目录"
+            echo "  --package, -p PKG        基础包名(默认 com.bidr.<编码>；支持 ai / ai.xxx / com.plsintec.pan 完整包名)"
             echo "  --change-port [PORT]     修改已生成文件的端口号"
             echo "  --help, -h               显示帮助信息"
             echo "示例:"
@@ -166,7 +175,7 @@ if [ "$CHANGE_PORT_MODE" = true ]; then
     exit 0
 fi
 
-# 如果没有通过参数提供项目编码，则交互式输入
+# 询问项目编码（如未提供）
 if [ -z "$PROJECT_CODE" ]; then
     read -p "请输入项目编码(英文,如:mcp): " PROJECT_CODE
 else
@@ -175,6 +184,47 @@ fi
 
 if [ -z "$PROJECT_CODE" ]; then
     print_error "项目编码不能为空"
+    exit 1
+fi
+
+# 询问基础包名（不限制前缀）
+#   ""                    -> com.bidr.<项目编码>          (默认)
+#   "ai"                  -> com.bidr.ai.<项目编码>
+#   "com.plsintec.pan"    -> com.plsintec.pan   (完整包名，原样使用)
+#   "com.plsintec"        -> com.plsintec.<项目编码>
+normalize_package() {
+    local code="$1" input="$2" result dots
+    input="$(printf '%s' "$input" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+    input="${input#.}"; input="${input%.}"
+    if [ -z "$input" ]; then
+        result="com.bidr.${code}"
+    else
+        case "$input" in
+            com.*|net.*|org.*|io.*)
+                dots="${input//[^.]/}"
+                if [ "${#dots}" -lt 2 ]; then
+                    result="${input}.${code}"
+                else
+                    result="${input}"
+                fi
+                ;;
+            *.*)
+                result="com.bidr.${input}"
+                ;;
+            *)
+                result="com.bidr.${input}.${code}"
+                ;;
+        esac
+    fi
+    printf '%s' "$result"
+}
+
+if [ -z "$PACKAGE_INPUT" ]; then
+    read -p "请输入基础包名(默认:com.bidr.<编码>，可填 ai / com.plsintec.pan): " PACKAGE_INPUT
+fi
+BASE_PACKAGE="$(normalize_package "$PROJECT_CODE" "$PACKAGE_INPUT")"
+if ! printf '%s' "$BASE_PACKAGE" | grep -Eq '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}$'; then
+    print_error "非法的基础包名: $BASE_PACKAGE"
     exit 1
 fi
 
@@ -188,11 +238,10 @@ print_info "应用端口号: $SERVER_PORT"
 
 # 自动生成其他信息
 PROJECT_NAME="${PROJECT_CODE}项目"
-BASE_PACKAGE="com.bidr.${PROJECT_CODE}"
 
 print_info "项目编码: $PROJECT_CODE"
 print_info "项目名称: $PROJECT_NAME (自动生成)"
-print_info "基础包名: $BASE_PACKAGE (自动生成)"
+print_info "基础包名: $BASE_PACKAGE"
 echo ""
 
 # 2. 判断当前目录结构
