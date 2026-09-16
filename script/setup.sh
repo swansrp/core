@@ -669,9 +669,9 @@ release.properties
 Thumbs.db
 EOF
 
-# 7. 生成 agent.md 索引文档
-print_info "生成 agent.md 索引文档..."
-cat > "$ROOT_DIR/agent.md" << EOF
+# 7. 生成 AGENTS.md 索引文档
+print_info "生成 AGENTS.md 索引文档..."
+cat > "$ROOT_DIR/AGENTS.md" << EOF
 # ${PROJECT_NAME} - AI Agent 开发指南
 
 > 本文档为 AI 编程助手提供项目开发规范和最佳实践索引
@@ -850,7 +850,7 @@ ${ROOT_DIR}/
 │   └── doc/                 # 框架文档（原始位置）
 │       ├── PROJECT_ARCHITECTURE.md  # 架构文档
 │       └── SQL代码生成指南.md        # 代码生成指南
-└── agent.md                     # 本文档
+└── AGENTS.md                     # 本文档
 \`\`\`
 
 ## 常用命令
@@ -900,7 +900,7 @@ npm run generate-api
 **注意**: 开发过程中请严格遵循本文档索引的规范，确保代码质量和一致性。
 EOF
 
-print_info "agent.md 生成完成"
+print_info "AGENTS.md 生成完成"
 
 # 8. 生成 README.md
 print_info "生成 README.md..."
@@ -948,7 +948,7 @@ src/main/java/${BASE_PACKAGE}/
 
 - [`core/doc/PROJECT_ARCHITECTURE.md`](../core/doc/PROJECT_ARCHITECTURE.md) - 项目架构文档
 - [`core/doc/SQL代码生成指南.md`](../core/doc/SQL代码生成指南.md) - SQL代码生成指南
-- [`agent.md`](../agent.md) - AI Agent开发指南
+- [`AGENTS.md`](../AGENTS.md) - AI Agent开发指南
 
 ## 构建和运行
 
@@ -1806,7 +1806,7 @@ print_info "  ✓ 项目目录结构"
 print_info "  ✓ 模块 pom.xml"
 print_info "  ✓ .gitignore"
 print_info "  ✓ 配置文件 (application*.yml)"
-print_info "  ✓ agent.md (AI开发指南)"
+print_info "  ✓ AGENTS.md (AI开发指南)"
 print_info "  ✓ ${PROJECT_CODE}-server 模块"
 print_info "  ✓ ${CAPITALIZED_CODE}Application.java"
 print_info "  ✓ Dockerfile"
@@ -1833,6 +1833,6 @@ echo ""
 print_info "开发指南:"
 print_info "  • 架构文档: core/doc/PROJECT_ARCHITECTURE.md"
 print_info "  • 代码生成: core/doc/SQL代码生成指南.md"
-print_info "  • AI助手: agent.md"
+print_info "  • AI助手: AGENTS.md"
 echo ""
 print_info "================================================"
