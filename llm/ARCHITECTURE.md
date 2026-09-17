@@ -40,6 +40,9 @@
 | `SkillRatingService` | `skill` | 回答评价（点赞/点踩/统计） |
 | `SseEventSender` | `sse` | 通用 SSE 事件发送器（不限 flow 链路，前身 FlowSseSender；七事件协议 conv/delta/tick/spec/msgid/done/error）：逐行拆发、线程安全（心跳与业务线程可并发写）、断连静默、活性心跳 startHeartbeat（周期推 tick，连接收口/断开自动停跳——AI 接口禁裸转圈的框架机制） |
 | `LiveModelFactory`（Bean） | `model` | 流式进度模型装配工厂：自建 SSE 客户端+同步回落双通道统一装配点，代理/重试口径随 Bean 固化；业务侧只注入 live 回调与用途，无 Provider 时懒回落同步模型 |
+| `RawSseStreamingChatModel` | `model` | 自建流式客户端（okhttp 手写 SSE）：`reasoning_content` 与 `content` 分流上抛、错误必达（绕开 0.33 流式丢弃 content=null delta 与失败路径吞 onError 两处硬伤）、空闲读超时护栏、`thinking_budget` 截断旋钮 |
+| `RawSyncChatModel` | `model` | 自建**同步工具**客户端（覆盖 `ToolAgentRunner` 同步链路）：`extraBody` 透传网关扩展参数（思考开关等，框架不解释语义）、`max_tokens` 保下限、4xx 不重试/5xx 退避重试、思考 token 落 trace 供审计、工具 id 兜底；非文本消息显式拒绝 |
+| `StreamingProgressChatModel` | `model` | 流式转同步门面：live 进度上屏（思考/应答分流节流 + 轮末归档）、闩等待心跳、首 token 前失败降级同步并记忆化 |
 
 ### 2.2 本期新增（agent 会话层）
 | 组件 | 职责 |

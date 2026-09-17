@@ -12,7 +12,11 @@ com.bidr.llm
 │   └── ModelConfigProvider          模型配置提供者接口（业务侧实现）
 ├── model
 │   ├── RefreshableChatModel         可热刷新的同步模型（实现 ChatLanguageModel）
-│   └── RefreshableStreamingChatModel 可热刷新的流式模型（实现 StreamingChatLanguageModel）
+│   ├── RefreshableStreamingChatModel 可热刷新的流式模型（实现 StreamingChatLanguageModel）
+│   ├── RawSseStreamingChatModel     自建流式客户端（reasoning 分流、错误必达、thinking_budget 截断旋钮）
+│   ├── RawSyncChatModel             自建同步工具客户端（extraBody 透传扩展参数、max_tokens 下限、审计 trace）
+│   ├── StreamingProgressChatModel   流式转同步门面（live 进度上屏 + 首 token 前降级同步）
+│   └── LiveModelFactory             流式进度模型装配工厂（Bean）
 ├── execute
 │   ├── StreamingContentExecutor     流式生成稳定性包装器（@Service，自动装配）
 │   └── ModelOutputSanitizer         模型输出清洗静态工具
@@ -328,6 +332,48 @@ ChatLanguageModel model = liveModelFactory.build(
         () -> requireSyncModel());
 String answer = model.generate(prompt);
 ```
+
+### 7.3 同步工具模型（RawSyncChatModel）：要给网关带扩展参数时用
+
+**先选型**——三种同步模型取用方式，按"要不要给请求体加网关扩展字段"决定：
+
+| 场景 | 用哪个 | 说明 |
+|---|---|---|
+| 常规同步调用、不需要扩展参数 | 默认 `ChatLanguageModel` Bean（`RefreshableChatModel`） | 库原生客户端，配置热刷新 + 用户级 Key 隔离开箱即用 |
+| 同步**工具循环**（`ToolAgentRunner`）且要带网关扩展参数 | `RawSyncChatModel` | 自建客户端，`extraBody` 任意透传（思考开关、`reasoning_effort` 等） |
+| 流式 + 进度上屏 | `LiveModelFactory.build(...)` | 见 7.2，走自建 SSE + live 回调 |
+
+**为什么库原生客户端做不到**：`OpenAiChatModel` 的请求体字段集固定，langchain4j 0.33 没有 `customParameters`（官方该能力要 1.2.0-beta8+ / Java 17），builder 只有 `customHeaders`——header 装不了 body 参数。同理，思考型模型的思考开关（`enable_thinking=false`）在库原生链路上**没有入口**。
+
+```java
+// 同步工具循环用模型：显式关思考（后台任务）+ max_tokens 保下限 + 5xx 退避重试 + 思考 token 落审计
+ChatLanguageModel agentModel = new RawSyncChatModel(
+        myModelConfigProvider,          // 配置来源（同 Refreshable 系列，可继续用业务实现）
+        "AGENT",                        // purpose：独立超时口径
+        buildProxy(),
+        Collections.singletonMap("enable_thinking", Boolean.FALSE),  // extraBody：框架不解释语义，原样透传
+        512,                            // maxTokens：null/非正=不携带；思考型模型小上限会空产出
+        3,                              // maxAttempts：仅 5xx/网络异常重试，4xx 立即失败
+        line -> auditLog(line)          // trace：每次调用一行（含「思考tokens=N」「工具=N」「耗时」），可落库
+);
+
+// 它实现标准 ChatLanguageModel，直接交给框架工具循环
+AgentLoopResult result = new ToolAgentRunner().run(agentModel, systemPrompt, userPrompt,
+        Arrays.asList(new MyTools()), new AgentLoopOptions(), listener);
+```
+
+| 行为 | `RawSyncChatModel` | 库原生（`RefreshableChatModel`） |
+|---|---|---|
+| 请求体扩展字段 | `extraBody` 任意透传（保留字段 model/messages/tools 以核心组装为准） | 无入口 |
+| 错误可见性 | 非 2xx 带**网关原始响应体**直抛；4xx 不重试、5xx/网络异常退避重试 | 经库层包装；重试由库内部完成 |
+| 思考 token 审计 | 从 `usage.completion_tokens_details.reasoning_tokens` 取回，落 trace（核对"该关思考的任务确实没思考"） | 不可见 |
+| 工具调用 id | 网关未回 id 时按序合成（回填结果需 id 对齐） | 由库处理 |
+| 多模态消息 | **显式抛异常**（不静默丢图）；多模态链路需另行适配 | 支持 `ImageContent` |
+| 流式 | 不支持（同步专用，流式用 7.2） | 同步专用 |
+
+**接入参考写法**：`RawSyncChatModelTest`（同包测试，离线可跑）——含请求体断言、工具调用轮端到端、5xx 重试/4xx 快速失败/空产出报错三类失败路径。测试用 JDK 自带 `HttpServer` 起本地端点（不引 MockWebServer 等新依赖），照抄即可验证自己的装配。
+
+**配置热刷新**：与 `RawSseStreamingChatModel` 同口径——每次调用从 `ModelConfigProvider` 取配置，连接参数（baseUrl/model/timeout/apiKey）签名变化时自动重建 HTTP 客户端，无需重启。
 
 ### 8. 文件解析为 Markdown（parse）
 
