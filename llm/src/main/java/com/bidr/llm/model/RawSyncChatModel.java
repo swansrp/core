@@ -16,6 +16,7 @@ import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,9 @@ import java.util.function.Consumer;
  *   <li>4xx 立即失败不重试，5xx/网络异常按指数退避重试（次数由 maxAttempts 定）；</li>
  *   <li>思考 token 数（{@code usage.completion_tokens_details.reasoning_tokens}）经 trace 回调透给业务，
  *       可核对"该关思考的任务确实没思考"（如批量核查任务的成本审计）；</li>
+ *   <li>{@code finish_reason} 进 trace 与 {@link Response}（截断 {@code length} 额外打 WARN）——
+ *       思考/输出被 max_tokens 掐断是最常见的"返回失败"，必须显式可见而非表现为空内容/坏 JSON；
+ *       注意截断不应原样重试（重试还是截断），正解是关思考或按思考基线调预算；</li>
  *   <li>网关未回 {@code tool_calls[].id} 时按序合成 id，避免工具结果回填时协议报错。</li>
  * </ul>
  * </p>
@@ -210,8 +214,15 @@ public class RawSyncChatModel implements ChatLanguageModel {
         List<ToolExecutionRequest> toolCalls = toolCallsOf(message);
         JsonNode usage = root.path("usage");
         int reasoningTokens = reasoningTokensOf(usage);
+        String finish = root.path("choices").path(0).path("finish_reason").asText(null);
+        if ("length".equals(finish)) {
+            // 截断是"返回失败"的最常见形态（思考/输出超出 max_tokens）：显式 WARN，
+            // 提示去查思考开关与预算，而不是让下游拿到空内容/坏 JSON 自己猜
+            log.warn("[{}-SYNC] LLM 输出被 max_tokens 截断（finish=length）：优先检查思考开关与 token 预算，"
+                    + "截断不应原样重试", purposeType);
+        }
 
-        trace(modelName, usage, reasoningTokens, toolCalls.size(), costMs,
+        trace(modelName, usage, reasoningTokens, toolCalls.size(), finish, costMs,
                 toolCalls.isEmpty() ? null : text);
 
         if (toolCalls.isEmpty() && !hasText(text)) {
@@ -220,7 +231,7 @@ public class RawSyncChatModel implements ChatLanguageModel {
         // 0.33 的 AiMessage 不允许同时携带正文与工具调用（构造器直接抛），工具轮取工具调用，
         // 模型前言文本经 trace 留存（循环协议要求 ai 消息携带 tool_calls 才能回填结果）
         AiMessage ai = toolCalls.isEmpty() ? AiMessage.from(text) : AiMessage.from(toolCalls);
-        return Response.from(ai, tokenUsageOf(usage));
+        return Response.from(ai, tokenUsageOf(usage), finishReasonOf(finish));
     }
 
     /** 连接参数签名（含 Key）：变化即重建客户端，配置改了下次调用生效 */
@@ -377,6 +388,27 @@ public class RawSyncChatModel implements ChatLanguageModel {
         return usage.path("reasoning_tokens").asInt(0);
     }
 
+    /** 网关 finish_reason → langchain4j FinishReason（缺失返回 null，由 Response 自行处理）；
+     *  包级可见供测试直验映射 */
+    static FinishReason finishReasonOf(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        switch (raw) {
+            case "stop":
+                return FinishReason.STOP;
+            case "length":
+                return FinishReason.LENGTH;
+            case "tool_calls":
+            case "function_call":
+                return FinishReason.TOOL_EXECUTION;
+            case "content_filter":
+                return FinishReason.CONTENT_FILTER;
+            default:
+                return FinishReason.OTHER;
+        }
+    }
+
     private static TokenUsage tokenUsageOf(JsonNode usage) {
         if (usage.isMissingNode() || usage.isNull()) {
             return null;
@@ -385,12 +417,13 @@ public class RawSyncChatModel implements ChatLanguageModel {
                 usage.path("total_tokens").asInt(0));
     }
 
-    /** 每次调用一行审计轨迹（业务可落库核对思考纪律与成本）；preambleText 非空表示工具轮丢弃的模型前言 */
-    private void trace(String modelName, JsonNode usage, int reasoningTokens, int toolCount, long costMs,
-                       String preambleText) {
+    /** 每次调用一行审计轨迹（业务可落库核对思考纪律/成本/截断）；preambleText 非空表示工具轮丢弃的模型前言 */
+    private void trace(String modelName, JsonNode usage, int reasoningTokens, int toolCount,
+                       String finish, long costMs, String preambleText) {
         String line = "model=" + modelName + " tokens=" + usage.path("prompt_tokens").asInt(0)
                 + "/" + usage.path("completion_tokens").asInt(0)
-                + " 思考tokens=" + reasoningTokens + " 工具=" + toolCount + " 耗时=" + costMs + "ms";
+                + " 思考tokens=" + reasoningTokens + " 工具=" + toolCount
+                + " finish=" + (finish == null ? "unknown" : finish) + " 耗时=" + costMs + "ms";
         log.info("[{}-SYNC] LLM 同步调用完成：{}", purposeType, line);
         if (traceSink != null) {
             traceSink.accept(line + (hasText(preambleText) ? " 前言=" + brief(preambleText, 60) : ""));

@@ -152,6 +152,45 @@ public class RawSyncChatModelTest {
         Assert.assertEquals("searchDocs", calls.get(1).name());
     }
 
+    /** finish_reason 映射：截断 length 是"返回失败"的最常见形态，必须映射为 LENGTH 供上层识别 */
+    @Test
+    public void finishReasonMappedToLangchainEnum() {
+        Assert.assertEquals(dev.langchain4j.model.output.FinishReason.STOP,
+                RawSyncChatModel.finishReasonOf("stop"));
+        Assert.assertEquals(dev.langchain4j.model.output.FinishReason.LENGTH,
+                RawSyncChatModel.finishReasonOf("length"));
+        Assert.assertEquals(dev.langchain4j.model.output.FinishReason.TOOL_EXECUTION,
+                RawSyncChatModel.finishReasonOf("tool_calls"));
+        Assert.assertEquals(dev.langchain4j.model.output.FinishReason.CONTENT_FILTER,
+                RawSyncChatModel.finishReasonOf("content_filter"));
+        Assert.assertEquals(dev.langchain4j.model.output.FinishReason.OTHER,
+                RawSyncChatModel.finishReasonOf("weird-gateway-value"));
+        Assert.assertNull("缺失不臆造", RawSyncChatModel.finishReasonOf(null));
+    }
+
+    /** 截断端到端：finish=length 时须落 trace（finish=）并把 LENGTH 透出到 Response——
+     *  思考挤爆 max_tokens 是最常见的"返回失败"，显式可观测才谈得上修（关思考/调预算） */
+    @Test
+    public void truncationSurfacesInTraceAndResponse() throws Exception {
+        List<String> trace = new CopyOnWriteArrayList<>();
+        int port = startServer(200, "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"partial\"},"
+                + "\"finish_reason\":\"length\"}],"
+                + "\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":4096,\"total_tokens\":4106,"
+                + "\"completion_tokens_details\":{\"reasoning_tokens\":3900}}}", new CopyOnWriteArrayList<>());
+
+        RawSyncChatModel model = new RawSyncChatModel(
+                stubProvider("http://127.0.0.1:" + port + "/v1", "k"), "AGENT", null, null, 4096, 1, trace::add);
+        Response<AiMessage> resp = model.generate(Collections.singletonList(UserMessage.from("hi")));
+
+        Assert.assertEquals("截断须映射为 LENGTH 透出", dev.langchain4j.model.output.FinishReason.LENGTH,
+                resp.finishReason());
+        Assert.assertEquals(1, trace.size());
+        Assert.assertTrue("trace 须带 finish=length 供审计，实际: " + trace.get(0),
+                trace.get(0).contains("finish=length"));
+        Assert.assertTrue("trace 须带思考 token 数（截断常因思考挤爆），实际: " + trace.get(0),
+                trace.get(0).contains("思考tokens=3900"));
+    }
+
     /** 非文本消息显式拒绝：静默丢弃图片会产出"看起来正常的错答案" */
     @Test
     public void nonTextContentIsRejectedExplicitly() throws Exception {
