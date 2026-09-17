@@ -21,19 +21,15 @@ import java.util.function.Consumer;
 
 /**
  * Title: RawSyncChatModelIT
- * Description: **真调样例**——接入方怎么把自建同步工具模型接到真实模型服务上跑工具循环，照本类抄即可。
- * 同时是"网关是否真按 extraBody 关思考"的环境验收（离线用例只能证明请求体带对了字段，网关是否照做只有真调能证）。
+ * Description: 真调**环境验收**——离线用例只能证明请求体带对了字段，"网关是否真照做（关思考）/ 真调工具"
+ * 只有真调能证。选型与调用方式见 README「模型层客户端一览」与 7.3，本类只负责断言。
  *
- * <p><b>CI 默认不跑</b>：本类不发往仓库的常规构建（surefire 默认只收 {@code *Test}，不含 {@code *IT}），
- * 需要时显式调用并给足环境变量：</p>
+ * <p><b>CI 默认不跑</b>：常规构建的 surefire 只收 {@code *Test}，不含 {@code *IT}；需要时显式调用并给足环境变量：</p>
  * <pre>
  * LLM_IT=1 LLM_IT_BASE_URL=https://your-gateway/compatible-mode/v1 LLM_IT_API_KEY=sk-xxx \
  *     mvn -pl core/llm test -Dtest=RawSyncChatModelIT
  * </pre>
- * <p>三个环境变量缺任一个即整体跳过（{@link Assume}），不会污染无凭据环境的构建结果。</p>
- *
- * <p>本类演示的完整接入链路：环境变量 → {@link ModelConfigProvider} 实现 → {@link RawSyncChatModel}
- * （携 {@code extraBody} 与 trace 回调）→ {@link ToolAgentRunner} 工具循环 → {@code @Tool} 工具类。</p>
+ * <p>三个环境变量缺任一个即整体跳过（{@link Assume}），不污染无凭据环境的构建结果。</p>
  *
  * @author Sharp
  * @since 2026/9/17

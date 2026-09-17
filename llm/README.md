@@ -36,6 +36,21 @@ com.bidr.llm
     └── InMemoryStreamAnswerStore    内存兜底实现（类路径无 core/redis 时自动装配，单实例适用）
 ```
 
+## 模型层客户端一览（选型先看这张表）
+
+四个客户端 = 两条协议实现 × 同步/流式；另有门面与工厂负责装配（不发 HTTP）。
+
+| 客户端 | 协议实现 | 能力 | 什么场景用它 | 入口 |
+|---|---|---|---|---|
+| `RefreshableChatModel` | 库原生 `OpenAiChatModel` | 同步、支持 tools、配置热刷新 + 用户级 Key 隔离 | 常规同步调用（摘要/抽取/单轮问答），**不需要**网关扩展参数 | §3 建 Bean；`generate(prompt)` / `generate(messages, toolSpecs)` |
+| `RefreshableStreamingChatModel` | 库原生 `OpenAiStreamingChatModel` | 流式回调（`StreamingResponseHandler`），无 tools | 要库原生流式回调的链路（FlowEngine 节点 / `StreamingContentExecutor`）；框架已设为默认 Bean | §3；注入 `StreamingChatLanguageModel` |
+| `RawSseStreamingChatModel` | **自建** okhttp SSE | reasoning 分流、错误必达、`thinking_budget` 截断 | 要思考过程上屏 / 要截断思考长尾 / 不能接受库原生流式丢 `content=null` delta 与吞 `onError` | §7.2 经 `LiveModelFactory.build(...)`（推荐）；或直接构造 + `generate(messages, specs, listener)` |
+| `RawSyncChatModel` | **自建** okhttp 同步 | 支持 tools、`extraBody` 透传网关扩展参数、`maxTokens` 下限、思考 token 落 trace | 同步工具循环（`ToolAgentRunner`）/ 同步调用要带网关扩展参数 / 要思考 token 审计 | §7.3；构造后交给 `ToolAgentRunner.run(...)` |
+
+两个"上层建筑"**不发 HTTP**，只做组合：`LiveModelFactory`（流式链路唯一装配入口，携 live 回调与 `thinkingBudget`）、`StreamingProgressChatModel`（流式转同步门面 + 进度上屏 + 首 token 前降级同步）。
+
+**为什么会有"自建"客户端**：库原生客户端的请求体字段集固定，网关扩展参数（思考开关 `enable_thinking`、`reasoning_effort` 等）没有入口——langchain4j 0.33 无 `customParameters`（官方该能力要 1.2.0-beta8+ / Java 17），builder 只有 `customHeaders`，装不了 body 参数。自建客户端自己拼体、自己发请求，把"能不能带扩展参数"还给业务；框架只透传不解释语义。
+
 ## 快速接入
 
 ### 1. 加依赖
@@ -371,7 +386,7 @@ AgentLoopResult result = new ToolAgentRunner().run(agentModel, systemPrompt, use
 | 多模态消息 | **显式抛异常**（不静默丢图）；多模态链路需另行适配 | 支持 `ImageContent` |
 | 流式 | 不支持（同步专用，流式用 7.2） | 同步专用 |
 
-**接入参考写法**：`RawSyncChatModelTest`（同包测试，离线可跑）——含请求体断言、工具调用轮端到端、5xx 重试/4xx 快速失败/空产出报错三类失败路径。测试用 JDK 自带 `HttpServer` 起本地端点（不引 MockWebServer 等新依赖），照抄即可验证自己的装配。
+**测试分工（测试只负责断言，选型与调用以本文档为准）**：`RawSyncChatModelTest` 离线回归——请求体/序列化/失败分类三类断言 + 本地 `HttpServer` 端到端（不引新依赖），CI 必跑；`RawSyncChatModelIT` 真调验收——工具循环端到端与 trace 字段，`LLM_IT=1` + 网关环境变量才跑（详见类注释跑法）。
 
 **配置热刷新**：与 `RawSseStreamingChatModel` 同口径——每次调用从 `ModelConfigProvider` 取配置，连接参数（baseUrl/model/timeout/apiKey）签名变化时自动重建 HTTP 客户端，无需重启。
 

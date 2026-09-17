@@ -34,17 +34,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Title: RawSyncChatModelTest
- * Description: 同步 raw 客户端回归 + **接入参考写法**：同步链路要带网关扩展参数（思考开关等）时怎么建模型、
- * 怎么读审计轨迹、失败怎么分类，看本文件即可。
+ * Description: 同步 raw 客户端**离线回归**（CI 必跑）——断言请求体组装、消息/工具序列化与失败分类；
+ * 选型与调用方式见 README「模型层客户端一览」与 7.3，本类只负责"代码没坏"。
  * <p>
  * 两类用例：
  * <ul>
- *   <li>请求体/响应解析断言（离线，不触网）——扩展参数透传与保留字段保护、max_tokens 两态、
+ *   <li>请求体/响应解析断言（不触外网）——扩展参数透传与保留字段保护、max_tokens 两态、
  *       工具定义与消息四态序列化、工具 id 兜底、非文本消息显式拒绝；</li>
  *   <li>本地 HttpServer 端到端——真实收发一次（工具调用轮 + 思考 token 落 trace）、
  *       5xx 重试后抛原始错误体、4xx 立即失败不重试、空 content 报错不静默。</li>
  * </ul>
- * 用 JDK 自带 HttpServer 而非 MockWebServer：不引入新测试依赖，别人照抄即可跑。
+ * 用 JDK 自带 HttpServer 而非 MockWebServer：不引入新测试依赖，无需凭据即可在 CI 构造
+ * "网关返回 500/400/空产出"这类真网关无法复现的场景。
  *
  * @author Sharp
  * @since 2026/9/17
