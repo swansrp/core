@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor
-@MetaDict(value = "JOIN_TYPE_DICT", remark = "矩阵变更类型")
+@MetaDict(value = "MATRIX_CHANGE_TYPE_DICT", remark = "矩阵变更类型")
 public enum MatrixChangeTypeDict implements Dict {
     /**
      * 矩阵变更类型字典
