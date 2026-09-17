@@ -26,6 +26,7 @@ import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.cache.Cache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -145,6 +146,13 @@ public class DictCacheService implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        Reflections reflections = PackageScanUtil.reflections(basePackage);
+        Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaDict.class);
+
+        // 开机以代码声明为准：先清掉已从代码里删除/改名、但数据库还残留的只读字典（类型行 + 条目）。
+        // 这类残留原本没有任何对账方：provider 不再为其注册，syncSysDict 的差集删除也就永远不会执行
+        cleanDeprecatedDictType(collectCodeDictName(metaDictClass));
+
         List<SysDictType> sysDictTypeList = sysDictTypeService.getNotReadOnlySysDictType();
         if (FuncUtil.isNotEmpty(sysDictTypeList)) {
             for (SysDictType sysDictType : sysDictTypeList) {
@@ -154,8 +162,6 @@ public class DictCacheService implements CommandLineRunner {
                                 false));
             }
         }
-        Reflections reflections = PackageScanUtil.reflections(basePackage);
-        Set<Class<?>> metaDictClass = reflections.getTypesAnnotatedWith(MetaDict.class);
 
         for (Class<?> clazz : metaDictClass) {
             DictCacheConfig config;
@@ -171,8 +177,39 @@ public class DictCacheService implements CommandLineRunner {
                 MAP.put(config.getDictName(),
                         new DictCacheProvider(dynamicMemoryCacheManager, config, sysDictService, sysDictTypeService,
                                 false));
+            } else {
+                // 声明了 @MetaDict 但既不是 Dict 枚举也不是 IDynamicDict：原本会被静默丢弃，
+                // 表现是界面上看得到字典名但下拉永远为空，这里留痕便于排查
+                log.warn("字典[{}]未注册缓存：{} 既不是 Dict 枚举也不是 IDynamicDict",
+                        clazz.getAnnotation(MetaDict.class).value(), clazz.getName());
             }
         }
+    }
+
+    /**
+     * 收集本次启动代码声明的字典名（与 run() 中 provider 注册的判定口径保持一致）
+     */
+    private Set<String> collectCodeDictName(Set<Class<?>> metaDictClass) {
+        Set<String> dictNameSet = new HashSet<>();
+        for (Class<?> clazz : metaDictClass) {
+            boolean codeDict = Enum.class.isAssignableFrom(clazz) && Dict.class.isAssignableFrom(clazz)
+                    || IDynamicDict.class.isAssignableFrom(clazz);
+            if (codeDict) {
+                dictNameSet.add(clazz.getAnnotation(MetaDict.class).value());
+            }
+        }
+        return dictNameSet;
+    }
+
+    private void cleanDeprecatedDictType(Set<String> codeDictNameSet) {
+        List<SysDictType> deprecatedList = sysDictTypeService.getReadOnlyNotIn(codeDictNameSet);
+        if (FuncUtil.isEmpty(deprecatedList)) {
+            return;
+        }
+        List<String> dictNameList = ReflectionUtil.getFieldList(deprecatedList, SysDictType::getDictName);
+        log.info("清理代码已删除的残留字典：{}", dictNameList);
+        sysDictTypeService.deleteByDictNameList(dictNameList);
+        sysDictService.deleteByDictList(dictNameList);
     }
 
     private DictCacheConfig buildDictCacheConfig(Class<?> clazz, Boolean dynamic) {
@@ -192,6 +229,20 @@ public class DictCacheService implements CommandLineRunner {
         DictCacheProvider dictCacheProvider = MAP.get(dictName);
         Validator.assertNotNull(dictCacheProvider, ErrCodeSys.SYS_CONFIG_NOT_EXIST, "字典: " + dictName);
         dictCacheProvider.cachePrepare(dictName);
+    }
+
+    /**
+     * 注销字典缓存：界面删除数据驱动型字典类型后，MAP 里的 provider 若不清理，
+     * 下拉仍会命中残留缓存直到过期或重启，表现为"删了还能选到"。
+     */
+    public void unregister(String dictName) {
+        DictCacheProvider dictCacheProvider = MAP.remove(dictName);
+        if (FuncUtil.isNotEmpty(dictCacheProvider)) {
+            Cache cache = dynamicMemoryCacheManager.getCache(dictName);
+            if (cache != null) {
+                cache.clear();
+            }
+        }
     }
 
     @RedisPublish

@@ -51,7 +51,19 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         if (init) {
             this.init();
         }
-        syncSysDictType(buildSysDictType(config.getDictName(), config.getDictTitle()));
+        // 类型行只允许由代码声明的字典（@MetaDict）回写：数据驱动型字典的 sys_dict_type 记录
+        // 是用户在界面上维护的正源，回写会把标题/只读标记按启动时的快照覆盖回去
+        if (isCodeGenerated()) {
+            syncSysDictType(buildSysDictType(config.getDictName(), config.getDictTitle()));
+        }
+    }
+
+    /**
+     * 是否代码生成的字典（@MetaDict 枚举 / IDynamicDict），其内容以代码为准、开机重建；
+     * 反之 read_only != '1' 的数据驱动型字典，条目与类型都以 sys_dict / sys_dict_type 为准。
+     */
+    private boolean isCodeGenerated() {
+        return StringUtil.convertSwitch(config.getReadOnly());
     }
 
     private void buildSysDictMap(List<SysDict> sysDictCache, Map<String, LinkedHashMap<String, SysDict>> map) {
@@ -105,7 +117,8 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         // 3. 写库：仅在初始化时执行（init=true）
         //    - 初始化：可能是首次部署，需要创建/更新数据库中的字典记录
         //    - 刷新：说明本地+Redis都过期了，但数据库已有数据，无需重复写入
-        if (init) {
+        //    数据驱动型字典的数据正源就是 sys_dict，回写自己无意义，只做代码生成型
+        if (init && isCodeGenerated()) {
             SysDictType sysDictType = buildSysDictType(dictName, dictTitle);
             syncSysDictType(sysDictType);
             if (CollectionUtils.isNotEmpty(sysDictCache)) {
@@ -121,7 +134,10 @@ public class DictCacheProvider extends DynamicMemoryCache<LinkedHashMap<String, 
         SysDictType sysDictType = new SysDictType();
         sysDictType.setDictName(dictName);
         sysDictType.setDictTitle(dictTitle);
-        sysDictType.setReadOnly(CommonConst.YES);
+        // 必须跟随 config：这里曾硬编码 '1'，导致数据驱动型（手工添加，read_only='0'）字典
+        // 被注册成 provider 的那次启动顺手改写成 '1'，下次启动 getNotReadOnlySysDictType 查不到它，
+        // 不再注册缓存 → 手工字典活不过第二次重启
+        sysDictType.setReadOnly(config.getReadOnly());
         return sysDictType;
     }
 

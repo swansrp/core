@@ -5,6 +5,7 @@ import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.kernel.vo.common.IdReqVO;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.portal.AdminPortal;
 import com.bidr.platform.dao.entity.SysDict;
@@ -69,6 +70,31 @@ public class AdminDictController extends BaseAdminOrderController<SysDict, SysDi
     @Override
     protected SFunction<SysDict, ?> id() {
         return SysDict::getDictId;
+    }
+
+    /**
+     * 条目新增前置拦截：内置字典的条目由枚举/动态字典开机重建，不允许界面加；
+     * read_only 由所属字典类型接管，不让业务人员在表单上手工填
+     */
+    @Override
+    public void adminBeforeAdd(SysDict entity) {
+        dictService.prepareAddDictItem(entity);
+    }
+
+    /**
+     * 内置字典条目（read_only='1'）改了下一次启动就会被代码覆写，一律拒绝；read_only 由后端接管
+     */
+    @Override
+    public void adminBeforeUpdate(SysDict entity) {
+        dictService.assertDictItemUpdate(entity);
+    }
+
+    /**
+     * /delete 与 /delete/list 都经 base deleteEntity 走到这里，批量删除同样受只读保护
+     */
+    @Override
+    public void adminBeforeDelete(IdReqVO vo) {
+        dictService.assertDictItemEditable(vo.getId());
     }
 
     @Override

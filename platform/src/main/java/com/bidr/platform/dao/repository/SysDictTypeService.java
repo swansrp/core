@@ -9,6 +9,8 @@ import com.bidr.platform.dao.mapper.SysDictTypeDao;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -26,6 +28,22 @@ public class SysDictTypeService extends BaseSqlRepo<SysDictTypeDao, SysDictType>
         return super.select(wrapper);
     }
 
+    /**
+     * 取「只读但代码里已不再声明」的字典类型，用于开机清理残留。
+     * <p>
+     * codeDictNameSet 为空时必须返回空：一方面 MP 的 notIn 遇到空集合会生成非法 SQL，
+     * 另一方面「代码一个字典都没扫到」通常是扫描异常，此时若退化成全表命中会误删所有内置字典。
+     */
+    public List<SysDictType> getReadOnlyNotIn(Collection<String> codeDictNameSet) {
+        if (FuncUtil.isEmpty(codeDictNameSet)) {
+            return new ArrayList<>();
+        }
+        LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()
+                .eq(SysDictType::getReadOnly, CommonConst.YES)
+                .notIn(SysDictType::getDictName, codeDictNameSet);
+        return super.select(wrapper);
+    }
+
     public List<SysDictType> getSysDictByTitle(String title) {
         LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()
                 .like(StringUtils.isNotEmpty(title), SysDictType::getDictTitle, title);
@@ -33,8 +51,11 @@ public class SysDictTypeService extends BaseSqlRepo<SysDictTypeDao, SysDictType>
     }
 
     public void deleteByDictNameList(List<String> dictNameList) {
+        if (FuncUtil.isEmpty(dictNameList)) {
+            return;
+        }
         LambdaQueryWrapper<SysDictType> wrapper = super.getQueryWrapper()
-                .in(FuncUtil.isNotEmpty(dictNameList), SysDictType::getDictName, dictNameList);
+                .in(SysDictType::getDictName, dictNameList);
         super.delete(wrapper);
     }
 

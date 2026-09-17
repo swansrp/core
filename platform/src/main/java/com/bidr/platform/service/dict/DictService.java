@@ -4,6 +4,7 @@ import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
 import com.bidr.platform.config.aop.RedisPublish;
+import com.bidr.platform.constant.err.DictErrorCode;
 import com.bidr.platform.dao.entity.SysBizDict;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDictType;
@@ -113,6 +114,8 @@ public class DictService {
     }
 
     public void replaceDefaultDictItem(UpdateDictDefaultReq vo) {
+        // 置默认同样是持久化修改，内置字典改了会在下一次启动被代码覆写，先拦截
+        assertDictTypeEditable(vo.getDictName());
         List<SysDict> entityList = new ArrayList<>();
         SysDict defaultDict = sysDictService.getDefaultDict(vo.getDictName());
         if (defaultDict != null) {
@@ -131,6 +134,7 @@ public class DictService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean addDictItem(AddDictItemReq req) {
+        prepareAddDictItem(req);
         dictCacheService.cachePrepare(req.getDictName());
         Validator.assertFalse(sysDictService.existed(req.getDictName(), req.getDictValue()), DICT_ITEM_IS_ALREADY_EXISTED, req.getDictTitle());
         return sysDictService.insert(req);
@@ -138,8 +142,62 @@ public class DictService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteDict(String dictName) {
+        assertDictTypeEditable(dictName);
         sysDictTypeService.deleteById(dictName);
         sysDictService.deleteByDictName(dictName);
+        // 类型与条目已从库中删除，同步注销内存缓存，避免下拉继续命中残留数据
+        dictCacheService.unregister(dictName);
+    }
+
+    /**
+     * 校验字典类型可界面维护：read_only='1' 的内置字典以代码（@MetaDict）为正源、开机重建，
+     * 改标题/删类型都会在下一次启动被覆写或造成运行期缓存不一致，因此一律拒绝。
+     */
+    public void assertDictTypeEditable(String dictName) {
+        SysDictType dictType = sysDictTypeService.selectById(dictName);
+        Validator.assertNotNull(dictType, DictErrorCode.DICT_IS_NOT_EXISTED, dictName);
+        Validator.assertFalse(CommonConst.YES.equals(dictType.getReadOnly()), DictErrorCode.DICT_IS_READ_ONLY,
+                dictType.getDictTitle());
+    }
+
+    /**
+     * 类型修改前置校验：除了内置字典不可改，read_only 本身也不允许从界面写。
+     * 它是「这条数据是否归代码（@MetaDict）管」的标记，手工把 '0' 改成 '1' 会让这条
+     * 记录在下次开机被 cleanDeprecatedDictType 当成代码已删除的僵尸字典清掉。
+     */
+    public void assertDictTypeUpdate(SysDictType entity) {
+        assertDictTypeEditable(entity.getDictName());
+        entity.setReadOnly(CommonConst.NO);
+    }
+
+    /**
+     * 校验字典条目可界面维护（内置字典的条目由枚举/动态字典生成，改了下次启动就没了）
+     */
+    public void assertDictItemEditable(String dictId) {
+        SysDict sysDict = sysDictService.selectById(dictId);
+        Validator.assertNotNull(sysDict, DictErrorCode.DICT_IS_NOT_EXISTED, dictId);
+        Validator.assertFalse(CommonConst.YES.equals(sysDict.getReadOnly()), DictErrorCode.DICT_IS_READ_ONLY,
+                sysDict.getDictTitle());
+    }
+
+    /**
+     * 条目修改前置校验：同类型，read_only 归后端管，不让界面手工置 '1'
+     */
+    public void assertDictItemUpdate(SysDict entity) {
+        assertDictItemEditable(entity.getDictId());
+        entity.setReadOnly(CommonConst.NO);
+    }
+
+    /**
+     * 新增条目前置校验：只允许往手工（非只读）字典里加条目，read_only 由所属类型接管，
+     * 不让业务人员在表单上手工填（历史上该列必填，只能靠人填对）。
+     */
+    public void prepareAddDictItem(SysDict sysDict) {
+        SysDictType dictType = sysDictTypeService.selectById(sysDict.getDictName());
+        Validator.assertNotNull(dictType, DictErrorCode.DICT_IS_NOT_EXISTED, sysDict.getDictName());
+        Validator.assertFalse(CommonConst.YES.equals(dictType.getReadOnly()), DictErrorCode.DICT_IS_READ_ONLY,
+                dictType.getDictTitle());
+        sysDict.setReadOnly(CommonConst.NO);
     }
 
     public List<DictRes> getSysDictByLabel(String dictName, String label) {

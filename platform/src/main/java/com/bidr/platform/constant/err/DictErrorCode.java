@@ -25,6 +25,7 @@ public enum DictErrorCode implements ErrCode {
 
     DICT_IS_ALREADY_EXISTED(55, "[%s]字典已存在"),
     DICT_ITEM_IS_ALREADY_EXISTED(56, "[%s]字典[%s]项已存在"),
+    DICT_IS_READ_ONLY(57, "[%s]为系统内置字典，不允许修改或删除"),
     ;
 
     private final Integer errCode;

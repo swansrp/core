@@ -65,8 +65,11 @@ public class SysDictService extends BaseSqlRepo<SysDictDao, SysDict> {
     }
 
     public void deleteByDictList(List<String> dictList) {
+        if (FuncUtil.isEmpty(dictList)) {
+            return;
+        }
         LambdaQueryWrapper<SysDict> wrapper = super.getQueryWrapper()
-                .in(FuncUtil.isNotEmpty(dictList), SysDict::getDictName, dictList);
+                .in(SysDict::getDictName, dictList);
         super.delete(wrapper);
     }
 
