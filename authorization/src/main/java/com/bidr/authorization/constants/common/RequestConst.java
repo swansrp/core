@@ -19,6 +19,7 @@ public class RequestConst {
     public static final String X_REQUESTED = "X-Requested-With";
     public static final String X_REQUEST_ID = "X-Request-Id";
     public static final String X_API_KEY = "x-api-key";
+    public static final String X_SPACE_ID = "X-Space-Id";
 
     public static final String GET = "GET";
     public static final String POST = "POST";
@@ -37,7 +38,7 @@ public class RequestConst {
 
     public static String getAllHeader() {
         return StringUtil.joinWith(",", TOKEN, ID_TOKEN, API_VERSION, OPERATOR, AUTHORIZATION, CLIENT_TYPE, CONTENT_TYPE,
-                X_REQUESTED, X_REQUEST_ID, X_API_KEY);
+                X_REQUESTED, X_REQUEST_ID, X_API_KEY, X_SPACE_ID);
     }
 
     public static String getAllMethod() {
