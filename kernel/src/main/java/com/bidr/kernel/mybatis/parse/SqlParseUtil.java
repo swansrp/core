@@ -59,13 +59,28 @@ public class SqlParseUtil {
     public static Select getPlainSelect(String sql) {
         Select select = null;
         try {
-            select = (Select) CCJSqlParserUtil.parse(sql,
+            select = (Select) CCJSqlParserUtil.parse(collapseBlankLines(sql),
                     ccjSqlParser -> ccjSqlParser.withSquareBracketQuotation(true));
         } catch (JSQLParserException e) {
             log.error(sql);
             Validator.assertException(ErrCodeSys.PA_PARAM_FORMAT, "SQL");
         }
         return select;
+    }
+
+    /**
+     * 压掉连续空行后再交给解析器。
+     *
+     * <p>MyBatis-Plus 的 insert / updateById 模板按字段生成 {@code <if>}，被跳过的 null 字段会在
+     * 语句文本里留下空行；而 JSqlParser <b>4.6</b>（本模块当前钉的版本）对"任意子句里连续 3 个换行"
+     * 直接抛 {@code ParseException}（4.4 可以）。{@code @DataScope} 拿到的正是这种运行时 SQL 文本，
+     * 不规整就会在最常见的"实体有几个空字段"上炸掉。</p>
+     *
+     * <p>纯空白变换：值一律走 {@code ?} 占位符，不触碰任何字面量。修在这个唯一解析入口里，
+     * 而不是让每个业务拦截器各打一份补丁。</p>
+     */
+    private static String collapseBlankLines(String sql) {
+        return sql != null && sql.contains("\n\n") ? sql.replaceAll("\n+", "\n") : sql;
     }
 
     public static String mergeWhere(String sql, Expression dataExpression) {
