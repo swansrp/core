@@ -45,4 +45,25 @@ public enum PortalConditionDict implements Dict {
     public static PortalConditionDict of(Integer value) {
         return EnumUtil.getBy(PortalConditionDict::getValue, value);
     }
+
+    /**
+     * 拼装该关系条件所需的最少可用值个数
+     * 各 SQL 构建器（字面量内联/命名参数/MyBatis-Plus wrapper）统一按此口径校验条件值，
+     * 值不足时跳过该条件，避免拼出 `col = ` 、`col IN ()` 这类让数据库直接语法报错的残缺 SQL
+     * 注意：方法名刻意不使用 get 前缀，避免被当成字典的序列化属性暴露给前端
+     *
+     * @return 需要的值个数，NULL/NOT_NULL 为 0，BETWEEN 系为 2，其余为 1
+     */
+    public int requiredValueCount() {
+        switch (this) {
+            case NULL:
+            case NOT_NULL:
+                return 0;
+            case BETWEEN:
+            case NOT_BETWEEN:
+                return 2;
+            default:
+                return 1;
+        }
+    }
 }

@@ -49,6 +49,9 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
 
     default void buildQueryWrapper(QueryWrapper<T> wrapper, ConditionVO condition) {
         formatDateValue(condition);
+        if (!normalizeConditionValue(condition)) {
+            return;
+        }
         String columnName = getColumnName(condition, wrapper.getEntityClass());
         switch (PortalConditionDict.of(condition.getRelation())) {
             case EQUAL:
@@ -160,6 +163,27 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
     }
 
     /**
+     * 条件值归一化：剔除无法作为单个 SQL 值使用的元素（null 与集合/数组等嵌套结构）
+     * 前端条件配置存在脏数据（如 value:[[]]）时，嵌套值一旦交给 wrapper 绑定会产生非法参数；
+     * 清洗后值个数不足该关系类型最低条件时，原逻辑会越界取值抛 IndexOutOfBounds，两者都让整条查询失败
+     *
+     * @param condition 查询条件
+     * @return true 表示条件值可用，可以继续拼装；false 表示本条条件整体跳过
+     */
+    default boolean normalizeConditionValue(ConditionVO condition) {
+        PortalConditionDict relation = PortalConditionDict.of(condition.getRelation());
+        if (relation == null) {
+            return false;
+        }
+        List<Object> scalarValues = FuncUtil.scalarValues(condition.getValue());
+        if (scalarValues.size() < relation.requiredValueCount()) {
+            return false;
+        }
+        condition.setValue(scalarValues);
+        return true;
+    }
+
+    /**
      * 获取数据库字段名
      *
      * @param condition   查询条件
@@ -213,6 +237,9 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
 
     default void buildQueryWrapper(MPJLambdaWrapper<T> wrapper, Map<String, String> aliasMap, Collection<String> havingFields, ConditionVO condition) {
         formatDateValue(condition);
+        if (!normalizeConditionValue(condition)) {
+            return;
+        }
         String columnName = getColumnName(condition.getProperty(), aliasMap, wrapper.getEntityClass());
         if (FuncUtil.isEmpty(havingFields) || !havingFields.contains(condition.getProperty())) {
             switch (PortalConditionDict.of(condition.getRelation())) {
@@ -588,25 +615,33 @@ public interface PortalSelectRepo<T> extends SmartLikeSelectRepo<T> {
                     return;
                 } else {
                     if (FuncUtil.isNotEmpty(req.getValue())) {
-                        if (FuncUtil.isNotEmpty(req.getValue().get(0))) {
+                        if (FuncUtil.isNotEmpty(req.getValue().get(0)) && normalizeConditionValue(req)) {
                             buildQueryWrapper(wrapper, aliasMap, null, req);
                         } else {
-                            if (FuncUtil.equals(andOr, SqlConstant.AND)) {
-                                wrapper.apply("1 = 1");
-                            } else {
-                                wrapper.apply("1 = 0");
-                            }
+                            applyEmptyCondition(wrapper, andOr);
                         }
                         return;
                     }
                 }
                 buildQueryWrapper(wrapper, aliasMap, null, req);
             }
-            if (FuncUtil.equals(andOr, SqlConstant.AND)) {
-                wrapper.apply("1 = 1");
-            } else {
-                wrapper.apply("1 = 0");
-            }
+            applyEmptyCondition(wrapper, andOr);
+        }
+    }
+
+    /**
+     * 条件整体不可用时补一个恒等式占位
+     * 高级查询逐层 nested 拼装，nested 内容为空会生成 `()` 这种非法语句；
+     * AND 分支取恒真（等价于跳过该条件），OR 分支取恒假（避免脏条件放大结果集）
+     *
+     * @param wrapper 查询条件
+     * @param andOr   当前层连接方式
+     */
+    default void applyEmptyCondition(MPJLambdaWrapper<T> wrapper, String andOr) {
+        if (FuncUtil.equals(andOr, SqlConstant.AND)) {
+            wrapper.apply("1 = 1");
+        } else {
+            wrapper.apply("1 = 0");
         }
     }
 

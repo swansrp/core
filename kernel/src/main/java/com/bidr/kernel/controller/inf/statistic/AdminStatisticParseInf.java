@@ -53,27 +53,34 @@ public interface AdminStatisticParseInf {
 
     default String buildQueryStr(AdvancedQuery query) {
         String columnName = query.getProperty();
-        List<?> valuesList = query.getValue();
+        PortalConditionDict relation = PortalConditionDict.of(query.getRelation());
+        // 条件值需先清洗：脏数据里的嵌套结构（如 value:[[]]）内联成字面量会得到 '[]' 这种永远匹配不到的条件值
+        List<?> valuesList = FuncUtil.scalarValues(query.getValue());
         if (FuncUtil.isEmpty(valuesList)) {
-            if (PortalConditionDict.NULL.equals(PortalConditionDict.of(query.getRelation()))) {
+            if (PortalConditionDict.NULL.equals(relation)) {
                 return columnName + " is null";
-            } else if (PortalConditionDict.NOT_NULL.equals(PortalConditionDict.of(query.getRelation()))) {
+            } else if (PortalConditionDict.NOT_NULL.equals(relation)) {
                 return columnName + " is not null";
             } else {
                 return FuncUtil.equals(query.getAndOr(), SqlConstant.AND) ? "1=1" : "1=0";
             }
+        }
+        // 可用值个数不足该关系类型的最低条件时整条跳过，否则会拼出 `col between 'x' and ` 这类残缺 SQL 让数据库直接语法报错
+        if (relation == null || valuesList.size() < relation.requiredValueCount()) {
+            return FuncUtil.equals(query.getAndOr(), SqlConstant.AND) ? "1=1" : "1=0";
         }
         String firstValue = "'" + valuesList.get(0) + "'";
         Object secondValue = "";
         if (valuesList.size() > 1) {
             secondValue = "'" + valuesList.get(1) + "'";
         }
-        String values = query.getValue().stream().map(v -> "'" + v + "'").collect(Collectors.joining(","));
-        switch (PortalConditionDict.of(query.getRelation())) {
+        String values = valuesList.stream().map(v -> "'" + v + "'").collect(Collectors.joining(","));
+        switch (relation) {
             case EQUAL:
-                return columnName + " = " + values;
+                // 等值只取第一个可用值：多值时原写法会得到 `col = 'a','b'` 这种非法语句
+                return columnName + " = " + firstValue;
             case NOT_EQUAL:
-                return columnName + " <> " + values;
+                return columnName + " <> " + firstValue;
             case IN:
                 return columnName + " in (" + values + ")";
             case NOT_IN:

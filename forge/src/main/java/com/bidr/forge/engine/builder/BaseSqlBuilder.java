@@ -160,9 +160,11 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
         }
 
         // NULL / NOT_NULL 不需要值，其余条件类型值为空时直接跳过
-        if (conditionDict != PortalConditionDict.NULL
-                && conditionDict != PortalConditionDict.NOT_NULL
-                && FuncUtil.isEmpty(value)) {
+        // 值需先清洗：集合/数组类型的元素（如前端脏配置 value:[[]]）无法作为单个参数绑定，
+        // 命名参数模板会把集合值展开成逗号分隔占位符列表，空集合展开后一个占位符都不剩，
+        // 于是拼出 `col = ` 这种残缺 SQL 让数据库直接语法报错（Doris 1105），整条查询失败
+        List<Object> bindValues = scalarValues(value);
+        if (bindValues.size() < conditionDict.requiredValueCount()) {
             return "";
         }
 
@@ -171,43 +173,35 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
 
         switch (conditionDict) {
             case EQUAL:
-                Object equalValue = getFirstValue(value);
-                if (equalValue == null) {
-                    return "";
-                }
-                parameters.put(paramKey, equalValue);
+                parameters.put(paramKey, bindValues.get(0));
                 return formattedColumn + " = :" + paramKey;
             case NOT_EQUAL:
-                Object notEqualValue = getFirstValue(value);
-                if (notEqualValue == null) {
-                    return "";
-                }
-                parameters.put(paramKey, notEqualValue);
+                parameters.put(paramKey, bindValues.get(0));
                 return formattedColumn + " != :" + paramKey;
             case GREATER:
-                parameters.put(paramKey, getFirstValue(value));
+                parameters.put(paramKey, bindValues.get(0));
                 return formattedColumn + " > :" + paramKey;
             case GREATER_EQUAL:
-                parameters.put(paramKey, getFirstValue(value));
+                parameters.put(paramKey, bindValues.get(0));
                 return formattedColumn + " >= :" + paramKey;
             case LESS:
-                parameters.put(paramKey, getFirstValue(value));
+                parameters.put(paramKey, bindValues.get(0));
                 return formattedColumn + " < :" + paramKey;
             case LESS_EQUAL:
-                parameters.put(paramKey, getFirstValue(value));
+                parameters.put(paramKey, bindValues.get(0));
                 return formattedColumn + " <= :" + paramKey;
             case NULL:
                 return formattedColumn + " IS NULL";
             case NOT_NULL:
                 return formattedColumn + " IS NOT NULL";
             case LIKE:
-                parameters.put(paramKey, "%" + getFirstValue(value) + "%");
+                parameters.put(paramKey, "%" + bindValues.get(0) + "%");
                 return formattedColumn + " LIKE :" + paramKey;
             case NOT_LIKE:
-                parameters.put(paramKey, "%" + getFirstValue(value) + "%");
+                parameters.put(paramKey, "%" + bindValues.get(0) + "%");
                 return formattedColumn + " NOT LIKE :" + paramKey;
             case IN:
-                parameters.put(paramKey, value);
+                parameters.put(paramKey, bindValues);
                 return formattedColumn + " IN (:" + paramKey + ")";
             case CONTAIN:
             case CONTAIN_IN_OR:
@@ -215,7 +209,7 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
                 List<String> parts = new ArrayList<>();
                 String join = (conditionDict == PortalConditionDict.CONTAIN_IN_AND) ? " AND " : " OR ";
                 int idx = 0;
-                for (Object v : value) {
+                for (Object v : bindValues) {
                     String pk = paramKey + "_" + (idx++);
                     parameters.put(pk, v);
                     parts.add("FIND_IN_SET(:" + pk + ", " + formattedColumn + ") > 0");
@@ -225,31 +219,36 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
                 }
                 return "(" + String.join(join, parts) + ")";
             case NOT_IN:
-                parameters.put(paramKey, value);
+                parameters.put(paramKey, bindValues);
                 return formattedColumn + " NOT IN (:" + paramKey + ")";
             case BETWEEN:
-                if (value.size() >= 2) {
-                    String paramKey1 = paramKey + "_start";
-                    String paramKey2 = paramKey + "_end";
-                    parameters.put(paramKey1, value.get(0));
-                    parameters.put(paramKey2, value.get(1));
-                    return formattedColumn + " BETWEEN :" + paramKey1 + " AND :" + paramKey2;
-                }
-                break;
+                String paramKey1 = paramKey + "_start";
+                String paramKey2 = paramKey + "_end";
+                parameters.put(paramKey1, bindValues.get(0));
+                parameters.put(paramKey2, bindValues.get(1));
+                return formattedColumn + " BETWEEN :" + paramKey1 + " AND :" + paramKey2;
             case NOT_BETWEEN:
-                if (value.size() >= 2) {
-                    String paramKey1 = paramKey + "_start";
-                    String paramKey2 = paramKey + "_end";
-                    parameters.put(paramKey1, value.get(0));
-                    parameters.put(paramKey2, value.get(1));
-                    return formattedColumn + " NOT BETWEEN :" + paramKey1 + " AND :" + paramKey2;
-                }
-                break;
+                String notParamKey1 = paramKey + "_start";
+                String notParamKey2 = paramKey + "_end";
+                parameters.put(notParamKey1, bindValues.get(0));
+                parameters.put(notParamKey2, bindValues.get(1));
+                return formattedColumn + " NOT BETWEEN :" + notParamKey1 + " AND :" + notParamKey2;
             default:
                 break;
         }
 
         return "";
+    }
+
+    /**
+     * 条件值清洗：只保留可直接绑定为单个 SQL 参数的标量值
+     * 空串是合法值（对应库里存 '' 的维度值），因此只剔除 null 与集合/数组/Map 这类嵌套结构
+     *
+     * @param value 原始条件值列表
+     * @return 可绑定的标量值列表
+     */
+    protected List<Object> scalarValues(List<?> value) {
+        return FuncUtil.scalarValues(value);
     }
 
     /**
@@ -264,13 +263,14 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
     }
 
     /**
-     * 获取列表的第一个值
+     * 获取列表的第一个可绑定值（供子类复用，口径同 {@link #scalarValues(List)}）
      *
      * @param value 值列表
-     * @return 第一个值
+     * @return 第一个标量值，无可用值时返回 null
      */
     protected Object getFirstValue(List<?> value) {
-        return FuncUtil.isNotEmpty(value) ? value.get(0) : null;
+        List<Object> scalarValues = scalarValues(value);
+        return scalarValues.isEmpty() ? null : scalarValues.get(0);
     }
 
     public String findVoColumnName(String columnName, Map<String, String> aliasMap) {
