@@ -4,6 +4,7 @@ import com.bidr.admin.manage.permit.service.AcPermitApplyPortalService;
 import com.bidr.admin.manage.permit.vo.AcPermitApplyVO;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
+import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.dao.entity.AcPermitApply;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.permit.PermitApplyService;
@@ -59,6 +60,13 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
     @RequestMapping(value = "", method = RequestMethod.GET)
     public PermitApplyVO getUserPermitStatus(String url, String customerNumber) {
         return permitApplyService.getUserPermit(url, customerNumber);
+    }
+
+    @Auth(AuthToken.class)
+    @ApiOperation(value = "判断页面路径是否存在", notes = "需携带合法令牌，不校验菜单权限")
+    @RequestMapping(value = "/exists", method = RequestMethod.GET)
+    public Boolean checkPathExists(String url) {
+        return permitApplyService.isPathExists(url);
     }
 
     @ApiOperation(value = "同意权限申请")

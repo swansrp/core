@@ -93,6 +93,16 @@ public class PermitApplyService {
         return lastMenuId;
     }
 
+    /**
+     * 判断给定路径是否为系统中已登记的页面（菜单）
+     *
+     * @param url 完整路径，如 "/SystemManage/permit/PermissionSwitch"
+     * @return true 表示路径存在，可申请权限；false 表示页面不存在
+     */
+    public boolean isPathExists(String url) {
+        return FuncUtil.isNotEmpty(findMenuIdByFullPath(url));
+    }
+
     public void applyUserPermit(String operator, String url, String reason) {
         Long menuId = findMenuIdByFullPath(url);
         if (FuncUtil.isNotEmpty(menuId)) {
