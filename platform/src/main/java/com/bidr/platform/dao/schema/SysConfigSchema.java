@@ -24,5 +24,11 @@ public class SysConfigSchema extends BaseMybatisSchema<SysConfig> {
                 "  PRIMARY KEY (`config_id`),\n" +
                 "  UNIQUE KEY `config_key` (`config_key`)\n" +
                 ") COMMENT='参数配置表';");
+
+        // v1：config_value 放宽为 text——运行期参数里出现了长文本（如问答系统提示词，
+        // 数百汉字），varchar(500) 装不下。MODIFY 幂等可重跑；TEXT 列不能带 DEFAULT，
+        // 原 DEFAULT '' 一并去掉（该列本就允许 NULL，语义不变）
+        setUpgradeDDL(1, "ALTER TABLE `sys_config` "
+                + "MODIFY COLUMN `config_value` text COMMENT '参数键值';");
     }
 }

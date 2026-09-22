@@ -56,7 +56,6 @@ public class SysConfig {
      */
     @TableField(value = "config_value")
     @ApiModelProperty(value = "参数键值")
-    @Size(max = 500, message = "参数键值最大长度要小于 500")
     private String configValue;
 
     /**
