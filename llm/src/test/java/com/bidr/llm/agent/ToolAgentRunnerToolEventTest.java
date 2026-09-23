@@ -1,5 +1,9 @@
 package com.bidr.llm.agent;
 
+import com.bidr.llm.agent.session.AgentEvent;
+import com.bidr.llm.agent.session.AgentSessionContext;
+import com.bidr.llm.agent.session.AgentSessionState;
+import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
@@ -135,5 +139,48 @@ public class ToolAgentRunnerToolEventTest {
                 .run(new ScriptedModel(), null, "请调用 echo", Collections.<Object>singletonList(new EchoTools()),
                         new AgentLoopOptions(5, 20), legacy);
         Assert.assertNotNull("仅实现旧两个方法的监听器应能跑完整个循环", result);
+    }
+
+    /**
+     * 🔴 会话链路断言（补此前空白）：上面两例只证明 runner 会调钩子；本例证明
+     * runner 经 {@link AgentSessionContext#loopListener()} 真把工具事件**落进会话事件存储**——
+     * 即 {@code GET /session/{id}/events?sinceSeq=} 读到的那条流，前端过程树的数据源。
+     * 用脚本化假模型，不依赖任何外部模型服务。
+     */
+    @Test
+    public void 会话监听器应把工具事件落进会话事件流() {
+        AgentSessionState state = new AgentSessionState();
+        state.setSessionId("s-tool-event");
+        state.setAgentKey("probe");
+        state.setStatus(AgentSessionState.RUNNING);
+        InMemoryAgentSessionStore store = new InMemoryAgentSessionStore();
+        store.saveState(state);
+        AgentSessionContext ctx = new AgentSessionContext(state, store, new java.util.HashMap<>());
+
+        new ToolAgentRunner().run(new ScriptedModel(), null, "请调用 echo",
+                Collections.<Object>singletonList(new EchoTools()), new AgentLoopOptions(5, 20), ctx.loopListener());
+
+        List<AgentEvent> events = store.events("s-tool-event", 0);
+        List<AgentEvent> calls = new ArrayList<>();
+        List<AgentEvent> results = new ArrayList<>();
+        for (AgentEvent ev : events) {
+            if (AgentEvent.TOOL_CALL.equals(ev.getType())) {
+                calls.add(ev);
+            } else if (AgentEvent.TOOL_RESULT.equals(ev.getType())) {
+                results.add(ev);
+            }
+        }
+
+        Assert.assertEquals("会话事件流里应有 1 条 tool_call", 1, calls.size());
+        Assert.assertEquals("会话事件流里应有 1 条 tool_result", 1, results.size());
+
+        java.util.Map<?, ?> callPayload = (java.util.Map<?, ?>) calls.get(0).getPayload();
+        Assert.assertEquals("call-1", callPayload.get("tool_call_id"));
+        Assert.assertEquals("echo", callPayload.get("tool_name"));
+        Assert.assertEquals("{\"text\":\"hi\"}", callPayload.get("arguments"));
+
+        java.util.Map<?, ?> resultPayload = (java.util.Map<?, ?>) results.get(0).getPayload();
+        Assert.assertEquals("id 必须与调用一致，供前端配对", "call-1", resultPayload.get("tool_call_id"));
+        Assert.assertEquals("echo:hi", resultPayload.get("output"));
     }
 }
