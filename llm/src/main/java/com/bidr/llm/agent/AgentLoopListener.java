@@ -50,4 +50,20 @@ public interface AgentLoopListener {
     default String terminalText() {
         return null;
     }
+
+    /**
+     * 工具调用结构化上报（与 {@link #log} 并行，不替代）：id 取模型给的 tool_call_id，
+     * argumentsJson 为参数原文（JSON 文本，由消费侧决定解析口径）。
+     * 默认空实现：轻链路（如维护问数）零改动即向后兼容；会话实现据此落
+     * {@code AgentEvent.TOOL_CALL}，供前端统一过程树渲染。
+     */
+    default void onToolCall(String toolCallId, String toolName, String argumentsJson) {
+    }
+
+    /**
+     * 工具返回结构化上报：resultText 为结果全文（失败亦走此口，文本含失败原因）。
+     * 默认空实现，兼容性同上；会话实现落 {@code AgentEvent.TOOL_RESULT}。
+     */
+    default void onToolResult(String toolCallId, String toolName, String resultText) {
+    }
 }

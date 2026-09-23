@@ -388,6 +388,25 @@ public class AgentSessionContext {
             public String awaitResumeIfPaused() {
                 return AgentSessionContext.this.awaitResumeIfPaused();
             }
+
+            /** 结构化工具事件：payload 键位与 relay §5.7 帧对齐，两路共用一个前端视图模型 */
+            @Override
+            public void onToolCall(String toolCallId, String toolName, String argumentsJson) {
+                Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                payload.put("tool_call_id", toolCallId == null ? "" : toolCallId);
+                payload.put("tool_name", toolName);
+                payload.put("arguments", argumentsJson);
+                emit(AgentEvent.TOOL_CALL, payload);
+            }
+
+            @Override
+            public void onToolResult(String toolCallId, String toolName, String resultText) {
+                Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                payload.put("tool_call_id", toolCallId == null ? "" : toolCallId);
+                payload.put("tool_name", toolName);
+                payload.put("output", resultText);
+                emit(AgentEvent.TOOL_RESULT, payload);
+            }
         };
     }
 }

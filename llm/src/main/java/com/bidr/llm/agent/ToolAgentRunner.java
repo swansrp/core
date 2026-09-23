@@ -130,10 +130,13 @@ public class ToolAgentRunner {
                     String cached = opt.getCachedTools().contains(req.name()) ? toolCache.get(cacheKey) : null;
                     if (cached != null) {
                                             sink.log("工具 " + req.name() + " 同参缓存命中，直接返回：" + fullText(cached));
+                        sink.onToolCall(req.id(), req.name(), req.arguments());
+                        sink.onToolResult(req.id(), req.name(), cached);
                         messages.add(ToolExecutionResultMessage.from(req, cached));
                         continue;
                     }
                     sink.log("调用工具 " + req.name() + "(" + fullText(req.arguments()) + ")");
+                    sink.onToolCall(req.id(), req.name(), req.arguments());
                     long toolStart = System.currentTimeMillis();
                     String toolResult = executeTool(req, toolObjects);
                     if (opt.getBudgetExemptTools().contains(req.name())) {
@@ -146,6 +149,7 @@ public class ToolAgentRunner {
                     }
                     messages.add(ToolExecutionResultMessage.from(req, toolResult));
                     sink.log("工具 " + req.name() + " 返回：" + fullText(toolResult));
+                    sink.onToolResult(req.id(), req.name(), toolResult);
                     // 失败分类熔断：失败文本按规则集计数，同类累计达阈值时取回拉直方向的指令
                     // （本轮工具循环结束后注入一条用户消息，一次性语义）
                     if (opt.getFailureBreaker() != null && breakerAdvice == null) {
@@ -194,7 +198,10 @@ public class ToolAgentRunner {
                 messages.add(last.content());
                 for (ToolExecutionRequest req : last.content().toolExecutionRequests()) {
                     sink.log("收口例外：执行 " + req.name() + " 后无工具直出");
-                    messages.add(ToolExecutionResultMessage.from(req, executeTool(req, toolObjects)));
+                    sink.onToolCall(req.id(), req.name(), req.arguments());
+                    String closingResult = executeTool(req, toolObjects);
+                    sink.onToolResult(req.id(), req.name(), closingResult);
+                    messages.add(ToolExecutionResultMessage.from(req, closingResult));
                 }
                 last = logged.generate(messages);
             }
