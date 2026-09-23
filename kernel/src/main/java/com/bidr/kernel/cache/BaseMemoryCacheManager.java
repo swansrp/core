@@ -86,7 +86,6 @@ public abstract class BaseMemoryCacheManager implements InitializingBean, CacheM
         cache.put(objKey, obj);
         if (log.isDebugEnabled()) {
             ConcurrentMap<Object, Object> nativeCache = (ConcurrentMap<Object, Object>) cache.getNativeCache();
-            log.debug("缓存: {} 键-> {} , 当前size={}", cacheName, objKey, nativeCache.size());
         }
     }
 
