@@ -1,13 +1,16 @@
 package com.bidr.llm.config;
 
+import com.bidr.llm.agent.external.ExternalRuntimeTaskService;
 import com.bidr.llm.agent.gate.AgentTaskGate;
 import com.bidr.llm.agent.gate.InMemoryAgentTaskGate;
 import com.bidr.llm.agent.gate.RedisAgentTaskGate;
+import com.bidr.llm.agent.runtime.spi.AgentRuntimeProvider;
 import com.bidr.llm.agent.session.AgentSessionStore;
 import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
 import com.bidr.llm.agent.session.RedisAgentSessionStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -69,5 +72,16 @@ public class AgentSessionAutoConfiguration {
             @Value("${llm.agent-task-gate.orphan-millis:90000}") long orphanMillis) {
         log.info("类路径无 core/redis，装配内存 AgentTaskGate（单实例 fallback，互斥不跨实例）");
         return new InMemoryAgentTaskGate(orphanMillis);
+    }
+
+    /**
+     * 外部 agent runtime 的任务派发服务（形态 B 接线）：provider 缺席时仍可装配，
+     * 工具面据 {@code available()} 明确回绝而非静默假成功——故不因未接外部 runtime 而阻断启动。
+     */
+    @Bean
+    @ConditionalOnMissingBean(ExternalRuntimeTaskService.class)
+    public ExternalRuntimeTaskService externalRuntimeTaskService(
+            AgentSessionStore store, ObjectProvider<AgentRuntimeProvider> providerHolder) {
+        return new ExternalRuntimeTaskService(store, providerHolder::getIfAvailable);
     }
 }
