@@ -1,5 +1,6 @@
 package com.bidr.agent.runtime.provider.openhands;
 
+import com.bidr.llm.agent.runtime.event.RuntimeEvents;
 import com.bidr.agent.runtime.client.AgentRuntimeErrors;
 import com.bidr.llm.agent.runtime.dto.TurnBlock;
 import com.bidr.llm.agent.runtime.dto.TurnItem;
@@ -68,17 +69,20 @@ public final class OpenHandsEventCodec {
     static final String REPLY_FAILED = "failed";
     static final String REPLY_CANCELLED = "cancelled";
 
-    /** 契约 §5.7 帧类型 */
-    static final String FRAME_ACCEPTED = "message.accepted";
-    static final String FRAME_SNAPSHOT = "message.snapshot";
-    static final String FRAME_STARTED = "message.started";
-    static final String FRAME_TEXT_DELTA = "text.delta";
-    static final String FRAME_THINKING_DELTA = "thinking.delta";
-    static final String FRAME_TOOL_CALL = "tool.call";
-    static final String FRAME_TOOL_RESULT = "tool.result";
-    static final String FRAME_DONE = "message.done";
-    static final String FRAME_ERROR = "message.error";
-    static final String FRAME_CANCELLED = "message.cancelled";
+    /**
+     * 规范事件词表（定义权在框架 core/llm 的 {@link RuntimeEvents}）：本 codec 只做
+     * "OpenHands 原生事件 → 规范事件"的翻译，词表本身不在此定义。
+     */
+    static final String FRAME_ACCEPTED = RuntimeEvents.ACCEPTED;
+    static final String FRAME_SNAPSHOT = RuntimeEvents.SNAPSHOT;
+    static final String FRAME_STARTED = RuntimeEvents.STARTED;
+    static final String FRAME_TEXT_DELTA = RuntimeEvents.TEXT_DELTA;
+    static final String FRAME_THINKING_DELTA = RuntimeEvents.THINKING_DELTA;
+    static final String FRAME_TOOL_CALL = RuntimeEvents.TOOL_CALL;
+    static final String FRAME_TOOL_RESULT = RuntimeEvents.TOOL_RESULT;
+    static final String FRAME_DONE = RuntimeEvents.DONE;
+    static final String FRAME_ERROR = RuntimeEvents.ERROR;
+    static final String FRAME_CANCELLED = RuntimeEvents.CANCELLED;
 
     /** 取消原因取值（契约 A4） */
     static final String CANCEL_BY_USER = "user.request";
@@ -210,16 +214,11 @@ public final class OpenHandsEventCodec {
      * 帧封套：{@code {type, session_id, message_id, data}}（字段名 snake_case，与平台一致）
      */
     static String frame(String type, String sessionId, String messageId, ObjectNode data) {
-        ObjectNode envelope = MAPPER.createObjectNode();
-        envelope.put("type", type);
-        envelope.put("session_id", sessionId);
-        envelope.put("message_id", messageId);
-        envelope.set("data", data == null ? MAPPER.createObjectNode() : data);
-        return envelope.toString();
+        return RuntimeEvents.frame(type, sessionId, messageId, data);
     }
 
     static ObjectNode data() {
-        return MAPPER.createObjectNode();
+        return RuntimeEvents.newData();
     }
 
     static String acceptedFrame(String sessionId, String messageId) {
@@ -235,9 +234,7 @@ public final class OpenHandsEventCodec {
     }
 
     static String deltaFrame(String type, String sessionId, String messageId, String delta) {
-        ObjectNode data = data();
-        data.put("delta", delta == null ? "" : delta);
-        return frame(type, sessionId, messageId, data);
+        return RuntimeEvents.deltaFrame(type, sessionId, messageId, delta);
     }
 
     static String toolCallFrame(String sessionId, String messageId, JsonNode actionEvent) {

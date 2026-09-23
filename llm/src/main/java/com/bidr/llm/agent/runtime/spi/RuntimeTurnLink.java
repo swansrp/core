@@ -17,7 +17,11 @@ import java.io.Closeable;
 public interface RuntimeTurnLink extends Closeable {
 
     /**
-     * 取下一帧，形如 {@code {"type":"text.delta","session_id":…,"message_id":…,"data":{…}}}
+     * 取下一帧，形如 {@code {"type":"text.delta","session_id":…,"message_id":…,"data":{…}}}。
+     * <p>
+     * 🔴 type 取值与 data 形状必须是框架规范事件（见
+     * {@link com.bidr.llm.agent.runtime.event.RuntimeEvents}），**不是上游的原生线格式**：
+     * provider 实现负责翻译；上游原生同形时"原样透传"只是该实现的优化，换上游只改它的 codec。
      *
      * @return 帧 JSON 原文；{@code null} = 已收流
      * @throws Exception 读取失败/链路断开（按断流处理）

@@ -34,8 +34,9 @@ import java.util.Map;
  * Title: AgentSystemProvider
  * Description: <b>agent-system 开放协议</b>实现（/open/v1，SSE 单轮流）。
  * <p>
- * 该上游的帧本来就是契约 §5.7 形状，所以流上<b>原样透传、零解析</b>——这是本实现内部的优化，
- * 不是 SPI 的对外承诺（另一个实现必须自己把事件映射成帧）。
+ * 该上游的帧与框架规范事件（{@code com.bidr.llm.agent.runtime.event.RuntimeEvents}）恰好同形，
+ * 所以流上<b>原样透传、零解析</b>——这是本实现内部的优化，不是 SPI 的对外承诺：
+ * 规范事件由框架定义，另一个实现必须自己把上游事件映射成规范事件。
  * 开流前错误（鉴权/会话失效/限流）在这里读 JSON 信封并按 D6 抛业务异常。
  *
  * @author sharp
