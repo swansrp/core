@@ -30,6 +30,7 @@
         <module>td</module>
         <module>llm</module>
         <module>insight</module>
+        <module>agent-runtime</module>
     </modules>
     <packaging>pom</packaging>
 

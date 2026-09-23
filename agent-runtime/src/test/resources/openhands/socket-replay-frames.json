@@ -1,0 +1,197 @@
+[
+  { "type": "sync", "from_seq": -1, "through_seq": 23 },
+  {
+    "type": "durable",
+    "seq": 0,
+    "event": {
+      "id": "sp-0",
+      "timestamp": "2026-09-23T05:58:19.214083",
+      "source": "agent",
+      "system_prompt": { "type": "text", "text": "<SOUL>...</SOUL>" },
+      "kind": "SystemPromptEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 1,
+    "event": {
+      "id": "u-0",
+      "timestamp": "2026-09-23T05:58:19.224912",
+      "source": "user",
+      "parent_id": "sp-0",
+      "llm_message": { "role": "user", "content": [ { "type": "text", "text": "上一轮的问题" } ] },
+      "kind": "MessageEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 2,
+    "event": {
+      "id": "st-2",
+      "timestamp": "2026-09-23T05:58:19.300000",
+      "source": "environment",
+      "key": "execution_status",
+      "value": "running",
+      "kind": "ConversationStateUpdateEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 3,
+    "event": {
+      "id": "m-0",
+      "timestamp": "2026-09-23T05:58:21.000000",
+      "source": "agent",
+      "parent_id": "u-0",
+      "llm_message": { "role": "assistant", "content": [ { "type": "text", "text": "上一轮的答复" } ] },
+      "kind": "MessageEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 4,
+    "event": {
+      "id": "st-4",
+      "timestamp": "2026-09-23T05:58:21.100000",
+      "source": "environment",
+      "key": "execution_status",
+      "value": "finished",
+      "kind": "ConversationStateUpdateEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 5,
+    "event": {
+      "id": "st-5",
+      "timestamp": "2026-09-23T05:58:21.200000",
+      "source": "environment",
+      "key": "stats",
+      "value": {
+        "usage_to_metrics": {
+          "default": {
+            "model_name": "openai/qwen3.8-flash",
+            "accumulated_token_usage": { "prompt_tokens": 58910, "completion_tokens": 627 }
+          }
+        }
+      },
+      "kind": "ConversationStateUpdateEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 19,
+    "event": {
+      "id": "u-1",
+      "timestamp": "2026-09-23T06:03:46.191163",
+      "source": "user",
+      "parent_id": "m-0",
+      "llm_message": { "role": "user", "content": [ { "type": "text", "text": "1+1 等于几" } ] },
+      "kind": "MessageEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 20,
+    "event": {
+      "id": "st-20",
+      "timestamp": "2026-09-23T06:03:46.204795",
+      "source": "environment",
+      "parent_id": "u-1",
+      "key": "execution_status",
+      "value": "running",
+      "kind": "ConversationStateUpdateEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 22,
+    "event": {
+      "id": "a-1",
+      "timestamp": "2026-09-23T06:03:48.486637",
+      "source": "agent",
+      "parent_id": "u-1",
+      "tool_name": "terminal",
+      "tool_call_id": "call_7bcad",
+      "tool_call": { "id": "call_7bcad", "name": "terminal", "arguments": "{\"command\": \"echo 2\"}" },
+      "summary": "Echo answer",
+      "kind": "ActionEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 23,
+    "event": {
+      "id": "o-1",
+      "timestamp": "2026-09-23T06:03:48.642948",
+      "source": "environment",
+      "parent_id": "a-1",
+      "tool_name": "terminal",
+      "tool_call_id": "call_7bcad",
+      "observation": { "content": [ { "type": "text", "text": "2" } ], "is_error": false, "exit_code": 0 },
+      "action_id": "a-1",
+      "kind": "ObservationEvent"
+    }
+  },
+  {
+    "type": "transient",
+    "event": {
+      "id": "fs-1",
+      "timestamp": "2026-09-23T06:04:00.000000",
+      "source": "environment",
+      "key": "full_state",
+      "value": {
+        "id": "conv-1",
+        "execution_status": "running",
+        "stats": {
+          "usage_to_metrics": {
+            "default": { "accumulated_token_usage": { "prompt_tokens": 59000, "completion_tokens": 660 } }
+          }
+        }
+      }
+    }
+  },
+  { "type": "item_started", "item_id": "m-1", "attempt": 1, "anchor_seq": 24 },
+  { "type": "delta", "item_id": "m-1", "attempt": 1, "order": 0, "kind": "text", "content": "1 + 1" },
+  { "type": "delta", "item_id": "m-1", "attempt": 1, "order": 1, "kind": "text", "content": " = 2" },
+  {
+    "type": "durable",
+    "seq": 25,
+    "event": {
+      "id": "m-1",
+      "timestamp": "2026-09-23T06:03:51.126221",
+      "source": "agent",
+      "parent_id": "o-1",
+      "llm_message": { "role": "assistant", "content": [ { "type": "text", "text": "1 + 1 = 2" } ] },
+      "kind": "MessageEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 26,
+    "event": {
+      "id": "st-26",
+      "timestamp": "2026-09-23T06:03:51.200000",
+      "source": "environment",
+      "key": "stats",
+      "value": {
+        "usage_to_metrics": {
+          "default": { "accumulated_token_usage": { "prompt_tokens": 59100, "completion_tokens": 700 } }
+        }
+      },
+      "kind": "ConversationStateUpdateEvent"
+    }
+  },
+  {
+    "type": "durable",
+    "seq": 27,
+    "event": {
+      "id": "st-27",
+      "timestamp": "2026-09-23T06:03:51.300000",
+      "source": "environment",
+      "key": "execution_status",
+      "value": "finished",
+      "kind": "ConversationStateUpdateEvent"
+    }
+  }
+]

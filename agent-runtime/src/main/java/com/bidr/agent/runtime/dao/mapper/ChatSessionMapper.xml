@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bidr.agent.runtime.dao.mapper.ChatSessionMapper">
+  <resultMap id="BaseResultMap" type="com.bidr.agent.runtime.dao.entity.ChatSession">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="session_id" jdbcType="VARCHAR" property="sessionId" />
+    <result column="agent_code" jdbcType="VARCHAR" property="agentCode" />
+    <result column="operator" jdbcType="VARCHAR" property="operator" />
+    <result column="group_key" jdbcType="VARCHAR" property="groupKey" />
+    <result column="business_type" jdbcType="VARCHAR" property="businessType" />
+    <result column="business_id" jdbcType="VARCHAR" property="businessId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="last_active_at" jdbcType="TIMESTAMP" property="lastActiveAt" />
+    <result column="message_count" jdbcType="INTEGER" property="messageCount" />
+    <result column="valid" jdbcType="INTEGER" property="valid" />
+    <result column="create_by" jdbcType="VARCHAR" property="createBy" />
+    <result column="create_at" jdbcType="TIMESTAMP" property="createAt" />
+    <result column="update_by" jdbcType="VARCHAR" property="updateBy" />
+    <result column="update_at" jdbcType="TIMESTAMP" property="updateAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, session_id, agent_code, operator, group_key, business_type, business_id, title, last_active_at, message_count, `valid`, create_by, create_at, update_by, update_at
+  </sql>
+</mapper>

@@ -1,0 +1,289 @@
+[
+  {
+    "id": "sp-0",
+    "timestamp": "2026-09-23T05:58:19.214083",
+    "source": "agent",
+    "system_prompt": { "cache_prompt": false, "type": "text", "text": "<SOUL>You are OpenHands agent...</SOUL>" },
+    "tools": [ { "kind": "TerminalTool", "title": "terminal" } ],
+    "kind": "SystemPromptEvent"
+  },
+  {
+    "id": "u-a",
+    "timestamp": "2026-09-23T05:58:19.224912",
+    "source": "user",
+    "parent_id": "sp-0",
+    "llm_message": {
+      "role": "user",
+      "content": [
+        { "cache_prompt": false, "type": "text", "text": "先用 shell 命令列出当前目录，然后回答：1+1 等于几" }
+      ],
+      "thinking_blocks": []
+    },
+    "activated_skills": [],
+    "extended_content": [],
+    "kind": "MessageEvent"
+  },
+  {
+    "id": "st-a1",
+    "timestamp": "2026-09-23T05:58:19.231373",
+    "source": "environment",
+    "parent_id": "u-a",
+    "key": "last_user_message_id",
+    "value": "u-a",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-a2",
+    "timestamp": "2026-09-23T05:58:19.242275",
+    "source": "environment",
+    "parent_id": "u-a",
+    "key": "execution_status",
+    "value": "running",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "a-a",
+    "timestamp": "2026-09-23T05:58:22.419859",
+    "source": "agent",
+    "parent_id": "u-a",
+    "thought": [ { "cache_prompt": false, "type": "text", "text": "I'll list the workspace first." } ],
+    "reasoning_content": "The user wants a directory listing.",
+    "thinking_blocks": [],
+    "action": { "command": "ls -la /workspace/probe18", "is_input": false, "reset": false, "kind": "TerminalAction" },
+    "tool_name": "terminal",
+    "tool_call_id": "call_10937e",
+    "tool_call": {
+      "id": "call_10937e",
+      "name": "terminal",
+      "arguments": "{\"command\": \"ls -la /workspace/probe18\", \"summary\": \"List workspace\"}",
+      "origin": "completion"
+    },
+    "llm_response_id": "chatcmpl-1",
+    "security_risk": "UNKNOWN",
+    "summary": "List workspace",
+    "kind": "ActionEvent"
+  },
+  {
+    "id": "o-a",
+    "timestamp": "2026-09-23T05:58:23.332276",
+    "source": "environment",
+    "parent_id": "a-a",
+    "tool_name": "terminal",
+    "tool_call_id": "call_10937e",
+    "observation": {
+      "content": [ { "cache_prompt": false, "type": "text", "text": "total 12\ndrwxr-xr-x. 3 openhands openhands 4096 .git" } ],
+      "is_error": false,
+      "command": "ls -la /workspace/probe18",
+      "exit_code": 0,
+      "timeout": false,
+      "metadata": { "exit_code": 0, "working_dir": "/workspace/probe18" },
+      "full_output_save_dir": "workspace/conversations/a502/observations",
+      "kind": "TerminalObservation"
+    },
+    "action_id": "a-a",
+    "extended_content": [],
+    "kind": "ObservationEvent"
+  },
+  {
+    "id": "st-a3",
+    "timestamp": "2026-09-23T05:58:24.100000",
+    "source": "environment",
+    "parent_id": "o-a",
+    "key": "stats",
+    "value": {
+      "usage_to_metrics": {
+        "default": {
+          "model_name": "openai/qwen3.8-flash",
+          "accumulated_cost": 0.0,
+          "accumulated_token_usage": { "model": "openai/qwen3.8-flash", "prompt_tokens": 11461, "completion_tokens": 100 }
+        }
+      }
+    },
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-a4",
+    "timestamp": "2026-09-23T05:58:24.830200",
+    "source": "environment",
+    "parent_id": "o-a",
+    "key": "stats",
+    "value": {
+      "usage_to_metrics": {
+        "default": {
+          "model_name": "openai/qwen3.8-flash",
+          "accumulated_token_usage": { "model": "openai/qwen3.8-flash", "prompt_tokens": 11779, "completion_tokens": 406 }
+        }
+      }
+    },
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "m-a",
+    "timestamp": "2026-09-23T05:58:26.374827",
+    "source": "agent",
+    "parent_id": "o-a",
+    "llm_message": {
+      "role": "assistant",
+      "content": [ { "cache_prompt": false, "type": "text", "text": "当前目录只有 .git。\n\n**1 + 1 = 2**" } ],
+      "reasoning_content": "The directory listing shows only .git.",
+      "thinking_blocks": []
+    },
+    "llm_response_id": "chatcmpl-2",
+    "activated_skills": [],
+    "extended_content": [],
+    "kind": "MessageEvent"
+  },
+  {
+    "id": "st-a5",
+    "timestamp": "2026-09-23T05:58:26.400000",
+    "source": "environment",
+    "parent_id": "m-a",
+    "key": "execution_status",
+    "value": "finished",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-a6",
+    "timestamp": "2026-09-23T05:58:26.500000",
+    "source": "environment",
+    "parent_id": "m-a",
+    "key": "stats",
+    "value": {
+      "usage_to_metrics": {
+        "default": {
+          "model_name": "openai/qwen3.8-flash",
+          "accumulated_token_usage": { "model": "openai/qwen3.8-flash", "prompt_tokens": 11800, "completion_tokens": 420 }
+        }
+      }
+    },
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-a7",
+    "timestamp": "2026-09-23T05:58:26.600000",
+    "source": "environment",
+    "parent_id": "m-a",
+    "key": "execution_status",
+    "value": "idle",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "u-b",
+    "timestamp": "2026-09-23T05:58:28.100000",
+    "source": "user",
+    "parent_id": "m-a",
+    "llm_message": {
+      "role": "user",
+      "content": [ { "cache_prompt": false, "type": "text", "text": "只回答一个字：好" } ],
+      "thinking_blocks": []
+    },
+    "activated_skills": [],
+    "extended_content": [],
+    "kind": "MessageEvent"
+  },
+  {
+    "id": "st-b1",
+    "timestamp": "2026-09-23T05:58:28.200000",
+    "source": "environment",
+    "parent_id": "u-b",
+    "key": "execution_status",
+    "value": "running",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "m-b",
+    "timestamp": "2026-09-23T05:58:28.825250",
+    "source": "agent",
+    "parent_id": "u-b",
+    "llm_message": {
+      "role": "assistant",
+      "content": [ { "cache_prompt": false, "type": "text", "text": "好" } ],
+      "reasoning_content": "One-character answer.",
+      "thinking_blocks": []
+    },
+    "llm_response_id": "chatcmpl-3",
+    "activated_skills": [],
+    "extended_content": [],
+    "kind": "MessageEvent"
+  },
+  {
+    "id": "st-b2a",
+    "timestamp": "2026-09-23T05:58:28.880000",
+    "source": "environment",
+    "parent_id": "m-b",
+    "key": "stats",
+    "value": {
+      "usage_to_metrics": {
+        "default": {
+          "model_name": "openai/qwen3.8-flash",
+          "accumulated_token_usage": { "model": "openai/qwen3.8-flash", "prompt_tokens": 11950, "completion_tokens": 425 }
+        }
+      }
+    },
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-b2",
+    "timestamp": "2026-09-23T05:58:28.900000",
+    "source": "environment",
+    "parent_id": "m-b",
+    "key": "execution_status",
+    "value": "finished",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-b3",
+    "timestamp": "2026-09-23T05:58:29.000000",
+    "source": "environment",
+    "parent_id": "m-b",
+    "key": "stats",
+    "value": {
+      "usage_to_metrics": {
+        "default": {
+          "model_name": "openai/qwen3.8-flash",
+          "accumulated_token_usage": { "model": "openai/qwen3.8-flash", "prompt_tokens": 12000, "completion_tokens": 430 }
+        }
+      }
+    },
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "u-c",
+    "timestamp": "2026-09-23T06:03:46.191163",
+    "source": "user",
+    "parent_id": "m-b",
+    "llm_message": {
+      "role": "user",
+      "content": [ { "cache_prompt": false, "type": "text", "text": "用 shell 执行 sleep 15 然后 echo done" } ],
+      "thinking_blocks": []
+    },
+    "activated_skills": [],
+    "extended_content": [],
+    "kind": "MessageEvent"
+  },
+  {
+    "id": "st-c1",
+    "timestamp": "2026-09-23T06:03:46.300000",
+    "source": "environment",
+    "parent_id": "u-c",
+    "key": "execution_status",
+    "value": "running",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "st-c2",
+    "timestamp": "2026-09-23T06:04:02.100000",
+    "source": "environment",
+    "parent_id": "u-c",
+    "key": "execution_status",
+    "value": "paused",
+    "kind": "ConversationStateUpdateEvent"
+  },
+  {
+    "id": "i-c",
+    "timestamp": "2026-09-23T06:04:02.200000",
+    "source": "user",
+    "parent_id": "u-c",
+    "kind": "InterruptEvent"
+  }
+]
