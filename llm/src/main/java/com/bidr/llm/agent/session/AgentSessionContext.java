@@ -407,6 +407,35 @@ public class AgentSessionContext {
                 payload.put("output", resultText);
                 emit(AgentEvent.TOOL_RESULT, payload);
             }
+
+            /** 会话链事件流持工具结果全文（I4），天然具备按句柄回捞能力（I5 判据） */
+            @Override
+            public boolean supportsToolResultRecall() {
+                return true;
+            }
+
+            /** 按 tool_call_id 只读回捞 TOOL_RESULT 事件全文（I13：只 events() 读，绝不 appendEvent）；
+             *  同 id 多条取最后一条（cachedTools 重调各带新全文）；payload 非 Map 的历史 String 事件
+             *  静默跳过；无命中返回 null 由工具侧回指令式错误文本 */
+            @Override
+            public String recallToolResult(String toolCallId) {
+                if (toolCallId == null || toolCallId.trim().isEmpty()) {
+                    return null;
+                }
+                String id = toolCallId.trim();
+                String found = null;
+                for (AgentEvent ev : store.events(state.getSessionId(), 0)) {
+                    if (!AgentEvent.TOOL_RESULT.equals(ev.getType()) || !(ev.getPayload() instanceof Map)) {
+                        continue;
+                    }
+                    Map<?, ?> map = (Map<?, ?>) ev.getPayload();
+                    if (id.equals(map.get("tool_call_id"))) {
+                        Object out = map.get("output");
+                        found = out == null ? null : String.valueOf(out);
+                    }
+                }
+                return found;
+            }
         };
     }
 }

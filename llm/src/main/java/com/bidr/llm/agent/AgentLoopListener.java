@@ -66,4 +66,22 @@ public interface AgentLoopListener {
      */
     default void onToolResult(String toolCallId, String toolName, String resultText) {
     }
+
+    /**
+     * 是否支持按 tool_call_id 回捞此前工具结果的原文全文——卸载机制的入场前置闸（I5：
+     * 无回捞通道不卸载，宁可不省不可丢信息）。默认 false：轻链路（票据链/NONE）零改动即向后兼容；
+     * 会话链 {@code AgentSessionContext#loopListener()} 覆写为 true（事件流持全文，按 id 只读回捞）
+     */
+    default boolean supportsToolResultRecall() {
+        return false;
+    }
+
+    /**
+     * 按 tool_call_id 回捞工具结果原文全文（与 {@link #supportsToolResultRecall()} 配套，
+     * 内建 recallToolResult 工具的取数出口）：只读，不得向事件流写入任何内容（I13）。
+     * 默认返回 null=未找到；会话实现顺序扫事件流 TOOL_RESULT 按 id 命中返回 output 全文
+     */
+    default String recallToolResult(String toolCallId) {
+        return null;
+    }
 }

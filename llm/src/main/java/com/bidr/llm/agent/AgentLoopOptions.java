@@ -50,6 +50,21 @@ public class AgentLoopOptions {
      *  分类规则与建议文案由业务注入（问数列校验类/资产生成协议类各配各的） */
     private AgentFailureBreaker failureBreaker;
 
+    /** 上下文 token 预算（估算 token，0=关闭仅按条数裁窗即既有行为，I9）：正值（建议 24000）为进入
+     *  模型的消息估算 token 上限，与条数窗口取更严者（I11）。0 时回落 sys_config
+     *  {@code AGENT_CONTEXT_TOKEN_BUDGET}（见 AgentContextBudget，Param 亦默认 0=全关）。
+     *  <p>为什么不复用 memoryWindow 承载 token 量纲：memoryWindow 被 10+ 处生产调用点以位置参数传入，
+     *  改其量纲会静默改变所有既有语义（20 突然变成 20 token），是最典型的「编译过得了、行为全变了」
+     *  事故形态；新增字段 + 默认关才满足 I9 关闭态零行为变化 */
+    private int contextTokenBudget = 0;
+
+    /** 工具结果入场卸载阈值（字符，0=关闭不卸载，I9）：超过该字符数的工具结果入场时替换为
+     *  预览+句柄指针文本，原文仍在会话事件流全文中，模型经内建 recallToolResult 工具按句柄回捞
+     *  （机制见 ToolResultOffloader/AgentToolRecall，不变式 I4/I5/I6/I7/I10）。
+     *  0 时回落 sys_config {@code AGENT_TOOL_RESULT_OFFLOAD_CHARS}；仅当 listener 支持回捞
+     *  （supportsToolResultRecall=true）时生效，无回捞通道一律原文入窗（I5） */
+    private int toolResultOffloadChars = 0;
+
     public AgentLoopOptions() {
     }
 

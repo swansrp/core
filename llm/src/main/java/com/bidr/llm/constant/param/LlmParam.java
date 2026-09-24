@@ -74,7 +74,37 @@ public enum LlmParam implements Param {
      * 多模态模型调用超时（秒）：图片转录耗时较长，默认高于文本模型
      */
     VISION_TIMEOUT_SECONDS("多模态超时(秒)", "180",
-            "多模态模型调用超时时间（秒）；非法值回落应用配置 llm.vision.timeout-seconds");
+            "多模态模型调用超时时间（秒）；非法值回落应用配置 llm.vision.timeout-seconds"),
+
+    /**
+     * 工具结果入场卸载阈值（字符）：L1 上下文预算治理灰度开关之一，0=关闭（I9 默认零行为变化）
+     */
+    AGENT_TOOL_RESULT_OFFLOAD_CHARS("工具结果卸载阈值(字)", "0",
+            "0=关闭不卸载；正值（建议4000）超过该字符数的工具结果入场替换为预览+句柄，原文经会话事件流按句柄回捞"),
+
+    /**
+     * 指针文本保留的头尾预览合计字数（头 8 成尾 2 成）
+     */
+    AGENT_TOOL_RESULT_PREVIEW_CHARS("工具结果卸载预览(字)", "1000",
+            "指针文本保留的头尾预览合计字数；填 0 或非法值回落默认值 1000；整体关闭卸载与回捞请置 AGENT_TOOL_RESULT_OFFLOAD_CHARS=0"),
+
+    /**
+     * 上下文 token 预算（估算 token）：L1 上下文预算治理灰度开关之二，0=关闭仅按条数裁窗（I9）
+     */
+    AGENT_CONTEXT_TOKEN_BUDGET("Agent上下文token预算", "0",
+            "0=仅按条数裁窗（既有行为）；正值（建议24000）为进入模型的消息估算token上限，与条数取更严者；估算偏保守（宁可早裁）"),
+
+    /**
+     * 单会话回捞次数上限：防模型反复捞致轮次爆炸（超限只提示收口）
+     */
+    AGENT_TOOL_RECALL_MAX_PER_RUN("Agent结果回捞次数上限", "3",
+            "单会话 recallToolResult 调用次数上限，超限只提示收口，防轮次爆炸；填 0 或非法值回落默认值 3；整体关闭卸载与回捞请置 AGENT_TOOL_RESULT_OFFLOAD_CHARS=0"),
+
+    /**
+     * 单次回捞回填模型的原文字符上限（超出截断，全文仍可在前端过程树查看）
+     */
+    AGENT_TOOL_RECALL_MAX_CHARS("Agent回捞返回上限(字)", "20000",
+            "单次回捞回填模型的原文字符上限，超出截断并提示前端过程树可看全文；填 0 或非法值回落默认值 20000；整体关闭卸载与回捞请置 AGENT_TOOL_RESULT_OFFLOAD_CHARS=0");
 
     private final String title;
     private final String defaultValue;

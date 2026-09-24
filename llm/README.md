@@ -375,6 +375,14 @@ ChatLanguageModel agentModel = new RawSyncChatModel(
 // 它实现标准 ChatLanguageModel，直接交给框架工具循环
 AgentLoopResult result = new ToolAgentRunner().run(agentModel, systemPrompt, userPrompt,
         Arrays.asList(new MyTools()), new AgentLoopOptions(), listener);
+
+// （可选）L1 上下文预算治理：两开关默认 0=全关，关闭态行为与改造前逐条一致；
+// 正值覆盖 sys_config（AGENT_CONTEXT_TOKEN_BUDGET / AGENT_TOOL_RESULT_OFFLOAD_CHARS 等，见 AgentContextBudget）。
+// 卸载仅当 listener 支持回捞（会话链 AgentSessionContext.loopListener()）时生效，超大工具结果入场换
+// 「预览+tool_call_id 句柄」指针，模型可内建调 recallToolResult 取回原文；token 预算与条数窗口取更严者。
+AgentLoopOptions governed = new AgentLoopOptions(30, 20);
+governed.setContextTokenBudget(24000);      // 估算 token 上限（ContextTokenEstimator，只高不低）
+governed.setToolResultOffloadChars(4000);   // 超过 4000 字的工具结果入场卸载
 ```
 
 | 行为 | `RawSyncChatModel` | 库原生（`RefreshableChatModel`） |

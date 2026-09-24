@@ -59,6 +59,19 @@
 ### 10. 直连兜底
 - 模型不支持工具调用或工具探索耗尽时，降级为无工具直连出答案。
 
+### 11. 工具结果入场卸载 + 句柄回捞（`toolResultOffloadChars`，2026-09 新增）
+- 超过阈值（字符）的工具结果**入场即替换**为「头尾预览 + `tool_call_id` 句柄」指针，不再等驱逐时才摘要——全文每轮重付的痛点从源头掐断；原文始终在会话事件流全文归档（呈现形态分层），模型经内建 `recallToolResult` 工具按句柄零损失取回。
+- 三道闸门防失控：单 run 回捞次数上限（默认 3）、单次回捞返回上限（默认 20000 字）、回捞结果不再二次卸载。钉住工具 ∪ askUser ∪ recallToolResult 永不卸载；无回捞通道（非会话链 listener）时一律原文入窗；收口路径最后一次 generate 前追加的消息一律原文。
+- 关闭态（`0`，框架默认）零行为变化；`cachedTools` 命中路径同样卸载并配本次新句柄。
+- 位置：`ToolResultOffloader` / `AgentToolRecall` / `ToolAgentRunner.appendToolResultMessage`、回捞读源 `AgentSessionContext.loopListener().recallToolResult`。
+
+### 12. Token 维度上下文预算（`contextTokenBudget`，2026-09 新增）
+- 裁窗计量单位补上 token 量纲：正值时为「进入模型的消息估算 token 上限」（估算式 CJK×1.0 + 其他×0.3 + 每条 4 + 工具定义×1.2，方向只高不低，见 `ContextTokenEstimator`），与条数窗口**取更严者**；被钉住对不可驱逐导致保留段仍超预算时只告警（软超），不迭代重算。
+- 驱逐出口唯一：token 触发与条数触发共用同一条 digest 归档路径，不新增摘要格式、不新增 LLM 调用。
+- 治理开启态每次 generate 前输出一行「上下文计量」（条数/字符/估算 token/本轮卸载/累计卸载/累计回捞/累计驱逐），与 `LoggingModel` 透出的端点真实 token 形成估算 vs 实测校准回路。
+- 关闭态（`0`，框架默认）行为与改造前逐条一致（有等价性回归测试锁死）。
+- 位置：`AgentContextBudget`（三级取值）/ `ContextTokenEstimator` / `ToolAgentRunner.trimToolMemory`。
+
 ---
 
 ## 三、已实现策略（业务层 `core/insight`，SmartQueryMaintainService）
@@ -113,7 +126,6 @@
 
 | 项 | 说明 | 优先级 |
 |---|---|---|
-| Token 维度预算 | 停止条件三维目前只有轮次+时间，缺 token 维度（长上下文成本失控风险） | 中 |
 | LLM 摘要压缩 | 现摘要为确定性一行式；复杂场景可引入小模型对驱逐区段做语义摘要（多一次 LLM 调用，需权衡延迟） | 低 |
 | 模型分档 | 解析/修复换快速非推理模型、维护用深度模型，压缩单轮延迟（需业务确认） | 中 |
 | 链路耗时可观测 | 每链轮数/耗时/工具调用数打点，支撑预算调优的数据依据 | 中 |
@@ -126,3 +138,6 @@
 - 观察收口日志："工具探索达上限…" = 轮次触顶；"会话总耗时达预算…" = 时间触顶——两者都保证有最终结论。
 - 若某工具重复调用仍频繁：确认其已登记进 `CATALOG_PINNED_TOOLS`（防重发）与 `READONLY_CACHE_TOOLS`（零成本兜底）。
 - 新增硬约束时的落点顺序：①工具 `@Tool` description（每轮可见）> ②用户提示词头部（永不被裁）> ③中段提示词（会被裁，避免）。
+- L1 预算治理的运维灰度开关（sys_config，均可被 `AgentLoopOptions` 正数值覆盖；**两类键语义不同**——开关键 `AGENT_TOOL_RESULT_OFFLOAD_CHARS` / `AGENT_CONTEXT_TOKEN_BUDGET` 默认 `0`，0 即"关闭"设计本体；闸门键默认即保守值（1000/3/20000），DB 填 `0` 或负值一律**回落保守默认**而非关闭，要整体关闭请关总开关 `AGENT_TOOL_RESULT_OFFLOAD_CHARS=0`。未显式开启的链路行为与改造前逐条一致）：
+  `AGENT_TOOL_RESULT_OFFLOAD_CHARS`（卸载阈值字，建议 4000）、`AGENT_TOOL_RESULT_PREVIEW_CHARS`（指针预览字，默认 1000）、`AGENT_CONTEXT_TOKEN_BUDGET`（token 预算，建议 24000）、`AGENT_TOOL_RECALL_MAX_PER_RUN`（回捞次数上限，默认 3）、`AGENT_TOOL_RECALL_MAX_CHARS`（回捞返回上限字，默认 20000）。
+- 判断治理是否真生效：看过程日志「上下文计量」行与「token 预算触发驱逐」「工具结果入场卸载」；关闭态不产生任何计量行（事件流零新增）。

@@ -21,6 +21,7 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,10 +71,33 @@ public class ToolAgentRunner {
         AgentLoopOptions opt = options == null ? new AgentLoopOptions() : options;
         // 停止检查透传至 LLM 等待层：等待期间轮询停止键，跨实例停止键也能快速收口（不只靠线程中断）
         ChatLanguageModel logged = new LoggingModel(model, sink::log, sink::shouldStop);
+        // ---- L1 上下文预算治理：阈值三级取值（option 正值 > sys_config > 默认全关，I9 关闭态零行为变化）----
+        int offloadChars = AgentContextBudget.offloadChars(opt.getToolResultOffloadChars());
+        int tokenBudget = AgentContextBudget.tokenBudget(opt.getContextTokenBudget());
+        int previewChars = AgentContextBudget.previewChars();
+        // I14：全部计数收敛在 run() 局部 RunStats 实例，runner 自身不新增任何字段（Spring 单例共享）
+        RunStats stats = new RunStats(sink);
+        stats.recallAvailable = sink.supportsToolResultRecall();
+        // I5：无回捞通道不卸载；I6：钉住工具 ∪ askUser ∪ recallToolResult 永不卸载
+        boolean offloadOn = offloadChars > 0 && stats.recallAvailable;
+        Set<String> neverOffload = new HashSet<>(
+                opt.getPinnedTools() == null ? Collections.emptySet() : opt.getPinnedTools());
+        neverOffload.add("askUser");
+        neverOffload.add(AgentToolRecall.TOOL_NAME);
+        List<Object> effectiveTools = new ArrayList<>(toolObjects);
+        if (offloadOn) {
+            // 回捞工具仅在有卸载时注册（默认零副作用，I9：无回捞通道/关闭态 specs 与改造前逐条一致）；
+            // 不登记 roundExemptTools——回捞实打实占轮次，轮次上限是回捞爆炸的最终兜底
+            stats.recallTool = new AgentToolRecall(sink, AgentContextBudget.recallMaxPerRun(),
+                    AgentContextBudget.recallMaxChars(), stats.offloadedHandles);
+            effectiveTools.add(stats.recallTool);
+        }
+        // specs 采集与全部 executeTool 调用点一律走 effectiveTools（否则回捞工具反射找不到 holder）
         List<ToolSpecification> specs = new ArrayList<>();
-        for (Object tools : toolObjects) {
+        for (Object tools : effectiveTools) {
             specs.addAll(ToolSpecifications.toolSpecificationsFrom(tools));
         }
+        int fixedOverheadTokens = ContextTokenEstimator.estimateSpecs(specs);
         List<ChatMessage> messages = new ArrayList<>();
         // system 槽可空：无框架级纪律可发时不加 SystemMessage（业务内容由调用方拼入 user 提示）
         if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
@@ -108,7 +132,8 @@ public class ToolAgentRunner {
                     sink.log("恢复指导语已注入：" + resumeGuidance);
                     messages.add(UserMessage.from("【用户补充指导】" + resumeGuidance.trim()));
                 }
-                trimToolMemory(messages, opt);
+                trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
+                logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
                 Response<AiMessage> resp = logged.generate(messages, specs);
                 AiMessage ai = resp.content();
                 messages.add(ai);
@@ -132,13 +157,16 @@ public class ToolAgentRunner {
                                             sink.log("工具 " + req.name() + " 同参缓存命中，直接返回：" + fullText(cached));
                         sink.onToolCall(req.id(), req.name(), req.arguments());
                         sink.onToolResult(req.id(), req.name(), cached);
-                        messages.add(ToolExecutionResultMessage.from(req, cached));
+                        // 缓存存原文全文（执行结果真源）；命中路径照样施加卸载并配本次新 id 的指针
+                        // （呈现形态分层，事件流全文齐全 → 新句柄可回捞，死循环论证见计划岔路 3）
+                        appendToolResultMessage(messages, req, cached, neverOffload,
+                                offloadChars, previewChars, true, stats);
                         continue;
                     }
                     sink.log("调用工具 " + req.name() + "(" + fullText(req.arguments()) + ")");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
                     long toolStart = System.currentTimeMillis();
-                    String toolResult = executeTool(req, toolObjects);
+                    String toolResult = executeTool(req, effectiveTools);
                     if (opt.getBudgetExemptTools().contains(req.name())) {
                         long waited = System.currentTimeMillis() - toolStart;
                         exemptMs += waited;
@@ -147,9 +175,11 @@ public class ToolAgentRunner {
                     if (opt.getCachedTools().contains(req.name()) && !toolResult.startsWith("【工具调用失败】")) {
                         toolCache.put(cacheKey, toolResult);
                     }
-                    messages.add(ToolExecutionResultMessage.from(req, toolResult));
+                    // I4：事件流先收全文（熔断器同样吃原文，防把指针当新失败模式计数）；入场再做卸载
                     sink.log("工具 " + req.name() + " 返回：" + fullText(toolResult));
                     sink.onToolResult(req.id(), req.name(), toolResult);
+                    appendToolResultMessage(messages, req, toolResult, neverOffload,
+                            offloadChars, previewChars, true, stats);
                     // 失败分类熔断：失败文本按规则集计数，同类累计达阈值时取回拉直方向的指令
                     // （本轮工具循环结束后注入一条用户消息，一次性语义）
                     if (opt.getFailureBreaker() != null && breakerAdvice == null) {
@@ -184,7 +214,8 @@ public class ToolAgentRunner {
             messages.add(UserMessage.from("探索预算已用完，禁止再调用任何工具。唯一例外：仍存在影响结论口径"
                     + "且无法自决的真歧义时，可调用 askUser 向用户确认后立即输出最终结论。"
                     + "请基于已有信息立即输出最终结论。"));
-            trimToolMemory(messages, opt);
+            trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
+            logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
             List<ToolSpecification> closingSpecs = new ArrayList<>();
             for (ToolSpecification s : specs) {
                 if ("askUser".equals(s.name())) {
@@ -199,10 +230,14 @@ public class ToolAgentRunner {
                 for (ToolExecutionRequest req : last.content().toolExecutionRequests()) {
                     sink.log("收口例外：执行 " + req.name() + " 后无工具直出");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
-                    String closingResult = executeTool(req, toolObjects);
+                    String closingResult = executeTool(req, effectiveTools);
                     sink.onToolResult(req.id(), req.name(), closingResult);
-                    messages.add(ToolExecutionResultMessage.from(req, closingResult));
+                    // I10 收口路径不卸载：最后一次 generate 之前追加的消息一律原文
+                    // （此时省 token 已无意义，丢信息代价最大；allowOffload=false 双保险）
+                    appendToolResultMessage(messages, req, closingResult, neverOffload,
+                            offloadChars, previewChars, false, stats);
                 }
+                logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
                 last = logged.generate(messages);
             }
             log.info("工具循环收口完成（上限 {} 轮 / 预算 {}s，超预算={}）",
@@ -351,8 +386,16 @@ public class ToolAgentRunner {
     /** 工具循环上下文滑动窗口：保留 system+首轮 user（+摘要归档），中段只留最近 window 条；
      *  切点对齐到非工具结果消息，避免拆散「AI 工具调用↔结果」配对导致协议报错；
      *  钉住工具（如 askUser）的消息对被驱逐前提取到头部永久保留（用户已确认口径不可遗忘）；
-     *  被驱逐的非钉住消息确定性压缩为摘要归档（零 LLM 成本）插入头部，模型裁窗后仍知探索过什么 */
-    private void trimToolMemory(List<ChatMessage> messages, AgentLoopOptions opt) {
+     *  被驱逐的非钉住消息确定性压缩为摘要归档（零 LLM 成本）插入头部，模型裁窗后仍知探索过什么。
+     *  <p>token 维度预算（L1 治理，I11 双约束取更严）：条数切点算法一行不改（I9 关闭态逐条等价），
+     *  tokenBudget&gt;0 时另算反向累加切点，两者取更严（max：保留段须同时满足两上限）后仍统一走
+     *  同一段切点回退（I1）；
+     *  驱逐出口唯一——无论哪个维度触发都走同一条 digest 路径（I12），不新增摘要格式、不新增 LLM 调用。
+     *  <p>private（非公共 API，仅供 run() 内部调用）：token 切点与关闭态等价性经 run() 黑盒测试覆盖
+     *  （签名含私有嵌套类型 RunStats，同包测试无法直打）。
+     *  引用不变式：I1/I2/I3/I9/I11/I12 */
+    private void trimToolMemory(List<ChatMessage> messages, AgentLoopOptions opt, int fixedOverheadTokens,
+                                int tokenBudget, RunStats stats) {
         // 头部保留：有 system 时 system+首轮 user 两条，无 system 时仅首轮 user 一条（与组装口径联动）
         int headEnd = (!messages.isEmpty() && messages.get(0) instanceof SystemMessage)
                 ? MEMORY_HEAD : MEMORY_HEAD - 1;
@@ -365,13 +408,47 @@ public class ToolAgentRunner {
             }
         }
         int window = opt.getMemoryWindow();
-        if (messages.size() <= headEnd + window) {
+        // 步骤 A：条数切点——既有算法原样（-1=未触发）；条数未超时不能直接 return，还须判 token 分支（I11）
+        int fromCount = messages.size() <= headEnd + window ? -1 : messages.size() - window;
+        // 步骤 B：token 切点——从尾部反向累加估算（含 specs 固定开销 + head 段），超预算即止（I8 宁高不低）
+        int fromToken = -1;
+        if (tokenBudget > 0 && messages.size() > headEnd) {
+            long acc = (long) fixedOverheadTokens
+                    + ContextTokenEstimator.estimateMessages(messages.subList(0, headEnd));
+            int i = messages.size() - 1;
+            while (i >= headEnd) {
+                int est = ContextTokenEstimator.estimateMessage(messages.get(i));
+                if (acc + est > tokenBudget) {
+                    break;
+                }
+                acc += est;
+                i--;
+            }
+            fromToken = i + 1;
+            // 步骤 D 兜底：尾部最近一组自身就超预算时回退保留最近一组——不裁空、不抛
+            if (fromToken > messages.size() - 1) {
+                fromToken = messages.size() - 1;
+            }
+            // 全保留仍在预算内 → 本维度无需驱逐（fromToken==headEnd 语义归一为未触发）
+            if (fromToken <= headEnd) {
+                fromToken = -1;
+            }
+        }
+        if (fromCount < 0 && fromToken < 0) {
             return;
         }
-        int from = messages.size() - window;
+        // 双约束取更严（保留段须同时满足条数与预算两个上限 → 取更靠后/驱逐更多的切点，I11）；
+        // 单维度触发时取触发者
+        int from = fromCount < 0 ? fromToken : (fromToken < 0 ? fromCount : Math.max(fromCount, fromToken));
+        // 切点回退避拆对（唯一防线，token 新切点同样必须再走这一段，I1）
         while (from > headEnd && messages.get(from) instanceof ToolExecutionResultMessage) {
             from--;
         }
+        if (from <= headEnd) {
+            return;
+        }
+        // 步骤 C：驱逐单一出口（I12）——钉住搬移 + digest 归档 + 重组，条数/token 触发共用
+        boolean tokenTriggered = fromToken >= 0 && (fromCount < 0 || fromToken >= fromCount);
         List<ChatMessage> pinned = pinnedBefore(messages, headEnd, from, opt.getPinnedTools());
         String digestNew = digestOf(messages, headEnd, from, pinned);
         List<ChatMessage> tail = new ArrayList<>(messages.subList(from, messages.size()));
@@ -382,6 +459,79 @@ public class ToolAgentRunner {
         }
         messages.addAll(pinned);
         messages.addAll(tail);
+        stats.totalEvicted += from - headEnd - pinned.size();
+        if (tokenTriggered) {
+            stats.sink.log("token 预算触发驱逐：保留尾部 " + tail.size() + " 条（钉住对 " + pinned.size()
+                    + " 条搬移头部保留），驱逐入摘要 " + (from - headEnd - pinned.size()) + " 条");
+        }
+        // 步骤 D：软超只观测不迭代——钉住对不可驱逐致保留段仍超预算时告警一次即止（防不可终止）
+        if (tokenBudget > 0) {
+            int estNow = ContextTokenEstimator.estimateMessages(messages) + fixedOverheadTokens;
+            if (estNow > tokenBudget) {
+                log.warn("上下文 token 预算软超: 估算 {} > 预算 {}（钉住对不可驱逐所致）", estNow, tokenBudget);
+            }
+        }
+    }
+
+    /** 工具结果入场统一收敛点（三处 add 全走此处）：卸载判定在 messages.add 之前（I2 只替换文本
+     *  不改位置/类型/id）；allowOffload=false 供收口路径保原文（I10）；neverOffload 命中保原文（I6）；
+     *  无回捞通道由 shouldOffload 的 recallChannelAvailable=false 拒绝卸载（I5）。private（非公共 API，
+     *  仅供 run() 内部调用），卸载行为经 run() 黑盒测试覆盖。
+     *  引用不变式：I2/I5/I6/I7/I10 */
+    private void appendToolResultMessage(List<ChatMessage> messages, ToolExecutionRequest req, String resultText,
+                                         Set<String> neverOffload, int offloadChars,
+                                         int previewChars, boolean allowOffload, RunStats stats) {
+        String text = resultText;
+        if (allowOffload && ToolResultOffloader.shouldOffload(req.name(), resultText, offloadChars,
+                neverOffload, stats.recallAvailable)) {
+            String pointer = ToolResultOffloader.pointerOf(req.id(), req.name(), resultText.length(),
+                    ContextTokenEstimator.estimateText(resultText), resultText, previewChars);
+            if (pointer != null) {
+                text = pointer;
+                stats.offloadedThisRound++;
+                stats.totalOffloaded++;
+                stats.offloadedHandles.add(req.id());
+                stats.sink.log("工具结果入场卸载：" + req.name() + " tool_call_id=" + req.id()
+                        + " 原 " + resultText.length() + " 字 → 指针 " + pointer.length()
+                        + " 字（原文已经事件流归档，可按句柄回捞）");
+            }
+        }
+        messages.add(ToolExecutionResultMessage.from(req, text));
+    }
+
+    /** 计量日志（验收数字来源，I8 校准回路）：每次 logged.generate 之前一条，与 LoggingModel
+     *  的端点真实 token 透出配对（估算 vs 实测）。仅治理开启态输出（I9：关闭态事件流零新增）；
+     *  每轮输出一行并清零本轮卸载计数（累计计数不清） */
+    private void logContextMeter(AgentLoopListener sink, RunStats stats, List<ChatMessage> messages,
+                                 int fixedOverheadTokens, int tokenBudget, boolean offloadOn) {
+        if (tokenBudget <= 0 && !offloadOn) {
+            return;
+        }
+        sink.log("上下文计量：条数=" + messages.size()
+                + " 字符=" + ContextTokenEstimator.countChars(messages)
+                + " 估算token=" + (ContextTokenEstimator.estimateMessages(messages) + fixedOverheadTokens)
+                + "（含工具定义 " + fixedOverheadTokens + "）"
+                + " 本轮卸载=" + stats.offloadedThisRound
+                + " 累计卸载=" + stats.totalOffloaded
+                + " 累计回捞=" + (stats.recallTool == null ? 0 : stats.recallTool.used())
+                + " 累计驱逐=" + stats.totalEvicted);
+        stats.offloadedThisRound = 0;
+    }
+
+    /** run() 作用域统计容器（I14：runner 无实例字段，本对象只作为 run 内局部变量存在）：
+     *  卸载/回捞/驱逐计数 + 本 run 已卸载句柄台账（回捞未命中时喂可用清单） */
+    private static final class RunStats {
+        final AgentLoopListener sink;
+        boolean recallAvailable;
+        AgentToolRecall recallTool;
+        final List<String> offloadedHandles = new ArrayList<>();
+        int offloadedThisRound;
+        int totalOffloaded;
+        int totalEvicted;
+
+        RunStats(AgentLoopListener sink) {
+            this.sink = sink;
+        }
     }
 
     /** 被驱逐区段确定性压缩：工具调用一行（名+参数摘要→结果摘要）、结论文本一行；
