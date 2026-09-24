@@ -249,7 +249,9 @@ public class AgentSessionService {
             // 存活信号走独立轻键（不读改写整条快照，避免与 run 线程落快照丢更新互踩）
             store.touchView(sessionId);
         }
-        if (!state.isTerminal() && System.currentTimeMillis() - state.getHeartbeat() > ORPHAN_HEARTBEAT_MILLIS) {
+        // 失联判定取"快照 heartbeat 与独立存活键"较大者：心跳线程只写轻键，不再回写状态快照
+        long aliveAt = Math.max(state.getHeartbeat(), store.runTime(sessionId));
+        if (!state.isTerminal() && System.currentTimeMillis() - aliveAt > ORPHAN_HEARTBEAT_MILLIS) {
             log.warn("agent 会话心跳超时判定失联, sessionId={}, agentKey={}", sessionId, state.getAgentKey());
             state.setStatus(AgentSessionState.STOPPED);
             state.setEndedAt(System.currentTimeMillis());
@@ -460,7 +462,7 @@ public class AgentSessionService {
     private void refreshHeartbeat(AgentSessionState state, AutonomousAgentDefinition definition) {
         try {
             // 同步刷新内存对象心跳：run 线程后续落快照（persistStages）携带新值，
-            // 防高频快照把 Redis 心跳回滚为启动时刻致查询侧误判失联
+            // 使快照 heartbeat 尽量跟上（查询侧失联判定还会并取独立存活键 runTime 兜底）
             state.setHeartbeat(System.currentTimeMillis());
             AgentSessionState latest = store.getState(state.getSessionId());
             if (latest == null || latest.isTerminal()) {
@@ -489,8 +491,9 @@ public class AgentSessionService {
                     return;
                 }
             }
-            latest.setHeartbeat(System.currentTimeMillis());
-            store.saveState(latest);
+            // 🔴 存活信号只写独立轻键：状态键是整份快照的读-改-写，心跳线程若回写快照，
+            // 会与 run 线程落快照互相丢更新（阶段/live 被回滚）——与 touchView 同一口径
+            store.touchRun(state.getSessionId());
         } catch (Exception e) {
             log.warn("agent 会话心跳刷新失败, sessionId={}, error={}", state.getSessionId(), e.getMessage());
         }

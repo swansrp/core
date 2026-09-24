@@ -109,4 +109,28 @@ public class RedisAgentSessionStoreTest {
         Assert.assertEquals(1L, store.appendEvent(SESSION, AgentEvent.RUN_START, "start"));
         Assert.assertEquals(2L, store.appendEvent(SESSION, AgentEvent.LOG, "log"));
     }
+
+    /**
+     * 执行实例存活信号必须是独立轻键：心跳线程据此刷新，永不回写状态快照
+     * （状态键是整份 JSON 的读-改-写，与 run 线程互踩会丢阶段/live 更新）
+     */
+    @Test
+    public void 存活键独立于状态与事件键() {
+        Map<String, String> backing = new ConcurrentHashMap<>();
+        RedisAgentSessionStore store = newStore(backing, new AtomicBoolean(false));
+
+        Assert.assertEquals("未心跳应为 0", 0L, store.runTime(SESSION));
+        store.touchRun(SESSION);
+        long aliveAt = store.runTime(SESSION);
+        Assert.assertTrue(aliveAt > 0);
+        Assert.assertEquals("🔴 只写轻键：不得产生状态键或事件键",
+                false, backing.containsKey(PREFIX + SESSION));
+        Assert.assertEquals(false, backing.containsKey(EVENTS_KEY));
+        Assert.assertTrue(backing.containsKey(PREFIX + SESSION + ":run"));
+
+        // 收口清理控制键时一并清掉存活键（防残留信号让失联判定失效）
+        store.clearControls(SESSION);
+        Assert.assertEquals(0L, store.runTime(SESSION));
+        Assert.assertEquals(false, backing.containsKey(PREFIX + SESSION + ":run"));
+    }
 }

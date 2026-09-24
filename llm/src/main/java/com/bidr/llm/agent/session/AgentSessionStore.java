@@ -42,6 +42,16 @@ public interface AgentSessionStore {
     /** 前端最近存活时间（无信号返回 0；断开即停判定依据） */
     long viewTime(String sessionId);
 
+    /**
+     * 刷新**执行实例存活**信号（属主实例心跳任务调用；与 {@link #touchView} 同为独立轻键）。
+     * 🔴 心跳线程**不得改用 saveState 刷 heartbeat 字段**：状态键是整份快照的读-改-写，
+     * 与 run 线程落快照会互相丢更新（阶段/live 被回滚）。
+     */
+    void touchRun(String sessionId);
+
+    /** 执行实例最近存活时间（无信号返回 0；失联判定与快照 heartbeat 取较大者） */
+    long runTime(String sessionId);
+
     /** 暂停会话（note 为暂停说明，前端状态条展示；幂等，重复暂停覆盖说明） */
     void pause(String sessionId, String note);
 

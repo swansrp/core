@@ -25,6 +25,7 @@ public class InMemoryAgentSessionStore implements AgentSessionStore {
         String answerJson;
         boolean stopRequested;
         long lastViewAt;
+        long lastRunAt;
     }
 
     private final Map<String, SessionBox> sessions = new ConcurrentHashMap<>();
@@ -87,6 +88,17 @@ public class InMemoryAgentSessionStore implements AgentSessionStore {
     @Override
     public void touchView(String sessionId) {
         box(sessionId).lastViewAt = System.currentTimeMillis();
+    }
+
+    @Override
+    public void touchRun(String sessionId) {
+        box(sessionId).lastRunAt = System.currentTimeMillis();
+    }
+
+    @Override
+    public long runTime(String sessionId) {
+        SessionBox box = sessions.get(sessionId);
+        return box == null ? 0 : box.lastRunAt;
     }
 
     @Override

@@ -20,14 +20,12 @@ import java.util.Set;
  * {@link #appendEvent} 为整表读-改-写、无跨键原子性，双写会互相覆盖。故任何非 run 线程
  * （HTTP 请求线程、心跳调度线程、定时任务）<b>都不得对同一会话调用 appendEvent</b>：
  * 跨线程要传达的事实走控制键（{@code requestStop}/{@code pause}/{@code submitAnswer}），
- * 由 run 线程收口时统一补发事件。
+ * 由 run 线程收口时统一补发事件；执行实例存活信号同样走独立轻键（{@code touchRun}），
+ * 心跳线程不回写状态快照。
  * <p>
  * 🔴 另一条同等重要的约束：<b>读失败不得当作"空表"回写</b>，否则一次瞬时失败会把整条历史截断
  * （实测中断标志位污染 Redisson 期间 64 条→2 条、序号从 1 重启）。{@link #appendEvent} 已按
  * "读失败即跳过本次追加"处理；{@link #read} 仍返回 null 表示失败，调用方不得据此构造新值写回。
- * <p>
- * 已知残留竞态：心跳线程仍会 saveState 刷 heartbeat 字段（同一状态键的读-改-写），影响面小于
- * 事件流（下次写入即自愈），待改为独立心跳键。
  * <p>
  * Redis 不可用时不中断执行：事件与状态写入失败仅记日志（会话退化无过程可见，控制键失联），
  * 与 RedisStreamAnswerStore 的容错口径一致
@@ -151,6 +149,24 @@ public class RedisAgentSessionStore implements AgentSessionStore {
     }
 
     @Override
+    public void touchRun(String sessionId) {
+        redisService.set(runKey(sessionId), ttlSeconds, String.valueOf(System.currentTimeMillis()));
+    }
+
+    @Override
+    public long runTime(String sessionId) {
+        String value = redisService.get(runKey(sessionId), String.class);
+        if (value == null) {
+            return 0;
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    @Override
     public long viewTime(String sessionId) {
         String value = redisService.get(viewKey(sessionId), String.class);
         if (value == null) {
@@ -218,6 +234,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         redisService.delete(answerKey(sessionId));
         redisService.delete(stopKey(sessionId));
         redisService.delete(viewKey(sessionId));
+        redisService.delete(runKey(sessionId));
     }
 
     // ---- 序列化与键 ----
@@ -246,6 +263,10 @@ public class RedisAgentSessionStore implements AgentSessionStore {
 
     private String eventsKey(String sessionId) {
         return keyPrefix + sessionId + ":events";
+    }
+
+    private String runKey(String sessionId) {
+        return keyPrefix + sessionId + ":run";
     }
 
     private String pauseKey(String sessionId) {
