@@ -45,8 +45,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>翻译近乎 1:1：core/llm 的工具事件 payload 键位已与规范事件对齐
  * （{@code tool_call_id/tool_name/arguments}｜{@code output}），故本类只做搬运不做重塑。</p>
  *
- * <p>🔴 不得阻塞：外部任务是分钟级的，工具面只暴露"提交/查进度/取结果/取消"，
- * 绝不在 {@code @Tool} 里同步等完结（会霸占轮次并撑爆上下文）。</p>
+ * <p>🔴 不得<b>无界</b>阻塞：外部任务是分钟级的，工具面只暴露"提交/等待/查进度/取结果/取消"。
+ * 等待走 {@code ExternalRuntimeTools.waitExternalTask} 的有界阻塞（单次 ≤60s、内部短周期探询
+ * 本类的 {@code progress} 纯读、可中断、轮次豁免由各 agent 的 loopOptions 声明）；
+ * 无界同步等完结仍然禁止（会霸占轮次并撑爆上下文）。</p>
  *
  * @author sharp
  * @since 2026/9/24
