@@ -109,4 +109,24 @@ public interface AgentRuntimeProvider {
     default UploadUrlResult createUploadUrl(String fileName, long fileSize, String mimeType) {
         throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST, "附件直传");
     }
+
+    /**
+     * 附件是否走"relay 代收转推"（上游只有文件上传 API、无预签名位时的第二条路：
+     * 浏览器把文件交给 relay，relay 用服务端凭据写进沙箱工作目录）。
+     * 与 {@link #supportsPresignedUpload()} 互斥使用：两者皆 false 表示该上游不支持附件。
+     */
+    default boolean supportsRelayUpload() {
+        return false;
+    }
+
+    /**
+     * 代收转推：把内容写入该会话沙箱内路径，返回沙箱内绝对路径（供正文引用）。
+     *
+     * @param sessionId 平台会话 id
+     * @param fileName  展示名（实现方须自行清洗，禁止让它拼出目录穿越）
+     * @param content   文件字节
+     */
+    default String uploadFile(String sessionId, String fileName, byte[] content) {
+        throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST, "附件代收转推");
+    }
 }

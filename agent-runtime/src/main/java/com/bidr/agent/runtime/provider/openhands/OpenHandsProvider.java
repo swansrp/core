@@ -288,10 +288,49 @@ public class OpenHandsProvider implements AgentRuntimeProvider {
     }
 
     /**
-     * 附件不走预签名直传（上游是 multipart 文件 API，未接线）
+     * 附件不走预签名直传（上游是 multipart 文件 API）
      */
     @Override
     public boolean supportsPresignedUpload() {
         return false;
+    }
+
+    /**
+     * 附件走 relay 代收转推：浏览器把文件交给 relay，relay 用服务端凭据写进该会话的沙箱工作目录。
+     */
+    @Override
+    public boolean supportsRelayUpload() {
+        return true;
+    }
+
+    @Override
+    public String uploadFile(String sessionId, String fileName, byte[] content) {
+        String safe = safeFileName(fileName);
+        String absolute = workspaceDir(sessionId) + "/" + safe;
+        client.upload(sessionId, absolute, safe, content);
+        return absolute;
+    }
+
+    /**
+     * 🔴 文件名清洗：只取 basename、去掉目录穿越与控制字符、限长。
+     * 它会被拼进沙箱**绝对路径**交给上游写文件接口，不清洗等于把"任意路径写"开放给浏览器。
+     */
+    static String safeFileName(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "file";
+        }
+        String name = raw.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        name = name.replaceAll("[^A-Za-z0-9._\\-\\u4e00-\\u9fa5]", "_").replace("..", "_");
+        if (name.startsWith(".")) {
+            name = "_" + name.substring(1);
+        }
+        if (name.isEmpty()) {
+            return "file";
+        }
+        return name.length() > 120 ? name.substring(name.length() - 120) : name;
     }
 }

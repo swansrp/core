@@ -13,7 +13,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
@@ -57,7 +61,9 @@ public class OpenHandsClient {
         this.rest = new RestTemplate(factory);
         this.rest.setMessageConverters(Arrays.asList(
                 new StringHttpMessageConverter(StandardCharsets.UTF_8),
-                new MappingJackson2HttpMessageConverter(this.mapper)));
+                new MappingJackson2HttpMessageConverter(this.mapper),
+                // 附件代收转推走 multipart，需表单转换器（其余调用仍只认 JSON/文本）
+                new FormHttpMessageConverter()));
         // 非 2xx 不抛：detail 体要读出来才能映射错误码
         this.rest.setErrorHandler(new ResponseErrorHandler() {
             @Override
@@ -87,8 +93,7 @@ public class OpenHandsClient {
      * @param path   绝对路径（不含 host），如 /api/conversations
      * @param body   请求体（可空）
      */
-    public JsonNode call(HttpMethod method, String path, Object body) {
-        HttpHeaders headers = new HttpHeaders();
+    public JsonNode call(HttpMethod method, String path, Object body) {        HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         String key = config.requireApiKey();
@@ -118,6 +123,49 @@ public class OpenHandsClient {
             }
         }
         throw mapError(status, raw, method, path, t0);
+    }
+
+    /**
+     * 附件代收转推：{@code POST /api/conversations/{cid}/file/upload?path=<绝对路径>}
+     * （multipart 字段名固定为 {@code file}，实测 openapi 定义）。
+     *
+     * @param absolutePath 沙箱内绝对路径（调用方负责清洗，禁止目录穿越）
+     */
+    public JsonNode upload(String conversationId, String absolutePath, String fileName, byte[] content) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.set("X-Session-API-Key", config.requireApiKey());
+        ByteArrayResource resource = new ByteArrayResource(content == null ? new byte[0] : content) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        };
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", resource);
+        String path = "/api/conversations/" + enc(conversationId) + "/file/upload?path=" + enc(absolutePath);
+        String url = base() + "/api/conversations/" + enc(conversationId) + "/file/upload"
+                + "?path=" + enc(absolutePath);
+        ResponseEntity<String> resp;
+        try {
+            resp = rest.exchange(URI.create(url), HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+        } catch (RestClientException e) {
+            if (AgentRuntimeErrors.isUnauthorized(e)) {
+                throw AgentRuntimeErrors.keyRejected("POST " + path);
+            }
+            throw AgentRuntimeErrors.of(-1, "Agent 运行时不可达：POST " + path + "（" + e.getMessage() + "）");
+        }
+        int status = resp.getStatusCode().value();
+        String raw = resp.getBody();
+        if (status >= 200 && status < 300) {
+            try {
+                return raw == null || raw.trim().isEmpty() ? mapper.nullNode() : mapper.readTree(raw);
+            } catch (Exception e) {
+                throw AgentRuntimeErrors.of(-1, "Agent 运行时响应不是合法 JSON（POST " + path + "）");
+            }
+        }
+        throw mapError(status, raw, HttpMethod.POST, path, System.currentTimeMillis());
     }
 
     /**

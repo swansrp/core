@@ -13,6 +13,8 @@ import com.bidr.agent.runtime.dao.entity.ChatSession;
 import com.bidr.agent.runtime.service.AgentChatSessionService;
 import com.bidr.llm.agent.runtime.spi.AgentRuntimeProvider;
 import com.bidr.llm.agent.runtime.spi.TurnOpenCmd;
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -20,16 +22,20 @@ import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -60,6 +66,9 @@ import java.util.UUID;
 public class AgentRuntimeRelayController {
 
     private final AgentRuntimeProvider provider;
+
+    /** 代收转推单文件上限（与平台侧"非图片 ≤100MB"区分：本路径经 relay 内存中转，收紧到 20MB） */
+    private static final long MAX_UPLOAD_BYTES = 20L * 1024 * 1024;
     private final AgentChatSessionService sessionService;
     private final AgentStreamRelay streamRelay;
 
@@ -148,5 +157,39 @@ public class AgentRuntimeRelayController {
         long fileSize = Long.parseLong(String.valueOf(req.getOrDefault("fileSize", req.getOrDefault("file_size", "0"))));
         String mimeType = String.valueOf(req.getOrDefault("mimeType", req.getOrDefault("mime_type", "")));
         return provider.createUploadUrl(fileName, fileSize, mimeType);
+    }
+
+    /**
+     * 附件代收转推（能力位分支二）：上游无预签名位时（如 OpenHands 只有 multipart 文件 API），
+     * 浏览器把文件交给 relay，relay 用服务端凭据写进该会话沙箱工作目录，返回沙箱内绝对路径供正文引用。
+     * 🔴 归属强校验同其他端点；文件名清洗与大小上限在 provider/本方法内做，绝不让浏览器决定落盘路径。
+     */
+    @ApiOperation("附件代收转推（写入会话沙箱目录）")
+    @PostMapping("/sessions/{sessionId}/files")
+    public Map<String, Object> uploadFile(@PathVariable String sessionId,
+                                          @RequestParam("file") MultipartFile file) {
+        sessionService.requireOwned(sessionId);
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException(ErrCodeSys.SYS_VALIDATE_NOT_PASS, "文件内容为空");
+        }
+        if (file.getSize() > MAX_UPLOAD_BYTES) {
+            throw new ServiceException(ErrCodeSys.SYS_VALIDATE_NOT_PASS,
+                    "文件超过上限 " + (MAX_UPLOAD_BYTES / (1024 * 1024)) + "MB");
+        }
+        if (!provider.supportsRelayUpload()) {
+            throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST, "附件代收转推");
+        }
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new ServiceException(ErrCodeSys.SYS_VALIDATE_NOT_PASS, "文件读取失败");
+        }
+        String path = provider.uploadFile(sessionId, file.getOriginalFilename(), bytes);
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("path", path);
+        res.put("name", file.getOriginalFilename());
+        res.put("size", file.getSize());
+        return res;
     }
 }
