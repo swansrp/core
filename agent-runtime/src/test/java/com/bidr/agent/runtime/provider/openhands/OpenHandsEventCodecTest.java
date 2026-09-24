@@ -1,8 +1,8 @@
 package com.bidr.agent.runtime.provider.openhands;
 
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.runtime.dto.TurnBlock;
 import com.bidr.llm.agent.runtime.dto.TurnItem;
-import com.bidr.kernel.exception.ServiceException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -12,12 +12,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Title: OpenHandsEventCodecTest

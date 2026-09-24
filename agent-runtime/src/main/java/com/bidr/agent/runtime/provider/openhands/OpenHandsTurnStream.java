@@ -7,51 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.FRAME_CANCELLED;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.FRAME_DONE;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.FRAME_ERROR;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.FRAME_TEXT_DELTA;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.FRAME_THINKING_DELTA;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.KIND_ACTION;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.KIND_AGENT_ERROR;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.KIND_CONV_ERROR;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.KIND_INTERRUPT;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.KIND_OBSERVATION;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.KIND_PAUSE;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.REPLY_CANCELLED;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.REPLY_COMPLETED;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.REPLY_FAILED;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.STATUS_ERROR;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.STATUS_FINISHED;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.STATUS_PAUSED;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.STATUS_RUNNING;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.STATUS_STUCK;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.acceptedFrame;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.deltaFrame;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.executionStatus;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.id;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.isAgentMessage;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.isUserMessage;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.kind;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.messageText;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.observationText;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.snapshotFrame;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.startedFrame;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.statsValue;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.terminalFrame;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.toolCallFrame;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.toolCallId;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.toolName;
-import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.toolResultFrame;
+import static com.bidr.agent.runtime.provider.openhands.OpenHandsEventCodec.*;
 
 /**
  * Title: OpenHandsTurnStream

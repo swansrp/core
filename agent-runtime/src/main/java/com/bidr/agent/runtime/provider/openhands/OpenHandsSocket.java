@@ -2,13 +2,7 @@ package com.bidr.agent.runtime.provider.openhands;
 
 import lombok.extern.slf4j.Slf4j;
 
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
+import javax.websocket.*;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URI;

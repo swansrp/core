@@ -1,7 +1,6 @@
 package com.bidr.agent.runtime.dto;
 
 import com.bidr.llm.agent.runtime.dto.FileRef;
-
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

@@ -2,7 +2,6 @@ package com.bidr.agent.runtime.spi;
 
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.validate.Validator;
 import org.springframework.util.StringUtils;
 

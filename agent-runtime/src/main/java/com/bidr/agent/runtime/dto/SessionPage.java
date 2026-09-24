@@ -1,10 +1,9 @@
 package com.bidr.agent.runtime.dto;
 
 import com.bidr.llm.agent.runtime.dto.SessionInfo;
-
 import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+
 import java.util.List;
 
 /**
