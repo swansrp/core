@@ -14,6 +14,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 通用资源权限管理Controller
@@ -69,5 +70,22 @@ public class AcResourcePermController {
     public void saveBySubject(@Validated @RequestBody ResourcePermSaveBySubjectReq req) {
         acResourcePermService.saveBySubject(req, AccountContext.getOperator());
         Resp.notice("保存成功");
+    }
+
+    /**
+     * 查询当前用户在某资源上命中的授权行的扩展数据（extra_data 原始串列表）。
+     * <p>
+     * 供列级权限运行态使用：前端拿到本人生效的若干 {@code {"columns":[…]}} 串后自行解析合并成隐藏列 token。
+     * 仅返回<b>当前用户命中</b>的行（复用 {@link ResourcePermFilterService#getMatchedRows}，含主体递归），
+     * 不泄露他人授权；authorization 层不解释 extra_data 内容，保持业务无关（与通用资源权限表「扩展数据不透明」一致）。
+     * </p>
+     */
+    @ApiOperation(value = "查询当前用户命中某资源的授权行扩展数据（原始串，前端解析）")
+    @RequestMapping(value = "/my-matched-extra", method = RequestMethod.GET)
+    public List<String> myMatchedExtra(@RequestParam String resourceType, @RequestParam String resourceId) {
+        return resourcePermFilterService.getMatchedRows(resourceType, resourceId).stream()
+                .map(AcResourcePerm::getExtraData)
+                .filter(extra -> extra != null && !extra.isEmpty())
+                .collect(Collectors.toList());
     }
 }

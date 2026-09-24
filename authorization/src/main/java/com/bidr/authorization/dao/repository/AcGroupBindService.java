@@ -1,15 +1,10 @@
 package com.bidr.authorization.dao.repository;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bidr.authorization.constants.dict.DataPermitScopeDict;
-import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcGroupBind;
-import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.mapper.AcGroupBindMapper;
-import com.bidr.kernel.mybatis.dao.repository.RecursionService;
+import com.bidr.authorization.service.permit.DataScopeResolver;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AcGroupBindService extends BaseSqlRepo<AcGroupBindMapper, AcGroupBind> {
 
-    private final RecursionService recursionService;
-    private final AcUserGroupService acUserGroupService;
-    private final AcGroupService acGroupService;
+    private final DataScopeResolver dataScopeResolver;
 
     /**
      * 按 groupId + bindType 查询绑定列表
@@ -160,12 +153,8 @@ public class AcGroupBindService extends BaseSqlRepo<AcGroupBindMapper, AcGroupBi
     /**
      * 按用户数据权限范围，查询其在指定 groupType + bindType 下的所有绑定 attachValue。
      * <p>
-     * 权限范围处理：
-     * <ul>
-     *   <li>ALL（全体）：返回该 groupType 下所有组的绑定</li>
-     *   <li>SUBORDINATE（本组及子组）：递归获取子组 + 本组</li>
-     *   <li>其他（本组/本人等）：仅本组</li>
-     * </ul>
+     * 权限范围的分档展开（ALL / SUBORDINATE / 仅本组）统一委托 {@link DataScopeResolver}，
+     * 与资源权限过滤共用同一套视野口径，避免同一规则多处实现产生分歧。
      * attachValue 结果去重。
      *
      * @param userId    用户id
@@ -174,58 +163,7 @@ public class AcGroupBindService extends BaseSqlRepo<AcGroupBindMapper, AcGroupBi
      * @return 去重后的 attachValue 列表，无数据时返回空列表
      */
     public List<String> listAttachValuesByDataScope(Long userId, String groupType, String bindType) {
-        // 1. 查用户在该 groupType 下的所有组关系（含 dataScope）
-        MPJLambdaWrapper<AcUserGroup> userGroupWrapper = new MPJLambdaWrapper<>(AcUserGroup.class).distinct()
-                .leftJoin(AcGroup.class, AcGroup::getId, AcUserGroup::getGroupId)
-                .eq(AcGroup::getType, groupType)
-                .eq(AcUserGroup::getUserId, userId);
-        List<AcUserGroup> userGroups = acUserGroupService.selectJoinList(AcUserGroup.class, userGroupWrapper);
-
-        if (FuncUtil.isEmpty(userGroups)) {
-            return new ArrayList<>();
-        }
-
-        // 2. 按数据权限范围汇总 groupId
-        Set<Long> groupIds = new HashSet<>();
-        for (AcUserGroup userGroup : userGroups) {
-            DataPermitScopeDict scope = DataPermitScopeDict.of(userGroup.getDataScope());
-            if (scope == DataPermitScopeDict.ALL) {
-                // ALL：该 groupType 下所有组，直接返回全量
-                List<AcGroup> allGroups = acGroupService.getGroupByType(groupType);
-                if (FuncUtil.isNotEmpty(allGroups)) {
-                    for (AcGroup g : allGroups) {
-                        groupIds.add(g.getId());
-                    }
-                }
-                // ALL 涵盖一切，无需继续处理其他组
-                break;
-            } else if (scope == DataPermitScopeDict.SUBORDINATE) {
-                // SUBORDINATE：递归获取子组
-                List<Long> subGroups = recursionService.getChildList(
-                        AcGroup::getId, AcGroup::getPid, userGroup.getGroupId());
-                if (FuncUtil.isNotEmpty(subGroups)) {
-                    groupIds.addAll(subGroups);
-                }
-                groupIds.add(userGroup.getGroupId());
-            } else {
-                // 其他（本组/本人等）：仅本组
-                groupIds.add(userGroup.getGroupId());
-            }
-        }
-
-        if (FuncUtil.isEmpty(groupIds)) {
-            return new ArrayList<>();
-        }
-
-        // 3. 查这些组在 bindType 下的绑定，取去重的 attachValue
-        LambdaQueryWrapper<AcGroupBind> bindWrapper = super.getQueryWrapper()
-                .in(AcGroupBind::getGroupId, groupIds)
-                .eq(AcGroupBind::getBindType, bindType);
-        List<AcGroupBind> binds = super.list(bindWrapper);
-
-        return binds.stream()
-                .map(AcGroupBind::getAttachValue)
-                .distinct()
-                .collect(Collectors.toList());
+        Set<Long> groupIds = dataScopeResolver.resolveEffectiveGroupIds(userId, groupType);
+        return listAttachValues(groupIds, bindType);
     }
 }

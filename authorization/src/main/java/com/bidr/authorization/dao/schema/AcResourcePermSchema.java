@@ -16,9 +16,10 @@ public class AcResourcePermSchema extends BaseMybatisSchema<AcResourcePerm> {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `ac_resource_perm` (\n" +
                 "  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',\n" +
                 "  `resource_type` varchar(100) NOT NULL COMMENT '资源类型（表名）',\n" +
-                "  `resource_id` varchar(50) NOT NULL COMMENT '资源ID（表主键）',\n" +
+                "  `resource_id` varchar(50) NOT NULL COMMENT '资源标识（表主键或 Portal 名称）',\n" +
                 "  `subject_type` int NOT NULL COMMENT '授权主体类型（0=角色 1=用户 2=用户组 3=部门）',\n" +
                 "  `subject_id` varchar(50) NOT NULL COMMENT '主体标识（role_id / customer_number / group_id / dept_id）',\n" +
+                "  `extra_data` text COMMENT '扩展信息JSON(如 {\"condition\":{...}})',\n" +
                 "  `create_by` varchar(50) DEFAULT NULL COMMENT '创建者',\n" +
                 "  `create_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',\n" +
                 "  PRIMARY KEY (`id`),\n" +
@@ -26,5 +27,8 @@ public class AcResourcePermSchema extends BaseMybatisSchema<AcResourcePerm> {
                 "  KEY `idx_resource` (`resource_type`, `resource_id`),\n" +
                 "  KEY `idx_subject` (`subject_type`, `subject_id`)\n" +
                 ") COMMENT='通用资源权限表';");
+        // 存量库补列：行级权限条件等扩展信息（镜像 ac_group_bind.extra_data 形态）
+        setUpgradeDDL(1, "ALTER TABLE `ac_resource_perm`\n" +
+                "\tADD COLUMN `extra_data` text COMMENT '扩展信息JSON(如 {\"condition\":{...}})' AFTER `subject_id`;\n");
     }
 }

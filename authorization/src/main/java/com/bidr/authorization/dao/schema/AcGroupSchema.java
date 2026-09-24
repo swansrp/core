@@ -26,5 +26,8 @@ public class AcGroupSchema extends BaseMybatisSchema<AcGroup> {
                 ") COMMENT='用户逻辑组群';");
         setUpgradeDDL(1, "ALTER TABLE `ac_group`\n" +
                 "\tADD UNIQUE INDEX `type_name` (`type`, `name`);\n");
+        // 数据权限按组树向下递归时以 pid 关联子节点，缺索引则每轮递归都要全表扫描
+        setUpgradeDDL(2, "ALTER TABLE `ac_group`\n" +
+                "\tADD INDEX `idx_pid` (`pid`);\n");
     }
 }

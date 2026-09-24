@@ -22,7 +22,7 @@ public class ResourcePermSaveReq {
     private String resourceType;
 
     @NotBlank(message = "资源ID不能为空")
-    @ApiModelProperty(value = "资源ID（表主键）", required = true)
+    @ApiModelProperty(value = "资源标识（表主键或 Portal 名称）", required = true)
     private String resourceId;
 
     @Valid
@@ -40,5 +40,12 @@ public class ResourcePermSaveReq {
         @NotBlank(message = "主体ID不能为空")
         @ApiModelProperty(value = "主体标识", required = true)
         private String subjectId;
+
+        /**
+         * 扩展信息JSON，随授权行整条覆盖保存；本模块不解析其结构（同 ac_group_bind.extra_data 的约定），
+         * 行级权限条件等语义由消费侧（forge）解释
+         */
+        @ApiModelProperty(value = "扩展信息JSON（可空）")
+        private String extraData;
     }
 }

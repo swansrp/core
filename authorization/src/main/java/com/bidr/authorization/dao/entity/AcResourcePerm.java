@@ -37,10 +37,11 @@ public class AcResourcePerm {
     private String resourceType;
 
     /**
-     * 资源ID（表主键）
+     * 资源标识（表主键或 Portal 名称）
+     * <p>整体粒度挂在 sys_portal 上，此列存 Portal 逻辑名（跨角色稳定），而非某一行 portal 的物理 id
      */
     @TableField(value = "resource_id")
-    @ApiModelProperty(value = "资源ID（表主键）")
+    @ApiModelProperty(value = "资源标识（表主键或 Portal 名称）")
     private String resourceId;
 
     /**
@@ -56,6 +57,13 @@ public class AcResourcePerm {
     @TableField(value = "subject_id")
     @ApiModelProperty(value = "主体标识")
     private String subjectId;
+
+    /**
+     * 扩展信息JSON（如行级权限条件 {"condition":{...}}）
+     */
+    @TableField(value = "extra_data")
+    @ApiModelProperty(value = "扩展信息JSON")
+    private String extraData;
 
     /**
      * 创建者
