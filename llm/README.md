@@ -380,6 +380,9 @@ AgentLoopResult result = new ToolAgentRunner().run(agentModel, systemPrompt, use
 // 正值覆盖 sys_config（AGENT_CONTEXT_TOKEN_BUDGET / AGENT_TOOL_RESULT_OFFLOAD_CHARS 等，见 AgentContextBudget）。
 // 卸载仅当 listener 支持回捞（会话链 AgentSessionContext.loopListener()）时生效，超大工具结果入场换
 // 「预览+tool_call_id 句柄」指针，模型可内建调 recallToolResult 取回原文；token 预算与条数窗口取更严者。
+// 句柄有两个来源，回捞取数按 tool_call_id 扫会话事件流、与是否卸载无关：① 窗内指针首行 tool_call_id=；
+// ② token 预算驱逐后进入探索摘要的行尾「（句柄=…）」（摘要头部另有一行调法指引）。二者由同一判据
+// recallUsable 开启——不会出现"给了句柄但工具没注册"的半开态，被裁内容同样可回捞。
 AgentLoopOptions governed = new AgentLoopOptions(30, 20);
 governed.setContextTokenBudget(24000);      // 估算 token 上限（ContextTokenEstimator，只高不低）
 governed.setToolResultOffloadChars(4000);   // 超过 4000 字的工具结果入场卸载
