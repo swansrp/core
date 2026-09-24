@@ -477,7 +477,11 @@ public class AgentSessionService {
                             state.getSessionId(), state.getAgentKey());
                     autoStopReasons.put(state.getSessionId(), "前端已断开，会话自动停止（节省资源，可重新发起）");
                     store.requestStop(state.getSessionId());
-                    store.appendEvent(state.getSessionId(), AgentEvent.STOPPED, "前端断开超阈值，会话自动停止");
+                    // 🔴 心跳线程不得 appendEvent：事件流是"整表读-改-写"，store 的约定是**单写者=run 线程**，
+                    // 第二个线程追加会与之互相覆盖。停止事件由 run 线程收口统一补发
+                    // （settle 的 STOPPED 分支，文案取上面的 autoStopReasons）。
+                    // 注：实测发生过的"64 条→2 条、序号从 1 重启"并非此处引起，而是 store 把
+                    // "读失败"当成"空表"回写截断历史——已在 RedisAgentSessionStore.appendEvent 修复。
                     Thread thread = runThreads.get(state.getSessionId());
                     if (thread != null) {
                         thread.interrupt();

@@ -13,8 +13,22 @@ import java.util.Set;
 /**
  * Title: RedisAgentSessionStore
  * Description: 会话存储 Redis 实现（生产默认）：
- * 状态与事件流各一键存 JSON（append 约定单写者，读改写安全），随每次写入 TTL 续期；
+ * 状态与事件流各一键存 JSON，随每次写入 TTL 续期；
  * 暂停/恢复指导语/停止为独立控制键——分布式多实例下任意实例可控制属主实例的会话。
+ * <p>
+ * 🔴 <b>不变式（是契约不是实现细节）：一个会话的事件流只有 run 线程这一个写者。</b>
+ * {@link #appendEvent} 为整表读-改-写、无跨键原子性，双写会互相覆盖。故任何非 run 线程
+ * （HTTP 请求线程、心跳调度线程、定时任务）<b>都不得对同一会话调用 appendEvent</b>：
+ * 跨线程要传达的事实走控制键（{@code requestStop}/{@code pause}/{@code submitAnswer}），
+ * 由 run 线程收口时统一补发事件。
+ * <p>
+ * 🔴 另一条同等重要的约束：<b>读失败不得当作"空表"回写</b>，否则一次瞬时失败会把整条历史截断
+ * （实测中断标志位污染 Redisson 期间 64 条→2 条、序号从 1 重启）。{@link #appendEvent} 已按
+ * "读失败即跳过本次追加"处理；{@link #read} 仍返回 null 表示失败，调用方不得据此构造新值写回。
+ * <p>
+ * 已知残留竞态：心跳线程仍会 saveState 刷 heartbeat 字段（同一状态键的读-改-写），影响面小于
+ * 事件流（下次写入即自愈），待改为独立心跳键。
+ * <p>
  * Redis 不可用时不中断执行：事件与状态写入失败仅记日志（会话退化无过程可见，控制键失联），
  * 与 RedisStreamAnswerStore 的容错口径一致
  *
@@ -71,10 +85,27 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         return ids;
     }
 
+    /**
+     * 🔴 读-改-写的安全前提：**"读失败"绝不等于"还没有事件"**。
+     * 若把读失败当空表再回写，会把整条历史截断成 1 条（实测中断标志位污染 Redisson 期间发生过
+     * 64 条→2 条、序号从 1 重启）。故读失败时**跳过本次追加**：宁可少一条过程事件，不可毁掉历史。
+     *
+     * @return 本次事件的 seq；负值表示未落库（读或写失败）
+     */
     @Override
     public long appendEvent(String sessionId, String type, Object payload) {
-        List<AgentEvent> events = read(eventsKey(sessionId), new TypeReference<List<AgentEvent>>() {
-        });
+        String key = eventsKey(sessionId);
+        List<AgentEvent> events;
+        try {
+            String json = redisService.get(key, String.class);
+            events = json == null ? new ArrayList<AgentEvent>()
+                    : objectMapper.readValue(json, new TypeReference<List<AgentEvent>>() {
+            });
+        } catch (Exception e) {
+            log.warn("agent 会话事件流读取失败，跳过本次追加以免截断历史, sessionId={}, type={}, error={}",
+                    sessionId, type, e.getMessage());
+            return -1;
+        }
         if (events == null) {
             events = new ArrayList<>();
         }
@@ -84,7 +115,12 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         event.setPayload(payload);
         event.setTime(System.currentTimeMillis());
         events.add(event);
-        write(eventsKey(sessionId), events);
+        try {
+            redisService.set(key, ttlSeconds, objectMapper.writeValueAsString(events));
+        } catch (Exception e) {
+            log.warn("agent 会话事件写入失败（会话退化无过程可见）key={}, error={}", key, e.getMessage());
+            return -1;
+        }
         return event.getSeq();
     }
 
