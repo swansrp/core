@@ -84,9 +84,6 @@ public abstract class BaseMemoryCacheManager implements InitializingBean, CacheM
     public void putCacheObj(String cacheName, Object objKey, Object obj) {
         Cache cache = getCache(cacheName);
         cache.put(objKey, obj);
-        if (log.isDebugEnabled()) {
-            ConcurrentMap<Object, Object> nativeCache = (ConcurrentMap<Object, Object>) cache.getNativeCache();
-        }
     }
 
     @Override

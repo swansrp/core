@@ -57,7 +57,7 @@ public class RecursionService {
 
             Field pidField = LambdaUtil.getField(pidFunc);
             String pidFieldName = pidField.getName();
-            TableField pidAnno = idField.getAnnotation(TableField.class);
+            TableField pidAnno = pidField.getAnnotation(TableField.class);
             if (pidAnno != null) {
                 pidFieldName = pidAnno.value();
             }
@@ -67,6 +67,8 @@ public class RecursionService {
             if (service != null) {
                 List<R> pidList = new ArrayList<>();
                 pidList.add(id);
+                // 与上面的 SQL 递归分支对齐：起始节点自身也计入结果（SQL 分支的起始行会进 temp 故天然含自身）
+                result.add(id);
                 List<T> list;
                 while (FuncUtil.isNotEmpty(pidList)) {
                     LambdaQueryWrapper<T> wrapper = service.getQueryWrapper();
@@ -106,7 +108,7 @@ public class RecursionService {
 
             Field pidField = LambdaUtil.getField(pidFunc);
             String pidFieldName = pidField.getName();
-            TableField pidAnno = idField.getAnnotation(TableField.class);
+            TableField pidAnno = pidField.getAnnotation(TableField.class);
             if (pidAnno != null) {
                 pidFieldName = pidAnno.value();
             }
