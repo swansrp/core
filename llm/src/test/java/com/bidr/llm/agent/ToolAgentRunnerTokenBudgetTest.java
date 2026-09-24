@@ -396,6 +396,157 @@ public class ToolAgentRunnerTokenBudgetTest {
         Assert.assertEquals(ContextProbeTools.report(10000, "A"), recalled);
     }
 
+    // ---------------- A9：digest 句柄保留（I15 同源 + 端到端回捞） ----------------
+
+    /** A9 指令行原文（独立照抄，与生产常量 DIGEST_RECALL_GUIDANCE 逐字符对齐——I9 基线同款纪律） */
+    private static final String EXPECTED_RECALL_GUIDANCE =
+            "被裁内容如需原文：凭行内「句柄=」调 recallToolResult，一次一个，受次数上限约束。\n";
+
+    /** 会话链 listener 夹具（recallAvailable=true：事件流持全文，supportsToolResultRecall 为真） */
+    private static AgentLoopListener sessionListener(String sessionId) {
+        AgentSessionState state = new AgentSessionState();
+        state.setSessionId(sessionId);
+        state.setAgentKey("probe");
+        state.setStatus(AgentSessionState.RUNNING);
+        InMemoryAgentSessionStore store = new InMemoryAgentSessionStore();
+        store.saveState(state);
+        return new AgentSessionContext(state, store, new HashMap<>()).loopListener();
+    }
+
+    private static boolean specsContainRecall(ScriptedModel model) {
+        for (ScriptedModel.RoundView v : model.views) {
+            for (dev.langchain4j.agent.tool.ToolSpecification s : v.specs) {
+                if (AgentToolRecall.TOOL_NAME.equals(s.name())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** 首个含 digest 的入窗视图（window=2 时第 3 轮必有） */
+    private static String firstDigest(ScriptedModel model) {
+        for (ScriptedModel.RoundView v : model.views) {
+            String d = digestOf(v.messages);
+            if (d != null) {
+                return d;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A9 测试 4：recallUsable 真值矩阵（offloadOn=T / offloadChars=0&&tokenBudget>0 / 两者皆0
+     * × recallAvailable=T/F 共 6 格）——specs 是否含 recallToolResult 与 digest 是否带行内句柄
+     * 两处必须同随判据（I15 同源不半开）；两者皆 0 时即使有回捞通道，specs 也不得多出本工具（I9）
+     */
+    @Test
+    public void recallUsable真值矩阵specs与digest同源() {
+        //      offload budget recallAvail expectUsable
+        Object[][] cases = {
+                {4000, null, true, true},    // 卸载开启（入场指针句柄路径）
+                {4000, null, false, false},  // I5：无回捞通道 offloadOn 亦为假，budget=0 → 全关
+                {null, 2000, true, true},    // A9 新形态：不卸载、被驱逐入 digest 带句柄
+                {null, 2000, false, false},  // 驱逐照常但无句柄（无通道不写）
+                {null, null, true, false},   // 默认态×会话链：specs 不多工具、digest 无句柄（I9）
+                {null, null, false, false},  // 默认态×轻链路：同上
+        };
+        for (Object[] c : cases) {
+            Integer offload = (Integer) c[0];
+            Integer budget = (Integer) c[1];
+            boolean recallAvail = (Boolean) c[2];
+            boolean expected = (Boolean) c[3];
+            AgentLoopListener l = recallAvail
+                    ? sessionListener("s-a9-matrix-" + System.nanoTime()) : light(null);
+            ScriptedModel model = new ScriptedModel(
+                    Step.tool("call-1", "bigReport", "{\"topic\":\"A\"}"),
+                    Step.tool("call-2", "echo", "{\"text\":\"hi\"}"),
+                    Step.done("结论"));
+            // window=2 保证各格都发生驱逐（digest 必产出，句柄断言有牙齿）
+            new ToolAgentRunner().run(model, "系统", "任务", tools(10000),
+                    opts(6, 2, offload, budget), l);
+            String digest = firstDigest(model);
+            Assert.assertNotNull("window=2 必触发驱逐产出摘要", digest);
+            Assert.assertEquals("specs 含回捞工具须符判据(offload=" + offload + ",budget=" + budget
+                            + ",recallAvail=" + recallAvail + ")",
+                    expected, specsContainRecall(model));
+            Assert.assertEquals("digest 行内句柄与 specs 同源(offload=" + offload + ",budget=" + budget
+                            + ",recallAvail=" + recallAvail + ")",
+                    expected, digest.contains("（句柄=call-1）"));
+            Assert.assertEquals("digest 指令行与 specs 同源(offload=" + offload + ",budget=" + budget
+                            + ",recallAvail=" + recallAvail + ")",
+                    expected, digest.startsWith(EXPECTED_DIGEST_PREFIX + EXPECTED_RECALL_GUIDANCE));
+        }
+    }
+
+    /**
+     * A9 测试 1 强化：多轮驱逐重拼 digest 时指令行幂等不重复（旧摘要回收先剥再拼）、
+     * 每轮被驱逐的工具结果行各带自己的句柄
+     */
+    @Test
+    public void 多轮驱逐指令行唯一且各行带句柄() {
+        ScriptedModel model = new ScriptedModel(
+                Step.tool("call-1", "bigReport", "{\"topic\":\"A\"}"),
+                Step.tool("call-2", "bigReport", "{\"topic\":\"B\"}"),
+                Step.tool("call-3", "bigReport", "{\"topic\":\"C\"}"),
+                Step.done("结论"));
+        new ToolAgentRunner().run(model, "系统", "任务", tools(10000),
+                opts(8, 100, null, 2000), sessionListener("s-a9-multi"));
+        ScriptedModel.RoundView last = model.views.get(model.views.size() - 1);
+        String digest = lastDigest(last.messages);
+        Assert.assertNotNull(digest);
+        Assert.assertEquals("指令行重拼后必须恰出现一次（幂等剥离）", 1,
+                occurrences(digest, "受次数上限约束"));
+        Assert.assertTrue("第一轮被驱逐行保留句柄", digest.contains("（句柄=call-1）"));
+        Assert.assertTrue("第二轮被驱逐行保留句柄", digest.contains("（句柄=call-2）"));
+    }
+
+    /**
+     * A9 测试 2（本次改动的存在理由，端到端）：大结果常规入窗（offloadChars=0，不触发卸载）→
+     * 被 token 预算裁进 digest → 模型从行内「句柄=」读到句柄 → 调 recallToolResult →
+     * 取回结果逐字符等于原文全文
+     */
+    @Test
+    public void digest行内句柄端到端回捞逐字符等于原文() {
+        ScriptedModel model = new ScriptedModel(
+                Step.tool("call-1", "bigReport", "{\"topic\":\"A\"}"),
+                Step.tool("call-2", "bigReport", "{\"topic\":\"B\"}"),
+                Step.tool("call-3", "recallToolResult", "{\"toolCallId\":\"call-1\"}"),
+                Step.done("结论引用 KEY-A-8888"));
+        AgentLoopResult r = new ToolAgentRunner().run(model, "系统", "任务", tools(10000),
+                opts(8, 100, null, 2000), sessionListener("s-a9-e2e"));
+        Assert.assertNotNull(r);
+        String digest = firstDigest(model);
+        Assert.assertNotNull("token 触发驱逐应有摘要", digest);
+        Assert.assertTrue("digest 头部须带指令行（开启态）",
+                digest.startsWith(EXPECTED_DIGEST_PREFIX + EXPECTED_RECALL_GUIDANCE));
+        Assert.assertTrue("被驱逐结果行尾须带行内句柄", digest.contains("（句柄=call-1）"));
+        Assert.assertTrue("句柄须落进行尾（brief 截断之外）",
+                digest.contains("（句柄=call-1）\n") || digest.endsWith("（句柄=call-1）"));
+        Assert.assertEquals("原文未泄漏进摘要（回捞才有意义）", -1, digest.indexOf("KEY-A-8888"));
+        System.out.println("[A9样例] 开启态 digest 实渲染 ↓\n" + digest + "[A9样例] ↑");
+        String recalled = null;
+        for (ScriptedModel.RoundView v : model.views) {
+            String t = resultText(v.messages, "call-3");
+            if (t != null) {
+                recalled = t;
+            }
+        }
+        Assert.assertNotNull(recalled);
+        Assert.assertEquals("端到端：凭 digest 句柄回捞须逐字符等于原文全文",
+                ContextProbeTools.report(10000, "A"), recalled);
+    }
+
+    private static int occurrences(String haystack, String needle) {
+        int n = 0;
+        int at = 0;
+        while ((at = haystack.indexOf(needle, at)) >= 0) {
+            n++;
+            at += needle.length();
+        }
+        return n;
+    }
+
     /** 步骤 D：钉住对不可驱逐致软超时只告警一次不迭代（跑完即证终止性），钉住对完整保留 */
     @Test
     public void 软超只告警不迭代() {
@@ -571,6 +722,18 @@ public class ToolAgentRunnerTokenBudgetTest {
             }
         }
         return null;
+    }
+
+    /** 末位摘要消息=最新累计版（第二次及以后的 trim 会残留首个旧摘要槽，HEAD 既有形态非 A9 引入，
+     *  取末位即当前生效 digest——A9 多轮重拼案专用） */
+    private static String lastDigest(List<ChatMessage> messages) {
+        String found = null;
+        for (ChatMessage m : messages) {
+            if (m instanceof UserMessage && ((UserMessage) m).singleText().startsWith(EXPECTED_DIGEST_PREFIX)) {
+                found = ((UserMessage) m).singleText();
+            }
+        }
+        return found;
     }
 
     private static String resultText(List<ChatMessage> messages, String callId) {

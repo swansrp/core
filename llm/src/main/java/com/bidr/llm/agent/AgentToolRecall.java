@@ -9,7 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Title: AgentToolRecall
  * Description: 框架级内建「句柄回捞」工具（风格对齐 AgentAskUserTool）：工具结果被入场卸载为
- * 指针后，模型凭指针首行的 tool_call_id 经本工具取回原文全文——「卸载即收益、回捞是有界最坏成本」
+ * 指针、或被窗口裁切压进【探索记录摘要】（A9）后，模型凭指针首行 tool_call_id=/摘要行内
+ * 「句柄=」的原文经本工具取回全文——「卸载即收益、回捞是有界最坏成本」
  * 的混合方案出口（计划岔路 1）。三层硬闸：
  * ① 单 run 次数上限（AGENT_TOOL_RECALL_MAX_PER_RUN，超限只回「回捞预算已用尽请收口」指令文本）；
  * ② 单次返回字符上限（AGENT_TOOL_RECALL_MAX_CHARS，超出截断并提示前端过程树可看全文）；
@@ -56,10 +57,11 @@ public class AgentToolRecall {
         return used.get();
     }
 
-    @Tool("按 tool_call_id 取回此前被卸载的工具结果原文全文。当上下文中出现形如"
-            + "【已卸载 tool_call_id=…】的指针、且预览内容不足以支撑你的结论时，调用本工具一次取全文；"
+    @Tool("按 tool_call_id 取回此前工具结果的原文全文。句柄两个来源：上下文形如"
+            + "【已卸载 tool_call_id=…】指针首行 tool_call_id= 后的原文，或【探索记录摘要】行内"
+            + "「句柄=」后的原文；预览/摘要不足以支撑你的结论时调用本工具取全文，"
             + "一次只回捞一个句柄，禁止用它重复拉取同一句柄")
-    public String recallToolResult(@P("指针首行给出的 tool_call_id 原文") String toolCallId) {
+    public String recallToolResult(@P("tool_call_id 句柄原文：指针首行 tool_call_id= 后或摘要行内「句柄=」后的内容") String toolCallId) {
         if (toolCallId == null || toolCallId.trim().isEmpty()) {
             return "拒绝：tool_call_id 不能为空，须为指针首行 tool_call_id= 后的原文句柄";
         }

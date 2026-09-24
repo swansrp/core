@@ -80,13 +80,19 @@ public class ToolAgentRunner {
         stats.recallAvailable = sink.supportsToolResultRecall();
         // I5：无回捞通道不卸载；I6：钉住工具 ∪ askUser ∪ recallToolResult 永不卸载
         boolean offloadOn = offloadChars > 0 && stats.recallAvailable;
+        // A9/I15 回捞可用性唯一同源判据：卸载开启（指针句柄）或 token 预算开启（digest 行内句柄）任一为真；
+        // 回捞工具注册与 digest 写句柄共此一刀，防"有句柄没工具/有工具没句柄"半开态。
+        // I9：offloadChars=0 && tokenBudget=0（默认态）→ false：specs 不增工具、digest 不写句柄，关闭态逐字符不变
+        boolean recallUsable = stats.recallAvailable && (offloadOn || tokenBudget > 0);
+        stats.recallUsable = recallUsable;
         Set<String> neverOffload = new HashSet<>(
                 opt.getPinnedTools() == null ? Collections.emptySet() : opt.getPinnedTools());
         neverOffload.add("askUser");
         neverOffload.add(AgentToolRecall.TOOL_NAME);
         List<Object> effectiveTools = new ArrayList<>(toolObjects);
-        if (offloadOn) {
-            // 回捞工具仅在有卸载时注册（默认零副作用，I9：无回捞通道/关闭态 specs 与改造前逐条一致）；
+        if (recallUsable) {
+            // 回捞工具仅在 recallUsable 时注册（A9 扩面：入场卸载指针与 digest 行内句柄两条回捞路径同源；
+            // 默认零副作用，I9：无回捞通道/关闭态 specs 与改造前逐条一致）；
             // 不登记 roundExemptTools——回捞实打实占轮次，轮次上限是回捞爆炸的最终兜底
             stats.recallTool = new AgentToolRecall(sink, AgentContextBudget.recallMaxPerRun(),
                     AgentContextBudget.recallMaxChars(), stats.offloadedHandles);
@@ -393,7 +399,7 @@ public class ToolAgentRunner {
      *  驱逐出口唯一——无论哪个维度触发都走同一条 digest 路径（I12），不新增摘要格式、不新增 LLM 调用。
      *  <p>private（非公共 API，仅供 run() 内部调用）：token 切点与关闭态等价性经 run() 黑盒测试覆盖
      *  （签名含私有嵌套类型 RunStats，同包测试无法直打）。
-     *  引用不变式：I1/I2/I3/I9/I11/I12 */
+     *  引用不变式：I1/I2/I3/I9/I11/I12/I15（A9：recallUsable 时 digest 行内写句柄+指令行，同源见 run()） */
     private void trimToolMemory(List<ChatMessage> messages, AgentLoopOptions opt, int fixedOverheadTokens,
                                 int tokenBudget, RunStats stats) {
         // 头部保留：有 system 时 system+首轮 user 两条，无 system 时仅首轮 user 一条（与组装口径联动）
@@ -403,7 +409,13 @@ public class ToolAgentRunner {
         if (messages.size() > headEnd && messages.get(headEnd) instanceof UserMessage) {
             String t = ((UserMessage) messages.get(headEnd)).singleText();
             if (t != null && t.startsWith(DIGEST_PREFIX)) {
-                oldDigest = t.substring(DIGEST_PREFIX.length());
+                String body = t.substring(DIGEST_PREFIX.length());
+                // A9 幂等回收：旧摘要若含回捞指令行（DIGEST_PREFIX 之后第一行）先剥再续写，
+                // 防多轮驱逐重拼时指令行重复；关闭态旧摘要本无指令行，剥离为空操作（I9 不受扰）
+                if (body.startsWith(DIGEST_RECALL_GUIDANCE)) {
+                    body = body.substring(DIGEST_RECALL_GUIDANCE.length());
+                }
+                oldDigest = body;
                 headEnd = headEnd + 1;
             }
         }
@@ -450,12 +462,15 @@ public class ToolAgentRunner {
         // 步骤 C：驱逐单一出口（I12）——钉住搬移 + digest 归档 + 重组，条数/token 触发共用
         boolean tokenTriggered = fromToken >= 0 && (fromCount < 0 || fromToken >= fromCount);
         List<ChatMessage> pinned = pinnedBefore(messages, headEnd, from, opt.getPinnedTools());
-        String digestNew = digestOf(messages, headEnd, from, pinned);
+        String digestNew = digestOf(messages, headEnd, from, pinned, stats.recallUsable);
         List<ChatMessage> tail = new ArrayList<>(messages.subList(from, messages.size()));
         messages.subList(headEnd, messages.size()).clear();
         String digest = trimDigest(oldDigest + digestNew);
         if (!digest.isEmpty()) {
-            messages.add(UserMessage.from(DIGEST_PREFIX + digest));
+            // A9：回捞指令行落在 DIGEST_PREFIX 之后、正文之前，仅 recallUsable 时存在（I15 同源）；
+            // 不占 DIGEST_MAX_LEN 容量（该行是指令非归档内容）
+            messages.add(UserMessage.from(DIGEST_PREFIX
+                    + (stats.recallUsable ? DIGEST_RECALL_GUIDANCE : "") + digest));
         }
         messages.addAll(pinned);
         messages.addAll(tail);
@@ -523,6 +538,8 @@ public class ToolAgentRunner {
     private static final class RunStats {
         final AgentLoopListener sink;
         boolean recallAvailable;
+        /** A9/I15：回捞唯一同源判据（run() 头部一次性计算，回捞工具注册与 digest 写句柄共用） */
+        boolean recallUsable;
         AgentToolRecall recallTool;
         final List<String> offloadedHandles = new ArrayList<>();
         int offloadedThisRound;
@@ -535,8 +552,11 @@ public class ToolAgentRunner {
     }
 
     /** 被驱逐区段确定性压缩：工具调用一行（名+参数摘要→结果摘要）、结论文本一行；
-     *  钉住对完整保留不入摘要 */
-    private static String digestOf(List<ChatMessage> messages, int headEnd, int from, List<ChatMessage> pinned) {
+     *  钉住对完整保留不入摘要。withHandles=true（recallUsable，A9/I15）时命中工具结果的行尾
+     *  追加「（句柄=tool_call_id）」——原文恒在会话事件流（I4），句柄即 recallToolResult 取数键，
+     *  被驱逐结果与入场卸载指针（I7）同等可回捞；false（关闭态）不写，digest 逐字符不变（I9） */
+    private static String digestOf(List<ChatMessage> messages, int headEnd, int from, List<ChatMessage> pinned,
+                                   boolean withHandles) {
         Set<ChatMessage> kept = Collections.newSetFromMap(new IdentityHashMap<>());
         kept.addAll(pinned);
         StringBuilder sb = new StringBuilder();
@@ -553,6 +573,9 @@ public class ToolAgentRunner {
                     if (j < from && messages.get(j) instanceof ToolExecutionResultMessage
                             && !kept.contains(messages.get(j))) {
                         sb.append(" → ").append(brief(((ToolExecutionResultMessage) messages.get(j)).text(), 100));
+                        if (withHandles) {
+                            sb.append("（句柄=").append(r.id()).append("）");
+                        }
                         j++;
                     }
                     sb.append("\n");
@@ -569,8 +592,13 @@ public class ToolAgentRunner {
         return d.length() <= DIGEST_MAX_LEN ? d : "…" + d.substring(d.length() - DIGEST_MAX_LEN);
     }
 
-    /** 探索摘要归档前缀（头部识别标记） */
+    /** 探索摘要归档前缀（头部识别标记；⚠️ 关闭态也走此头部识别，trimToolMemory 靠
+     *  startsWith(DIGEST_PREFIX) 定位旧摘要——本常量一字不可改，A9 指令行只能落在其后） */
     private static final String DIGEST_PREFIX = "【探索记录摘要（窗口裁切压缩归档）】\n";
+    /** A9 回捞指令行（仅 recallUsable 时拼在 DIGEST_PREFIX 之后、摘要正文之前；重拼时幂等剥离，
+     *  见 trimToolMemory 旧摘要回收；不占 DIGEST_MAX_LEN 封顶容量） */
+    private static final String DIGEST_RECALL_GUIDANCE =
+            "被裁内容如需原文：凭行内「句柄=」调 recallToolResult，一次一个，受次数上限约束。\n";
     /** 摘要归档长度上限（字符） */
     private static final int DIGEST_MAX_LEN = 3000;
 

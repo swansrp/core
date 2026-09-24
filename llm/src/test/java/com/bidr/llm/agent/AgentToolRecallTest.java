@@ -68,4 +68,24 @@ public class AgentToolRecallTest {
         recall.recallToolResult("call-1");
         Assert.assertTrue("第 4 次收口", recall.recallToolResult("call-1").contains("回捞预算已用尽"));
     }
+
+    /** A9 裁定 4：@Tool description 覆盖两个句柄来源（指针 tool_call_id= / 摘要行内「句柄=」），
+     *  且保留「一次一个、禁止重复拉同一句柄」纪律——description 进 specs，此处锁死防回退 */
+    @Test
+    public void tool描述覆盖双句柄来源且纪律措辞在位() {
+        dev.langchain4j.agent.tool.Tool tool = null;
+        for (java.lang.reflect.Method m : AgentToolRecall.class.getMethods()) {
+            tool = m.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
+            if (tool != null) {
+                break;
+            }
+        }
+        Assert.assertNotNull(tool);
+        String desc = String.join("", tool.value());
+        Assert.assertTrue("应保留指针句柄来源", desc.contains("tool_call_id="));
+        Assert.assertTrue("应新增摘要行内句柄来源（A9）", desc.contains("句柄="));
+        Assert.assertTrue("应保留探索摘要来源标识", desc.contains("【探索记录摘要】"));
+        Assert.assertTrue("一次一个纪律措辞在位", desc.contains("一次只回捞一个句柄"));
+        Assert.assertTrue("禁止重复措辞在位", desc.contains("禁止用它重复拉取同一句柄"));
+    }
 }

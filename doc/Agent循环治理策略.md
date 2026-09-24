@@ -63,11 +63,12 @@
 - 超过阈值（字符）的工具结果**入场即替换**为「头尾预览 + `tool_call_id` 句柄」指针，不再等驱逐时才摘要——全文每轮重付的痛点从源头掐断；原文始终在会话事件流全文归档（呈现形态分层），模型经内建 `recallToolResult` 工具按句柄零损失取回。
 - 三道闸门防失控：单 run 回捞次数上限（默认 3）、单次回捞返回上限（默认 20000 字）、回捞结果不再二次卸载。钉住工具 ∪ askUser ∪ recallToolResult 永不卸载；无回捞通道（非会话链 listener）时一律原文入窗；收口路径最后一次 generate 前追加的消息一律原文。
 - 关闭态（`0`，框架默认）零行为变化；`cachedTools` 命中路径同样卸载并配本次新句柄。
-- 位置：`ToolResultOffloader` / `AgentToolRecall` / `ToolAgentRunner.appendToolResultMessage`、回捞读源 `AgentSessionContext.loopListener().recallToolResult`。
+- **句柄有两个来源**（`I15`）：① 入场卸载指针首行的 `tool_call_id=`；② 被窗口裁进【探索记录摘要】时，被驱逐的工具结果行尾追加的 `（句柄=…）`——原文恒在会话事件流（I4），故**被裁掉的结果与窗内指针同等可回捞**，不存在"裁切即失联"。二者共用同一把同源判据 `recallUsable = 有回捞通道 && (卸载开启 || token 预算开启)`：回捞工具是否进 specs、摘要是否写句柄，由这一个布尔决定，杜绝"有句柄没工具 / 有工具没句柄"的半开态。默认全关时 `recallUsable=false`，specs 不增工具、digest 逐字符不变（I9）。摘要头部随之多一行回捞指引，仅该形态存在。
+- 位置：`ToolResultOffloader` / `AgentToolRecall` / `ToolAgentRunner.appendToolResultMessage`、摘要句柄 `ToolAgentRunner.digestOf`、回捞读源 `AgentSessionContext.loopListener().recallToolResult`。
 
 ### 12. Token 维度上下文预算（`contextTokenBudget`，2026-09 新增）
 - 裁窗计量单位补上 token 量纲：正值时为「进入模型的消息估算 token 上限」（估算式 CJK×1.0 + 其他×0.3 + 每条 4 + 工具定义×1.2，方向只高不低，见 `ContextTokenEstimator`），与条数窗口**取更严者**；被钉住对不可驱逐导致保留段仍超预算时只告警（软超），不迭代重算。
-- 驱逐出口唯一：token 触发与条数触发共用同一条 digest 归档路径，不新增摘要格式、不新增 LLM 调用。
+- 驱逐出口唯一：token 触发与条数触发共用同一条 digest 归档路径，不新增摘要块、不新增 LLM 调用（`recallUsable` 时仅在被裁的工具结果**行尾**多挂 `（句柄=…）`，行结构不变，见 §二第 11 条 I15）。
 - 治理开启态每次 generate 前输出一行「上下文计量」（条数/字符/估算 token/本轮卸载/累计卸载/累计回捞/累计驱逐），与 `LoggingModel` 透出的端点真实 token 形成估算 vs 实测校准回路。
 - 关闭态（`0`，框架默认）行为与改造前逐条一致（有等价性回归测试锁死）。
 - 位置：`AgentContextBudget`（三级取值）/ `ContextTokenEstimator` / `ToolAgentRunner.trimToolMemory`。
