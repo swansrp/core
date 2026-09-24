@@ -62,6 +62,7 @@ public class DynamicQueryController extends DynamicBaseController {
     public Page<Map<String, Object>> generalQuery(@PathVariable String portalName, @RequestBody QueryConditionReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         AdvancedQueryReq advReq = convertToAdvancedReq(req);
+        applyRowPolicy(portalName, advReq);
         return driver.queryPage(advReq, portalName, getRoleId());
     }
 
@@ -70,6 +71,7 @@ public class DynamicQueryController extends DynamicBaseController {
     public List<Map<String, Object>> generalSelect(@PathVariable String portalName, @RequestBody QueryConditionReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         AdvancedQueryReq advReq = convertToAdvancedReq(req);
+        applyRowPolicy(portalName, advReq);
         return driver.queryList(advReq, portalName, getRoleId());
     }
 
@@ -77,6 +79,7 @@ public class DynamicQueryController extends DynamicBaseController {
     @PostMapping("/{portalName}/advanced/query")
     public Page<Map<String, Object>> advancedQuery(@PathVariable String portalName, @RequestBody AdvancedQueryReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        applyRowPolicy(portalName, req);
         return driver.queryPage(req, portalName, getRoleId());
     }
 
@@ -84,6 +87,7 @@ public class DynamicQueryController extends DynamicBaseController {
     @PostMapping("/{portalName}/advanced/select")
     public List<Map<String, Object>> advancedSelect(@PathVariable String portalName, @RequestBody AdvancedQueryReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        applyRowPolicy(portalName, req);
         return driver.queryList(req, portalName, getRoleId());
     }
 
@@ -94,6 +98,7 @@ public class DynamicQueryController extends DynamicBaseController {
     public Long generalCount(@PathVariable String portalName, @RequestBody QueryConditionReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         AdvancedQueryReq advReq = convertToAdvancedReq(req);
+        applyRowPolicy(portalName, advReq);
         return driver.count(advReq, portalName, getRoleId());
     }
 
@@ -101,6 +106,7 @@ public class DynamicQueryController extends DynamicBaseController {
     @PostMapping("/{portalName}/advanced/count")
     public Long advancedCount(@PathVariable String portalName, @RequestBody AdvancedQueryReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        applyRowPolicy(portalName, req);
         return driver.count(req, portalName, getRoleId());
     }
 
@@ -109,6 +115,7 @@ public class DynamicQueryController extends DynamicBaseController {
     public Map<String, Object> generalSummary(@PathVariable String portalName, @RequestBody GeneralSummaryReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         AdvancedSummaryReq advReq = convertToAdvancedReq(req);
+        applyRowPolicy(portalName, advReq);
         return driver.summary(advReq, portalName, getRoleId());
     }
 
@@ -116,6 +123,7 @@ public class DynamicQueryController extends DynamicBaseController {
     @PostMapping("/{portalName}/advanced/summary")
     public Map<String, Object> advancedSummary(@PathVariable String portalName, @RequestBody AdvancedSummaryReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        applyRowPolicy(portalName, req);
         return driver.summary(req, portalName, getRoleId());
     }
 
@@ -124,6 +132,7 @@ public class DynamicQueryController extends DynamicBaseController {
     public List<StatisticRes> generalStatistic(@PathVariable String portalName, @RequestBody GeneralStatisticReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         AdvancedStatisticReq advReq = convertToAdvancedReq(req);
+        applyRowPolicy(portalName, advReq);
         return driver.statistic(advReq, portalName, getRoleId());
     }
 
@@ -131,6 +140,7 @@ public class DynamicQueryController extends DynamicBaseController {
     @RequestMapping(value = {"/{portalName}/advanced/statistic", "/{portalName}/advanced/statistic/**"}, method = RequestMethod.POST)
     public List<StatisticRes> advancedStatistic(@PathVariable String portalName, @RequestBody AdvancedStatisticReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
+        applyRowPolicy(portalName, req);
         return driver.statistic(req, portalName, getRoleId());
     }
 
@@ -138,6 +148,8 @@ public class DynamicQueryController extends DynamicBaseController {
     @RequestMapping(value = {"/{portalName}/pivot", "/{portalName}/pivot/**"}, method = RequestMethod.POST)
     public List<Map<String, Object>> pivot(@PathVariable String portalName, @RequestBody AdvancedPivotReq req) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
-        return driver.pivot(req, portalName, getRoleId());
+        applyRowPolicy(portalName, req);
+        applyPivotColumnPolicy(portalName, req);
+        return stripPivotHiddenColumns(portalName, driver.pivot(req, portalName, getRoleId()));
     }
 }

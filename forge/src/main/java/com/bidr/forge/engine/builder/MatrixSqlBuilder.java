@@ -2,6 +2,7 @@ package com.bidr.forge.engine.builder;
 
 import com.bidr.forge.dao.entity.SysMatrix;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
+import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -273,7 +274,9 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
             return req.getSortList().stream()
                     .map(sort -> {
                         String field = sort.getProperty();
-                        String columnName = aliasMap.getOrDefault(field, field);
+                        // 用户显式排序不得引用隐藏列（值虽已置空，行序仍会泄露大小关系）；系统注入的 WHERE 不在此列
+                        ColumnAliasMap.assertNotSortableField(aliasMap, field);
+                        String columnName = ColumnAliasMap.resolve(aliasMap, field);
                         String direction = sort.getType() != null && sort.getType() == 2 ? "DESC" : "ASC";
                         return "`" + columnName + "` " + direction;
                     })
@@ -303,8 +306,8 @@ public class MatrixSqlBuilder extends BaseSqlBuilder {
             return columnName;
         }
 
-        // 兜底：假设字段名就是列名
-        return fieldName;
+        // 兜底：假设字段名就是列名（列权限收窄时直传物理列名会被拒绝，防止写入/读到隐藏列）
+        return ColumnAliasMap.resolve(aliasMap, fieldName);
     }
 
     /**

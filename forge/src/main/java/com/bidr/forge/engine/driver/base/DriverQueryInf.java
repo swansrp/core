@@ -3,13 +3,16 @@ package com.bidr.forge.engine.driver.base;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.engine.builder.SqlBuilder;
+import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Driver查询接口
@@ -108,6 +111,7 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             page.setTotal(total == null ? 0 : total);
             if (page.getTotal() > 0) {
                 List<Map<String, Object>> records = jdbcConnectService.query(sqlParts.getSelectSql(), parameters);
+                ColumnAliasMap.blankHiddenColumns(records, hiddenFieldsOf(aliasMap));
                 page.setRecords(records);
             }
             return page;
@@ -152,7 +156,9 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
             noPagingReq.setPageSize(null);
 
             String selectSql = builder.buildSelect(noPagingReq, aliasMap, parameters);
-            return jdbcConnectService.query(selectSql, parameters);
+            List<Map<String, Object>> records = jdbcConnectService.query(selectSql, parameters);
+            ColumnAliasMap.blankHiddenColumns(records, hiddenFieldsOf(aliasMap));
+            return records;
         } finally {
             jdbcConnectService.restoreDataSource(prevDataSource);
         }
@@ -213,5 +219,15 @@ public interface DriverQueryInf<VO> extends DriverBaseInf {
         } finally {
             jdbcConnectService.restoreDataSource(prevDataSource);
         }
+    }
+
+    /**
+     * 取本次查询别名映射上登记的隐藏列字段集（供结果置空）；非 {@link ColumnAliasMap} 或无隐藏时返回空集
+     */
+    static Set<String> hiddenFieldsOf(Map<String, String> aliasMap) {
+        if (aliasMap instanceof ColumnAliasMap) {
+            return ((ColumnAliasMap) aliasMap).getHiddenFields();
+        }
+        return Collections.emptySet();
     }
 }

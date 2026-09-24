@@ -62,7 +62,10 @@ public class DynamicTreeController extends DynamicCrudController {
     @GetMapping("/{portalName}/tree/data")
     public List<TreeDataResVO> getTreeData(@PathVariable String portalName) {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
-        List<Map<String, Object>> allData = driver.getAllData(portalName, getRoleId());
+        // getAllData 驱动内部就是「空条件 queryList」，这里用同样的载体先把行策略并进 condition 再取数
+        AdvancedQueryReq policyReq = new AdvancedQueryReq();
+        applyRowPolicy(portalName, policyReq);
+        List<Map<String, Object>> allData = driver.queryList(policyReq, portalName, getRoleId());
 
         SysPortal portal = sysPortalService.getByName(portalName, null);
         String idColumn = portal.getIdColumn();
@@ -88,6 +91,7 @@ public class DynamicTreeController extends DynamicCrudController {
     public List<TreeDataResVO> getTreeDataAdvanced(@PathVariable String portalName, @RequestBody AdvancedQueryReq req) {
         req.setCurrentPage(1L);
         req.setPageSize(60000L);
+        applyRowPolicy(portalName, req);
 
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         Page<Map<String, Object>> page = driver.queryPage(req, portalName, getRoleId());
@@ -165,6 +169,8 @@ public class DynamicTreeController extends DynamicCrudController {
         }
 
         AdvancedQueryReq queryReq = new AdvancedQueryReq(condition, sortList);
+        // 子节点列表同样受行策略约束：无权限的行不应在树的下钻里暴露
+        applyRowPolicy(portalName, queryReq);
 
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         List<Map<String, Object>> children = driver.queryList(queryReq, portalName, getRoleId());

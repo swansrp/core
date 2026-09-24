@@ -6,6 +6,8 @@ import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.forge.engine.builder.BaseSqlBuilder;
+import com.bidr.forge.service.perm.ColumnAliasMap;
+import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -65,7 +67,7 @@ public class DriverStatisticSupportService {
         String elseStr;
         if (FuncUtil.isNotEmpty(statisticColumnField) && !isCount) {
             // SUM 统计：返回字段值
-            String statDb = aliasMap.getOrDefault(statisticColumnField, statisticColumnField);
+            String statDb = ColumnAliasMap.resolve(aliasMap, statisticColumnField);
             thenStr = ctx.formatColumnExpression(statDb);
             elseStr = "0";
         } else {
@@ -271,20 +273,27 @@ public class DriverStatisticSupportService {
         // 2: SELECT 行维度列（别名=前端字段名）
         List<String> selectParts = new ArrayList<>();
         List<String> groupByParts = new ArrayList<>();
+        // 本次请求生成的输出列别名集合：透视排序只能引用这些名字
+        Set<String> outputAliases = new HashSet<>();
         for (KeyValueResVO group : req.getGroupColumns()) {
             Validator.assertTrue(FuncUtil.isNotEmpty(group.getValue()), ErrCodeSys.SYS_ERR_MSG, "行维度字段不能为空");
-            String groupDb = aliasMap.getOrDefault(group.getValue(), group.getValue());
+            // 统计与透视的字段由请求侧传入，矩阵模式下 FROM 就是物理表，故经别名表解析并受列权限约束
+            String groupDb = ColumnAliasMap.resolve(aliasMap, group.getValue());
             String groupExpr = ctx.formatColumnExpression(groupDb);
             selectParts.add(groupExpr + " AS `" + group.getValue() + "`");
             groupByParts.add(groupExpr);
+            outputAliases.add(group.getValue());
         }
 
         // 3: 透视列 × 度量列 的条件聚合
         for (MetricCondition pivot : pivots) {
             Validator.assertTrue(FuncUtil.isNotEmpty(pivot.getValue()), ErrCodeSys.SYS_ERR_MSG, "透视列标识不能为空");
+            // 透视列标识会参与聚合列别名拼接（${标识}__${度量字段}），不经映射也不受列权限约束，故单独校验字符集
+            Validator.assertTrue(SqlIdentifierUtil.isSafeIdentifier(pivot.getValue()),
+                    ErrCodeSys.SYS_ERR_MSG, "透视列标识非法：" + pivot.getValue());
             for (PivotMeasure measure : req.getMeasures()) {
                 Validator.assertTrue(FuncUtil.isNotEmpty(measure.getField()), ErrCodeSys.SYS_ERR_MSG, "度量字段不能为空");
-                String measureDb = aliasMap.getOrDefault(measure.getField(), measure.getField());
+                String measureDb = ColumnAliasMap.resolve(aliasMap, measure.getField());
                 String measureExpr = ctx.formatColumnExpression(measureDb);
                 // 条件表达式: 无条件=纯度量; 有条件=case when 条件 then 度量 else null end（null 对各聚合类型均安全）
                 String innerExpr = measureExpr;
@@ -293,8 +302,9 @@ public class DriverStatisticSupportService {
                     innerExpr = "case when " + (FuncUtil.isEmpty(condSql) ? "1=1" : condSql)
                             + " then " + measureExpr + " else null end";
                 }
-                selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr)
-                        + " AS `" + pivot.getValue() + "__" + measure.getField() + "`");
+                String aggAlias = pivot.getValue() + "__" + measure.getField();
+                selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
+                outputAliases.add(aggAlias);
             }
         }
 
@@ -317,6 +327,9 @@ public class DriverStatisticSupportService {
                 if (FuncUtil.isEmpty(sort.getProperty())) {
                     continue;
                 }
+                // 透视的 ORDER BY 引用的是 SELECT 输出别名（行维度字段名或 ${列标识}__${度量字段}），故不做映射，
+                // 但列权限收窄时必须限定在本次输出别名内，否则可用裸物理列名排序反推隐藏列的值
+                ColumnAliasMap.assertReadableField(aliasMap, outputAliases, sort.getProperty());
                 orderParts.add("`" + sort.getProperty() + "`" + (Integer.valueOf(1).equals(sort.getType()) ? " DESC" : " ASC"));
             }
             if (FuncUtil.isNotEmpty(orderParts)) {
@@ -487,7 +500,7 @@ public class DriverStatisticSupportService {
 
         // 3: 准备 SELECT 子句（分组列 + 聚合表达式）
         // 3.1 计算分组列对应的数据库列名（优先 aliasMap），并构造 SELECT 的 metric 列表达式
-        String metricColumnDb = aliasMap.getOrDefault(metric.getColumn(), metric.getColumn());
+        String metricColumnDb = ColumnAliasMap.resolve(aliasMap, metric.getColumn());
         String metricSelect = "IFNULL(" + ctx.formatColumnExpression(metricColumnDb) + ", '" + StatisticRes.NULL + "') AS `" + metric.getColumn() + "`";
 
         // 3.2 根据第一个 statisticColumn 决定聚合表达式：有 value 则 SUM，否则 COUNT
@@ -495,7 +508,7 @@ public class DriverStatisticSupportService {
         String statisticExpr;
         if (FuncUtil.isNotEmpty(firstStatistic.getValue())) {
             // 3.2.1 若 statistic.value 非空，取其数据库列名并用 SUM 聚合
-            String statDb = aliasMap.getOrDefault(firstStatistic.getValue(), firstStatistic.getValue());
+            String statDb = ColumnAliasMap.resolve(aliasMap, firstStatistic.getValue());
             statisticExpr = "SUM(" + ctx.formatColumnExpression(statDb) + ")";
         } else {
             // 3.2.2 否则使用 COUNT(1)
@@ -590,7 +603,7 @@ public class DriverStatisticSupportService {
         List<String> selectParts = new ArrayList<>();
         String groupByDb = null;
         if (groupMetric != null && FuncUtil.isNotEmpty(groupMetric.getColumn())) {
-            String metricColumnDb = aliasMap.getOrDefault(groupMetric.getColumn(), groupMetric.getColumn());
+            String metricColumnDb = ColumnAliasMap.resolve(aliasMap, groupMetric.getColumn());
             groupByDb = metricColumnDb;
             selectParts.add("IFNULL(" + ctx.formatColumnExpression(metricColumnDb) + ", '" + StatisticRes.NULL + "') AS `" + groupMetric.getColumn() + "`");
         }

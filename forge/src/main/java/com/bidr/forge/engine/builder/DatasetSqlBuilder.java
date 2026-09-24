@@ -3,6 +3,7 @@ package com.bidr.forge.engine.builder;
 import com.bidr.forge.constant.dict.JoinTypeDict;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
+import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
@@ -355,9 +356,11 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
                         String field = sort.getProperty();
                         // 清洗，避免出现 ORDER BY 'dy'
                         field = SqlIdentifierUtil.sanitizeQuotedIdentifier(field);
+                        // 用户显式排序不得引用隐藏列（值虽已置空，行序仍会泄露大小关系）；系统注入的 WHERE 不在此列
+                        ColumnAliasMap.assertNotSortableField(aliasMap, field);
 
                         // Dataset: 排序字段也需要从“前端字段名”映射到“真实字段/表达式”
-                        String mapped = FuncUtil.isNotEmpty(aliasMap) ? aliasMap.getOrDefault(field, field) : field;
+                        String mapped = ColumnAliasMap.resolve(aliasMap, field);
                         mapped = SqlIdentifierUtil.sanitizeQuotedIdentifier(mapped);
 
                         String direction = PortalSortDict.DESC.getValue().equals(sort.getType()) ? "DESC" : "ASC";

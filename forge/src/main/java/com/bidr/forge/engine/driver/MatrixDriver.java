@@ -8,6 +8,7 @@ import com.bidr.forge.engine.DriverCapability;
 import com.bidr.forge.engine.PortalDataMode;
 import com.bidr.forge.engine.builder.MatrixSqlBuilder;
 import com.bidr.forge.engine.builder.SqlBuilder;
+import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.forge.service.statistic.DriverStatisticSupportService;
 import com.bidr.forge.service.statistic.MatrixStatisticQueryContext;
 import com.bidr.kernel.constant.CommonConst;
@@ -315,8 +316,10 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         }
 
         try {
-            return driverStatisticSupportService.summary(jdbcConnectService, req,
+            Map<String, Object> result = driverStatisticSupportService.summary(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
+            ColumnAliasMap.blankHiddenColumns(result, resolveHiddenColumnFields(portalName));
+            return result;
         } finally {
             jdbcConnectService.resetToDefaultDataSource();
         }
@@ -337,8 +340,10 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
         try {
             // 统一由 DriverStatisticSupportService 按 req.metricCondition 自动选择分支
-            return driverStatisticSupportService.statistic(jdbcConnectService, req,
+            List<StatisticRes> result = driverStatisticSupportService.statistic(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
+            blankHiddenStatistics(portalName, result);
+            return result;
         } finally {
             jdbcConnectService.resetToDefaultDataSource();
         }
@@ -357,8 +362,10 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         }
 
         try {
-            return driverStatisticSupportService.pivot(jdbcConnectService, req,
+            List<Map<String, Object>> result = driverStatisticSupportService.pivot(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
+            ColumnAliasMap.blankHiddenColumns(result, resolveHiddenColumnFields(portalName));
+            return result;
         } finally {
             jdbcConnectService.resetToDefaultDataSource();
         }

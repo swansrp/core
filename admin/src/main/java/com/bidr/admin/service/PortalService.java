@@ -12,6 +12,7 @@ import com.bidr.admin.dao.repository.SysPortalIndicatorGroupService;
 import com.bidr.admin.dao.repository.SysPortalIndicatorService;
 import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.admin.holder.PortalConfigContext;
+import com.bidr.admin.service.perm.PortalColumnPolicyService;
 import com.bidr.admin.vo.*;
 import com.bidr.admin.vo.statistic.IndicatorItem;
 import com.bidr.admin.vo.statistic.IndicatorRes;
@@ -20,6 +21,7 @@ import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.utils.BeanUtil;
+import com.bidr.kernel.utils.ConditionVariableUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.utils.StringUtil;
@@ -55,6 +57,8 @@ public class PortalService {
     @Resource
     private PortalConfigService portalConfigService;
 
+    private final PortalColumnPolicyService portalColumnPolicyService;
+
     public PortalWithColumnsRes getPortalWithColumnsConfig(PortalReq req) {
         if (FuncUtil.isEmpty(req.getRoleId())) {
             req.setRoleId(PortalConfigContext.getPortalConfigRoleId());
@@ -68,6 +72,29 @@ public class PortalService {
         Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "实体");
         PortalWithColumnsRes res = Resp.convert(portal, PortalWithColumnsRes.class);
         fillColumnsAndAssociates(Collections.singletonList(res));
+        return res;
+    }
+
+    /**
+     * 运行态视图配置：全量配置基础上按当前用户列权限剥掉被隐藏的列
+     * <p>
+     * 供 GET /config（运行态表格/透视的列定义来源）使用；配置抽屉等编辑器场景必须拿全量
+     * （否则被隐藏的列不再出现在候选里、无法再勾回），另走 GET /config/full →
+     * {@link #getPortalWithColumnsConfig(PortalReq)}。
+     * 隐藏集为空（未配列权限/非登录上下文）时零行为变更；token 口径同 forge 透视剥离：{@code c:property}。
+     * </p>
+     */
+    public PortalWithColumnsRes getPortalWithColumnsConfigForView(PortalReq req) {
+        PortalWithColumnsRes res = getPortalWithColumnsConfig(req);
+        Set<String> hiddenTokens = portalColumnPolicyService.resolveHiddenTokens(
+                PortalColumnPolicyService.RESOURCE_TYPE_PORTAL_COLUMN, req.getName());
+        if (FuncUtil.isEmpty(hiddenTokens) || FuncUtil.isEmpty(res.getColumns())) {
+            return res;
+        }
+        res.setColumns(res.getColumns().stream()
+                .filter(column -> !hiddenTokens.contains(
+                        PortalColumnPolicyService.COLUMN_TOKEN_PREFIX + column.getProperty()))
+                .collect(java.util.stream.Collectors.toList()));
         return res;
     }
 
@@ -123,6 +150,7 @@ public class PortalService {
 
     @Transactional(rollbackFor = Exception.class)
     public void updatePortalConfig(PortalUpdateReq req) {
+        ConditionVariableUtil.validateTokens(req.getDefaultCondition());
         SysPortal portal = ReflectionUtil.copy(req, SysPortal.class);
         if (FuncUtil.isEmpty(req.getPidColumn())) {
             portal.setPidColumn(StringUtil.EMPTY);
@@ -146,6 +174,7 @@ public class PortalService {
 
     @Transactional(rollbackFor = Exception.class)
     public void updatePortalColumn(PortalColumnReq req) {
+        ConditionVariableUtil.validateTokens(req.getDefaultValue());
         SysPortalColumn column = ReflectionUtil.copy(req, SysPortalColumn.class);
         sysPortalColumnService.updateById(column);
     }

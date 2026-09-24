@@ -1,6 +1,7 @@
 package com.bidr.forge.engine.builder;
 
 import com.bidr.forge.engine.builder.base.SqlBuilderQueryInf;
+import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
@@ -144,7 +145,8 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
      */
     protected String buildFieldCondition(AdvancedQuery query, Map<String, String> aliasMap, Map<String, Object> parameters) {
         String fieldName = query.getProperty();
-        String columnName = aliasMap.getOrDefault(fieldName, fieldName);
+        // 列权限收窄时，条件字段必须能在别名表命中，否则可用物理列名读出隐藏列
+        String columnName = ColumnAliasMap.resolve(aliasMap, fieldName);
         Integer relation = query.getRelation();
         List<?> value = query.getValue();
 

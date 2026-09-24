@@ -48,8 +48,15 @@ public class AdminPortalController {
 
     @ApiTrace(response = false)
     @RequestMapping(path = {"/config"}, method = {RequestMethod.GET})
-    @ApiOperation(value = "获取后台管理配置")
+    @ApiOperation(value = "获取运行态视图配置（已按当前用户列权限剥离隐藏列）")
     public PortalWithColumnsRes getPortal(PortalReq req) {
+        return portalService.getPortalWithColumnsConfigForView(req);
+    }
+
+    @ApiTrace(response = false)
+    @RequestMapping(path = {"/config/full"}, method = {RequestMethod.GET})
+    @ApiOperation(value = "获取后台管理配置（全量，供权限配置抽屉等编辑器场景）")
+    public PortalWithColumnsRes getPortalFull(PortalReq req) {
         return portalService.getPortalWithColumnsConfig(req);
     }
 
