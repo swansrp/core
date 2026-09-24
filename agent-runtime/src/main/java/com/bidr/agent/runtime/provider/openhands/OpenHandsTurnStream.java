@@ -316,8 +316,8 @@ final class OpenHandsTurnStream implements RuntimeTurnLink {
             return;
         }
         if (KIND_OBSERVATION.equals(kind)) {
-            pending.add(toolResultFrame(sessionId, turnId, toolName(event), toolCallId(event),
-                    observationText(event)));
+            pending.add(toolResultFrame(sessionId, turnId, OpenHandsEventCodec.resultToolName(event),
+                    toolCallId(event), OpenHandsEventCodec.resultOutput(event)));
             return;
         }
         if (KIND_AGENT_ERROR.equals(kind)) {

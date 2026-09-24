@@ -7,6 +7,7 @@ import com.bidr.llm.agent.runtime.dto.AgentInfo;
 import com.bidr.llm.agent.runtime.dto.CancelResult;
 import com.bidr.llm.agent.runtime.dto.DeleteResult;
 import com.bidr.llm.agent.runtime.dto.SessionInfo;
+import com.bidr.llm.agent.runtime.dto.SubAgentInfo;
 import com.bidr.llm.agent.runtime.dto.TurnItem;
 import com.bidr.llm.agent.runtime.dto.TurnPage;
 import com.bidr.llm.agent.runtime.spi.AgentRuntimeProvider;
@@ -309,6 +310,25 @@ public class OpenHandsProvider implements AgentRuntimeProvider {
         String absolute = workspaceDir(sessionId) + "/" + safe;
         client.upload(sessionId, absolute, safe, content);
         return absolute;
+    }
+
+    /** 只读发现：上游有哪些可委派的子 agent 类型（供管理面展示；注册/配置不经过框架） */
+    @Override
+    public List<SubAgentInfo> listSubAgents() {
+        List<SubAgentInfo> list = new ArrayList<>();
+        JsonNode agents = client.subAgents().path("agents");
+        for (JsonNode agent : agents) {
+            List<String> tools = new ArrayList<>();
+            for (JsonNode tool : agent.path("tools")) {
+                tools.add(tool.asText());
+            }
+            list.add(new SubAgentInfo(
+                    agent.path("name").asText(""),
+                    agent.path("description").asText(""),
+                    agent.path("model").asText("inherit"),
+                    tools));
+        }
+        return list;
     }
 
     /**

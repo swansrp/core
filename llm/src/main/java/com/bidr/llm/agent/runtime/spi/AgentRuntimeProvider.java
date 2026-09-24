@@ -4,12 +4,14 @@ import com.bidr.llm.agent.runtime.dto.AgentInfo;
 import com.bidr.llm.agent.runtime.dto.CancelResult;
 import com.bidr.llm.agent.runtime.dto.DeleteResult;
 import com.bidr.llm.agent.runtime.dto.SessionInfo;
+import com.bidr.llm.agent.runtime.dto.SubAgentInfo;
 import com.bidr.llm.agent.runtime.dto.TurnItem;
 import com.bidr.llm.agent.runtime.dto.TurnPage;
 import com.bidr.llm.agent.runtime.dto.UploadUrlResult;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -128,5 +130,15 @@ public interface AgentRuntimeProvider {
      */
     default String uploadFile(String sessionId, String fileName, byte[] content) {
         throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST, "附件代收转推");
+    }
+
+    /**
+     * 可委派的子 agent 类型（**只读发现**，供管理面展示）。
+     * 空清单 = 该上游未提供（如未开子 agent，或内置/文件定义为空）——不是错误。
+     * 🔴 边界：只发现、不注册。子 agent 的注册与配置是各家 runtime 自己的管理面，
+     * 框架不定义注册协议（各家差异极大且与部署强绑定）。
+     */
+    default List<SubAgentInfo> listSubAgents() {
+        return Collections.emptyList();
     }
 }

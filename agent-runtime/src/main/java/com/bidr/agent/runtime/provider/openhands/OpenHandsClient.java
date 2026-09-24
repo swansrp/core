@@ -221,6 +221,17 @@ public class OpenHandsClient {
     }
 
     /**
+     * 可委派子 agent 类型（只读发现；OpenHands 侧无内置时返回空清单——不是错误）
+     */
+    public JsonNode subAgents() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("load_user", true);
+        body.put("load_project", true);
+        body.put("load_builtin", true);
+        return post("/api/sub-agents", body);
+    }
+
+    /**
      * 按名字取 agent profile id（建会话必填）：名字命中优先，否则用上游当前激活档案。
      * 两者都没有即未接线（返回 null，由调用方给可诊断的错误）。
      */

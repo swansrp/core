@@ -84,6 +84,9 @@ public final class OpenHandsEventCodec {
     static final String FRAME_ERROR = RuntimeEvents.ERROR;
     static final String FRAME_CANCELLED = RuntimeEvents.CANCELLED;
 
+    /** 规范 spawn 容器步名（前端据此渲染子 Agent 组） */
+    static final String SPAWN_TOOL = RuntimeEvents.SPAWN_TOOL;
+
     /** 取消原因取值（契约 A4） */
     static final String CANCEL_BY_USER = "user.request";
 
@@ -237,11 +240,88 @@ public final class OpenHandsEventCodec {
         return RuntimeEvents.deltaFrame(type, sessionId, messageId, delta);
     }
 
+    /** OpenHands 的委派工具名（action.kind=TaskAction，observation.kind=TaskObservation） */
+    static final String TOOL_TASK = "task";
+
+    /**
+     * 委派动作：OpenHands 的子 agent **不产生子会话**（实测 {@code sub_conversation_ids=[]}），
+     * 子 agent 的报告直接作为父级 {@code task} 工具的输出回来。
+     * 🔴 OEM 侧把它映射成规范 spawn 容器步（{@code spawn_subagent} + {@code agent_code}），
+     * 直播与历史两路同形状——**不伪造子事件流**（上游没给，就不发明）。
+     */
+    static boolean isTaskAction(JsonNode event) {
+        return KIND_ACTION.equals(kind(event))
+                && (TOOL_TASK.equals(toolName(event))
+                || "TaskAction".equals(event.path("action").path("kind").asText(null)));
+    }
+
+    /** 子 agent 类型（TaskAction.subagent_type，回落 tool_call.arguments 里的同名字段） */
+    static String taskSubagentType(JsonNode event) {
+        String type = event.path("action").path("subagent_type").asText(null);
+        if (type == null || type.isEmpty()) {
+            type = event.path("tool_call").path("arguments").asText("").contains("subagent_type")
+                    ? parseArg(event, "subagent_type") : null;
+        }
+        return type == null || type.isEmpty() ? "subagent" : type;
+    }
+
+    private static String parseArg(JsonNode event, String key) {
+        try {
+            JsonNode args = MAPPER.readTree(event.path("tool_call").path("arguments").asText("{}"));
+            return args.path(key).asText(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 委派步的入参视图：只暴露前端要展示的三件（编码/标签/任务），不带 security_risk 等噪音 */
+    static ObjectNode taskArguments(JsonNode actionEvent) {
+        ObjectNode args = MAPPER.createObjectNode();
+        args.put("agent_code", taskSubagentType(actionEvent));
+        String label = actionEvent.path("action").path("description").asText(null);
+        if (label == null || label.isEmpty()) {
+            label = actionEvent.path("summary").asText(null);
+        }
+        if (label != null && !label.isEmpty()) {
+            args.put("label", label);
+        }
+        String prompt = actionEvent.path("action").path("prompt").asText(null);
+        if (prompt != null && !prompt.isEmpty()) {
+            args.put("prompt", prompt);
+        }
+        return args;
+    }
+
+    /**
+     * 委派输出：成功给子 agent 报告原文；失败给规范错误 JSON
+     * （前端 {@code spawnOutcome} 据此把容器步标成 failed）。
+     */
+    static String taskOutput(JsonNode observationEvent) {
+        JsonNode observation = observationEvent.path("observation");
+        String text = observationText(observationEvent);
+        if (!observation.path("is_error").asBoolean(false)) {
+            return text;
+        }
+        ObjectNode error = MAPPER.createObjectNode();
+        error.put("outcome", "failed");
+        error.put("agent_code", observation.path("subagent").asText(taskSubagentType(observationEvent)));
+        error.put("error", text == null || text.isEmpty() ? "子 Agent 执行失败" : text);
+        return error.toString();
+    }
+
+    /** 该观察事件是否来自委派 */
+    static boolean isTaskObservation(JsonNode event) {
+        return KIND_OBSERVATION.equals(kind(event))
+                && (TOOL_TASK.equals(toolName(event))
+                || "TaskObservation".equals(event.path("observation").path("kind").asText(null)));
+    }
+
     static String toolCallFrame(String sessionId, String messageId, JsonNode actionEvent) {
         ObjectNode data = data();
-        data.put("tool_name", toolName(actionEvent));
+        boolean task = isTaskAction(actionEvent);
+        data.put("tool_name", task ? SPAWN_TOOL : toolName(actionEvent));
         data.put("tool_call_id", toolCallId(actionEvent));
-        Object arguments = toolArguments(actionEvent);
+        Object arguments = task ? taskArguments(actionEvent) : toolArguments(actionEvent);
         if (arguments instanceof JsonNode) {
             data.set("arguments", (JsonNode) arguments);
         } else if (arguments != null) {
@@ -476,12 +556,23 @@ public final class OpenHandsEventCodec {
         }
     }
 
+    /** 观察事件的规范工具名（委派→spawn 容器，与普通工具步两路同形） */
+    static String resultToolName(JsonNode event) {
+        return isTaskObservation(event) ? SPAWN_TOOL : toolName(event);
+    }
+
+    /** 观察事件的规范输出（委派取子 agent 报告，失败包成规范错误 JSON） */
+    static String resultOutput(JsonNode event) {
+        return isTaskObservation(event) ? taskOutput(event) : observationText(event);
+    }
+
     private static TurnBlock callBlock(JsonNode actionEvent) {
         TurnBlock block = new TurnBlock();
+        boolean task = isTaskAction(actionEvent);
         block.setType("tool_call");
-        block.setToolName(toolName(actionEvent));
+        block.setToolName(task ? SPAWN_TOOL : toolName(actionEvent));
         block.setToolCallId(toolCallId(actionEvent));
-        block.setArguments(toolArguments(actionEvent));
+        block.setArguments(task ? taskArguments(actionEvent) : toolArguments(actionEvent));
         block.setContent(actionEvent.path("summary").asText(null));
         return block;
     }
@@ -489,10 +580,10 @@ public final class OpenHandsEventCodec {
     private static TurnBlock resultBlock(JsonNode event) {
         TurnBlock block = new TurnBlock();
         block.setType("tool_result");
-        block.setToolName(toolName(event));
+        block.setToolName(resultToolName(event));
         block.setToolCallId(toolCallId(event));
         block.setOutput(KIND_AGENT_ERROR.equals(kind(event))
-                ? event.path("error").asText("") : observationText(event));
+                ? event.path("error").asText("") : resultOutput(event));
         return block;
     }
 
@@ -536,8 +627,8 @@ public final class OpenHandsEventCodec {
             } else if (isFinishObservation(event)) {
                 // 回声：正文已由 FinishAction 给出
             } else if (KIND_OBSERVATION.equals(kind)) {
-                frames.add(toolResultFrame(sessionId, messageId, toolName(event), toolCallId(event),
-                        observationText(event)));
+                frames.add(toolResultFrame(sessionId, messageId, resultToolName(event), toolCallId(event),
+                        resultOutput(event)));
             } else if (KIND_AGENT_ERROR.equals(kind)) {
                 frames.add(toolResultFrame(sessionId, messageId, toolName(event), toolCallId(event),
                         event.path("error").asText("")));
