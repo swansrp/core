@@ -3,6 +3,7 @@ package com.bidr.admin.service.statistic;
 import com.bidr.admin.dao.entity.SysPortalIndicator;
 import com.bidr.admin.service.common.BasePortalService;
 import com.bidr.admin.vo.statistic.PortalIndicatorVO;
+import com.bidr.kernel.utils.ConditionVariableUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
@@ -19,5 +20,17 @@ public class AdminPortalIndicatorService extends BasePortalService<SysPortalIndi
     @Override
     public void getJoinWrapper(MPJLambdaWrapper<SysPortalIndicator> wrapper) {
         super.getJoinWrapper(wrapper);
+    }
+
+    @Override
+    public void beforeAdd(SysPortalIndicator entity) {
+        super.beforeAdd(entity);
+        ConditionVariableUtil.validateTokens(entity.getCondition());
+    }
+
+    @Override
+    public void beforeUpdate(SysPortalIndicator entity) {
+        super.beforeUpdate(entity);
+        ConditionVariableUtil.validateTokens(entity.getCondition());
     }
 }

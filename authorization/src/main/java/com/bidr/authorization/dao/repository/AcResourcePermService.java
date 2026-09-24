@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.mapper.AcResourcePermMapper;
 import com.bidr.authorization.vo.perm.ResourcePermSaveBySubjectReq;
 import com.bidr.authorization.vo.perm.ResourcePermSaveReq;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import com.bidr.kernel.utils.ConditionVariableUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +74,13 @@ public class AcResourcePermService extends BaseSqlRepo<AcResourcePermMapper, AcR
         String resourceType = req.getResourceType();
         String resourceId = req.getResourceId();
 
+        // 保存校验：验证 extra_data 中所有 ${...} token 合法性
+        if (FuncUtil.isNotEmpty(req.getPerms())) {
+            for (ResourcePermSaveReq.PermItem item : req.getPerms()) {
+                ConditionVariableUtil.validateTokens(item.getExtraData());
+            }
+        }
+
         // 先删除原有授权
         deleteByResource(resourceType, resourceId);
 
@@ -85,6 +93,8 @@ public class AcResourcePermService extends BaseSqlRepo<AcResourcePermMapper, AcR
                 perm.setResourceId(resourceId);
                 perm.setSubjectType(item.getSubjectType());
                 perm.setSubjectId(item.getSubjectId());
+                // 全量覆盖语义下扩展信息随行一起重写，不继承旧值：前端保存时总是带全量现状
+                perm.setExtraData(item.getExtraData());
                 perm.setCreateBy(operator);
                 permList.add(perm);
             }
