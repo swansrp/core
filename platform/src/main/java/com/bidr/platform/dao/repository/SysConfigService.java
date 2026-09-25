@@ -40,6 +40,16 @@ public class SysConfigService extends BaseSqlRepo<SysConfigDao, SysConfig> {
                 .set(SysConfig::getConfigGroup, configGroup));
     }
 
+    /**
+     * 按 config_key 同步参数名称/备注文案（null 表示该列不动；永不触碰 config_value 运行值）
+     */
+    public void refreshTitleRemark(String configKey, String configName, String remark) {
+        update(null, Wrappers.<SysConfig>lambdaUpdate()
+                .eq(SysConfig::getConfigKey, configKey)
+                .set(configName != null, SysConfig::getConfigName, configName)
+                .set(remark != null, SysConfig::getRemark, remark));
+    }
+
     public Page<SysConfig> querySysConfig(QuerySysConfigReq req) {
         LambdaQueryWrapper<SysConfig> wrapper = super.getQueryWrapper()
                 .like(FuncUtil.isNotEmpty(req.getConfigKey()), SysConfig::getConfigKey, req.getConfigKey());

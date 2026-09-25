@@ -19,7 +19,7 @@ public enum ParamFrame implements Param {
     /**
      * 系统参数
      */
-    CACHE_INIT_MODE("缓存加载模式", "1", "1:redis, 0:内存");
+    CACHE_INIT_MODE("缓存加载模式", "1", "【出厂默认即可】系统缓存载体：1＝Redis（多实例共享，部署形态即此）、0＝进程内存（仅单机开发调试）；改后需重启生效");
 
 
     private final String title;

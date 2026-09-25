@@ -62,10 +62,13 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
                         item.setConfigGroup(group);
                         sysConfigList.add(item);
                         list.add(item);
-                    } else if (isBlank(existing.getConfigGroup())) {
-                        // 存量行回填：只补空分组，不覆盖已有值；同步改内存对象让本次缓存即带分组
-                        existing.setConfigGroup(group);
-                        backfillKeys.computeIfAbsent(group, k -> new ArrayList<>()).add(configKey);
+                    } else {
+                        if (isBlank(existing.getConfigGroup())) {
+                            // 存量行回填：只补空分组，不覆盖已有值；同步改内存对象让本次缓存即带分组
+                            existing.setConfigGroup(group);
+                            backfillKeys.computeIfAbsent(group, k -> new ArrayList<>()).add(configKey);
+                        }
+                        refreshMeta(configKey, existing, (Param) enumItem);
                     }
                 }
             }
@@ -90,6 +93,29 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
 
     private boolean isBlank(String str) {
         return str == null || str.trim().isEmpty();
+    }
+
+    /**
+     * title/remark 以代码为准同步进库：说明文字是代码文档而非运维数据，启动刷新才能让
+     * 文案改进到达存量环境（只同步文字，⚠️ 绝不碰 config_value——运行值以库为准是定案）。
+     * 枚举 remark 为空时不清库：未写 remark 的参数不把库里已有文案抹掉。
+     */
+    private void refreshMeta(String configKey, SysConfig existing, Param param) {
+        String dbRemark = existing.getRemark() == null ? "" : existing.getRemark();
+        boolean nameChanged = !param.getTitle().equals(existing.getConfigName());
+        boolean remarkChanged = !param.getRemark().isEmpty() && !param.getRemark().equals(dbRemark);
+        if (!nameChanged && !remarkChanged) {
+            return;
+        }
+        if (nameChanged) {
+            existing.setConfigName(param.getTitle());
+        }
+        if (remarkChanged) {
+            existing.setRemark(param.getRemark());
+        }
+        sysConfigService.refreshTitleRemark(configKey,
+                nameChanged ? param.getTitle() : null,
+                remarkChanged ? param.getRemark() : null);
     }
 
     private SysConfig buildSysConfig(Class<?> clazz, String configKey, Param param) {

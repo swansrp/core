@@ -20,7 +20,8 @@ public enum SmsParam implements Param {
     /**
      * 短信参数
      */
-    SMS_MOCK_MODE("短信模拟模式", CommonConst.YES, "");
+    SMS_MOCK_MODE("短信模拟模式", CommonConst.YES,
+            "【未启用短信则不动】1＝模拟模式，短信不真发只记日志（开发/演示防误发）；接了真实短信网关才置 0");
 
     private final String title;
     private final String defaultValue;
