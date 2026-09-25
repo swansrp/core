@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  * &lt;尾预览 previewChars×0.2 字&gt;
  * 提示：重复同参调用本工具只会再得一个指针；预览不足以定论时必须回捞，禁止凭预览猜测。
  * </pre>
- * 引用不变式：I2（只改文本不改拓扑——本类只产文本）、I5（无回捞通道不卸载）、
+ * 引用不变式：I2（只改文本不改拓扑——本类只产文本）、I5（A10 起由框架两级通道保证卸载必有取回路径）、
  * I6（neverOffload 命中不卸载）、I7（句柄前置可摘要）、I9（offloadChars=0 一律不卸载）
  *
  * @author Sharp
@@ -37,18 +37,19 @@ public final class ToolResultOffloader {
     }
 
     /**
-     * 入场卸载判定（I5/I6/I9）：回捞通道可用 且 阈值正值 且 结果长度严格超过阈值 且 工具不在永不卸载集。
-     * 长度==阈值不卸载（边界语义：超过才卸载）
+     * 入场卸载判定（I6/I9）：阈值正值 且 结果长度严格超过阈值 且 工具不在永不卸载集。
+     * 长度==阈值不卸载（边界语义：超过才卸载）。
+     * <p>A10 起不再要求链路提供回捞通道：{@code ToolAgentRunner} 自带 run 作用域缓冲兜底（I16），
+     * 卸载必有取回路径 ⇒ I5 从"无外部通道不卸载"升级为"框架两级通道恒在"
      *
-     * @param toolName             工具名
-     * @param resultText           结果原文
-     * @param offloadChars         卸载阈值（0=关闭）
-     * @param neverOffload         永不卸载集（pinnedTools ∪ askUser ∪ recallToolResult）
-     * @param recallChannelAvailable listener.supportsToolResultRecall()（false 时一律原文入窗，I5）
+     * @param toolName     工具名
+     * @param resultText   结果原文
+     * @param offloadChars 卸载阈值（0=关闭）
+     * @param neverOffload 永不卸载集（pinnedTools ∪ askUser ∪ recallToolResult）
      */
     public static boolean shouldOffload(String toolName, String resultText, int offloadChars,
-                                        Set<String> neverOffload, boolean recallChannelAvailable) {
-        if (!recallChannelAvailable || offloadChars <= 0 || resultText == null) {
+                                        Set<String> neverOffload) {
+        if (offloadChars <= 0 || resultText == null) {
             return false;
         }
         if (toolName != null && neverOffload != null && neverOffload.contains(toolName)) {

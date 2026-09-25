@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Title: AgentContextBudget
- * Description: L1 上下文预算治理五项阈值的取值单一出口（三级优先级，I9 兜底）：
+ * Description: L1 上下文预算治理六项阈值的取值单一出口（三级优先级，I9 兜底）：
  * <pre>option 正值 &gt; sys_config（LlmParam 运维灰度） &gt; Param 默认值（全关/保守默认）</pre>
  * Param 读取口径参照 DbAwareModelConfigProvider#dbValue：SysConfigCacheService 取不到
  * （启动早期无 Spring 上下文/参数未入库/值非数字）一律吞掉回落默认，绝不让取参击穿工具循环。
@@ -45,6 +45,11 @@ public final class AgentContextBudget {
     /** 单次回捞返回字符上限 */
     public static int recallMaxChars() {
         return resolveFloor(fromParam(LlmParam.AGENT_TOOL_RECALL_MAX_CHARS), 0, enumDefault(LlmParam.AGENT_TOOL_RECALL_MAX_CHARS));
+    }
+
+    /** run 作用域回捞缓冲容量（字，A10）：超出按插入序挤出最旧条目 */
+    public static int recallBufferChars() {
+        return resolveFloor(fromParam(LlmParam.AGENT_TOOL_RECALL_BUFFER_CHARS), 0, enumDefault(LlmParam.AGENT_TOOL_RECALL_BUFFER_CHARS));
     }
 
     /**

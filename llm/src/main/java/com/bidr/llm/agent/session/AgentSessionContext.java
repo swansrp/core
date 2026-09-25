@@ -408,7 +408,8 @@ public class AgentSessionContext {
                 emit(AgentEvent.TOOL_RESULT, payload);
             }
 
-            /** 会话链事件流持工具结果全文（I4），天然具备按句柄回捞能力（I5 判据） */
+            /** 会话链事件流持工具结果全文（I4）⇒ 回捞的**优先**通道，可跨 run/跨实例取回
+             *  （A10 起 run 内缓冲为兜底通道，本位只扩可捞范围，不再是卸载前置） */
             @Override
             public boolean supportsToolResultRecall() {
                 return true;

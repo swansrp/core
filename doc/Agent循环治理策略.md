@@ -61,10 +61,11 @@
 
 ### 11. 工具结果入场卸载 + 句柄回捞（`toolResultOffloadChars`，2026-09 新增）
 - 超过阈值（字符）的工具结果**入场即替换**为「头尾预览 + `tool_call_id` 句柄」指针，不再等驱逐时才摘要——全文每轮重付的痛点从源头掐断；原文始终在会话事件流全文归档（呈现形态分层），模型经内建 `recallToolResult` 工具按句柄零损失取回。
-- 三道闸门防失控：单 run 回捞次数上限（默认 3）、单次回捞返回上限（默认 20000 字）、回捞结果不再二次卸载。钉住工具 ∪ askUser ∪ recallToolResult 永不卸载；无回捞通道（非会话链 listener）时一律原文入窗；收口路径最后一次 generate 前追加的消息一律原文。
+- 三道闸门防失控：单 run 回捞次数上限（默认 3）、单次回捞返回上限（默认 20000 字）、回捞结果不再二次卸载。钉住工具 ∪ askUser ∪ recallToolResult 永不卸载；收口路径最后一次 generate 前追加的消息一律原文。
 - 关闭态（`0`，框架默认）零行为变化；`cachedTools` 命中路径同样卸载并配本次新句柄。
-- **句柄有两个来源**（`I15`）：① 入场卸载指针首行的 `tool_call_id=`；② 被窗口裁进【探索记录摘要】时，被驱逐的工具结果行尾追加的 `（句柄=…）`——原文恒在会话事件流（I4），故**被裁掉的结果与窗内指针同等可回捞**，不存在"裁切即失联"。二者共用同一把同源判据 `recallUsable = 有回捞通道 && (卸载开启 || token 预算开启)`：回捞工具是否进 specs、摘要是否写句柄，由这一个布尔决定，杜绝"有句柄没工具 / 有工具没句柄"的半开态。默认全关时 `recallUsable=false`，specs 不增工具、digest 逐字符不变（I9）。摘要头部随之多一行回捞指引，仅该形态存在。
-- 位置：`ToolResultOffloader` / `AgentToolRecall` / `ToolAgentRunner.appendToolResultMessage`、摘要句柄 `ToolAgentRunner.digestOf`、回捞读源 `AgentSessionContext.loopListener().recallToolResult`。
+- **句柄有两个来源**（`I15`）：① 入场卸载指针首行的 `tool_call_id=`；② 被窗口裁进【探索记录摘要】时，被驱逐的工具结果行尾追加的 `（句柄=…）`——原文恒在会话事件流（I4），故**被裁掉的结果与窗内指针同等可回捞**，不存在"裁切即失联"。二者共用同一把同源判据 `recallUsable = (卸载开启 || token 预算开启)`（A10 起不再叠通道位）：回捞工具是否进 specs、摘要是否写句柄，由这一个布尔决定，杜绝"有句柄没工具 / 有工具没句柄"的半开态。默认全关时 `recallUsable=false`，specs 不增工具、digest 逐字符不变（I9）。摘要头部随之多一行回捞指引，仅该形态存在。
+- **回捞通道由框架两级自带**（`I16`，2026-09 修正案 A10）：取数**先走会话事件流**（`supportsToolResultRecall()=true` 的链路，跨 run、跨实例、重启后仍可捞），miss 或本无通道时落到 `RunScopedRecallBuffer`——run 作用域内暂存"模型已看不到的原文"（被卸载为指针的 + 被驱逐进摘要的），随本次 `run()` 结束释放。故任何链路零改动即享有卸载与回捞，运维开关一置正值就生效；`supportsToolResultRecall` 从此只决定**可回捞范围**（跨 run / 仅本 run），不再是卸载前置闸。I16 三条：①只存不可见者（窗内原文与收口保原文不入表）；②生命周期=一次 run，绝不跨 run 引用；③只读，绝不写事件流（不破 I13）。缓冲容量 `AGENT_TOOL_RECALL_BUFFER_CHARS`（默认 120000 字）按插入序 FIFO 挤出最旧句柄——长 run 累积的不可见原文可远超窗口，不设上限即无界堆占用；被挤出的句柄回捞返回"未找到（已被容量挤出）"，属显式记录的有界退化。裸链路若将来改成多 run 复用同一消息历史，**必须同时接通道**，否则上一 run 的句柄必失联。
+- 位置：`ToolResultOffloader` / `AgentToolRecall` / `ToolAgentRunner.appendToolResultMessage`、摘要句柄 `ToolAgentRunner.digestOf`、回捞读源 `AgentSessionContext.loopListener().recallToolResult`（优先）与 `RunScopedRecallBuffer`（兜底，A10）。
 
 ### 12. Token 维度上下文预算（`contextTokenBudget`，2026-09 新增）
 - 裁窗计量单位补上 token 量纲：正值时为「进入模型的消息估算 token 上限」（估算式 CJK×1.0 + 其他×0.3 + 每条 4 + 工具定义×1.2，方向只高不低，见 `ContextTokenEstimator`），与条数窗口**取更严者**；被钉住对不可驱逐导致保留段仍超预算时只告警（软超），不迭代重算。
@@ -140,5 +141,5 @@
 - 若某工具重复调用仍频繁：确认其已登记进 `CATALOG_PINNED_TOOLS`（防重发）与 `READONLY_CACHE_TOOLS`（零成本兜底）。
 - 新增硬约束时的落点顺序：①工具 `@Tool` description（每轮可见）> ②用户提示词头部（永不被裁）> ③中段提示词（会被裁，避免）。
 - L1 预算治理的运维灰度开关（sys_config，均可被 `AgentLoopOptions` 正数值覆盖；**两类键语义不同**——开关键 `AGENT_TOOL_RESULT_OFFLOAD_CHARS` / `AGENT_CONTEXT_TOKEN_BUDGET` 默认 `0`，0 即"关闭"设计本体；闸门键默认即保守值（1000/3/20000），DB 填 `0` 或负值一律**回落保守默认**而非关闭，要整体关闭请关总开关 `AGENT_TOOL_RESULT_OFFLOAD_CHARS=0`。未显式开启的链路行为与改造前逐条一致）：
-  `AGENT_TOOL_RESULT_OFFLOAD_CHARS`（卸载阈值字，建议 4000）、`AGENT_TOOL_RESULT_PREVIEW_CHARS`（指针预览字，默认 1000）、`AGENT_CONTEXT_TOKEN_BUDGET`（token 预算，建议 24000）、`AGENT_TOOL_RECALL_MAX_PER_RUN`（回捞次数上限，默认 3）、`AGENT_TOOL_RECALL_MAX_CHARS`（回捞返回上限字，默认 20000）。
+  `AGENT_TOOL_RESULT_OFFLOAD_CHARS`（卸载阈值字，建议 4000）、`AGENT_TOOL_RESULT_PREVIEW_CHARS`（指针预览字，默认 1000）、`AGENT_CONTEXT_TOKEN_BUDGET`（token 预算，建议 24000）、`AGENT_TOOL_RECALL_MAX_PER_RUN`（回捞次数上限，默认 3）、`AGENT_TOOL_RECALL_MAX_CHARS`（回捞返回上限字，默认 20000）、`AGENT_TOOL_RECALL_BUFFER_CHARS`（run 内回捞缓冲容量字，默认 120000，A10）。
 - 判断治理是否真生效：看过程日志「上下文计量」行与「token 预算触发驱逐」「工具结果入场卸载」；关闭态不产生任何计量行（事件流零新增）。

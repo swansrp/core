@@ -437,17 +437,19 @@ public class ToolAgentRunnerTokenBudgetTest {
 
     /**
      * A9 测试 4：recallUsable 真值矩阵（offloadOn=T / offloadChars=0&&tokenBudget>0 / 两者皆0
-     * × recallAvailable=T/F 共 6 格）——specs 是否含 recallToolResult 与 digest 是否带行内句柄
-     * 两处必须同随判据（I15 同源不半开）；两者皆 0 时即使有回捞通道，specs 也不得多出本工具（I9）
+     * × 通道位 T/F 共 6 格）——specs 是否含 recallToolResult 与 digest 是否带行内句柄
+     * 两处必须同随判据（I15 同源不半开）；两者皆 0 时即使有回捞通道，specs 也不得多出本工具（I9）。
+     * <p>A10 改判两格：通道位（listener 是否实现事件流回捞）不再参与判定——框架自带 run 缓冲兜底，
+     * 轻链路的 offload/tokenBudget 格同样开启（旧口径"无通道不卸载"随 I5 升级作废）
      */
     @Test
     public void recallUsable真值矩阵specs与digest同源() {
         //      offload budget recallAvail expectUsable
         Object[][] cases = {
                 {4000, null, true, true},    // 卸载开启（入场指针句柄路径）
-                {4000, null, false, false},  // I5：无回捞通道 offloadOn 亦为假，budget=0 → 全关
-                {null, 2000, true, true},    // A9 新形态：不卸载、被驱逐入 digest 带句柄
-                {null, 2000, false, false},  // 驱逐照常但无句柄（无通道不写）
+                {4000, null, false, true},   // A10：轻链路同样卸载（run 缓冲即通道）
+                {null, 2000, true, true},    // A9 形态：不卸载、被驱逐入 digest 带句柄
+                {null, 2000, false, true},   // A10：轻链路驱逐同样写句柄
                 {null, null, true, false},   // 默认态×会话链：specs 不多工具、digest 无句柄（I9）
                 {null, null, false, false},  // 默认态×轻链路：同上
         };
@@ -534,6 +536,36 @@ public class ToolAgentRunnerTokenBudgetTest {
         }
         Assert.assertNotNull(recalled);
         Assert.assertEquals("端到端：凭 digest 句柄回捞须逐字符等于原文全文",
+                ContextProbeTools.report(10000, "A"), recalled);
+    }
+
+    /**
+     * A10 端到端（轻链路版，与上一案唯一差别是 listener 无跨 run 通道）：被 token 预算裁进 digest 的
+     * 大结果，模型凭行内「句柄=」调 recallToolResult，由框架自带的 run 作用域缓冲取回逐字符等于原文——
+     * 业务侧一行代码不加即享有该能力（本笔改动的收益面）
+     */
+    @Test
+    public void 轻链路digest句柄端到端回捞逐字符等于原文() {
+        ScriptedModel model = new ScriptedModel(
+                Step.tool("call-1", "bigReport", "{\"topic\":\"A\"}"),
+                Step.tool("call-2", "bigReport", "{\"topic\":\"B\"}"),
+                Step.tool("call-3", "recallToolResult", "{\"toolCallId\":\"call-1\"}"),
+                Step.done("结论引用 KEY-A-8888"));
+        AgentLoopResult r = new ToolAgentRunner().run(model, "系统", "任务", tools(10000),
+                opts(8, 100, null, 2000), light(null));
+        Assert.assertNotNull(r);
+        String digest = firstDigest(model);
+        Assert.assertTrue("轻链路开启态同样写指令行+行内句柄（I15）",
+                digest.startsWith(EXPECTED_DIGEST_PREFIX + EXPECTED_RECALL_GUIDANCE)
+                        && digest.contains("（句柄=call-1）"));
+        String recalled = null;
+        for (ScriptedModel.RoundView v : model.views) {
+            String t = resultText(v.messages, "call-3");
+            if (t != null) {
+                recalled = t;
+            }
+        }
+        Assert.assertEquals("端到端：run 缓冲取回须逐字符等于原文全文",
                 ContextProbeTools.report(10000, "A"), recalled);
     }
 

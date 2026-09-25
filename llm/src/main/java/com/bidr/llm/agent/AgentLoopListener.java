@@ -68,8 +68,10 @@ public interface AgentLoopListener {
     }
 
     /**
-     * 是否支持按 tool_call_id 回捞此前工具结果的原文全文——卸载机制的入场前置闸（I5：
-     * 无回捞通道不卸载，宁可不省不可丢信息）。默认 false：轻链路（票据链/NONE）零改动即向后兼容；
+     * 是否提供**跨 run** 的原文回捞通道（会话事件流）——A10 起不再是卸载的前置闸：
+     * {@code ToolAgentRunner} 自带 run 作用域缓冲（{@link RunScopedRecallBuffer}，I16），任何链路
+     * 零改动即有取回路径；本位为真只是把可回捞范围从"本次 run"扩到"整段会话（跨 run、跨实例）"。
+     * 默认 false：轻链路（票据链/NONE）只享受 run 内通道；
      * 会话链 {@code AgentSessionContext#loopListener()} 覆写为 true（事件流持全文，按 id 只读回捞）
      */
     default boolean supportsToolResultRecall() {
@@ -78,7 +80,8 @@ public interface AgentLoopListener {
 
     /**
      * 按 tool_call_id 回捞工具结果原文全文（与 {@link #supportsToolResultRecall()} 配套，
-     * 内建 recallToolResult 工具的取数出口）：只读，不得向事件流写入任何内容（I13）。
+     * 内建 recallToolResult 工具的**优先**取数出口，miss 后框架落 run 作用域缓冲）：
+     * 只读，不得向事件流写入任何内容（I13）。
      * 默认返回 null=未找到；会话实现顺序扫事件流 TOOL_RESULT 按 id 命中返回 output 全文
      */
     default String recallToolResult(String toolCallId) {

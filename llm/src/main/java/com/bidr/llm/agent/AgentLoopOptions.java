@@ -59,10 +59,11 @@ public class AgentLoopOptions {
     private int contextTokenBudget = 0;
 
     /** 工具结果入场卸载阈值（字符，0=关闭不卸载，I9）：超过该字符数的工具结果入场时替换为
-     *  预览+句柄指针文本，原文仍在会话事件流全文中，模型经内建 recallToolResult 工具按句柄回捞
-     *  （机制见 ToolResultOffloader/AgentToolRecall，不变式 I4/I5/I6/I7/I10）。
-     *  0 时回落 sys_config {@code AGENT_TOOL_RESULT_OFFLOAD_CHARS}；仅当 listener 支持回捞
-     *  （supportsToolResultRecall=true）时生效，无回捞通道一律原文入窗（I5） */
+     *  预览+句柄指针文本，原文进框架自带的 run 作用域回捞缓冲（会话链另有事件流全文副本），
+     *  模型经内建 recallToolResult 工具按句柄回捞（机制见 ToolResultOffloader/AgentToolRecall/
+     *  RunScopedRecallBuffer，不变式 I4/I5/I6/I7/I10/I16）。
+     *  0 时回落 sys_config {@code AGENT_TOOL_RESULT_OFFLOAD_CHARS}；A10 起任何链路零改动即生效
+     *  （旧"须 listener 支持回捞"前置已作废，通道位只决定能否跨 run 回捞） */
     private int toolResultOffloadChars = 0;
 
     public AgentLoopOptions() {

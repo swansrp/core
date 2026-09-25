@@ -78,12 +78,13 @@ public class ToolAgentRunner {
         // I14：全部计数收敛在 run() 局部 RunStats 实例，runner 自身不新增任何字段（Spring 单例共享）
         RunStats stats = new RunStats(sink);
         stats.recallAvailable = sink.supportsToolResultRecall();
-        // I5：无回捞通道不卸载；I6：钉住工具 ∪ askUser ∪ recallToolResult 永不卸载
-        boolean offloadOn = offloadChars > 0 && stats.recallAvailable;
+        // A10：回捞通道由框架两级自带（run 内缓冲 + 会话事件流），不再依赖链路能力位 ⇒
+        // I5 语义升级：卸载恒有取回路径，`recallAvailable` 只决定「能否跨 run 回捞」，不再是卸载前置条件
+        boolean offloadOn = offloadChars > 0;
         // A9/I15 回捞可用性唯一同源判据：卸载开启（指针句柄）或 token 预算开启（digest 行内句柄）任一为真；
         // 回捞工具注册与 digest 写句柄共此一刀，防"有句柄没工具/有工具没句柄"半开态。
         // I9：offloadChars=0 && tokenBudget=0（默认态）→ false：specs 不增工具、digest 不写句柄，关闭态逐字符不变
-        boolean recallUsable = stats.recallAvailable && (offloadOn || tokenBudget > 0);
+        boolean recallUsable = offloadOn || tokenBudget > 0;
         stats.recallUsable = recallUsable;
         Set<String> neverOffload = new HashSet<>(
                 opt.getPinnedTools() == null ? Collections.emptySet() : opt.getPinnedTools());
@@ -92,10 +93,10 @@ public class ToolAgentRunner {
         List<Object> effectiveTools = new ArrayList<>(toolObjects);
         if (recallUsable) {
             // 回捞工具仅在 recallUsable 时注册（A9 扩面：入场卸载指针与 digest 行内句柄两条回捞路径同源；
-            // 默认零副作用，I9：无回捞通道/关闭态 specs 与改造前逐条一致）；
+            // 默认零副作用，I9：关闭态 specs 与改造前逐条一致）；
             // 不登记 roundExemptTools——回捞实打实占轮次，轮次上限是回捞爆炸的最终兜底
             stats.recallTool = new AgentToolRecall(sink, AgentContextBudget.recallMaxPerRun(),
-                    AgentContextBudget.recallMaxChars(), stats.offloadedHandles);
+                    AgentContextBudget.recallMaxChars(), stats.lossy);
             effectiveTools.add(stats.recallTool);
         }
         // specs 采集与全部 executeTool 调用点一律走 effectiveTools（否则回捞工具反射找不到 holder）
@@ -462,6 +463,9 @@ public class ToolAgentRunner {
         // 步骤 C：驱逐单一出口（I12）——钉住搬移 + digest 归档 + 重组，条数/token 触发共用
         boolean tokenTriggered = fromToken >= 0 && (fromCount < 0 || fromToken >= fromCount);
         List<ChatMessage> pinned = pinnedBefore(messages, headEnd, from, opt.getPinnedTools());
+        // A10/I16：驱逐即归档——凡即将对模型不可见的工具结果原文一律进 run 缓冲，与摘要行内句柄（I15）
+        // 同一批 id，杜绝"给了句柄却无处取数"的半开态；钉住对搬回窗内仍可见，不入本表
+        archiveEvicted(messages, headEnd, from, pinned, stats);
         String digestNew = digestOf(messages, headEnd, from, pinned, stats.recallUsable);
         List<ChatMessage> tail = new ArrayList<>(messages.subList(from, messages.size()));
         messages.subList(headEnd, messages.size()).clear();
@@ -490,25 +494,25 @@ public class ToolAgentRunner {
 
     /** 工具结果入场统一收敛点（三处 add 全走此处）：卸载判定在 messages.add 之前（I2 只替换文本
      *  不改位置/类型/id）；allowOffload=false 供收口路径保原文（I10）；neverOffload 命中保原文（I6）；
-     *  无回捞通道由 shouldOffload 的 recallChannelAvailable=false 拒绝卸载（I5）。private（非公共 API，
-     *  仅供 run() 内部调用），卸载行为经 run() 黑盒测试覆盖。
-     *  引用不变式：I2/I5/I6/I7/I10 */
+     *  卸载即把原文归档进 run 作用域回捞缓冲（A10/I16），有会话事件流时另有一份跨 run 副本。
+     *  private（非公共 API，仅供 run() 内部调用），卸载行为经 run() 黑盒测试覆盖。
+     *  引用不变式：I2/I5/I6/I7/I10/I16 */
     private void appendToolResultMessage(List<ChatMessage> messages, ToolExecutionRequest req, String resultText,
                                          Set<String> neverOffload, int offloadChars,
                                          int previewChars, boolean allowOffload, RunStats stats) {
         String text = resultText;
-        if (allowOffload && ToolResultOffloader.shouldOffload(req.name(), resultText, offloadChars,
-                neverOffload, stats.recallAvailable)) {
+        if (allowOffload && ToolResultOffloader.shouldOffload(req.name(), resultText, offloadChars, neverOffload)) {
             String pointer = ToolResultOffloader.pointerOf(req.id(), req.name(), resultText.length(),
                     ContextTokenEstimator.estimateText(resultText), resultText, previewChars);
             if (pointer != null) {
                 text = pointer;
                 stats.offloadedThisRound++;
                 stats.totalOffloaded++;
-                stats.offloadedHandles.add(req.id());
+                stats.lossy.archive(req.id(), resultText);
                 stats.sink.log("工具结果入场卸载：" + req.name() + " tool_call_id=" + req.id()
                         + " 原 " + resultText.length() + " 字 → 指针 " + pointer.length()
-                        + " 字（原文已经事件流归档，可按句柄回捞）");
+                        + " 字（原文已入回捞缓冲" + (stats.recallAvailable ? "+会话事件流" : "")
+                        + "，可按句柄回捞）");
             }
         }
         messages.add(ToolExecutionResultMessage.from(req, text));
@@ -534,14 +538,16 @@ public class ToolAgentRunner {
     }
 
     /** run() 作用域统计容器（I14：runner 无实例字段，本对象只作为 run 内局部变量存在）：
-     *  卸载/回捞/驱逐计数 + 本 run 已卸载句柄台账（回捞未命中时喂可用清单） */
+     *  卸载/回捞/驱逐计数 + 框架自带的 run 作用域回捞缓冲（A10/I16：对模型不可见的原文在此取回） */
     private static final class RunStats {
         final AgentLoopListener sink;
+        /** listener 是否提供跨 run 的会话事件流通道（A10 起只影响「可回捞范围」表述，不再是卸载前置条件） */
         boolean recallAvailable;
         /** A9/I15：回捞唯一同源判据（run() 头部一次性计算，回捞工具注册与 digest 写句柄共用） */
         boolean recallUsable;
         AgentToolRecall recallTool;
-        final List<String> offloadedHandles = new ArrayList<>();
+        /** A10：本 run 内被卸载/被驱逐的原文（句柄即 recallToolResult 取数键，I16 生命周期=本 run） */
+        final RunScopedRecallBuffer lossy = new RunScopedRecallBuffer();
         int offloadedThisRound;
         int totalOffloaded;
         int totalEvicted;
@@ -553,7 +559,8 @@ public class ToolAgentRunner {
 
     /** 被驱逐区段确定性压缩：工具调用一行（名+参数摘要→结果摘要）、结论文本一行；
      *  钉住对完整保留不入摘要。withHandles=true（recallUsable，A9/I15）时命中工具结果的行尾
-     *  追加「（句柄=tool_call_id）」——原文恒在会话事件流（I4），句柄即 recallToolResult 取数键，
+     *  追加「（句柄=tool_call_id）」——原文恒可取回（A10/I16 的 run 缓冲；会话链另有事件流副本，I4），
+     *  句柄即 recallToolResult 取数键，
      *  被驱逐结果与入场卸载指针（I7）同等可回捞；false（关闭态）不写，digest 逐字符不变（I9） */
     private static String digestOf(List<ChatMessage> messages, int headEnd, int from, List<ChatMessage> pinned,
                                    boolean withHandles) {
@@ -585,6 +592,24 @@ public class ToolAgentRunner {
             }
         }
         return sb.toString();
+    }
+
+    /** 驱逐区段内「对模型不可见的工具结果」原文归档进 run 缓冲（A10/I16）：与 digestOf 同一套
+     *  区间与钉住跳过判据，故归档集恒为摘要行内句柄集（I15 不半开）；指针文本本身再归档无意义，跳过 */
+    private static void archiveEvicted(List<ChatMessage> messages, int headEnd, int from,
+                                       List<ChatMessage> pinned, RunStats stats) {
+        Set<ChatMessage> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+        kept.addAll(pinned);
+        for (int i = headEnd; i < from; i++) {
+            ChatMessage m = messages.get(i);
+            if (kept.contains(m) || !(m instanceof ToolExecutionResultMessage)) {
+                continue;
+            }
+            ToolExecutionResultMessage tr = (ToolExecutionResultMessage) m;
+            if (!ToolResultOffloader.isPointer(tr.text())) {
+                stats.lossy.archive(tr.id(), tr.text());
+            }
+        }
     }
 
     /** 摘要长度封顶：超出保留最近部分（越新的探索越有参考价值） */

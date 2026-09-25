@@ -104,7 +104,14 @@ public enum LlmParam implements Param {
      * 单次回捞回填模型的原文字符上限（超出截断，全文仍可在前端过程树查看）
      */
     AGENT_TOOL_RECALL_MAX_CHARS("Agent回捞返回上限(字)", "20000",
-            "单次回捞回填模型的原文字符上限，超出截断并提示前端过程树可看全文；填 0 或非法值回落默认值 20000；整体关闭卸载与回捞请置 AGENT_TOOL_RESULT_OFFLOAD_CHARS=0");
+            "单次回捞回填模型的原文字符上限，超出截断并提示前端过程树可看全文；填 0 或非法值回落默认值 20000；整体关闭卸载与回捞请置 AGENT_TOOL_RESULT_OFFLOAD_CHARS=0"),
+
+    /**
+     * run 作用域回捞缓冲容量（字符）：框架自带兜底通道（I16）暂存「模型已看不到的工具结果原文」
+     * （被卸载为指针的 + 被窗口驱逐进摘要的），按插入序 FIFO 挤出最旧条目
+     */
+    AGENT_TOOL_RECALL_BUFFER_CHARS("Agent回捞缓冲容量(字)", "120000",
+            "单次 run 内可回捞原文的缓冲总字数上限，超出按插入序挤出最旧句柄（被挤出的句柄回捞返回未找到）；填 0 或非法值回落默认值 120000");
 
     private final String title;
     private final String defaultValue;

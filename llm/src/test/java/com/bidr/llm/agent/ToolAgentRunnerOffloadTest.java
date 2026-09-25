@@ -37,7 +37,7 @@ import static com.bidr.llm.agent.ScriptedModel.Step.tools;
  */
 public class ToolAgentRunnerOffloadTest {
 
-    /** 会话链夹具：真实 AgentSessionContext + 内存 store（事件流持全文=回捞源，I4/I5 形态齐全） */
+    /** 会话链夹具：真实 AgentSessionContext + 内存 store（事件流持全文=跨 run 优先通道，I4/I13 形态齐全） */
     private static final class Fix {
         final AgentSessionContext ctx;
         final InMemoryAgentSessionStore store;
@@ -310,9 +310,10 @@ public class ToolAgentRunnerOffloadTest {
         Assert.assertEquals(ContextProbeTools.report(10000, "A"), recalled);
     }
 
-    /** I5 + 默认零副作用：无回捞通道时不注册 recallToolResult、一律原文入窗 */
+    /** A10：轻链路（listener 无跨 run 事件流通道）同样卸载、同样注册回捞工具，
+     *  且句柄经框架自带的 run 作用域缓冲取回原文——"无通道不卸载"的旧口径（I5）已被两级通道取代 */
     @Test
-    public void 无回捞通道时不注册回捞工具且一律原文入窗() {
+    public void 轻链路无事件流同样卸载并注册回捞工具且可取回原文() {
         AgentLoopListener legacy = new AgentLoopListener() {
             @Override
             public void log(String line) {
@@ -324,19 +325,23 @@ public class ToolAgentRunnerOffloadTest {
             }
         };
         ScriptedModel model = scripted(
-                tool("call-1", "bigReport", bigArgs("A")), done("结论"));
-        new ToolAgentRunner().run(model, "系统", "任务", Collections.<Object>singletonList(new ContextProbeTools()),
-                opts(5, 20, 4000), legacy);
-        for (ScriptedModel.RoundView v : model.views) {
-            for (ToolSpecification s : v.specs) {
-                Assert.assertNotEquals(AgentToolRecall.TOOL_NAME, s.name());
-            }
+                tool("call-1", "bigReport", bigArgs("A")),
+                tool("call-2", AgentToolRecall.TOOL_NAME, recallArgs("call-1")),
+                done("结论"));
+        new ToolAgentRunner().run(model, "系统", "任务",
+                Collections.<Object>singletonList(new ContextProbeTools(10000)), opts(5, 20, 4000), legacy);
+        Assert.assertTrue("A10：无事件流通道同样入场卸载",
+                ToolResultOffloader.isPointer(resultTextOf(model.views.get(1).messages, "call-1")));
+        boolean registered = false;
+        for (ToolSpecification s : model.views.get(1).specs) {
+            registered |= AgentToolRecall.TOOL_NAME.equals(s.name());
         }
-        String entry = resultTextOf(model.views.get(1).messages, "call-1");
-        Assert.assertFalse("I5：无回捞通道一律原文入窗", ToolResultOffloader.isPointer(entry));
+        Assert.assertTrue("A10：轻链路也注册回捞工具", registered);
+        Assert.assertEquals("句柄经 run 缓冲取回逐字符等于原文",
+                ContextProbeTools.report(10000, "A"), resultTextOf(model.views.get(2).messages, "call-2"));
     }
 
-    /** 开启态才注册回捞工具进 specs（有回捞通道且阈值正值） */
+    /** 开启态注册回捞工具进 specs（卸载阈值正值即开，A10 起与 listener 通道位无关） */
     @Test
     public void 开启态注册回捞工具进specs() {
         Fix f = new Fix("s-off-9");

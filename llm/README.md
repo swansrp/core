@@ -378,11 +378,12 @@ AgentLoopResult result = new ToolAgentRunner().run(agentModel, systemPrompt, use
 
 // （可选）L1 上下文预算治理：两开关默认 0=全关，关闭态行为与改造前逐条一致；
 // 正值覆盖 sys_config（AGENT_CONTEXT_TOKEN_BUDGET / AGENT_TOOL_RESULT_OFFLOAD_CHARS 等，见 AgentContextBudget）。
-// 卸载仅当 listener 支持回捞（会话链 AgentSessionContext.loopListener()）时生效，超大工具结果入场换
-// 「预览+tool_call_id 句柄」指针，模型可内建调 recallToolResult 取回原文；token 预算与条数窗口取更严者。
-// 句柄有两个来源，回捞取数按 tool_call_id 扫会话事件流、与是否卸载无关：① 窗内指针首行 tool_call_id=；
-// ② token 预算驱逐后进入探索摘要的行尾「（句柄=…）」（摘要头部另有一行调法指引）。二者由同一判据
-// recallUsable 开启——不会出现"给了句柄但工具没注册"的半开态，被裁内容同样可回捞。
+// **任何链路零改动即生效**（A10）：超大工具结果入场换「预览+tool_call_id 句柄」指针，token 预算与条数窗口取更严者。
+// 句柄有两个来源，二者由同一判据 recallUsable 开启——不会出现"给了句柄但工具没注册"的半开态：
+// ① 窗内指针首行 tool_call_id=；② token 预算驱逐后进入探索摘要的行尾「（句柄=…）」（摘要头部另有一行调法指引）。
+// 取回靠内建 recallToolResult，两级通道：会话事件流优先（跨 run/跨实例可捞，须 AgentSessionContext.loopListener()）
+// → 框架自带的 run 作用域缓冲兜底（仅本次 run 可捞，容量 AGENT_TOOL_RECALL_BUFFER_CHARS 默认 120000 字，
+// 超容量按插入序挤出最旧句柄，被挤出的回捞返回"未找到"）。裸 listener 链路即走兜底这条路径。
 AgentLoopOptions governed = new AgentLoopOptions(30, 20);
 governed.setContextTokenBudget(24000);      // 估算 token 上限（ContextTokenEstimator，只高不低）
 governed.setToolResultOffloadChars(4000);   // 超过 4000 字的工具结果入场卸载
