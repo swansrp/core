@@ -13,7 +13,7 @@ import lombok.Getter;
  * @date 2019/10/16 21:18
  */
 @Getter
-@MetaParam
+@MetaParam("对象存储")
 @AllArgsConstructor
 public enum OssParam implements Param {
     /**

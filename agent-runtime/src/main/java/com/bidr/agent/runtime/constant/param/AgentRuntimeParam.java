@@ -20,7 +20,7 @@ import lombok.Getter;
  * @since 2026/9/22
  */
 @Getter
-@MetaParam
+@MetaParam("Agent运行")
 @AllArgsConstructor
 public enum AgentRuntimeParam implements Param {
 

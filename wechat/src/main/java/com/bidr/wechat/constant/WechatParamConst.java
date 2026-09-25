@@ -15,7 +15,7 @@ import lombok.Getter;
  * @Package: com.srct.service.wechat.constant
  */
 @Getter
-@MetaParam
+@MetaParam("微信对接")
 @AllArgsConstructor
 public enum WechatParamConst implements Param {
     /**

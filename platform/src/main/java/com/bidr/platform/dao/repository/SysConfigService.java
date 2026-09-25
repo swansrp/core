@@ -1,6 +1,7 @@
 package com.bidr.platform.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
@@ -9,6 +10,7 @@ import com.bidr.platform.dao.mapper.SysConfigDao;
 import com.bidr.platform.vo.params.QuerySysConfigReq;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -24,8 +26,18 @@ public class SysConfigService extends BaseSqlRepo<SysConfigDao, SysConfig> {
     public List<SysConfig> getSysConfigCache() {
         LambdaQueryWrapper<SysConfig> wrapper = super.getQueryWrapper()
                 .select(SysConfig::getConfigKey, SysConfig::getConfigName, SysConfig::getConfigValue,
-                        SysConfig::getRemark);
+                        SysConfig::getConfigGroup, SysConfig::getRemark);
         return super.select(wrapper);
+    }
+
+    /**
+     * 按 config_key 批量回填分组，只更新分组为空的存量行（幂等，可每次启动重跑）
+     */
+    public void fillEmptyGroup(Collection<String> configKeys, String configGroup) {
+        update(null, Wrappers.<SysConfig>lambdaUpdate()
+                .in(SysConfig::getConfigKey, configKeys)
+                .and(w -> w.isNull(SysConfig::getConfigGroup).or().eq(SysConfig::getConfigGroup, ""))
+                .set(SysConfig::getConfigGroup, configGroup));
     }
 
     public Page<SysConfig> querySysConfig(QuerySysConfigReq req) {

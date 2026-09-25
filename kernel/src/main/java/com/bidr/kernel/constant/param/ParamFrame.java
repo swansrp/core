@@ -14,7 +14,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@MetaParam
+@MetaParam("框架基础")
 public enum ParamFrame implements Param {
     /**
      * 系统参数

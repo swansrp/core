@@ -49,20 +49,47 @@ public class SysConfigCacheService extends DynamicMemoryCache<SysConfig> {
         Reflections reflections = PackageScanUtil.reflections(basePackage);
         Set<Class<?>> metaParamClass = reflections.getTypesAnnotatedWith(MetaParam.class);
         List<SysConfig> sysConfigList = new ArrayList<>();
+        Map<String, List<String>> backfillKeys = new HashMap<>();
         for (Class<?> clazz : metaParamClass) {
             if (Enum.class.isAssignableFrom(clazz) && Param.class.isAssignableFrom(clazz)) {
+                String group = resolveGroup(clazz);
                 for (Object enumItem : clazz.getEnumConstants()) {
                     String configKey = ((Enum) enumItem).name();
-                    if (map.get(configKey) == null) {
+                    SysConfig existing = map.get(configKey);
+                    if (existing == null) {
                         Param param = (Param) enumItem;
                         SysConfig item = buildSysConfig(clazz, configKey, param);
+                        item.setConfigGroup(group);
                         sysConfigList.add(item);
                         list.add(item);
+                    } else if (isBlank(existing.getConfigGroup())) {
+                        // 存量行回填：只补空分组，不覆盖已有值；同步改内存对象让本次缓存即带分组
+                        existing.setConfigGroup(group);
+                        backfillKeys.computeIfAbsent(group, k -> new ArrayList<>()).add(configKey);
                     }
                 }
             }
         }
         sysConfigService.saveBatch(sysConfigList);
+        backfillKeys.forEach((group, keys) -> sysConfigService.fillEmptyGroup(keys, group));
+    }
+
+    /**
+     * 分组名：@MetaParam("分组名") 显式声明优先，未声明回落枚举类名去掉 Param 后缀
+     */
+    private String resolveGroup(Class<?> clazz) {
+        MetaParam metaParam = clazz.getAnnotation(MetaParam.class);
+        if (metaParam != null && !isBlank(metaParam.value())) {
+            return metaParam.value();
+        }
+        String simpleName = clazz.getSimpleName();
+        return simpleName.endsWith("Param")
+                ? simpleName.substring(0, simpleName.length() - "Param".length())
+                : simpleName;
+    }
+
+    private boolean isBlank(String str) {
+        return str == null || str.trim().isEmpty();
     }
 
     private SysConfig buildSysConfig(Class<?> clazz, String configKey, Param param) {

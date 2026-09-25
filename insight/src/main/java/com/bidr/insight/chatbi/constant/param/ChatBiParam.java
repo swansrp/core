@@ -15,7 +15,7 @@ import lombok.Getter;
  */
 
 @Getter
-@MetaParam
+@MetaParam("智能问数")
 @AllArgsConstructor
 public enum ChatBiParam implements Param {
 

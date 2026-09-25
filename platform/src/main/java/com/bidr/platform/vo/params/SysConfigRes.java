@@ -36,6 +36,10 @@ public class SysConfigRes {
     @Size(max = 500, message = "参数键值最大长度要小于 500")
     private String configValue;
 
+    @ApiModelProperty(value = "参数分组")
+    @Size(max = 100, message = "参数分组最大长度要小于 100")
+    private String configGroup;
+
 
     @ApiModelProperty(value = "系统内置")
     private String configType;

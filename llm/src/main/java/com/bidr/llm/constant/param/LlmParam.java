@@ -17,7 +17,7 @@ import lombok.Getter;
  */
 
 @Getter
-@MetaParam
+@MetaParam("大模型")
 @AllArgsConstructor
 public enum LlmParam implements Param {
 

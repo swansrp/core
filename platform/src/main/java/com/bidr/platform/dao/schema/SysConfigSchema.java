@@ -30,5 +30,10 @@ public class SysConfigSchema extends BaseMybatisSchema<SysConfig> {
         // 原 DEFAULT '' 一并去掉（该列本就允许 NULL，语义不变）
         setUpgradeDDL(1, "ALTER TABLE `sys_config` "
                 + "MODIFY COLUMN `config_value` text COMMENT '参数键值';");
+
+        // v2：参数分组列——@MetaParam 枚举扫描时写入所属模块名，管理页据此分模块展示；
+        // 手工插入/无枚举来源的参数保持空串，前端归入"其他"
+        setUpgradeDDL(2, "ALTER TABLE `sys_config` "
+                + "ADD COLUMN `config_group` varchar(100) DEFAULT '' COMMENT '参数分组' AFTER `config_value`;");
     }
 }

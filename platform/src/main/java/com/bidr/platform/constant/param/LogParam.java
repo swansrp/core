@@ -14,7 +14,7 @@ import lombok.Getter;
  */
 
 @Getter
-@MetaParam
+@MetaParam("日志系统")
 @AllArgsConstructor
 public enum LogParam implements Param {
     /**

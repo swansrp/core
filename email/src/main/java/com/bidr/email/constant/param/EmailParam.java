@@ -15,7 +15,7 @@ import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
-@MetaParam
+@MetaParam("邮件")
 public enum EmailParam implements Param {
     /**
      * 异常通知邮箱

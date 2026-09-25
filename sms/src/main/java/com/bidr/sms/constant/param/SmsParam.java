@@ -15,7 +15,7 @@ import lombok.Getter;
  */
 @AllArgsConstructor
 @Getter
-@MetaParam
+@MetaParam("短信")
 public enum SmsParam implements Param {
     /**
      * 短信参数

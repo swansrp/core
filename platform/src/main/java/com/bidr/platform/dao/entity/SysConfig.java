@@ -59,6 +59,14 @@ public class SysConfig {
     private String configValue;
 
     /**
+     * 参数分组（所属模块，@MetaParam 声明，启动扫描写入/回填）
+     */
+    @TableField(value = "config_group")
+    @ApiModelProperty(value = "参数分组")
+    @Size(max = 100, message = "参数分组最大长度要小于 100")
+    private String configGroup;
+
+    /**
      * 系统内置
      */
     @TableField(value = "config_type")

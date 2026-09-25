@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MetaParam {
     /**
-     * 参数名
+     * 参数分组名（管理页按模块归类展示）；留空＝由枚举类名去掉 Param 后缀推导
      */
     String value() default "";
 }

@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
  * @since 2024/10/31 11:00
  */
 @Getter
-@MetaParam
+@MetaParam("即时聊天")
 @RequiredArgsConstructor
 @SuppressWarnings("AlibabaEnumConstantsMustHaveComment")
 public enum ChatParam implements Param {

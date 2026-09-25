@@ -15,7 +15,7 @@ import lombok.Getter;
  */
 
 @Getter
-@MetaParam
+@MetaParam("语义层")
 @AllArgsConstructor
 public enum SmartQueryParam implements Param {
 

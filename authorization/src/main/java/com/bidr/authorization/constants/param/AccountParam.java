@@ -13,7 +13,7 @@ import lombok.Getter;
  * @since 2023/04/27 09:00
  */
 @Getter
-@MetaParam
+@MetaParam("账号认证")
 @AllArgsConstructor
 public enum AccountParam implements Param {
     /**
