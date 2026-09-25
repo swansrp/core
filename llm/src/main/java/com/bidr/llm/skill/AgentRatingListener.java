@@ -6,6 +6,10 @@ package com.bidr.llm.skill;
  * 给业务侧补自己的语义（如 chatbi 把 rating 内嵌对话正文供本人恢复回显）。按 skillCode 分发，
  * 首个 supports 命中的生效；无任何监听器时端点按请求体自组装记录直落底座。
  * <p>
+ * {@link #retentionDays(String)} 对两个评价写口都生效（含会话评价 /session/{id}/rate）；
+ * {@link #beforeRate} 与 {@link #beforeRemove} 仅通用写口回调——会话评价的记录由会话快照组装，
+ * 业务接管会丢会话维度字段。
+ * <p>
  * 红线：llm 不反向依赖业务结构——钩子只进出底座模型（{@link SkillRatingRecord}）与
  * 业务自定的 ratingId 字符串，业务内部动作（定位消息/改正文等）全部自包含。
  * 钩子异常向外抛出，端点透传失败（正文未内嵌成功则底座不落库，双写一致性由钩子保证）。

@@ -86,7 +86,7 @@ public class AgentSessionController {
     /** extEquals 查询参数 JSON 解析 */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 评价快照保留天数（会话评价无业务参数可配，取与对话同量级的缺省） */
+    /** 评价快照保留天数缺省（业务有 {@link AgentRatingListener} 承接时以其 retentionDays 为准） */
     private static final int RATING_RETENTION_DAYS = 30;
 
     // ==================== agent 注册表与会话控制 ====================
@@ -228,7 +228,8 @@ public class AgentSessionController {
 
     /**
      * 会话整体评价（AgentChat 结论区点赞/点踩；空=取消）：经 skill 评价底座入库，
-     * ratingId=sessionId 同会话重复评价覆盖，ext 携 agentKey 供运营统计筛选
+     * ratingId=sessionId 同会话重复评价覆盖，ext 携 agentKey 与会话 subject 业务标识供运营统计筛选。
+     * 读取回显走 {@code GET /rating/detail}（ratingId 即 sessionId）
      */
     @PostMapping("/session/{sessionId}/rate")
     public void rate(@PathVariable("sessionId") String sessionId, @RequestBody SessionRateReq req) {
@@ -253,7 +254,12 @@ public class AgentSessionController {
             record.getExt().put("feedback", req.getFeedback());
         }
         record.getExt().put("agentKey", state.getAgentKey());
-        skillRatingService.save(state.getSkillCode(), record, RATING_RETENTION_DAYS);
+        // 会话作用对象（定义经 sessionSubject 提供的业务标识，框架不解释其语义）随评价落 ext，
+        // 运营统计按 extEquals 精确筛（如 InkHub 用 subject=空间 id 出"某空间的评价流水"）
+        if (StringUtils.hasText(state.getSubject())) {
+            record.getExt().put("subject", state.getSubject());
+        }
+        skillRatingService.save(state.getSkillCode(), record, retentionDays(state.getSkillCode()));
     }
 
     // ==================== 通用评价（skill 底座，flow/autonomous 两型统一） ====================
@@ -304,8 +310,19 @@ public class AgentSessionController {
         if (record.getRatingTime() == null) {
             record.setRatingTime(System.currentTimeMillis());
         }
-        int retentionDays = listener == null ? RATING_RETENTION_DAYS : listener.retentionDays(skillCode);
-        skillRatingService.save(skillCode, record, retentionDays);
+        skillRatingService.save(skillCode, record, retentionDays(skillCode));
+    }
+
+    /**
+     * 单条评价读取（{@code /rating/save} 与 {@code /session/{id}/rate} 两个写口的对称读口）：
+     * 前端恢复渲染时回显"已点赞/已点踩"点亮态的数据源。ratingId 口径同写口（会话评价=sessionId，
+     * 通用评价=conversationId:messageId）；未评价或快照已超保留期返回空响应体
+     */
+    @GetMapping("/rating/detail")
+    public SkillRatingRecord ratingDetail(String skillCode, String ratingId) {
+        requireText(skillCode, "skill 标识");
+        requireText(ratingId, "评价标识");
+        return skillRatingService.get(skillCode.trim(), ratingId.trim());
     }
 
     /**
@@ -344,6 +361,16 @@ public class AgentSessionController {
             }
         }
         return null;
+    }
+
+    /**
+     * 评价快照保留天数：业务钩子优先（可与自己的对话保留期共用系统参数），无钩子回落缺省值。
+     * 会话评价链只取钩子的保留策略、不取 {@code beforeRate} 的组装接管——会话快照口径字段
+     * （displayName/summary/subject）只有会话侧拿得到，业务钩子拿到组装会丢这些维度
+     */
+    private int retentionDays(String skillCode) {
+        AgentRatingListener listener = findRatingListener(skillCode);
+        return listener == null ? RATING_RETENTION_DAYS : listener.retentionDays(skillCode);
     }
 
     // ==================== flow 编排管理（自 ChatBiController 上提泛化） ====================

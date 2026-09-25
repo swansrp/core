@@ -88,6 +88,19 @@ public class SkillRatingService {
     }
 
     /**
+     * 单条评价读取（{@link #save} 的对称读口，前端恢复"已点赞/已点踩"点亮态用）：
+     * ratingId 口径同写口（会话评价=sessionId，通用评价=conversationId:messageId）。
+     * 未评价、快照已过保留期、应用未接入 Redis 三种情形一律返回 null，调用方按"未评价"渲染
+     */
+    public SkillRatingRecord get(String skillCode, String ratingId) {
+        RedisService redis = redisProvider.getIfAvailable();
+        if (redis == null || !StringUtils.hasText(skillCode) || !StringUtils.hasText(ratingId)) {
+            return null;
+        }
+        return readRecord(redis, skillCode.trim(), ratingId.trim());
+    }
+
+    /**
      * 移除评价（取消评价）：删快照 + 出索引；未接入 Redis 时空操作
      */
     public void remove(String skillCode, String ratingId) {

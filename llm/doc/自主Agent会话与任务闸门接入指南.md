@@ -147,7 +147,8 @@ public class XxxAgent extends AbstractToolLoopAgent<XxxState> {
 | `GET /session/{id}/status` | 状态快照（stages/plan/questions/live/summary，2s 轮询载体） |
 | `GET /session/{id}/events?sinceSeq=` | 事件流增量读取 |
 | `GET /sessions/active?agentKey=` | 活跃会话列表（本人发起的非终态会话，新→旧）：刷新/重连场景数据源，快照带 `subject` 供业务维度定向重连 |
-| `POST /session/{id}/rate` | 结论评价 |
+| `POST /session/{id}/rate` | 结论评价（ratingId=sessionId 覆盖写，rating 空=取消；记录 ext 带 `agentKey` 与会话 `subject`，运营统计按 `extEquals` 精确筛；保留天数走业务 `AgentRatingListener.retentionDays`，无钩子回落 30 天） |
+| `GET /rating/detail?skillCode=&ratingId=` | 单条评价读取（两个评价写口的对称读口）：前端刷新/历史恢复时回显"已点赞/已点踩"点亮态；未评价或已过保留期返回空 payload |
 
 业务入口 Controller 只需做业务预检（如闸门 `checkFree` 在途拦截）后透传 start，或前端直连通用端点。
 
