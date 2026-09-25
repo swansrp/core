@@ -8,8 +8,8 @@ import java.util.regex.Pattern;
  * Title: ToolResultOffloader
  * Description: 工具结果入场卸载纯函数（无状态）：超长工具结果在 messages.add 之前替换为
  * 「预览 + 句柄」指针文本，原文全文仍经 onToolResult 进会话事件流（I4），模型按句柄经内建
- * recallToolResult 工具回捞。指针格式（首行整体 &lt;100 字符以扛住 digest brief(…,100) 截断，
- * tool_call_id 落在前 60 字符内，I7）：
+ * recallToolResult 工具回捞。指针格式（I7 的截断存活条件是<b>句柄结束位置落在前 60 字符内</b>，
+ * 与首行整体长度无关——真实 tool_call_id 长 29 字且首行按"可照抄"口径重复一次 id，首行恒 >100 字）：
  * <pre>
  * 【已卸载 tool_call_id=call-1 原 12345 字/约 4300 token｜要原文调 recallToolResult("call-1")】
  * &lt;头预览 previewChars×0.8 字&gt;
@@ -97,10 +97,13 @@ public final class ToolResultOffloader {
         if (pointer.length() >= resultText.length()) {
             return null;
         }
-        // 硬校验二（I7）：首行 tool_call_id 必须落在前 60 字符内且首行整体 <100 字符，
-        // 保证经 brief(…,100)（digest）/brief(…,300)（日志）任意头部截断后句柄仍完整可反解
+        // 硬校验二（I7）：句柄结束位置必须落在前 60 字符内——这才是"任意头部截断后句柄仍可反解"
+        // （digest brief(…,100)/日志 brief(…,300) 均截于 60 之后）的不变式本身；id 超长者（>44 字）
+        // 由这一条挡下。⚠️ 此处原先还并了一个「首行整体 <100 字符」上限，那是从属愿望不是不变式：
+        // 真实 id 29 字 + 首行重复一次 id ⇒ 首行恒 124 字，真环境零卸载，而离线用例一律用 "call-1"
+        // 短 id 全绿，两层从未交叉（2026-09-25 InkHub 层 2 真模型实测抓出，见用例 生产形态长id仍卸载）
         int idPos = first.indexOf(toolCallId);
-        if (idPos < 0 || idPos + toolCallId.length() > 60 || first.length() >= 100) {
+        if (idPos < 0 || idPos + toolCallId.length() > 60) {
             return null;
         }
         return pointer;

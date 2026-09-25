@@ -40,7 +40,40 @@ public class ToolResultOffloaderTest {
         String firstLine = p.split("\n", 2)[0];
         int pos = firstLine.indexOf("call-1");
         Assert.assertTrue("句柄必须落在首行前 60 字符内,实际位置 " + pos, pos >= 0 && pos + "call-1".length() <= 60);
-        Assert.assertTrue("首行整体须短于 100 字符以扛 brief(100),实际 " + firstLine.length(), firstLine.length() < 100);
+    }
+
+    /**
+     * I7 的真实形态维度（层 2 真模型实测抓出的盲区回归）：生产 tool_call_id 长 29 字（OpenAI 风格
+     * {@code call_<24hex>}），首行按可照抄口径再写一次 id 后整体 124 字。旧实现把「首行 &lt;100 字」
+     * 当成不变式，真环境对任何结果都放弃卸载（累计卸载恒 0），而上述短 id 用例全绿——两形态从未交叉。
+     * 本用例锁死：长 id 必须照常卸载，且句柄在 brief(100)/brief(300) 截断后仍可反解
+     */
+    @Test
+    public void 生产形态长id仍卸载且截断后句柄可反解() {
+        String id = "call_39c844940c8c42a59dda6743";
+        Assert.assertEquals("真实形态 id 长度", 29, id.length());
+        String text = big(2633);
+        Assert.assertTrue(ToolResultOffloader.shouldOffload("search_docs", text, 2000,
+                Collections.singleton("waitExternalTask")));
+        String p = ToolResultOffloader.pointerOf(id, "search_docs", text.length(), 900, text, 1000);
+        Assert.assertNotNull("长 id 不得放弃卸载（放弃＝真环境零卸载）", p);
+        Assert.assertTrue("指针仍须严格短于原文,实际 " + p.length(), p.length() < text.length());
+        String firstLine = p.split("\n", 2)[0];
+        Assert.assertTrue("首行长 id 形态本就 >100 字,实际 " + firstLine.length(), firstLine.length() > 100);
+        Assert.assertEquals(id, ToolResultOffloader.handleOf(brief(p, 100)));
+        Assert.assertEquals(id, ToolResultOffloader.handleOf(brief(p, 300)));
+        // I7 保证的真实下限：句柄结束位置 ≤60 ⇒ 任何 ≥60 字截断可反解（长 id 形态结束于 45 字）；
+        // brief(40) 反解不出属预期——把断言写在 40 上等于要求 id ≤24 字，那才是旧实现的隐藏假设
+        Assert.assertEquals(id, ToolResultOffloader.handleOf(brief(p, 60)));
+    }
+
+    /** I7 边界：id 长到句柄落不进前 60 字符时放弃卸载（防截断后无句柄的死指针） */
+    @Test
+    public void 句柄落不进前60字符时放弃卸载() {
+        String tooLong = "call_" + String.join("", Collections.nCopies(40, "a"));
+        String text = big(5000);
+        Assert.assertNull("id 结束位置越过 60 字符须放弃",
+                ToolResultOffloader.pointerOf(tooLong, "t", text.length(), 1500, text, 1000));
     }
 
     /** I7 下游：经 brief(…,100)（digest 驱逐）与 brief(…,300)（日志）截断后句柄仍完整可反解 */
