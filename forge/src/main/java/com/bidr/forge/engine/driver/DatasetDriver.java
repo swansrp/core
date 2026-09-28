@@ -247,18 +247,22 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
         // 为统计查询构建特殊的别名映射，使用Dataset中定义的columnAlias作为键值
         Map<String, String> aliasMap = buildStatisticAliasMap(columns);
 
-        // 2) 在 Dataset 指定的数据源中执行统计 SQL（真正访问业务表/维表的阶段）
+        // 2) 隐藏列解析涉及本地 ac_resource_perm 查询，必须在切换数据源之前完成，
+        //    否则随统计作用域被路由到 DORIS 等外部源报 No database selected
+        Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
+
+        // 3) 在 Dataset 指定的数据源中执行统计 SQL（真正访问业务表/维表的阶段）
         if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
             DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
             List<StatisticRes> result = driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
-            blankHiddenStatistics(portalName, result);
+            blankHiddenStatistics(result, hiddenFields);
             return result;
         }
 
         try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
             DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
             List<StatisticRes> result = driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
-            blankHiddenStatistics(portalName, result);
+            blankHiddenStatistics(result, hiddenFields);
             return result;
         } finally {
             // 双保险：确保离开本方法时恢复到进入本方法前的数据源

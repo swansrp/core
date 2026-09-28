@@ -310,6 +310,10 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
         Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
 
+        // 隐藏列解析涉及本地 ac_resource_perm 查询，必须在切换数据源之前完成，
+        // 否则随统计作用域被路由到 DORIS 等外部源报 No database selected
+        Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
+
         // 切换数据源
         if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
             jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
@@ -318,7 +322,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         try {
             Map<String, Object> result = driverStatisticSupportService.summary(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
-            ColumnAliasMap.blankHiddenColumns(result, resolveHiddenColumnFields(portalName));
+            ColumnAliasMap.blankHiddenColumns(result, hiddenFields);
             return result;
         } finally {
             jdbcConnectService.resetToDefaultDataSource();
@@ -333,6 +337,9 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
         Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
 
+        // 隐藏列解析涉及本地 ac_resource_perm 查询，必须在切换数据源之前完成（同上）
+        Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
+
         // 切换数据源
         if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
             jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
@@ -342,7 +349,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
             // 统一由 DriverStatisticSupportService 按 req.metricCondition 自动选择分支
             List<StatisticRes> result = driverStatisticSupportService.statistic(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
-            blankHiddenStatistics(portalName, result);
+            blankHiddenStatistics(result, hiddenFields);
             return result;
         } finally {
             jdbcConnectService.resetToDefaultDataSource();
@@ -356,6 +363,9 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
 
         Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
 
+        // 隐藏列解析涉及本地 ac_resource_perm 查询，必须在切换数据源之前完成（同上）
+        Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
+
         // 切换数据源
         if (FuncUtil.isNotEmpty(matrixColumns.getDataSource())) {
             jdbcConnectService.switchDataSource(matrixColumns.getDataSource());
@@ -364,7 +374,7 @@ public class MatrixDriver implements PortalDriver<Map<String, Object>> {
         try {
             List<Map<String, Object>> result = driverStatisticSupportService.pivot(jdbcConnectService, req,
                     new MatrixStatisticQueryContext(matrixColumns), aliasMap);
-            ColumnAliasMap.blankHiddenColumns(result, resolveHiddenColumnFields(portalName));
+            ColumnAliasMap.blankHiddenColumns(result, hiddenFields);
             return result;
         } finally {
             jdbcConnectService.resetToDefaultDataSource();

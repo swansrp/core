@@ -117,8 +117,9 @@ public class ResourcePermFilterService {
      * 每条命中记录可各自携带行条件，由调用方按 OR 合并。
      * 未命中任何记录时返回空列表：要么资源未配置授权（默认放行且无行限制），
      * 要么整体访问已被层 1 拒绝（走不到这里）。
-     * 管理员不做特殊处理：层 1 的 admin-bypass 只管可见性，行策略仍按实际命中的记录生效，
-     * 保证 admin-bypass=false 实测时管理员同样能被行条件限住。
+     * 管理员旁路：与 {@link #hasPermission}/{@link #filterAccessibleIds} 同口径（{@code admin-bypass} 开启时放行），
+     * 返回空列表即“无命中行”——对调用方语义为无行限制/无隐藏列，管理员看全部；
+     * admin-bypass 置 false 实测时旁路不生效，管理员仍按真实命中记录被限住。
      * </p>
      *
      * @param resourceType 资源类型（表名）
@@ -126,6 +127,10 @@ public class ResourcePermFilterService {
      * @return 命中的授权行列表，按 subject_type、subject_id 稳定排序
      */
     public List<AcResourcePerm> getMatchedRows(String resourceType, String resourceId) {
+        // 管理员直接无命中（条件带 adminBypass：置 false 实测时管理员仍走真实解析）
+        if (adminBypass && permitService.isAdmin()) {
+            return Collections.emptyList();
+        }
         List<AcResourcePerm> permList = acResourcePermService.getByResource(resourceType, resourceId);
         if (FuncUtil.isEmpty(permList)) {
             return Collections.emptyList();

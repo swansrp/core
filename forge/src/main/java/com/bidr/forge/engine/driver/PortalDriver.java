@@ -275,13 +275,24 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
     /**
      * 统计图表结果脱敏：递归把隐藏列（分类轴）的 metric（实际值）与 metricLabel（字典标签）置 null。
      * <p>口径与列表一致：保留节点与聚合数值，仅剥离隐藏列自身的值；隐藏列不作为分类轴时不受影响。
+     * <p>注意：本重载会实时查询本地权限表（ac_resource_perm），禁止在已切换到 DORIS 等外部
+     * 数据源的作用域内调用，否则 MyBatis 会被路由到外部源报 No database selected；
+     * 此场景请先用 {@link #resolveHiddenColumnFields(String)} 在切换前解析，
+     * 再在作用域内调 {@link #blankHiddenStatistics(List, Set)} 做纯内存脱敏。
      */
     default void blankHiddenStatistics(String portalName, List<StatisticRes> resList) {
         if (FuncUtil.isEmpty(resList)) {
             return;
         }
-        Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
-        if (FuncUtil.isEmpty(hiddenFields)) {
+        blankHiddenStatistics(resList, resolveHiddenColumnFields(portalName));
+    }
+
+    /**
+     * 统计图表结果脱敏（纯内存版）：使用调用方提前解析好的隐藏字段集合，不触发任何数据库查询。
+     * <p>供 statistic 等需切换外部数据源的方法使用：切换前解析 hiddenFields，作用域内调用本方法。
+     */
+    default void blankHiddenStatistics(List<StatisticRes> resList, Set<String> hiddenFields) {
+        if (FuncUtil.isEmpty(resList) || FuncUtil.isEmpty(hiddenFields)) {
             return;
         }
         blankStatisticNodes(resList, hiddenFields);
