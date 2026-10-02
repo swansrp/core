@@ -133,6 +133,26 @@ public interface AgentRuntimeProvider {
     }
 
     /**
+     * 是否支持<b>产物回读</b>——沙箱在自己工作目录里生成的文件，服务端按相对路径把字节取回来。
+     * 与 {@link #uploadFile} 方向相反：附件是我方写进沙箱，产物是沙箱产出后交回我方。
+     * false = 该上游没有文件读接口；调用 {@link #downloadFile} 会抛错，业务侧据能力位降级。
+     */
+    default boolean supportsFileDownload() {
+        return false;
+    }
+
+    /**
+     * 产物回读：读该会话工作目录内某相对路径的字节（如沙箱打包好的技能包）。
+     *
+     * @param sessionId    平台会话 id
+     * @param relativePath 工作目录内的相对路径；允许嵌套子目录（产物常落在 {@code out/} 之类前缀下），
+     *                     实现方须拒绝绝对路径与 {@code ..} 穿越——它会被拼进沙箱绝对路径交给上游读文件接口
+     */
+    default byte[] downloadFile(String sessionId, String relativePath) {
+        throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST, "产物回读");
+    }
+
+    /**
      * 可委派的子 agent 类型（**只读发现**，供管理面展示）。
      * 空清单 = 该上游未提供（如未开子 agent，或内置/文件定义为空）——不是错误。
      * 🔴 边界：只发现、不注册。子 agent 的注册与配置是各家 runtime 自己的管理面，

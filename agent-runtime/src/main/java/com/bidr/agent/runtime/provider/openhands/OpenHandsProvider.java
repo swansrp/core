@@ -301,6 +301,24 @@ public class OpenHandsProvider implements AgentRuntimeProvider {
         return absolute;
     }
 
+    /**
+     * 产物可回读：上游有与 upload 对称的 {@code file/download}（v1.49.4 openapi 实测）。
+     */
+    @Override
+    public boolean supportsFileDownload() {
+        return true;
+    }
+
+    /**
+     * 产物回读：相对路径拼进该会话工作目录（与 {@link #uploadFile} 同一目录规则），
+     * 由 {@link #safeRelPath} 守住穿越——沙箱产出什么路径由我方派单约定，不采信调用方原样传 path。
+     */
+    @Override
+    public byte[] downloadFile(String sessionId, String relativePath) {
+        String absolute = workspaceDir(sessionId) + "/" + safeRelPath(relativePath);
+        return client.download(sessionId, absolute);
+    }
+
     /** 只读发现：上游有哪些可委派的子 agent 类型（供管理面展示；注册/配置不经过框架） */
     @Override
     public List<SubAgentInfo> listSubAgents() {
@@ -341,5 +359,34 @@ public class OpenHandsProvider implements AgentRuntimeProvider {
             return "file";
         }
         return name.length() > 120 ? name.substring(name.length() - 120) : name;
+    }
+
+    /**
+     * 🔴 产物相对路径清洗（读侧）。与 {@link #safeFileName} 同属"会被拼进沙箱绝对路径"的入参，
+     * 但两者判据不同、不可互相顶替：写侧只收 basename（沙箱附件不许落子目录），读侧必须允许嵌套
+     * 相对路径（产物按派单约定落在 {@code out/} 之类前缀下），否则正常产物读不到。
+     * <p>
+     * 因此这里不做字符白名单（沙箱产物的文件名由沙箱决定），只硬拒三类：
+     * 绝对路径／盘符开头、空段与纯点号段、任何 {@code ..} 段——逃逸出工作目录一律 40010。
+     */
+    static String safeRelPath(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            throw AgentRuntimeErrors.of(40010, "产物路径不能为空");
+        }
+        String value = raw.trim().replace('\\', '/');
+        if (value.startsWith("/") || value.contains(":")) {
+            throw AgentRuntimeErrors.of(40010, "产物路径必须是工作目录内的相对路径：" + raw);
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String segment : value.split("/")) {
+            if (segment.isEmpty() || ".".equals(segment) || "..".equals(segment)) {
+                throw AgentRuntimeErrors.of(40010, "产物路径含非法路径段：" + raw);
+            }
+            if (kept.length() > 0) {
+                kept.append('/');
+            }
+            kept.append(segment);
+        }
+        return kept.toString();
     }
 }

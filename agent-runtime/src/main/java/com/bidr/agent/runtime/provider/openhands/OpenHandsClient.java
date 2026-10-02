@@ -10,6 +10,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -39,6 +40,12 @@ import java.util.*;
 @Slf4j
 public class OpenHandsClient {
 
+    /**
+     * 产物回读上限：上游 {@code file/download} 对任意路径回全量字节，超限先拒——
+     * 与 relay 附件上行的 20MB 同量级，也防把工作区里的大文件整份读进 JVM 堆。
+     */
+    static final int DOWNLOAD_MAX_BYTES = 20 * 1024 * 1024;
+
     private final AgentRuntimeConfigProvider config;
     private final RestTemplate rest;
     private final ObjectMapper mapper;
@@ -51,6 +58,12 @@ public class OpenHandsClient {
         factory.setReadTimeout(config.getIdleTimeoutMs());
         this.rest = new RestTemplate(factory);
         this.rest.setMessageConverters(Arrays.asList(
+                // 🔴 产物回读要裸字节，且必须**排在 Jackson 之前**：本清单是 setMessageConverters
+                //    整体替换默认转换器，不显式加这条就没人支持 byte[]；加了但排在后面，
+                //    缺失文件的 404 响应（Content-Type=application/json）会被 Jackson 先抢去按
+                //    byte[] 解 JSON 炸掉，错误码映射（404→40402）根本走不到（2026-10-02 live IT 实测）。
+                //    它只认领 responseType=byte[] 的请求，不抢任何 JSON/文本响应。
+                new ByteArrayHttpMessageConverter(),
                 new StringHttpMessageConverter(StandardCharsets.UTF_8),
                 new MappingJackson2HttpMessageConverter(this.mapper),
                 // 附件代收转推走 multipart，需表单转换器（其余调用仍只认 JSON/文本）
@@ -157,6 +170,50 @@ public class OpenHandsClient {
             }
         }
         throw mapError(status, raw, HttpMethod.POST, path, System.currentTimeMillis());
+    }
+
+    /**
+     * 产物回读：{@code GET /api/conversations/{cid}/file/download?path=<绝对路径>}
+     * （与 {@link #upload} 对称的读侧，v1.49.4 openapi 实测存在；回 {@code application/octet-stream} 裸字节）。
+     * <p>
+     * 路径编码沿用 {@link #upload} 同款 {@link #enc}（{@code %2F} 形式的 path 上游接受，已生产验证）。
+     * 鉴权还是那一把 {@code X-Session-API-Key}——🔴 它<b>只准入不认身份</b>：同一把 key 能读任意会话的
+     * 工作文件，所以归属校验必须由调用方（业务侧 {@code requireOwned}）先做，本类不放宽也不承担。
+     *
+     * @param absolutePath 沙箱内绝对路径（调用方负责拼与清洗，禁止目录穿越）
+     */
+    public byte[] download(String conversationId, String absolutePath) {
+        String path = "/api/conversations/" + enc(conversationId)
+                + "/file/download?path=" + enc(absolutePath);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
+        headers.set("X-Session-API-Key", config.requireApiKey());
+        long t0 = System.currentTimeMillis();
+        ResponseEntity<byte[]> resp;
+        try {
+            resp = rest.exchange(URI.create(base() + path), HttpMethod.GET,
+                    new HttpEntity<>(headers), byte[].class);
+        } catch (RestClientException e) {
+            if (AgentRuntimeErrors.isUnauthorized(e)) {
+                throw AgentRuntimeErrors.keyRejected("GET " + path);
+            }
+            throw AgentRuntimeErrors.of(-1, "Agent 运行时不可达：GET " + path + "（" + e.getMessage() + "）");
+        }
+        int status = resp.getStatusCode().value();
+        byte[] body = resp.getBody();
+        if (status < 200 || status >= 300) {
+            // 错误体在这个通道上仍是 JSON（detail），但成功时是裸字节，故只在失败分支按文本解
+            throw mapError(status, body == null ? "" : new String(body, StandardCharsets.UTF_8),
+                    HttpMethod.GET, path, t0);
+        }
+        int size = body == null ? 0 : body.length;
+        if (resp.getHeaders().getContentLength() > DOWNLOAD_MAX_BYTES || size > DOWNLOAD_MAX_BYTES) {
+            throw AgentRuntimeErrors.of(-1, "产物超出回读上限 "
+                    + DOWNLOAD_MAX_BYTES / 1024 / 1024 + "MB：" + absolutePath);
+        }
+        log.info("OpenHands 产物已回读: cid={} path={} bytes={}（{}ms）",
+                conversationId, absolutePath, size, System.currentTimeMillis() - t0);
+        return body == null ? new byte[0] : body;
     }
 
     /**
