@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -91,6 +92,23 @@ public class OssMinioServiceImpl extends BaseOssService {
         String key = getKey(url);
         log.info("getPreviewUrl == {}", key);
         return presign(key, fileName, true);
+    }
+
+    @Override
+    public void putBytes(String objectName, byte[] bytes, String contentType) {
+        // 桶不存在时自建：全新 MinIO 实例给出的是空实例，产物写入是第一次用到这个桶的场景
+        // （控制台预建时 bucketExists 幂等跳过；SDK 无原子 create-if-absent，并发首写最坏多建一次）
+        if (!minioTemplate.bucketExists(bucketName)) {
+            log.info("对象存储桶不存在，创建: {}", bucketName);
+            minioTemplate.createBucket(bucketName);
+        }
+        minioTemplate.putObject(bucketName, objectName, new ByteArrayInputStream(bytes),
+                resolveContentType(contentType, objectName));
+    }
+
+    @Override
+    public byte[] readBytes(String objectName) {
+        return minioTemplate.getObjectData(bucketName, objectName);
     }
 
     /** 生成 GET 预签名地址（私有桶可匿名访问；inline 时覆盖响应 Content-Type 与内联下载头） */

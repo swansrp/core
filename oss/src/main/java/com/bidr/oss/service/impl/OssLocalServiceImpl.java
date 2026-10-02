@@ -83,9 +83,8 @@ public class OssLocalServiceImpl extends BaseOssService {
     public void deleteObject(String url) {
         String key = getKey(url);
         log.info("deleteObject == {}", key);
-        Path root = Paths.get(getUploadPath()).toAbsolutePath().normalize();
-        Path target = root.resolve(key).normalize();
-        if (!target.startsWith(root)) {
+        Path target = inRoot(key);
+        if (target == null) {
             log.error("deleteObject 拒绝：目标路径逃逸上传根目录, key={}", key);
             return;
         }
@@ -94,6 +93,54 @@ public class OssLocalServiceImpl extends BaseOssService {
         } catch (IOException e) {
             throw new ServiceException("删除本地文件失败", e);
         }
+    }
+
+    /**
+     * 按对象名直写本地文件（父目录自动创建）。
+     * 🔴 对象名来自调用方，与 deleteObject 同一道逃逸闸门：解析后必须仍在上传根目录内，
+     * 否则 {@code ../} 形态的 key 会把产物写到任意路径（本机实现等于本地文件系统写权限）。
+     */
+    @Override
+    public void putBytes(String objectName, byte[] bytes, String contentType) {
+        Path target = requireInRoot(objectName);
+        try {
+            Path directory = target.getParent();
+            if (directory != null && !Files.exists(directory)) {
+                Files.createDirectories(directory);
+            }
+            Files.write(target, bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            throw new ServiceException("写入本地对象失败: " + objectName, e);
+        }
+    }
+
+    @Override
+    public byte[] readBytes(String objectName) {
+        Path target = requireInRoot(objectName);
+        if (!Files.exists(target)) {
+            throw new ServiceException("本地对象不存在: " + objectName);
+        }
+        try {
+            return Files.readAllBytes(target);
+        } catch (IOException e) {
+            throw new ServiceException("读取本地对象失败: " + objectName, e);
+        }
+    }
+
+    /** 写/读侧用：逃逸直接拒（对象名来自调用方，本机实现等于本地文件系统读写权限） */
+    private Path requireInRoot(String objectName) {
+        Path target = inRoot(objectName);
+        if (target == null) {
+            throw new ServiceException("拒绝访问上传根目录之外的对象: " + objectName);
+        }
+        return target;
+    }
+
+    /** 对象名 → 上传根目录内的绝对路径；逃逸根目录返回 null，由调用方按自身语义处理（写读拒绝、删除跳过） */
+    private Path inRoot(String objectName) {
+        Path root = Paths.get(getUploadPath()).toAbsolutePath().normalize();
+        Path target = root.resolve(objectName == null ? "" : objectName).normalize();
+        return target.startsWith(root) ? target : null;
     }
 
     // ===================== 分片上传（断点续传） =====================

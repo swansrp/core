@@ -9,6 +9,7 @@ import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.aliyun.oss.model.InitiateMultipartUploadRequest;
 import com.aliyun.oss.model.ListPartsRequest;
 import com.aliyun.oss.model.ObjectMetadata;
+import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.PartETag;
 import com.aliyun.oss.model.PartListing;
 import com.aliyun.oss.model.PartSummary;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -97,6 +99,27 @@ public class OssAliServiceImpl extends BaseOssService {
         String key = getKey(url);
         log.info("deleteObject == {}", key);
         client().deleteObject(bucketName, key);
+    }
+
+    @Override
+    public void putBytes(String objectName, byte[] bytes, String contentType) {
+        try {
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentType(resolveContentType(contentType, objectName));
+            metadata.setContentLength(bytes.length);
+            client().putObject(bucketName, objectName, new ByteArrayInputStream(bytes), metadata);
+        } catch (Exception e) {
+            throw new ServiceException("写入对象失败: " + objectName, e);
+        }
+    }
+
+    @Override
+    public byte[] readBytes(String objectName) {
+        try (OSSObject object = client().getObject(bucketName, objectName)) {
+            return readAll(object.getObjectContent());
+        } catch (Exception e) {
+            throw new ServiceException("读取对象失败: " + objectName, e);
+        }
     }
 
     @Override

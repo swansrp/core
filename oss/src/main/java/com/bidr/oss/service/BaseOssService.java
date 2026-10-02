@@ -14,6 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Date;
 
 /**
@@ -209,6 +212,17 @@ public abstract class BaseOssService implements ObjectStorageService {
         }
         String mime = contentTypeOf(objectName);
         return mime != null ? mime : "application/octet-stream";
+    }
+
+    /** 读尽输入流为字节（各家 SDK 的对象体流语义不同：只负责读，不负责关流） */
+    protected static byte[] readAll(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        int n;
+        while ((n = in.read(chunk)) != -1) {
+            out.write(chunk, 0, n);
+        }
+        return out.toByteArray();
     }
 
 }

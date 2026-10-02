@@ -1,5 +1,6 @@
 package com.bidr.oss.service;
 
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.oss.constant.dict.OssTypeDict;
 import com.bidr.oss.dao.entity.SaObjectStorage;
 import com.bidr.oss.vo.PartInfo;
@@ -148,6 +149,34 @@ public interface ObjectStorageService {
      */
     default String getPreviewUrl(String url, String fileName) {
         return getReadUrl(url);
+    }
+
+    // ===================== 按对象名直写/直读字节 SPI =====================
+    // 服务端自产产物（技能包、解析产物等）既没有 MultipartFile 也没有 HTTP 请求上下文，
+    // 又不该绑死某一家 SDK——入口通用化，落点仍是同一桶，读回可继续走
+    // buildAccessUrl + getReadUrl。默认不支持，由实现按自身能力覆写，
+    // 调用方拿到异常即是"当前部署形态不支持"，消息已含对象名，不必再加能力位。
+
+    /**
+     * 按对象名直写字节（不落 sa_object_storage 台账、不生成随机访问名，
+     * 对象名由调用方自拼并保证稳定；版本化产物据此可重复覆盖同一 key）
+     *
+     * @param objectName  对象名
+     * @param bytes       内容
+     * @param contentType MIME，空则按扩展名推断（本机实现没有对象元数据概念，该值只是提示）
+     */
+    default void putBytes(String objectName, byte[] bytes, String contentType) {
+        throw new ServiceException("当前对象存储不支持按对象名直写字节：" + objectName);
+    }
+
+    /**
+     * 按对象名读回字节（对象不存在应抛出并带对象名，调用方要能分清"没有这个对象"与"通道坏了"）
+     *
+     * @param objectName 对象名
+     * @return 对象内容
+     */
+    default byte[] readBytes(String objectName) {
+        throw new ServiceException("当前对象存储不支持按对象名读回字节：" + objectName);
     }
 
     // ===================== 分片上传（断点续传） SPI =====================

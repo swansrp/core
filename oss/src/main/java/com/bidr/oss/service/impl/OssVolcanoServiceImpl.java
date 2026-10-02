@@ -1,5 +1,6 @@
 package com.bidr.oss.service.impl;
 
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.oss.constant.OssConst;
 import com.bidr.oss.dao.entity.SaObjectStorage;
 import com.bidr.oss.service.BaseOssService;
@@ -11,6 +12,8 @@ import com.volcengine.tos.model.object.AbortMultipartUploadInput;
 import com.volcengine.tos.model.object.CompleteMultipartUploadV2Input;
 import com.volcengine.tos.model.object.CreateMultipartUploadInput;
 import com.volcengine.tos.model.object.DeleteObjectInput;
+import com.volcengine.tos.model.object.GetObjectV2Input;
+import com.volcengine.tos.model.object.GetObjectV2Output;
 import com.volcengine.tos.model.object.ListPartsInput;
 import com.volcengine.tos.model.object.ListPartsOutput;
 import com.volcengine.tos.model.object.ObjectMetaRequestOptions;
@@ -24,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -111,6 +115,30 @@ public class OssVolcanoServiceImpl extends BaseOssService {
         String key = getKey(url);
         log.info("deleteObject == {}", key);
         client().deleteObject(new DeleteObjectInput().setBucket(bucketName).setKey(key));
+    }
+
+    @Override
+    public void putBytes(String objectName, byte[] bytes, String contentType) {
+        try {
+            // Content-Type 必须显式设置，否则 TOS 默认 octet-stream、浏览器只能下载不能预览
+            client().putObject(new PutObjectInput().setBucket(bucketName).setKey(objectName)
+                    .setContentLength(bytes.length)
+                    .setOptions(new ObjectMetaRequestOptions()
+                            .setContentType(resolveContentType(contentType, objectName)))
+                    .setContent(new ByteArrayInputStream(bytes)));
+        } catch (Exception e) {
+            throw new ServiceException("写入对象失败: " + objectName, e);
+        }
+    }
+
+    @Override
+    public byte[] readBytes(String objectName) {
+        try (GetObjectV2Output output = client().getObject(
+                new GetObjectV2Input().setBucket(bucketName).setKey(objectName))) {
+            return readAll(output.getContent());
+        } catch (Exception e) {
+            throw new ServiceException("读取对象失败: " + objectName, e);
+        }
     }
 
     @Override
