@@ -130,6 +130,7 @@ public class ExternalRuntimeTaskService {
         state.setStartedAt(System.currentTimeMillis());
         state.setHeartbeat(System.currentTimeMillis());
         state.setDetachPolicy("KEEP_RUNNING");
+        state.setRuntimeSessionId(session.getSessionId());
         store.saveState(state);
         store.appendEvent(taskId, AgentEvent.RUN_START, "外部任务已派发（上游 agent=" + code + "）");
 
@@ -185,6 +186,8 @@ public class ExternalRuntimeTaskService {
         res.put("status", state.getStatus());
         res.put("summary", state.getSummary());
         res.put("error", state.getError());
+        // 产物回读入口：任务句柄终局即在途链已清除，上游会话标识只能随状态本身给出
+        res.put("runtimeSessionId", state.getRuntimeSessionId());
         return res;
     }
 

@@ -217,6 +217,8 @@ public class ExternalRuntimeTaskServiceTest {
         Map<String, Object> result = service.result(taskId);
         Assert.assertNotNull(result);
         Assert.assertEquals("答案是 3", result.get("summary"));
+        // 终局后在途链已清除，产物回读要靠状态里这份上游会话标识（沙箱工作区还在，句柄不在）
+        Assert.assertEquals("up-session-1", result.get("runtimeSessionId"));
     }
 
     @Test

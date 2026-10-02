@@ -89,6 +89,14 @@ public class AgentSessionState implements Serializable {
     private String detachPolicy;
 
     /**
+     * 外部 runtime 会话标识（形态 B）：本任务背后的上游 runtime 会话，派发时一次性写入。
+     * 终局后任务句柄与在途链即清除，但这个标识随状态活到 store TTL 之外——
+     * 产物回读（{@code AgentRuntimeProvider#downloadFile}）与沙箱清理都以它为入口。
+     * 本进程内部 agent 会话为 null。
+     */
+    private String runtimeSessionId;
+
+    /**
      * 结论摘要（业务经 AgentSessionContext#setSummary 写入，FINISHED 时展示）
      */
     private String summary;
