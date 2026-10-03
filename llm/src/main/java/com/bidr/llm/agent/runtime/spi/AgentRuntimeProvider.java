@@ -122,13 +122,18 @@ public interface AgentRuntimeProvider {
     }
 
     /**
-     * 代收转推：把内容写入该会话沙箱内路径，返回沙箱内绝对路径（供正文引用）。
+     * 代收转推：把内容写入该会话沙箱工作区，返回沙箱内绝对路径（供正文引用）。
      *
-     * @param sessionId 平台会话 id
-     * @param fileName  展示名（实现方须自行清洗，禁止让它拼出目录穿越）
-     * @param content   文件字节
+     * <p>与 {@link #downloadFile} 用<b>同一把尺子</b>：{@code relativePath} 是工作目录内的相对路径，
+     * <b>允许子目录</b>（一份多文件底稿的目录结构是要保住的，压平会让同名文件互相顶掉），
+     * 绝对路径／盘符／{@code ..} 段由实现方硬拒。浏览器侧若要"只落一个附件名"，
+     * 清洗成 basename 是<b>调用方</b>的事（见 relay 的附件端点），不在这条通用口上做。</p>
+     *
+     * @param sessionId    平台会话 id
+     * @param relativePath 工作目录内的相对路径（如 {@code templates/report.md}）
+     * @param content      文件字节（原样写入，二进制同样走这条）
      */
-    default String uploadFile(String sessionId, String fileName, byte[] content) {
+    default String uploadFile(String sessionId, String relativePath, byte[] content) {
         throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST, "附件代收转推");
     }
 

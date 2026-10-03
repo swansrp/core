@@ -366,6 +366,94 @@ class OpenHandsLiveIT {
         }
     }
 
+    /**
+     * 带底稿派发的前置测量腿：写侧现在按<b>相对路径</b>写工作区（保子目录），业务侧要用它把技能包
+     * 整个解压后塞进沙箱，所以开工前必须实测四件事——① 上游会不会自动建父目录（嵌套路径能否落）；
+     * ② 不同子目录的同名文件是否真的互不顶掉；③ 二进制字节能否原样进；④ 单文件体积与单次文件数的
+     * 上限在哪。④ 只测量不断言（上限是上游部署参数，钉死会让本腿在别的机器上假红）。
+     * <p>
+     * 若①失败，回落方案已定：整包 zip 作为<b>单个</b> SeedFile 进沙箱、由沙箱自己解压
+     * （只改 InkHub 侧的 seed 构造，框架接口不动）。
+     */
+    @Test
+    @Order(10)
+    @DisplayName("底稿派发测量：嵌套路径 / 同名不互顶 / 二进制 / 体积与条数上限")
+    void seedFileChannelMeasured() {
+        Assumptions.assumeTrue("1".equals(System.getenv("OH_SEED_IT")),
+                "未设 OH_SEED_IT=1，跳过底稿通道测量腿");
+
+        SessionCreateCmd cmd = new SessionCreateCmd();
+        cmd.setAgentCode("default");
+        cmd.setBusinessType("supervision");
+        cmd.setBusinessId("PRJ-IT-SEED");
+        String cid = provider.createSession(cmd).getSessionId();
+        StringBuilder report = new StringBuilder("[SEED-PROBE] cid=" + cid);
+        try {
+            // ①＋② 嵌套目录 + 不同子目录同名：两份内容都必须各自在，谁也不许顶掉谁
+            byte[] t = "# 报告模板\n设备名称\n".getBytes(StandardCharsets.UTF_8);
+            byte[] e = "# 报告样例\n水泵 2026-10-03 合格\n".getBytes(StandardCharsets.UTF_8);
+            provider.uploadFile(cid, "templates/报告.md", t);
+            provider.uploadFile(cid, "examples/报告.md", e);
+            assertArrayEquals(t, provider.downloadFile(cid, "templates/报告.md"), "templates 下的内容被顶掉了");
+            assertArrayEquals(e, provider.downloadFile(cid, "examples/报告.md"), "examples 下的内容被顶掉了");
+            report.append(" nested=OK(同名不互顶)");
+
+            // ③ 二进制：PNG 魔数 + 伪随机字节（含 0x00 与 >0x7F，文本通道最容易在这里改字节）
+            byte[] bin = binaryPayload(4096);
+            provider.uploadFile(cid, "assets/blob.png", bin);
+            assertArrayEquals(bin, provider.downloadFile(cid, "assets/blob.png"), "二进制必须逐字节相等");
+            report.append(" binary=OK(").append(bin.length).append("B)");
+
+            // ④-a 条数：24 个成员（真实技能包常见规模）逐个写、逐个读回
+            int written = 0;
+            for (int i = 0; i < 24; i++) {
+                String rel = String.format("seed/f%02d.md", i);
+                provider.uploadFile(cid, rel, ("成员 " + i).getBytes(StandardCharsets.UTF_8));
+                if (provider.downloadFile(cid, rel).length > 0) {
+                    written++;
+                }
+            }
+            assertEquals(24, written, "24 个成员应全部可写可读");
+            report.append(" count=24/24");
+
+            // ④-b 体积：逐档测量，失败不判红（只记录哪一档、什么错），但最小档必须成
+            for (int mb : new int[]{1, 8, 32}) {
+                byte[] payload = binaryPayload(mb * 1024 * 1024);
+                long began = System.currentTimeMillis();
+                try {
+                    provider.uploadFile(cid, "big/" + mb + "mb.bin", payload);
+                    int back = provider.downloadFile(cid, "big/" + mb + "mb.bin").length;
+                    report.append(" size-").append(mb).append("MB=OK(")
+                            .append(System.currentTimeMillis() - began).append("ms, 回读 ")
+                            .append(back == payload.length ? "等长" : back + "≠" + payload.length).append(")");
+                } catch (Exception ex) {
+                    report.append(" size-").append(mb).append("MB=FAIL(")
+                            .append(String.valueOf(ex.getMessage()).replace('\n', ' ')).append(")");
+                    if (mb == 1) {
+                        fail("1MB 都写不进说明底稿通道本身坏了：" + ex.getMessage());
+                    }
+                }
+            }
+            System.out.println(report);
+        } finally {
+            System.out.println(report);
+            provider.deleteSession(cid);
+        }
+    }
+
+    /** 确定性伪随机字节（含 0x00 与高位字节，便于跨次复跑比对） */
+    private static byte[] binaryPayload(int size) {
+        byte[] bytes = new byte[size];
+        long state = 0x5DEECE66DL;
+        for (int i = 0; i < size; i++) {
+            state = (state * 6364136223846793005L + 1442695040888963407L) & Long.MAX_VALUE;
+            bytes[i] = (byte) (state >>> 33);
+        }
+        bytes[0] = 'P';
+        bytes[1] = 'K';
+        return bytes;
+    }
+
     // ==================== 工具 ====================
 
     /**

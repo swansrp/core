@@ -148,7 +148,8 @@ public class AgentRuntimeRelayController {
     /**
      * 附件代收转推（能力位分支二）：上游无预签名位时（如 OpenHands 只有 multipart 文件 API），
      * 浏览器把文件交给 relay，relay 用服务端凭据写进该会话沙箱工作目录，返回沙箱内绝对路径供正文引用。
-     * 🔴 归属强校验同其他端点；文件名清洗与大小上限在 provider/本方法内做，绝不让浏览器决定落盘路径。
+     * 🔴 归属强校验同其他端点；名字在本方法内压成 basename、路径清洗在 provider 内做，
+     * 大小上限在这两处合起来卡——绝不让浏览器决定落盘路径。
      */
     @ApiOperation("附件代收转推（写入会话沙箱目录）")
     @PostMapping("/sessions/{sessionId}/files")
@@ -171,11 +172,29 @@ public class AgentRuntimeRelayController {
         } catch (IOException e) {
             throw new ServiceException(ErrCodeSys.SYS_VALIDATE_NOT_PASS, "文件读取失败");
         }
-        String path = provider.uploadFile(sessionId, file.getOriginalFilename(), bytes);
+        String path = provider.uploadFile(sessionId, basenameOf(file.getOriginalFilename()), bytes);
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("path", path);
         res.put("name", file.getOriginalFilename());
         res.put("size", file.getSize());
         return res;
+    }
+
+    /**
+     * 🔴 浏览器给的名字只决定**文件名**、不决定落盘位置：provider 的 {@code uploadFile} 现在按相对路径
+     * 写工作区（业务侧要能派多目录底稿），所以 relay 这一层必须先把名字压成 basename，否则
+     * {@code ../../x}、{@code /etc/x} 之类会被当成合法嵌套递到上游。
+     * 真正的清洗（绝对路径／盘符／{@code ..}／空段）由 provider 兜底，这里只负责压平。
+     */
+    static String basenameOf(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "file";
+        }
+        String name = raw.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        return StringUtils.hasText(name) ? name : "file";
     }
 }

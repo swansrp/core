@@ -294,10 +294,12 @@ public class OpenHandsProvider implements AgentRuntimeProvider {
     }
 
     @Override
-    public String uploadFile(String sessionId, String fileName, byte[] content) {
-        String safe = safeFileName(fileName);
-        String absolute = workspaceDir(sessionId) + "/" + safe;
-        client.upload(sessionId, absolute, safe, content);
+    public String uploadFile(String sessionId, String relativePath, byte[] content) {
+        // 🔴 写侧与读侧同一把尺子：保子目录、硬拒绝对路径与 ..。
+        // 旧实现只取 basename，多文件底稿会互相顶掉（templates/x.md 与 examples/x.md 落成同一个）
+        String rel = safeRelPath(relativePath);
+        String absolute = workspaceDir(sessionId) + "/" + rel;
+        client.upload(sessionId, absolute, basename(rel), content);
         return absolute;
     }
 
@@ -339,48 +341,37 @@ public class OpenHandsProvider implements AgentRuntimeProvider {
     }
 
     /**
-     * 🔴 文件名清洗：只取 basename、去掉目录穿越与控制字符、限长。
-     * 它会被拼进沙箱**绝对路径**交给上游写文件接口，不清洗等于把"任意路径写"开放给浏览器。
+     * 相对路径的末段（交给上游当 multipart 的展示文件名）。落盘位置由绝对路径决定，
+     * 这里只管名字，不做穿越判定——那道闸在 {@link #safeRelPath}。
      */
-    static String safeFileName(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return "file";
-        }
-        String name = raw.replace('\\', '/');
-        int slash = name.lastIndexOf('/');
-        if (slash >= 0) {
-            name = name.substring(slash + 1);
-        }
-        name = name.replaceAll("[^A-Za-z0-9._\\-\\u4e00-\\u9fa5]", "_").replace("..", "_");
-        if (name.startsWith(".")) {
-            name = "_" + name.substring(1);
-        }
-        if (name.isEmpty()) {
-            return "file";
-        }
-        return name.length() > 120 ? name.substring(name.length() - 120) : name;
+    static String basename(String relativePath) {
+        int slash = relativePath.lastIndexOf('/');
+        return slash < 0 ? relativePath : relativePath.substring(slash + 1);
     }
 
     /**
-     * 🔴 产物相对路径清洗（读侧）。与 {@link #safeFileName} 同属"会被拼进沙箱绝对路径"的入参，
-     * 但两者判据不同、不可互相顶替：写侧只收 basename（沙箱附件不许落子目录），读侧必须允许嵌套
-     * 相对路径（产物按派单约定落在 {@code out/} 之类前缀下），否则正常产物读不到。
+     * 🔴 工作目录内相对路径清洗（<b>读写两侧共用同一把尺子</b>）。它会被拼进沙箱**绝对路径**
+     * 交给上游的文件接口，不清洗等于把"任意路径读写"开放给调用方。
      * <p>
-     * 因此这里不做字符白名单（沙箱产物的文件名由沙箱决定），只硬拒三类：
-     * 绝对路径／盘符开头、空段与纯点号段、任何 {@code ..} 段——逃逸出工作目录一律 40010。
+     * 写侧旧实现是"只取 basename"，那会把多文件底稿压平——不同子目录的同名文件互相顶掉，
+     * 因此写侧现在也收嵌套相对路径；读侧本来就必须允许嵌套（产物按派单约定落在 {@code out/}
+     * 之类前缀下）。两侧都硬拒三类：绝对路径／盘符开头、空段与纯点号段、任何 {@code ..} 段。
+     * <p>
+     * 不做字符白名单（技能包成员名与沙箱产物名由内容决定，中文与空格都要能落）。
+     * 浏览器侧"只许交一个展示名"的收口在 relay 层，不在这条通用口上。
      */
     static String safeRelPath(String raw) {
         if (!StringUtils.hasText(raw)) {
-            throw AgentRuntimeErrors.of(40010, "产物路径不能为空");
+            throw AgentRuntimeErrors.of(40010, "工作区路径不能为空");
         }
         String value = raw.trim().replace('\\', '/');
         if (value.startsWith("/") || value.contains(":")) {
-            throw AgentRuntimeErrors.of(40010, "产物路径必须是工作目录内的相对路径：" + raw);
+            throw AgentRuntimeErrors.of(40010, "工作区路径必须是相对路径：" + raw);
         }
         StringBuilder kept = new StringBuilder();
         for (String segment : value.split("/")) {
             if (segment.isEmpty() || ".".equals(segment) || "..".equals(segment)) {
-                throw AgentRuntimeErrors.of(40010, "产物路径含非法路径段：" + raw);
+                throw AgentRuntimeErrors.of(40010, "工作区路径含非法路径段：" + raw);
             }
             if (kept.length() > 0) {
                 kept.append('/');

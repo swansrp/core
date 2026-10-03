@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
  * Description: 产物回读的**相对路径清洗**测试。该名字会被拼进沙箱绝对路径交给上游读文件接口，
  * 不清洗就等于把"读工作区外任意文件"开放给调用方（上游那一把 session key 本就只准入不认身份）。
  * <p>
- * 与写侧 {@code OpenHandsProviderUploadTest} 的判据不同是刻意的：写侧只收 basename，
- * 读侧必须放过嵌套相对路径（产物按派单约定落在 {@code out/} 前缀下），
+ * 读侧与写侧现在共用同一个清洗方法（写侧旧实现"只取 basename"已于带底稿派发时改掉了）：
+ * 两侧都必须放过嵌套相对路径（产物按派单约定落在 {@code out/} 前缀下），
  * 故这里既锁"放过合法嵌套"，也锁"逃逸一律拒"。
  * <p>
  * ⚠️ 本模块跑在 JUnit 5（surefire-junit-platform）上：写成 JUnit 4 会被**静默跳过**

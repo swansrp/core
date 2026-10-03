@@ -57,6 +57,10 @@ public class ExternalRuntimeTaskServiceTest {
 
     private static final class FakeProvider implements AgentRuntimeProvider {
         private final List<String> frames;
+        /** 上游动作时序（写底稿/开轮/删会话），供"先落底稿再开轮"这类顺序断言 */
+        private final List<String> calls = Collections.synchronizedList(new ArrayList<String>());
+        /** 能力位开关：false＝该上游不能往工作区写文件 */
+        private boolean relayUpload = true;
         private String cancelledTurnId;
 
         FakeProvider(List<String> frames) {
@@ -88,6 +92,7 @@ public class ExternalRuntimeTaskServiceTest {
 
         @Override
         public DeleteResult deleteSession(String sessionId) {
+            calls.add("delete:" + sessionId);
             return null;
         }
 
@@ -108,13 +113,25 @@ public class ExternalRuntimeTaskServiceTest {
         }
 
         @Override
+        public boolean supportsRelayUpload() {
+            return relayUpload;
+        }
+
+        @Override
+        public String uploadFile(String sessionId, String fileName, byte[] content) {
+            calls.add("upload:" + fileName);
+            return "/workspace/" + fileName;
+        }
+
+        @Override
         public RuntimeTurnLink openTurn(TurnOpenCmd cmd) {
+            calls.add("openTurn");
             return new ScriptedLink(frames);
         }
 
         @Override
         public RuntimeTurnLink attachTurn(String sessionId, String turnId) {
-            return new ScriptedLink(Collections.emptyList());
+            return new ScriptedLink(Collections.<String>emptyList());
         }
     }
 
@@ -260,5 +277,78 @@ public class ExternalRuntimeTaskServiceTest {
         } catch (IllegalArgumentException expected) {
             Assert.assertTrue(expected.getMessage().contains("不存在"));
         }
+    }
+
+    // ==================== 带背景文件的派发（底稿口） ====================
+
+    private static byte[] bytes(String text) {
+        try {
+            return text.getBytes("UTF-8");
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Test
+    public void 背景文件先落工作区再开轮() throws Exception {
+        InMemoryAgentSessionStore store = new InMemoryAgentSessionStore();
+        FakeProvider provider = new FakeProvider(happyFrames());
+        ExternalRuntimeTaskService service = new ExternalRuntimeTaskService(store, () -> provider);
+
+        String taskId = service.submit(null, "default", "在这份底稿上改", Arrays.asList(
+                new SeedFile("SKILL.md", bytes("# skill")),
+                new SeedFile("templates/report.md", bytes("模板"))));
+        awaitTerminal(store, taskId);
+
+        Assert.assertEquals("底稿必须整体早于开轮（否则模型只能凭转述重造），且按清单顺序逐文件写",
+                Arrays.asList("upload:SKILL.md", "upload:templates/report.md", "openTurn"),
+                new ArrayList<String>(provider.calls));
+    }
+
+    @Test
+    public void 上游不支持写入时拒绝派发并回收刚建好的会话() {
+        InMemoryAgentSessionStore store = new InMemoryAgentSessionStore();
+        FakeProvider provider = new FakeProvider(happyFrames());
+        provider.relayUpload = false;
+        ExternalRuntimeTaskService service = new ExternalRuntimeTaskService(store, () -> provider);
+        try {
+            service.submit(null, "default", "在这份底稿上改",
+                    Collections.singletonList(new SeedFile("SKILL.md", bytes("# skill"))));
+            Assert.fail("能力位缺失必须回绝，不能降级成「没带底稿照跑」");
+        } catch (IllegalStateException expected) {
+            Assert.assertTrue("报错要点明是背景文件", expected.getMessage().contains("背景文件"));
+        }
+        Assert.assertFalse("底稿没落成就不该开轮", provider.calls.contains("openTurn"));
+        Assert.assertTrue("刚建的会话不能留成空转沙箱", provider.calls.contains("delete:up-session-1"));
+    }
+
+    @Test
+    public void 空清单与三参口径一致不碰写入() throws Exception {
+        InMemoryAgentSessionStore store = new InMemoryAgentSessionStore();
+        FakeProvider provider = new FakeProvider(happyFrames());
+        ExternalRuntimeTaskService service = new ExternalRuntimeTaskService(store, () -> provider);
+        String taskId = service.submit(null, "default", "任务", Collections.<SeedFile>emptyList());
+        awaitTerminal(store, taskId);
+        Assert.assertEquals(Collections.singletonList("openTurn"), new ArrayList<String>(provider.calls));
+    }
+
+    @Test
+    public void 背景文件缺路径或缺字节直接报错() {
+        InMemoryAgentSessionStore store = new InMemoryAgentSessionStore();
+        FakeProvider provider = new FakeProvider(happyFrames());
+        ExternalRuntimeTaskService service = new ExternalRuntimeTaskService(store, () -> provider);
+        try {
+            service.submit(null, "default", "任务", Collections.singletonList(new SeedFile("  ", bytes("x"))));
+            Assert.fail("缺相对路径应报错");
+        } catch (IllegalArgumentException expected) {
+            Assert.assertTrue(expected.getMessage().contains("相对路径"));
+        }
+        try {
+            service.submit(null, "default", "任务", Collections.singletonList(new SeedFile("SKILL.md", null)));
+            Assert.fail("缺字节应报错");
+        } catch (IllegalArgumentException expected) {
+            Assert.assertTrue(expected.getMessage().contains("字节"));
+        }
+        Assert.assertFalse("校验失败发生在写入之前，不应有开轮", provider.calls.contains("openTurn"));
     }
 }

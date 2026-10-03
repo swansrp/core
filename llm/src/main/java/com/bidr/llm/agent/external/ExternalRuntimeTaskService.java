@@ -98,6 +98,21 @@ public class ExternalRuntimeTaskService {
      * @return 任务句柄（= 本地任务会话 id）
      */
     public String submit(String parentSessionId, String agentCode, String requirement) {
+        return submit(parentSessionId, agentCode, requirement, null);
+    }
+
+    /**
+     * 带<b>背景文件</b>的派发（空白开工 → 指定底稿）：见 {@link SeedFile}。
+     *
+     * <p>顺序是硬约定——<b>建会话 → 写底稿 → 开轮</b>：底稿没落进工作区就开轮，模型只能凭转述重造，
+     * 这条腿就白加了。因此写入失败会让整次派发失败（并顺手软删那个空转的上游会话，不留孤儿沙箱），
+     * 而不是降级成"没带底稿照跑"。</p>
+     *
+     * @param seed 背景文件清单；空＝与三参口径完全一致
+     * @throws IllegalStateException    清单非空但该上游不支持写入工作区（能力位缺失不静默丢底稿）
+     * @throws IllegalArgumentException 清单里的文件缺相对路径或缺字节
+     */
+    public String submit(String parentSessionId, String agentCode, String requirement, List<SeedFile> seed) {
         AgentRuntimeProvider provider = providerSupplier.get();
         if (provider == null) {
             throw new IllegalStateException("未接入外部 agent runtime（未装配 AgentRuntimeProvider）");
@@ -112,6 +127,12 @@ public class ExternalRuntimeTaskService {
         String code = (agentCode == null || agentCode.trim().isEmpty()) ? "default" : agentCode.trim();
         SessionInfo session = provider.createSession(new SessionCreateCmd(
                 code, "ext-task", null, new HashMap<>(), null, null));
+        try {
+            pushSeed(provider, session.getSessionId(), seed);
+        } catch (RuntimeException e) {
+            releaseQuietly(provider, session.getSessionId());
+            throw e;
+        }
         TurnOpenCmd cmd = new TurnOpenCmd();
         cmd.setSessionId(session.getSessionId());
         cmd.setAgentCode(code);
@@ -395,6 +416,34 @@ public class ExternalRuntimeTaskService {
     }
 
     // ==================== 辅助 ====================
+
+    /** 底稿写入：空清单直接返回（三参口径零变化）；清单非空则先验能力位，再逐文件写 */
+    private static void pushSeed(AgentRuntimeProvider provider, String runtimeSessionId, List<SeedFile> seed) {
+        if (seed == null || seed.isEmpty()) {
+            return;
+        }
+        if (!provider.supportsRelayUpload()) {
+            throw new IllegalStateException("当前沙箱（" + provider.name() + "）不支持写入工作区，无法带背景文件派发");
+        }
+        for (SeedFile file : seed) {
+            if (file == null || file.getRelativePath() == null || file.getRelativePath().trim().isEmpty()) {
+                throw new IllegalArgumentException("背景文件缺相对路径");
+            }
+            if (file.getContent() == null) {
+                throw new IllegalArgumentException("背景文件缺字节内容：" + file.getRelativePath());
+            }
+            provider.uploadFile(runtimeSessionId, file.getRelativePath().trim(), file.getContent());
+        }
+    }
+
+    /** 派发中途失败时回收刚建的会话：底稿没写进去就不该留着一个空转的沙箱（清理失败不掩盖原异常） */
+    private static void releaseQuietly(AgentRuntimeProvider provider, String runtimeSessionId) {
+        try {
+            provider.deleteSession(runtimeSessionId);
+        } catch (Exception e) {
+            log.warn("背景文件写入失败后的会话清理未成功（{}）：{}", runtimeSessionId, e.getMessage());
+        }
+    }
 
     private AgentSessionState requireTask(String taskId) {
         AgentSessionState state = store.getState(taskId);
