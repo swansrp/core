@@ -104,9 +104,15 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
         // 客户端断开连接，不处理
     }
 
+    @ResponseBody
     @ExceptionHandler(RepeatSubmitException.class)
-    public void handleRepeatSubmitException(RepeatSubmitException e) {
-        // 防重复提交，不处理
+    public ResponseEntity<Response<String>> errorHandler(RepeatSubmitException ex) {
+        // 拒绝类失败必须回错误信封：返回 void＝HTTP 200＋空 body，前端读不到 status 会判成"成功"（假成功）。
+        // 有意不调 errorHandler(ServiceException)＝不发 ServiceExceptionEvent，免得客户端连点被当服务端故障触发告警邮件。
+        ServiceException serviceException = new ServiceException(ex.getMessage());
+        serviceException.setStackTrace(ex.getStackTrace());
+        Response<String> res = new Response(serviceException);
+        return new ResponseEntity<>(res, HttpStatus.OK);
     }
 
     /**
