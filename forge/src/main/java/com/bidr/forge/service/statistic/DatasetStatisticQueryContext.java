@@ -22,6 +22,15 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
     private static final String SUBQUERY_ALIAS = "t";
 
     private final DatasetSqlBuilder builder;
+    /**
+     * 预览 FROM 专用构建器：不补 t. 前缀（内层直接引用物理列），常驻过滤谓词在这一层生效；
+     * 与 builder 分开，避免外层条件构建时重复拼接 base_filter
+     */
+    private final DatasetSqlBuilder previewBuilder;
+    /**
+     * getFromSql() 产生的命名参数（常驻过滤谓词 token 绑定），执行前由调用方并入执行参数
+     */
+    private final Map<String, Object> previewParams = new LinkedHashMap<>();
     private final String defaultTableAlias;
     /**
      * Dataset 预览 SELECT 输出列的别名集合（包含 portal 字段映射后的 voFieldName 与 columnAlias）。
@@ -31,17 +40,19 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
 
     public DatasetStatisticQueryContext(DatasetColumns datasetColumns,
                                         List<SysDatasetTable> datasets,
-                                        List<SysDatasetColumn> columns) {
+                                        List<SysDatasetColumn> columns,
+                                        String baseFilter) {
         // 统计 SQL 里经常直接引用 dy/userNo 等字段；在多表 join 场景下需要补齐主表别名避免歧义。
         this.defaultTableAlias = resolveDefaultTableAlias(datasets);
         this.selectAliases = resolveSelectAliases(columns);
 
-        this.builder = new DatasetSqlBuilder(datasetColumns.getId(), datasets, columns) {
+        this.builder = new DatasetSqlBuilder(datasetColumns.getId(), datasets, columns, null) {
             @Override
             protected String formatColumnName(String columnName) {
                 return formatColumnExpression(columnName);
             }
         };
+        this.previewBuilder = new DatasetSqlBuilder(datasetColumns.getId(), datasets, columns, baseFilter);
     }
 
     private static Set<String> resolveSelectAliases(List<SysDatasetColumn> columns) {
@@ -91,7 +102,17 @@ public class DatasetStatisticQueryContext implements StatisticQueryContext {
         // 因此这里必须使用“预览 SQL（去除 LIMIT）”作为子查询，然后在外层做聚合统计：
         // SELECT ... FROM (SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ...) AS t
         // 注意：不包含 LIMIT，避免统计时受分页影响。
-        String previewSql = builder.buildSelect(new AdvancedQueryReq(), Collections.emptyMap(), new HashMap<>());
+        previewParams.clear();
+        String previewSql = previewBuilder.buildSelect(new AdvancedQueryReq(), Collections.emptyMap(), previewParams);
+        return stripPreviewTail(previewSql);
+    }
+
+    @Override
+    public Map<String, Object> getPreviewParams() {
+        return previewParams;
+    }
+
+    private String stripPreviewTail(String previewSql) {
         String upper = previewSql.toUpperCase(Locale.ROOT);
 
         // 去除 LIMIT（如果存在）

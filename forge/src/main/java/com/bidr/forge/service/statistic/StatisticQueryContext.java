@@ -2,6 +2,9 @@ package com.bidr.forge.service.statistic;
 
 import com.bidr.forge.engine.builder.BaseSqlBuilder;
 
+import java.util.Collections;
+import java.util.Map;
+
 /**
  * 统计SQL上下文抽象：屏蔽 Matrix/Dataset 在 FROM 片段、列引用格式、条件构建器上的差异。
  *
@@ -28,5 +31,13 @@ public interface StatisticQueryContext {
      * Dataset: colAlias / 表别名.列 等（由 aliasMap 提供），不加反引号
      */
     String formatColumnExpression(String dbColumnOrAlias);
+
+    /**
+     * FROM 片段（getFromSql 生成）里产生的命名参数（如常驻过滤谓词的 token 绑定），
+     * 执行前须并入执行参数；默认空（Matrix 无预览参数）。
+     */
+    default Map<String, Object> getPreviewParams() {
+        return Collections.emptyMap();
+    }
 }
 

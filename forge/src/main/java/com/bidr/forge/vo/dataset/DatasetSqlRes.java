@@ -18,5 +18,8 @@ public class DatasetSqlRes {
 
     @ApiModelProperty("拼装后的 SQL（可选择包含列备注注释）")
     private String sql;
+
+    @ApiModelProperty("常驻过滤谓词（外层 WHERE 片段）：随 SQL 一并回显，前端拼回编辑器末尾，再次保存才不会清掉已转存的常驻条件")
+    private String baseFilter;
 }
 

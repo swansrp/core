@@ -7,7 +7,7 @@ import com.bidr.forge.vo.dataset.DatasetConfigReq;
 import com.bidr.forge.vo.dataset.DatasetConfigRes;
 import com.bidr.forge.vo.dataset.DatasetSqlRes;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.vo.common.IdOrderReqVO;
 import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
@@ -44,7 +44,7 @@ public class DatasetConfigController {
             return datasetConfigService.parseSql(req);
         } catch (JSQLParserException e) {
             log.error("SQL解析失败: {}", e.getMessage(), e);
-            throw new NoticeException("SQL解析失败: " + e.getMessage());
+            throw new ServiceException("SQL解析失败: " + e.getMessage());
         }
     }
 
@@ -58,7 +58,7 @@ public class DatasetConfigController {
             return res;
         } catch (JSQLParserException e) {
             log.error("SQL解析失败: {}", e.getMessage(), e);
-            throw new NoticeException("SQL解析失败: " + e.getMessage());
+            throw new ServiceException("SQL解析失败: " + e.getMessage());
         }
     }
 
@@ -75,6 +75,7 @@ public class DatasetConfigController {
         DatasetSqlRes res = new DatasetSqlRes();
         res.setDatasetId(datasetId);
         res.setSql(datasetConfigService.buildDatasetSql(datasetId, includeRemarks));
+        res.setBaseFilter(datasetConfigService.getBaseFilter(datasetId));
         return res;
     }
 

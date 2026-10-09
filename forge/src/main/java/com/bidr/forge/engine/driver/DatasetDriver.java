@@ -67,9 +67,10 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
     @Override
     public SqlBuilder getSqlBuilder(String portalName, Long roleId) {
         Long datasetId = getDatasetIdFromPortal(portalName, roleId);
+        SysDataset dataset = sysDatasetService.selectById(datasetId);
         List<SysDatasetTable> datasets = sysDatasetTableService.getByDatasetId(datasetId);
         List<SysDatasetColumn> columns = retainPermittedDatasetColumns(sysDatasetColumnService.getByDatasetId(datasetId));
-        return new DatasetSqlBuilder(datasetId, datasets, columns);
+        return new DatasetSqlBuilder(datasetId, datasets, columns, dataset == null ? null : dataset.getBaseFilter());
     }
 
     @Override
@@ -201,14 +202,14 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
         // 2) 在 Dataset 指定的数据源中执行统计 SQL
         Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
         if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
-            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns, datasetColumns.getBaseFilter());
             Map<String, Object> result = driverStatisticSupportService.summary(jdbcConnectService, req, ctx, aliasMap);
             ColumnAliasMap.blankHiddenColumns(result, hiddenFields);
             return result;
         }
 
         try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
-            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns, datasetColumns.getBaseFilter());
             Map<String, Object> result = driverStatisticSupportService.summary(jdbcConnectService, req, ctx, aliasMap);
             ColumnAliasMap.blankHiddenColumns(result, hiddenFields);
             return result;
@@ -253,14 +254,14 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
 
         // 3) 在 Dataset 指定的数据源中执行统计 SQL（真正访问业务表/维表的阶段）
         if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
-            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns, datasetColumns.getBaseFilter());
             List<StatisticRes> result = driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
             blankHiddenStatistics(result, hiddenFields);
             return result;
         }
 
         try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
-            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns, datasetColumns.getBaseFilter());
             List<StatisticRes> result = driverStatisticSupportService.statistic(jdbcConnectService, req, ctx, aliasMap);
             blankHiddenStatistics(result, hiddenFields);
             return result;
@@ -299,14 +300,14 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
         // 2) 在 Dataset 指定的数据源中执行透视聚合 SQL
         Set<String> hiddenFields = resolveHiddenColumnFields(portalName);
         if (FuncUtil.isEmpty(datasetColumns.getDataSource())) {
-            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns, datasetColumns.getBaseFilter());
             List<Map<String, Object>> result = driverStatisticSupportService.pivot(jdbcConnectService, req, ctx, aliasMap);
             ColumnAliasMap.blankHiddenColumns(result, hiddenFields);
             return result;
         }
 
         try (JdbcConnectService.DataSourceScope ignored = jdbcConnectService.switchDataSourceScope(datasetColumns.getDataSource())) {
-            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns);
+            DatasetStatisticQueryContext ctx = new DatasetStatisticQueryContext(datasetColumns, datasets, columns, datasetColumns.getBaseFilter());
             List<Map<String, Object>> result = driverStatisticSupportService.pivot(jdbcConnectService, req, ctx, aliasMap);
             ColumnAliasMap.blankHiddenColumns(result, hiddenFields);
             return result;

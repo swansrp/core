@@ -48,6 +48,13 @@ public class SysDataset {
     private String remark;
 
     /**
+     * 常驻过滤谓词（WHERE 片段，支持 '${currentYear}' 等条件变量）
+     */
+    @TableField(value = "base_filter")
+    @ApiModelProperty(value = "常驻过滤谓词")
+    private String baseFilter;
+
+    /**
      * 创建者
      */
     @TableField(value = "create_by", fill = FieldFill.INSERT)

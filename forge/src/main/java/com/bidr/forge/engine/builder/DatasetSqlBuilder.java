@@ -4,6 +4,7 @@ import com.bidr.forge.constant.dict.JoinTypeDict;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.service.perm.ColumnAliasMap;
+import com.bidr.forge.utils.DatasetBaseFilterUtil;
 import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;
@@ -29,11 +30,16 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     private final Long datasetId;
     private final List<SysDatasetTable> datasets;
     private final List<SysDatasetColumn> columns;
+    /**
+     * 常驻过滤谓词（WHERE 片段）；统计外层条件构建器传 null，避免与内层预览重复拼接
+     */
+    private final String baseFilter;
 
-    public DatasetSqlBuilder(Long datasetId, List<SysDatasetTable> datasets, List<SysDatasetColumn> columns) {
+    public DatasetSqlBuilder(Long datasetId, List<SysDatasetTable> datasets, List<SysDatasetColumn> columns, String baseFilter) {
         this.datasetId = datasetId;
         this.datasets = datasets;
         this.columns = columns;
+        this.baseFilter = baseFilter;
     }
 
     /**
@@ -249,16 +255,30 @@ public class DatasetSqlBuilder extends BaseSqlBuilder {
     }
 
     /**
-     * 构建WHERE子句
+     * 构建WHERE子句：常驻过滤谓词 + 请求条件，两侧各自括号包裹（base 片段可能含 OR）
      */
     private String buildWhere(AdvancedQueryReq req, Map<String, String> aliasMap, Map<String, Object> parameters) {
-        if (FuncUtil.isEmpty(req.getCondition())) {
-            return "";
+        String baseWhere = buildBaseFilterWhere(parameters);
+        String reqWhere = "";
+        if (FuncUtil.isNotEmpty(req.getCondition())) {
+            // 过滤出非聚合字段的条件（聚合字段走HAVING）
+            Set<String> aggregateFields = getAggregateFields();
+            reqWhere = buildCondition(req.getCondition(), aliasMap, parameters, aggregateFields, false);
         }
+        if (FuncUtil.isEmpty(baseWhere)) {
+            return reqWhere;
+        }
+        if (FuncUtil.isEmpty(reqWhere)) {
+            return baseWhere;
+        }
+        return "(" + baseWhere + ") AND (" + reqWhere + ")";
+    }
 
-        // 过滤出非聚合字段的条件（聚合字段走HAVING）
-        Set<String> aggregateFields = getAggregateFields();
-        return buildCondition(req.getCondition(), aliasMap, parameters, aggregateFields, false);
+    /**
+     * 常驻过滤谓词 → 可绑定 SQL（变量 token 解析为 :param_N）
+     */
+    private String buildBaseFilterWhere(Map<String, Object> parameters) {
+        return DatasetBaseFilterUtil.toBindableSql(baseFilter, parameters);
     }
 
     /**

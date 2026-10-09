@@ -148,6 +148,24 @@ public class PortalDatasetSqlUtil {
         return sql.toString();
     }
 
+    /**
+     * 提取 SQL 的外层 WHERE 谓词（AST 序列化，行内注释自然剥除）；无 WHERE 返回 null。
+     * 保存链路用它把 SQL 里写的 WHERE 经 base_filter 校验后转存为常驻条件，
+     * 运行期仍由 DatasetSqlBuilder 按 "(base) AND (req)" 统一拼接。
+     */
+    public static String extractWhereSql(String sql) throws JSQLParserException {
+        Statement statement = CCJSqlParserUtil.parse(sql);
+        if (!(statement instanceof Select)) {
+            return null;
+        }
+        SelectBody selectBody = ((Select) statement).getSelectBody();
+        if (!(selectBody instanceof PlainSelect)) {
+            return null;
+        }
+        Expression where = ((PlainSelect) selectBody).getWhere();
+        return where != null ? where.toString() : null;
+    }
+
     public static void parseSqlColumn(List<SysDatasetColumn> sysDatasetColumns, List<SqlColumn> columns,
                                       Map<String, SqlColumn> aggregateColumns,
                                       Map<String, SqlColumn> notAggregateColumns) {

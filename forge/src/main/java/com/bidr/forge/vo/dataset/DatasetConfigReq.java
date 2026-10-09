@@ -31,4 +31,7 @@ public class DatasetConfigReq {
 
     @ApiModelProperty(value = "数据源配置名称（可选，为空则使用默认数据源）")
     private String dataSource;
+
+    @ApiModelProperty(value = "常驻过滤谓词（WHERE 片段，支持 '${currentYear}' 等条件变量；空=清除）")
+    private String baseFilter;
 }

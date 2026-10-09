@@ -26,4 +26,7 @@ public class DatasetConfigRes {
 
     @ApiModelProperty(value = "数据集列配置列表")
     private List<SysDatasetColumn> columns;
+
+    @ApiModelProperty(value = "常驻条件（SQL 外层 WHERE 转存或页面输入，保存后生效值）")
+    private String baseFilter;
 }

@@ -1,11 +1,13 @@
 package com.bidr.forge.service.dataset;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
+import com.bidr.forge.utils.DatasetBaseFilterUtil;
 import com.bidr.forge.utils.DatasetColumnRemarkUtil;
 import com.bidr.forge.utils.PortalDatasetSqlUtil;
 import com.bidr.forge.utils.SqlIdentifierUtil;
@@ -72,6 +74,14 @@ public class DatasetConfigService {
         Validator.assertTrue(FuncUtil.isNotEmpty(req.getDatasetId()) || FuncUtil.isNotEmpty(req.getDatasetName()),
                 ErrCodeSys.SYS_ERR_MSG, "保存时datasetId或datasetName至少需要提供一个");
 
+        // 常驻条件来源：SQL 带外层 WHERE 时以 SQL 为准（提取后走同一套六重校验转存），
+        // 无 WHERE 时以页面「常驻条件」输入框为准（恒提交，空串=清除）。非法内容直接抛出阻止入库。
+        String sqlWhere = PortalDatasetSqlUtil.extractWhereSql(req.getSql());
+        boolean baseFilterFromSql = FuncUtil.isNotEmpty(sqlWhere);
+        String baseFilter = baseFilterFromSql
+                ? DatasetBaseFilterUtil.validate(sqlWhere)
+                : DatasetBaseFilterUtil.validate(req.getBaseFilter());
+
         Long datasetId = req.getDatasetId();
         boolean isNewDataset = FuncUtil.isEmpty(datasetId);
 
@@ -81,6 +91,7 @@ public class DatasetConfigService {
             dataset.setDatasetName(req.getDatasetName());
             dataset.setDataSource(req.getDataSource());
             dataset.setRemark(req.getRemark());
+            dataset.setBaseFilter(baseFilter);
             sysDatasetService.insert(dataset);
             datasetId = dataset.getId();
             req.setDatasetId(datasetId);
@@ -92,9 +103,9 @@ public class DatasetConfigService {
             Validator.assertNotNull(existingDataset, ErrCodeSys.SYS_ERR_MSG, "数据集不存在，datasetId=" + datasetId);
 
             // 检测基本信息是否有变更
-            boolean datasetChanged = hasDatasetChanged(existingDataset, req);
+            boolean datasetChanged = hasDatasetChanged(existingDataset, req, baseFilter, baseFilterFromSql);
             if (datasetChanged) {
-                updateDatasetIfChanged(existingDataset, req);
+                updateDatasetIfChanged(existingDataset, req, baseFilter, baseFilterFromSql);
                 sysDatasetService.updateById(existingDataset);
                 log.info("更新Dataset基本信息，datasetId={}", datasetId);
             }
@@ -116,7 +127,9 @@ public class DatasetConfigService {
                 log.info("Dataset配置无变更，跳过更新，datasetId={}", datasetId);
                 // 但如果用户只是改了 SQL 注释（备注），也需要把备注更新到列配置表
                 persistColumnRemarksIfOnlyRemarksChanged(existingConfig, newConfig);
-                return getConfig(datasetId);
+                DatasetConfigRes unchanged = getConfig(datasetId);
+                unchanged.setBaseFilter(baseFilter);
+                return unchanged;
             }
 
             log.info("检测到Dataset配置变更，datasetId={}", datasetId);
@@ -135,12 +148,14 @@ public class DatasetConfigService {
         if (FuncUtil.isNotEmpty(newConfig.getColumns())) {
             sysDatasetColumnService.insert(newConfig.getColumns());
         }
+        newConfig.setBaseFilter(baseFilter);
 
-        log.info("成功保存Dataset配置，datasetId={}, tables={}, columns={}, mode={}",
+        log.info("成功保存Dataset配置，datasetId={}, tables={}, columns={}, mode={}, baseFilter={}, baseFilterFromSql={}",
                 datasetId,
                 FuncUtil.isEmpty(newConfig.getTables()) ? 0 : newConfig.getTables().size(),
                 FuncUtil.isEmpty(newConfig.getColumns()) ? 0 : newConfig.getColumns().size(),
-                isNewDataset ? "新增" : "更新");
+                isNewDataset ? "新增" : "更新",
+                baseFilter, baseFilterFromSql);
 
         return newConfig;
     }
@@ -148,7 +163,8 @@ public class DatasetConfigService {
     /**
      * 检测Dataset基本信息是否有变更
      */
-    private boolean hasDatasetChanged(SysDataset existing, DatasetConfigReq req) {
+    private boolean hasDatasetChanged(SysDataset existing, DatasetConfigReq req, String baseFilter,
+                                      boolean baseFilterFromSql) {
         boolean changed = false;
 
         if (FuncUtil.isNotEmpty(req.getDatasetName()) && !req.getDatasetName().equals(existing.getDatasetName())) {
@@ -160,6 +176,16 @@ public class DatasetConfigService {
         if (FuncUtil.isNotEmpty(req.getRemark()) && !req.getRemark().equals(existing.getRemark())) {
             changed = true;
         }
+        // SQL 携带外层 WHERE 时以 SQL 为准（不看 req.baseFilter 是否提交）；
+        // 否则 req.baseFilter 为 null 表示本次未提交该字段，空串归一为 null 即清除。
+        // 这里必须用 null 归一比较，不能走 isNotEmpty（否则空串永远触发不了清除）
+        if (baseFilterFromSql) {
+            if (!compareString(baseFilter, existing.getBaseFilter())) {
+                changed = true;
+            }
+        } else if (req.getBaseFilter() != null && !compareString(baseFilter, existing.getBaseFilter())) {
+            changed = true;
+        }
 
         return changed;
     }
@@ -167,7 +193,8 @@ public class DatasetConfigService {
     /**
      * 更新Dataset基本信息（仅更新非空字段）
      */
-    private void updateDatasetIfChanged(SysDataset dataset, DatasetConfigReq req) {
+    private void updateDatasetIfChanged(SysDataset dataset, DatasetConfigReq req, String baseFilter,
+                                        boolean baseFilterFromSql) {
         if (FuncUtil.isNotEmpty(req.getDatasetName())) {
             dataset.setDatasetName(req.getDatasetName());
         }
@@ -176,6 +203,20 @@ public class DatasetConfigService {
         }
         if (FuncUtil.isNotEmpty(req.getRemark())) {
             dataset.setRemark(req.getRemark());
+        }
+        if (baseFilterFromSql) {
+            // baseFilterFromSql ⇒ baseFilter 经 validate 归一化必非 null，直接覆盖
+            dataset.setBaseFilter(baseFilter);
+        } else if (req.getBaseFilter() != null) {
+            if (baseFilter != null) {
+                dataset.setBaseFilter(baseFilter);
+            } else if (FuncUtil.isNotEmpty(dataset.getBaseFilter())) {
+                // updateById 默认跳过 null 字段，清除必须显式置 NULL
+                sysDatasetService.update(new LambdaUpdateWrapper<SysDataset>()
+                        .set(SysDataset::getBaseFilter, null)
+                        .eq(SysDataset::getId, dataset.getId()));
+                dataset.setBaseFilter(null);
+            }
         }
     }
 
@@ -292,6 +333,9 @@ public class DatasetConfigService {
         res.setDatasetId(datasetId);
         res.setTables(tables);
         res.setColumns(columns);
+        // 该字段此前只由保存链路赋值、读取侧恒 null（声明了却没通道），读取时一并带出
+        SysDataset dataset = sysDatasetService.selectById(datasetId);
+        res.setBaseFilter(dataset == null ? null : dataset.getBaseFilter());
         return res;
     }
 
@@ -463,6 +507,18 @@ public class DatasetConfigService {
         Validator.assertNotNull(datasetId, ErrCodeSys.SYS_ERR_MSG, "datasetId不能为空");
         DatasetConfigRes cfg = getConfig(datasetId);
         return PortalDatasetSqlUtil.buildQuerySql(cfg.getTables(), cfg.getColumns(), includeRemarks);
+    }
+
+    /**
+     * 取常驻过滤谓词（外层 WHERE 片段）
+     * SQL 回显必须与它一起下发：编辑器里的外层 WHERE 是唯一书写入口，回显不拼回则下次保存
+     * 以"SQL 无 WHERE ＋ 恒提交空串"命中清除分支，把已转存的常驻条件静默清掉
+     */
+    public String getBaseFilter(Long datasetId) {
+        Validator.assertNotNull(datasetId, ErrCodeSys.SYS_ERR_MSG, "datasetId不能为空");
+        SysDataset dataset = sysDatasetService.selectById(datasetId);
+        Validator.assertNotNull(dataset, ErrCodeSys.SYS_ERR_MSG, "数据集不存在，datasetId=" + datasetId);
+        return dataset.getBaseFilter();
     }
 
     private boolean containsChinese(String s) {
