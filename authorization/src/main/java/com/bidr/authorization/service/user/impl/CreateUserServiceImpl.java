@@ -61,6 +61,10 @@ public class CreateUserServiceImpl implements CreateUserService {
         user.setUserName(loginId);
         user.setPhoneNumber(phoneNumber);
         user.setPassword(Md5Util.generate(password));
+        if (FuncUtil.isNotEmpty(password)) {
+            // 注册链自带密码的号不算"未设过密码"，否则 PASSWORD_EXPIRED(365) 会把首登直接判成过期
+            user.setPasswordLastTime(new Date());
+        }
         user.setName(name);
         user.setNickName(name);
         user.setEmail(email);
@@ -158,7 +162,9 @@ public class CreateUserServiceImpl implements CreateUserService {
         AcUser user = new AcUser();
         user.setStatus(ActiveStatusDict.ACTIVATE.getValue());
         user.setPasswordErrorTime(0);
-        user.setPasswordLastTime(new Date());
+        // 0＝"尚未设过密码"标记：LoginServiceImpl 无密码分支凭它抛 AC_PASSWORD_NOT_EXISTED，登录页才翻「首次登录-设置密码」面板；
+        // 置 now 会让无密码账号只能收到"请用微信或短信登录"，面板永不可达（erp F-4 实证）。
+        user.setPasswordLastTime(new Date(0L));
         user.setValid(CommonConst.YES);
         return user;
     }
