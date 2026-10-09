@@ -43,10 +43,10 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20260928132818-73</kernel.version>
-                <platform.version>20260928132818-73</platform.version>
-                <authorization.version>20260928132818-73</authorization.version>
-                <llm.version>20260928132818-73</llm.version>
+                <kernel.version>20261009153916-74</kernel.version>
+                <platform.version>20261009153916-74</platform.version>
+                <authorization.version>20261009153916-74</authorization.version>
+                <llm.version>20261009153916-74</llm.version>
             </properties>
         </profile>
     </profiles>
