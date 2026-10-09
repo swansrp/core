@@ -123,6 +123,14 @@ public class SysPortalTable {
     private String defaultSort;
 
     /**
+     * 表格常驻条件JSON（与 sys_portal.default_condition 同构，支持 ${var} 条件变量）
+     * 多Tab页面下按成员表格各自生效，是唯一的 per-tab 行级过滤抓手
+     */
+    @TableField(value = "fixed_condition")
+    @ApiModelProperty(value = "表格常驻条件JSON")
+    private String fixedCondition;
+
+    /**
      * 状态
      */
     @TableField(value = "status")

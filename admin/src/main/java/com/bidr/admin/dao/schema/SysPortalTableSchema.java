@@ -50,5 +50,9 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         // 透视合计列位置(仅 row 度量布局生效): first=透视列之前(紧跟指标列), last=透视列之后(默认)
         setUpgradeDDL(8, "ALTER TABLE `sys_portal_table`\n" +
                 "\tADD COLUMN `pivot_total_pos` CHAR(5) NOT NULL DEFAULT 'last' COMMENT '透视合计列位置: first=靠前 last=靠后' AFTER `pivot_measure_layout`;\n");
+        // 表格常驻条件: 与 sys_portal.default_condition 同构的 JSON 条件树, 前端解析变量后 AND 进本表格下发条件;
+        // 多Tab页面的筛选栏归宿主共享, 故 per-tab 的行级过滤只能挂在成员表格自身上
+        setUpgradeDDL(9, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `fixed_condition` TEXT NULL COMMENT '表格常驻条件JSON(与default_condition同构,支持条件变量)' AFTER `default_sort`;\n");
     }
 }

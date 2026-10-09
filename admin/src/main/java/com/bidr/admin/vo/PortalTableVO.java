@@ -109,6 +109,12 @@ public class PortalTableVO extends BaseVO {
     private String defaultSort;
 
     /**
+     * 表格常驻条件JSON（与 sys_portal.default_condition 同构，支持 ${var} 条件变量）
+     */
+    @ApiModelProperty(value = "表格常驻条件JSON")
+    private String fixedCondition;
+
+    /**
      * 状态
      */
     @ApiModelProperty(value = "状态")
