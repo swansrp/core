@@ -33,6 +33,7 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
     String AGG_MIN = "min";
     String AGG_MAX = "max";
     String AGG_COUNT_DISTINCT = "countDistinct";
+    String AGG_RATIO = "ratio";
     String PIVOT_ALIAS_SPLITTER = "__";
 
     /**
@@ -68,6 +69,10 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
             Validator.assertNotNull(pivot.getCondition(), ErrCodeSys.PA_DATA_NOT_EXIST, "透视列条件");
             for (PivotMeasure measure : req.getMeasures()) {
                 Validator.assertNotBlank(measure.getField(), ErrCodeSys.PA_DATA_NOT_EXIST, "度量字段");
+                if (FuncUtil.equals(measure.getAgg(), AGG_RATIO)) {
+                    Validator.assertNotBlank(measure.getNumerator(), ErrCodeSys.PA_DATA_NOT_EXIST, "比率度量分子字段");
+                    Validator.assertNotBlank(measure.getDenominator(), ErrCodeSys.PA_DATA_NOT_EXIST, "比率度量分母字段");
+                }
                 wrapper.getSelectColum().add(new SelectString(String.format("%s as '%s'",
                         buildPivotAgg(pivot, measure),
                         pivot.getValue() + PIVOT_ALIAS_SPLITTER + measure.getField()), wrapper.getAlias()));
@@ -112,6 +117,12 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
         } else if (FuncUtil.equals(agg, AGG_COUNT_DISTINCT)) {
             // ELSE NULL: DISTINCT 自动忽略 NULL, 只统计命中行的去重值
             return String.format("count(distinct %s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
+        } else if (FuncUtil.equals(agg, AGG_RATIO)) {
+            // 比率度量: 分子/分母各自按同一透视条件聚合后再相除(条件只包一边会把另一腿算进错误分母),
+            // 除零或空组回落 NULL, 前端按空单元格渲染
+            return String.format("sum(%s) / nullif(sum(%s), 0)",
+                    parseStatisticSelect(pivot.getCondition(), measure.getNumerator(), true),
+                    parseStatisticSelect(pivot.getCondition(), measure.getDenominator(), true));
         } else {
             return String.format("sum(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), false));
         }

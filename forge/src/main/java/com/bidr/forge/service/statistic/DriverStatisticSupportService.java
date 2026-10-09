@@ -9,6 +9,7 @@ import com.bidr.forge.engine.builder.BaseSqlBuilder;
 import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.controller.inf.statistic.AdminStatisticPivotInf;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;
@@ -184,6 +185,9 @@ public class DriverStatisticSupportService {
                     .append(" FROM ").append(ctx.getFromSql())
                     .append(") tt");
 
+            // preview SQL 里的常驻过滤谓词参数（token 绑定）并入执行参数
+            parameters.putAll(ctx.getPreviewParams());
+
             List<Map<String, Object>> result = jdbc.executeQuery(sql.toString(), parameters);
             if (FuncUtil.isEmpty(result)) {
                 return Collections.emptyMap();
@@ -191,43 +195,17 @@ public class DriverStatisticSupportService {
             return result.get(0);
         }
 
-        // 3. 有条件：把 where/group/having 下推到 preview SQL 内层（从而可以用 t.project_name 这种物理列做过滤）
-        String clausesWithoutOrder = builder.buildQueryClauses(req, aliasMap, parameters, false);
-
-        // ctx.getFromSql() 返回 (previewSql-noLimit) AS t，其中 previewSql 默认带 ORDER BY。
-        // 我们要的结构是：在 previewSql 内部（dw_dws.xxx t 这一层）先 where，再 order by。
-        // 由于 ctx.getFromSql() 已经把 previewSql 包起来了，这里重新构造一层：
-        // FROM ( (previewSql_noLimit_noOrder + clausesWithoutOrder + orderByClause) ) AS t
-
-        // 1) 先拿一份无 LIMIT 的 preview SQL（维持 dataset 默认 order by 字段逻辑），并拆出 ORDER BY
-        // ctx.getFromSql() 形如：(SELECT ... ORDER BY ...) AS t
-        // 这里为了最小改动，直接把 where 追加到这个子查询内部：
-        // (SELECT ... FROM ... WHERE ... ORDER BY ...) AS t
-        // 做法：插入到最后一个 " ORDER BY " 之前；若没有 ORDER BY，则直接追加到末尾。
+        // 3. 有条件：条件构建在外层（builder 的 formatColumnName 会把字段映射到 t.输出别名），
+        //    preview 子查询内已带 base_filter 的 WHERE，不能对 getFromSql() 结果做字符串插入（会双 WHERE）
         String fromSql = ctx.getFromSql();
-        if (fromSql.startsWith("(") && fromSql.endsWith("AS t")) {
-            int orderIdx = fromSql.toUpperCase(Locale.ROOT).lastIndexOf(" ORDER BY ");
-            if (orderIdx > 0) {
-                // 在 ORDER BY 前插入 where/group/having
-                fromSql = fromSql.substring(0, orderIdx) + clausesWithoutOrder + fromSql.substring(orderIdx);
-            } else {
-                // 没有 ORDER BY，直接追加
-                int asIdx = fromSql.toUpperCase(Locale.ROOT).lastIndexOf(") AS T");
-                if (asIdx > 0) {
-                    fromSql = fromSql.substring(0, asIdx) + clausesWithoutOrder + fromSql.substring(asIdx);
-                } else {
-                    fromSql = fromSql + clausesWithoutOrder;
-                }
-            }
-        } else {
-            // 兜底：直接拼到 fromSql 后面
-            fromSql = fromSql + clausesWithoutOrder;
-        }
+        parameters.putAll(ctx.getPreviewParams());
+        String clausesWithoutOrder = builder.buildQueryClauses(req, aliasMap, parameters, false);
 
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ").append(outerSelectSql)
                 .append(" FROM (SELECT ").append(innerSelectSql)
                 .append(" FROM ").append(fromSql)
+                .append(clausesWithoutOrder)
                 .append(") tt");
 
         List<Map<String, Object>> result = jdbc.executeQuery(sql.toString(), parameters);
@@ -269,6 +247,9 @@ public class DriverStatisticSupportService {
 
         BaseSqlBuilder builder = ctx.getConditionBuilder();
         Map<String, Object> parameters = new LinkedHashMap<>();
+        // 先生成 FROM（preview 的常驻谓词参数占住编号前段），后续条件参数续号，避免 param_N 冲突
+        String fromSql = ctx.getFromSql();
+        parameters.putAll(ctx.getPreviewParams());
 
         // 2: SELECT 行维度列（别名=前端字段名）
         List<String> selectParts = new ArrayList<>();
@@ -293,17 +274,29 @@ public class DriverStatisticSupportService {
                     ErrCodeSys.SYS_ERR_MSG, "透视列标识非法：" + pivot.getValue());
             for (PivotMeasure measure : req.getMeasures()) {
                 Validator.assertTrue(FuncUtil.isNotEmpty(measure.getField()), ErrCodeSys.SYS_ERR_MSG, "度量字段不能为空");
-                String measureDb = ColumnAliasMap.resolve(aliasMap, measure.getField());
-                String measureExpr = ctx.formatColumnExpression(measureDb);
-                // 条件表达式: 无条件=纯度量; 有条件=case when 条件 then 度量 else null end（null 对各聚合类型均安全）
-                String innerExpr = measureExpr;
-                if (FuncUtil.isNotEmpty(pivot.getCondition())) {
-                    String condSql = builder.buildWhereCondition(pivot.getCondition(), aliasMap, parameters);
-                    innerExpr = "case when " + (FuncUtil.isEmpty(condSql) ? "1=1" : condSql)
-                            + " then " + measureExpr + " else null end";
-                }
                 String aggAlias = pivot.getValue() + "__" + measure.getField();
-                selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
+                if (FuncUtil.equals(measure.getAgg(), AdminStatisticPivotInf.AGG_RATIO)) {
+                    // ratio 的 field 仅作输出别名（真实取数走分子/分母），不经别名映射，故单独按字符集校验
+                    Validator.assertTrue(SqlIdentifierUtil.isSafeIdentifier(measure.getField()),
+                            ErrCodeSys.SYS_ERR_MSG, "度量字段名非法：" + measure.getField());
+                    // 比率度量: 分子/分母列各自解析（同受列权限约束）、分别套同一透视条件，聚合后相除，除零/空组回落 NULL
+                    Validator.assertTrue(FuncUtil.isNotEmpty(measure.getNumerator()) && FuncUtil.isNotEmpty(measure.getDenominator()),
+                            ErrCodeSys.SYS_ERR_MSG, "比率度量缺少分子/分母字段：" + measure.getField());
+                    String numExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
+                            ctx.formatColumnExpression(ColumnAliasMap.resolve(aliasMap, measure.getNumerator())));
+                    String denExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
+                            ctx.formatColumnExpression(ColumnAliasMap.resolve(aliasMap, measure.getDenominator())));
+                    // 两腿各自 sum 后再相除：裸列会让聚合查询 SELECT 引用未 GROUP BY 的列（Doris 直接拒）
+                    selectParts.add(buildPivotAggExpr(AdminStatisticPivotInf.AGG_SUM, numExpr)
+                            + " / nullif(" + buildPivotAggExpr(AdminStatisticPivotInf.AGG_SUM, denExpr) + ", 0)"
+                            + " AS `" + aggAlias + "`");
+                } else {
+                    // resolve 内含字段名安全校验（请求侧字段名拼入反引号位置）
+                    String measureDb = ColumnAliasMap.resolve(aliasMap, measure.getField());
+                    String innerExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
+                            ctx.formatColumnExpression(measureDb));
+                    selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
+                }
                 outputAliases.add(aggAlias);
             }
         }
@@ -311,7 +304,7 @@ public class DriverStatisticSupportService {
         // 4: 组装 SQL: FROM 上下文片段 + WHERE 主条件 + GROUP BY 行维度
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ").append(String.join(", ", selectParts))
-                .append(" FROM ").append(ctx.getFromSql());
+                .append(" FROM ").append(fromSql);
         if (FuncUtil.isNotEmpty(req.getCondition())) {
             String whereSql = builder.buildWhereCondition(req.getCondition(), aliasMap, parameters);
             if (FuncUtil.isNotEmpty(whereSql)) {
@@ -342,7 +335,21 @@ public class DriverStatisticSupportService {
     }
 
     /**
-     * 构建单个透视单元格的聚合表达式
+     * 构建透视单元格内部取数表达式：无透视条件=裸列；有条件=case when 条件 then 列 else null end
+     * ratio 度量的分子/分母必须各自独立包同一条件（只包一边会把另一腿算进错误分母）
+     */
+    private static String buildPivotInnerExpr(BaseSqlBuilder builder, Map<String, String> aliasMap,
+                                              Map<String, Object> parameters, MetricCondition pivot, String columnExpr) {
+        if (FuncUtil.isEmpty(pivot.getCondition())) {
+            return columnExpr;
+        }
+        String condSql = builder.buildWhereCondition(pivot.getCondition(), aliasMap, parameters);
+        return "case when " + (FuncUtil.isEmpty(condSql) ? "1=1" : condSql)
+                + " then " + columnExpr + " else null end";
+    }
+
+    /**
+     * 构建单个透视单元格的聚合表达式（ratio 不走单一聚合，在主循环按 分子/分母 各自 sum 后相除拼装）
      * 聚合语义对齐 kernel 的 AdminStatisticPivotInf.buildPivotAgg：
      * else null 对 sum/count/avg/min/max/countDistinct 均安全（聚合函数自动忽略 NULL）
      */
@@ -495,6 +502,9 @@ public class DriverStatisticSupportService {
         // 2: 构建 WHERE 条件（参数化）
         // 2.1 创建参数 map，交由 buildWhereSql 填充
         Map<String, Object> parameters = new LinkedHashMap<>();
+        // 先生成 FROM（preview 的常驻谓词参数占住编号前段），后续条件参数续号，避免 param_N 冲突
+        String fromSql = ctx.getFromSql();
+        parameters.putAll(ctx.getPreviewParams());
         // 2.2 通过 buildWhereSql 获取 where 子句（不含 WHERE 前缀）
         String where = buildWhereSql(req, ctx, aliasMap, parameters);
 
@@ -519,7 +529,7 @@ public class DriverStatisticSupportService {
         // 4.1 组装基础 SQL：SELECT {metricSelect}, {statisticExpr} AS `statistic` FROM {table}
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ").append(metricSelect).append(", ").append(statisticExpr).append(" AS `statistic`")
-                .append(" FROM ").append(ctx.getFromSql());
+                .append(" FROM ").append(fromSql);
         // 4.2 若有 where 条件则追加
         if (FuncUtil.isNotEmpty(where)) {
             sql.append(" WHERE ").append(where);
@@ -597,6 +607,9 @@ public class DriverStatisticSupportService {
 
         // 2: 构建 WHERE 条件并准备参数容器
         Map<String, Object> parameters = new LinkedHashMap<>();
+        // 先生成 FROM（preview 的常驻谓词参数占住编号前段），后续条件参数续号，避免 param_N 冲突
+        String fromSql = ctx.getFromSql();
+        parameters.putAll(ctx.getPreviewParams());
         String where = buildWhereSql(req, ctx, aliasMap, parameters);
 
         // 3: 组装 SELECT 列（可包含 groupMetric 列 + 多个 case/count 列）
@@ -657,7 +670,7 @@ public class DriverStatisticSupportService {
         // 5: 组装并执行 SQL
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ").append(String.join(", ", selectParts))
-                .append(" FROM ").append(ctx.getFromSql());
+                .append(" FROM ").append(fromSql);
         if (FuncUtil.isNotEmpty(where)) {
             sql.append(" WHERE ").append(where);
         }
