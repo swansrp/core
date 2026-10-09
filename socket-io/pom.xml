@@ -36,8 +36,8 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <authorization.version>20261009153916-74</authorization.version>
-                <mongo.version>20261009153916-74</mongo.version>
+                <authorization.version>20261010031245-75</authorization.version>
+                <mongo.version>20261010031245-75</mongo.version>
             </properties>
         </profile>
     </profiles>
