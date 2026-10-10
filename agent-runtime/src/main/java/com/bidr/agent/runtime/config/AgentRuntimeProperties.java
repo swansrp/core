@@ -90,4 +90,24 @@ public class AgentRuntimeProperties {
      * 单轮最多多少步工具调用（上游 max_iterations；防跑飞，也直接决定单轮成本上限）
      */
     private int maxIterations = 30;
+
+    /**
+     * HTTP 代理：上游运行时须经代理访问时启用（与 llm.proxy.*、spring.elasticsearch.proxy.* 同一口径）；
+     * enable=false（默认）＝直连，零行为变化。只影响 REST 与 SSE 两条出网腿。
+     */
+    private final Proxy proxy = new Proxy();
+
+    @Getter
+    @Setter
+    public static class Proxy {
+
+        /** 是否启用代理（默认直连） */
+        private boolean enable = false;
+
+        /** 代理主机（enable=true 时必填） */
+        private String host = "";
+
+        /** 代理端口 */
+        private int port = 0;
+    }
 }

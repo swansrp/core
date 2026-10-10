@@ -48,7 +48,11 @@ public class AgentRuntimeSseClient {
      */
     public UpstreamStream open(String method, String path, String jsonBody, String idempotencyKey) throws IOException {
         URL url = new URL(config.requireBaseUrl() + config.getApiPrefix() + path);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        java.net.Proxy httpProxy = config.getProxy().isEnable()
+                ? new java.net.Proxy(java.net.Proxy.Type.HTTP, new java.net.InetSocketAddress(
+                        config.getProxy().getHost(), config.getProxy().getPort()))
+                : java.net.Proxy.NO_PROXY;
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection(httpProxy);
         connection.setRequestMethod(method);
         connection.setConnectTimeout(config.getConnectTimeoutMs());
         // 空闲读超时：平台 15s 心跳，超时即判断流（不设全量超时，长轮次可达数分钟）

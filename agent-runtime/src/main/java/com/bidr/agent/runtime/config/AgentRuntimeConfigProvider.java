@@ -50,6 +50,11 @@ public class AgentRuntimeConfigProvider {
         this.sysConfigProvider = sysConfigProvider;
     }
 
+    /** HTTP 代理（纯 yaml 配置，不进系统参数页）：REST 与 SSE 两条出网腿共用 */
+    public AgentRuntimeProperties.Proxy getProxy() {
+        return properties.getProxy();
+    }
+
     /**
      * 平台开放面地址（无有效值返回空串；调用方用 {@link #isConfigured()} 判定接线状态）
      */

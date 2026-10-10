@@ -54,6 +54,10 @@ public class AgentRuntimeRestClient {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(config.getConnectTimeoutMs());
         factory.setReadTimeout(config.getIdleTimeoutMs());
+        if (config.getProxy().isEnable()) {
+            factory.setProxy(new java.net.Proxy(java.net.Proxy.Type.HTTP, new java.net.InetSocketAddress(
+                    config.getProxy().getHost(), config.getProxy().getPort())));
+        }
         this.restTemplate = new RestTemplate(factory);
         // String 转换器必须在前：本客户端按 String 取原始响应体再自行解信封（否则 Jackson 会尝试把 JSON 解成 String 报错）
         this.restTemplate.setMessageConverters(Arrays.asList(
