@@ -11,8 +11,15 @@ import java.util.concurrent.TimeUnit;
 
 public interface RedisService {
 
+    /**
+     * 按前缀 SCAN。<b>入参与返回都是逻辑键</b>（不含 app.projectId 前缀）：扫描时补前缀、返回时剥掉，
+     * 故结果可直接喂给 {@link #delete(List)} 等读写方法。
+     */
     Set<String> keys(String prefix);
 
+    /**
+     * 按模式 KEYS。<b>入参与返回都是逻辑键</b>，口径同 {@link #keys(String)}。
+     */
     Set<String> keysByPattern(String pattern);
 
     void set(String key, Object value);
@@ -35,6 +42,9 @@ public interface RedisService {
 
     Long decr(String key, long delta);
 
+    /**
+     * 同 {@link #keysByPattern(String)}（逻辑键进、逻辑键出）。
+     */
     Set<String> getKeys(String pattern);
 
     Boolean delete(String key);

@@ -26,11 +26,13 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Set<String> keys(String prefix) {
+        Validator.assertNotBlank(prefix, ErrCodeSys.PA_DATA_NOT_EXIST, "prefix");
+        String appPrefix = appPrefix();
         Set<String> keys = new HashSet<>();
-        ScanOptions scanOptions = ScanOptions.scanOptions().match(getKey(prefix) + "*").count(SCAN_SIZE).build();
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(appPrefix + prefix + "*").count(SCAN_SIZE).build();
         Cursor<String> cursor = redisTemplate.scan(scanOptions);
         while (cursor.hasNext()) {
-            keys.add(cursor.next());
+            keys.add(stripAppPrefix(cursor.next(), appPrefix));
         }
         cursor.close();
         return keys;
@@ -38,7 +40,9 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Set<String> keysByPattern(String pattern) {
-        return redisTemplate.keys(pattern);
+        Validator.assertNotBlank(pattern, ErrCodeSys.PA_DATA_NOT_EXIST, "pattern");
+        String appPrefix = appPrefix();
+        return logicalKeys(redisTemplate.keys(appPrefix + pattern), appPrefix);
     }
 
     @Override
@@ -50,6 +54,30 @@ public class RedisServiceImpl implements RedisService {
 
     public String getKey(String key) {
         return RedisCacheConfig.getKey(key);
+    }
+
+    /**
+     * 🔴 键命名空间只有"逻辑键"一种口径：读写一律经 {@link #getKey(String)} 补 app.projectId 前缀，
+     * 故枚举类方法也必须<b>以补前缀的串扫描、把前缀剥掉再返回</b>——调用方拿到的键可以直接再喂回本服务。
+     * 历史缺陷两条：扫描串裸传 ⇒ 恒扫不到；返回物理键 ⇒ 喂回来二次加前缀（会话枚举恒空、对话列表读空）。
+     */
+    private String appPrefix() {
+        return RedisCacheConfig.getKey("");
+    }
+
+    private String stripAppPrefix(String physicalKey, String appPrefix) {
+        return physicalKey.startsWith(appPrefix) ? physicalKey.substring(appPrefix.length()) : physicalKey;
+    }
+
+    private Set<String> logicalKeys(Set<String> physicalKeys, String appPrefix) {
+        if (physicalKeys == null || physicalKeys.isEmpty()) {
+            return new HashSet<>();
+        }
+        Set<String> keys = new HashSet<>(physicalKeys.size());
+        for (String physicalKey : physicalKeys) {
+            keys.add(stripAppPrefix(physicalKey, appPrefix));
+        }
+        return keys;
     }
 
     @Override
@@ -114,8 +142,7 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Set<String> getKeys(String pattern) {
-        Validator.assertNotBlank(pattern, ErrCodeSys.PA_DATA_NOT_EXIST, "pattern");
-        return redisTemplate.keys(pattern);
+        return keysByPattern(pattern);
     }
 
     @Override
