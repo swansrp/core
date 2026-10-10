@@ -126,12 +126,13 @@ public class LlmDefaultAutoConfiguration {
      * 文件解析服务：任意文件（url/File/路径/InputStream）→ Markdown；
      * 扫描件与图片需多模态模型，配置解析顺序：调用时传入 VisionModelConfig →
      * {@link ModelConfigProvider}（purpose = VISION，数据库系统参数优先）；
+     * 多模态调用的 HTTP 代理复用 {@link #buildProxy()}（与文本模型同源 {@code llm.proxy.*}），
      * 无 Provider 的应用也可自行 new FileMarkdownService(null) 后纯靠调用传参使用
      */
     @Bean
     @ConditionalOnMissingBean
     public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider) {
-        return new FileMarkdownService(configProvider.getIfAvailable());
+        return new FileMarkdownService(configProvider.getIfAvailable(), buildProxy());
     }
 
     /**

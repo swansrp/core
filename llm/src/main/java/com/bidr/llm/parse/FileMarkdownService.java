@@ -28,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -100,8 +101,19 @@ public class FileMarkdownService {
      */
     private final ModelConfigProvider configProvider;
 
+    /**
+     * 多模态调用 HTTP 代理：复用 core {@code llm.proxy.*} 口径（与文本打分同一份配置），
+     * 为 null 表示直连；由 {@code LlmDefaultAutoConfiguration} 构造 Bean 时经 buildProxy 注入
+     */
+    private final Proxy proxy;
+
     public FileMarkdownService(ModelConfigProvider configProvider) {
+        this(configProvider, null);
+    }
+
+    public FileMarkdownService(ModelConfigProvider configProvider, Proxy proxy) {
         this.configProvider = configProvider;
+        this.proxy = proxy;
     }
 
     // ---------------- 对外入口：url / File / Path / InputStream ----------------
@@ -282,6 +294,7 @@ public class FileMarkdownService {
                 .modelName(config.getModelName())
                 .timeout(Duration.ofSeconds(config.getTimeoutSeconds() > 0 ? config.getTimeoutSeconds() : 180L))
                 .maxRetries(1)
+                .proxy(proxy)
                 .logRequests(false)
                 .logResponses(false)
                 .build();
