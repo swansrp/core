@@ -38,12 +38,27 @@ public class MinioTemplate {
     private String endpoint;
     @Value("${oss.bucket}")
     private String bucketName;
-    
+    @Value("${oss.proxy.enable:false}")
+    private boolean proxyEnable;
+    @Value("${oss.proxy.host:}")
+    private String proxyHost;
+    @Value("${oss.proxy.port:0}")
+    private int proxyPort;
+
     protected MinioClient minioClient;
 
     public MinioClient getClient() {
         if (FuncUtil.isEmpty(minioClient)) {
-            this.minioClient = MinioClient.builder().endpoint(endpoint).credentials(appKey, appSecret).build();
+            MinioClient.Builder builder = MinioClient.builder().endpoint(endpoint).credentials(appKey, appSecret);
+            if (proxyEnable) {
+                // minio 内部经 newBuilder() 继承该 client（代理/连接池保留）再叠自己的拦截器与超时
+                okhttp3.OkHttpClient httpClient = new okhttp3.OkHttpClient.Builder()
+                        .proxy(new java.net.Proxy(java.net.Proxy.Type.HTTP,
+                                new java.net.InetSocketAddress(proxyHost, proxyPort)))
+                        .build();
+                builder.httpClient(httpClient);
+            }
+            this.minioClient = builder.build();
         }
         return minioClient;
     }
