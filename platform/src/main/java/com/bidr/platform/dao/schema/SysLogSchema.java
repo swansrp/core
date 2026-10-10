@@ -33,7 +33,10 @@ public class SysLogSchema extends BaseMybatisSchema<SysLog> {
                 "  KEY `env_type` (`env_type`),\n" +
                 "  KEY `request_id` (`request_id`),\n" +
                 "  KEY `trace_id` (`trace_id`),\n" +
-                "  KEY `request_ip` (`request_ip`)\n" +
+                "  KEY `request_ip` (`request_ip`),\n" +
+                "  KEY `create_time` (`create_time`)\n" +
                 ") COMMENT='系统日志表';");
+        // 已上线表建表即冻结，变更只走版本递增：v1＝补 create_time 索引（索引名取列名，与同表其余 KEY 同口径）。
+        setUpgradeDDL(1, "ALTER TABLE `sys_log` ADD INDEX `create_time` (`create_time`);");
     }
 }

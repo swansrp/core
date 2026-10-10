@@ -20,7 +20,7 @@ public enum LogParam implements Param {
     /**
      *
      */
-    DB_LOG_EXPIRED("日志保存周期(天)", "30", "【按需调整】每天定时清除多少天前的系统日志，默认 30；有审计留痕要求先调大再等清理任务跑，改小则下轮清理直接生效");
+    DB_LOG_EXPIRED("日志保存周期(天)", "30", "【按需调整】每天 03:15 清除多少天前的系统日志，默认 30；有审计留痕要求先调大再等清理任务跑，改小则下轮清理直接生效。清理沿主键分批删（单轮上限 100 万行或 5 分钟），积压量大时分几夜追平；行数减了但表空间不随之归还 OS，要还盘另做 OPTIMIZE TABLE");
 
     private final String title;
     private final String defaultValue;

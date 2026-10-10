@@ -119,6 +119,8 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
             }
             
             // 表不存在，创建表
+            // 🔴 与 SysLogSchema 的 createDDL 同形：本 appender 起在 logback 侧、拿不到 Spring bean，
+            // 两份建表语句必须一起改（索引/列只写在一边，就会出现"先起 appender 的库缺索引"）
             String createTableSQL = "CREATE TABLE IF NOT EXISTS `sys_log` (\n" +
                     "  `log_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '日志id',\n" +
                     "  `project_id` varchar(100) DEFAULT NULL COMMENT '项目标识id',\n" +
@@ -142,7 +144,8 @@ public class DbLogbackAppender extends DBAppenderBase<ILoggingEvent> {
                     "  KEY `env_type` (`env_type`),\n" +
                     "  KEY `request_id` (`request_id`),\n" +
                     "  KEY `trace_id` (`trace_id`),\n" +
-                    "  KEY `request_ip` (`request_ip`)\n" +
+                    "  KEY `request_ip` (`request_ip`),\n" +
+                    "  KEY `create_time` (`create_time`)\n" +
                     ") COMMENT='系统日志表';";
             
             createStmt = connection.prepareStatement(createTableSQL);
