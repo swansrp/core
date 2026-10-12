@@ -1,12 +1,16 @@
 package com.bidr.llm.agent.session;
 
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.agent.AgentLoopListener;
+import com.bidr.llm.agent.AgentToolSurfaceSink;
+import com.bidr.llm.agent.ToolSurfaceFacts;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -408,6 +412,12 @@ public class AgentSessionContext {
                 emit(AgentEvent.TOOL_RESULT, payload);
             }
 
+            /** 工具面定形 ⇒ 转交台账（M14 棒2 装配单）；台账缺席时静默跳过 */
+            @Override
+            public void onToolsResolved(List<String> toolNames) {
+                reportToolSurface(toolNames);
+            }
+
             /** 会话链事件流持工具结果全文（I4）⇒ 回捞的**优先**通道，可跨 run/跨实例取回
              *  （A10 起 run 内缓冲为兜底通道，本位只扩可捞范围，不再是卸载前置） */
             @Override
@@ -438,5 +448,30 @@ public class AgentSessionContext {
                 return found;
             }
         };
+    }
+
+    /**
+     * 工具面定形落台账（M14 棒2）：sink 由能力台账模块实现，框架不装它时 {@code getBean} 返回 null
+     * ⇒ 静默跳过，会话行为与改前逐字节一致。取 bean 与回调整体兜异常——台账是复盘链路，
+     * 写不进去只记 warn，绝不把工具循环带崩（同 {@code AgentContextBudget} 的取参口径）。
+     */
+    private void reportToolSurface(List<String> toolNames) {
+        try {
+            AgentToolSurfaceSink sink = BeanUtil.getBean(AgentToolSurfaceSink.class);
+            if (sink == null) {
+                return;
+            }
+            ToolSurfaceFacts facts = new ToolSurfaceFacts();
+            facts.setSessionId(state.getSessionId());
+            facts.setAgentKey(state.getAgentKey());
+            facts.setSkillCode(state.getSkillCode());
+            facts.setDisplayName(state.getDisplayName());
+            facts.setOperator(state.getOperator());
+            facts.setToolNames(toolNames == null ? Collections.emptyList() : new ArrayList<>(toolNames));
+            facts.setPayload(payload);
+            sink.onToolsResolved(facts);
+        } catch (Exception e) {
+            log.warn("工具面定形落台账失败（不影响会话）, session={}, error={}", state.getSessionId(), e.getMessage());
+        }
     }
 }

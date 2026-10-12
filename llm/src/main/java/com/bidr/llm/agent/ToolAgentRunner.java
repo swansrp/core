@@ -104,6 +104,9 @@ public class ToolAgentRunner {
         for (Object tools : effectiveTools) {
             specs.addAll(ToolSpecifications.toolSpecificationsFrom(tools));
         }
+        // M14 棒2：工具面定形上报（装配单正源）。清单取自 specs 本身⇒与发给模型的那份逐字一致，
+        // 含上面条件追加的回捞工具；台账缺席时 listener 默认空实现，异常一律不外溢进循环
+        notifyToolSurfaceResolved(specs, sink);
         int fixedOverheadTokens = ContextTokenEstimator.estimateSpecs(specs);
         List<ChatMessage> messages = new ArrayList<>();
         // system 槽可空：无框架级纪律可发时不加 SystemMessage（业务内容由调用方拼入 user 提示）
@@ -332,6 +335,31 @@ public class ToolAgentRunner {
             return toolErrorText(req.name(), e.getCause() != null ? e.getCause() : e);
         } catch (Exception e) {
             return toolErrorText(req.name(), e);
+        }
+    }
+
+    /** 工具面定形清单（按发给模型的 specs 原序去重；null 名跳过——理论不发生，防御性收口） */
+    static List<String> toolNamesOf(List<ToolSpecification> specs) {
+        List<String> names = new ArrayList<>();
+        if (specs == null) {
+            return names;
+        }
+        for (ToolSpecification spec : specs) {
+            String name = spec == null ? null : spec.name();
+            if (name != null && !name.trim().isEmpty() && !names.contains(name)) {
+                names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /** 工具面定形上报：listener 默认空实现（无台账即零行为），实现方抛错也吞在这里——
+     *  台账是复盘链路，绝不改写会话结局也不中断循环 */
+    private static void notifyToolSurfaceResolved(List<ToolSpecification> specs, AgentLoopListener sink) {
+        try {
+            sink.onToolsResolved(toolNamesOf(specs));
+        } catch (Exception e) {
+            log.warn("工具面定形上报失败（不影响会话）: error={}", e.getMessage());
         }
     }
 

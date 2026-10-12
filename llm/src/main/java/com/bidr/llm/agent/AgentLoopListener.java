@@ -1,5 +1,7 @@
 package com.bidr.llm.agent;
 
+import java.util.List;
+
 /**
  * Title: AgentLoopListener
  * Description: 工具循环业务钩子：过程日志回调 + 停止检查（每轮循环头调用一次，
@@ -65,6 +67,15 @@ public interface AgentLoopListener {
      * 默认空实现，兼容性同上；会话实现落 {@code AgentEvent.TOOL_RESULT}。
      */
     default void onToolResult(String toolCallId, String toolName, String resultText) {
+    }
+
+    /**
+     * 工具面定形上报（M14 棒2）：引擎把 {@code ToolSpecifications} 采集完的**最终**工具名清单
+     * 交出来——含按上下文预算条件追加的回捞工具，故与"模型实际收到什么"逐字一致，
+     * 业务侧从 {@code tools(...)} 钩子重算拿不到这一份。
+     * 默认空实现：轻链路与票据链零改动即向后兼容；会话实现转交 {@link AgentToolSurfaceSink}
+     */
+    default void onToolsResolved(List<String> toolNames) {
     }
 
     /**
