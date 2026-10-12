@@ -65,6 +65,15 @@ public class AgentManifest {
     @ApiModelProperty(value = "提示词段清单（JSON 数组，按拼装顺序）")
     private String promptSections;
 
+    /** 行内最重的一列，默认不从读口下发（按 ?include=prompt 展开，见 AgentManifestController） */
+    @TableField(value = "prompt_text")
+    @ApiModelProperty(value = "提示词全文（模型首轮收到的 system 槽原文＝段清单那几段的真身；超长截尾）")
+    private String promptText;
+
+    @TableField(value = "conversation_id")
+    @ApiModelProperty(value = "历史对话定位（正文按保留期过期、本值永久；NULL＝该会话没接对话层）")
+    private String conversationId;
+
     @TableField(value = "extras")
     @ApiModelProperty(value = "业务标注（JSON 对象，featureId/spaceId 这类框架不认的维度）")
     private String extras;

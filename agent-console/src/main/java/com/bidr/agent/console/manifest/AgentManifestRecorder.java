@@ -4,6 +4,7 @@ import com.bidr.agent.console.dao.entity.AgentManifest;
 import com.bidr.agent.console.dao.repository.AgentManifestService;
 import com.bidr.llm.agent.AgentToolSurfaceSink;
 import com.bidr.llm.agent.ToolSurfaceFacts;
+import com.bidr.llm.agent.conversation.AgentConversationLinkSink;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +18,8 @@ import java.util.List;
 
 /**
  * Title: AgentManifestRecorder
- * Description: 装配单落库腿（M14 棒2）：接框架的工具面定形回调，补完业务三栏后落一行。
+ * Description: 装配单落库腿（M14 棒2）：接框架的工具面定形回调，补完业务三栏后落一行；
+ * 棒 2 增量再接对话定位回调，收口那一刻给同一行补 conversation_id。
  *
  * <p><b>整段兜异常</b>：装配单是复盘链路，写不进（表未建、库不通、贡献者抛错）一律只记 warn，
  * 绝不把工具循环带崩——这条与 {@code AgentRunLedgerService} 同口径。</p>
@@ -35,10 +37,17 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "agent-console.manifest", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class AgentManifestRecorder implements AgentToolSurfaceSink {
+public class AgentManifestRecorder implements AgentToolSurfaceSink, AgentConversationLinkSink {
 
     /** JSON 列序列化（只写不读；读腿见 {@code AgentManifestView#of}） */
     private static final ObjectMapper OM = new ObjectMapper();
+
+    /**
+     * 提示词全文落库上限（字）：列是 MEDIUMTEXT，撑不破，但一行的体量得有天花板——
+     * 整包技能正文内联进提示词时可达几十 KB，永久留存按会话数线性涨。
+     * 超限截尾留显式标记（宁可留头部可读的一份，也不要把整列放弃成 NULL）
+     */
+    static final int PROMPT_TEXT_MAX_CHARS = 100_000;
 
     private final AgentManifestService repo;
 
@@ -105,9 +114,41 @@ public class AgentManifestRecorder implements AgentToolSurfaceSink {
         row.setModelTier(draft.getModelTier());
         row.setSkillRefs(json(draft.getSkills()));
         row.setPromptSections(json(draft.getSections()));
+        row.setPromptText(truncatePrompt(facts.getPromptText()));
         row.setExtras(draft.getExtras().isEmpty() ? null : json(draft.getExtras()));
         row.setValid("1");
         return row;
+    }
+
+    /**
+     * 对话定位落列（M14 棒2 增量）：收口时框架/业务广播 sessionId→conversationId，
+     * 这里只给已存在的行补那一列。<b>不新建行</b>——装配单的行的定义是"工具面定形过"，
+     * 没有那场定形记录就凭一条对话凭空造一行，会让"最近装配单"列表混进半空行。
+     * 异常一律吞掉：定位写不进最多是页面少一个入口，绝不击穿对话归档
+     */
+    @Override
+    public void onConversationLinked(String sessionId, String conversationId) {
+        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(conversationId)) {
+            return;
+        }
+        try {
+            repo.linkConversation(sessionId.trim(), conversationId.trim());
+        } catch (Exception e) {
+            log.warn("装配单对话定位补写失败（不影响对话）: session={}, error={}", sessionId, e.getMessage());
+        }
+    }
+
+    /** 超长截尾（留显式标记，让读的人知道看到的是半份）；空/空白按 NULL 存＝"没有 system 槽"。
+     *  不 trim：这一列的卖点是"当时那份逐字"，改一个空格就没法跟模型收到的比对了 */
+    static String truncatePrompt(String promptText) {
+        if (!StringUtils.hasText(promptText)) {
+            return null;
+        }
+        if (promptText.length() <= PROMPT_TEXT_MAX_CHARS) {
+            return promptText;
+        }
+        return promptText.substring(0, PROMPT_TEXT_MAX_CHARS)
+                + "\n……（原文 " + promptText.length() + " 字，已截尾）";
     }
 
     private static String json(Object value) {

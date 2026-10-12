@@ -49,4 +49,16 @@ public class AgentManifestService extends BaseSqlRepo<AgentManifestMapper, Agent
         where.eq(AgentManifest::getSessionId, row.getSessionId());
         update(row, where);
     }
+
+    /**
+     * 补写对话定位列（M14 棒2 增量）：装配单在工具面定形时落行，对话 id 要到收口才产生，
+     * 故这是一条<b>定向 UPDATE 单列</b>、不整行覆盖——把技能清单/段清单那些已定的栏原地保住。
+     * 无该行（装配单关闭、或会话早于棒 2）时 0 行受影响，静默即可：定位不是会话的必需品。
+     */
+    public void linkConversation(String sessionId, String conversationId) {
+        LambdaUpdateWrapper<AgentManifest> where = new LambdaUpdateWrapper<>();
+        where.eq(AgentManifest::getSessionId, sessionId)
+                .set(AgentManifest::getConversationId, conversationId);
+        update(where);
+    }
 }

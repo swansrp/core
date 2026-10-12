@@ -15,6 +15,9 @@ import org.springframework.stereotype.Service;
  * <p>开关 {@code agent-console.manifest.enabled}（默认开）：关掉即停写快照，
  * 历史行原样留在表里可读——回退不需要动数据。</p>
  *
+ * <p>建表即冻结：棒 2 增量加的两列（提示词全文、对话定位）走 {@code setUpgradeDDL} 追加，
+ * createDDL 一字未动。这两列是行内最重的载荷，读口默认不下发（见 {@code AgentManifestController}）。</p>
+ *
  * @author Sharp
  * @since 2026-10-12
  */
@@ -43,6 +46,12 @@ public class AgentManifestSchema extends BaseMybatisSchema<AgentManifest> {
                 "    PRIMARY KEY (`id`),\n" +
                 "    UNIQUE KEY `uk_sys_agent_manifest_session` (`session_id`),\n" +
                 "    KEY `idx_sys_agent_manifest_agent` (`agent_key`, `id`)\n" +
-                ") COMMENT='agent 会话装配单（工具面定形那一刻落一行，永久留存；记\"这场会话手里有什么\"：工具名清单/模型档/技能与版本/提示词段。只读诊断证据，不是运行期输入——本表不参与会话决策，也不进空间行级隔离清单'");
+                ") COMMENT='agent 会话装配单（工具面定形那一刻落一行，永久留存；记\"这场会话手里有什么\"：工具名清单/模型档/技能与版本/提示词段。只读诊断证据，不是运行期输入——本表不参与空间行级隔离，也不进会话决策'");
+
+        // M14 棒2 增量：装配单从"手里有什么"扩到"当时被怎么说、跟谁聊过"。
+        // 两列都不进默认响应（读口 ?include= 显式展开，见 AgentManifestController 的权限闸）
+        setUpgradeDDL(1, "ALTER TABLE `sys_agent_manifest`\n" +
+                "\tADD COLUMN `prompt_text` MEDIUMTEXT NULL COMMENT '提示词全文：模型首轮收到的 system 槽原文，即 prompt_sections 那几段拼出来的真身（超长截尾留标记；业务按惯例把内容放 user 槽时这里只有框架纪律）' AFTER `prompt_sections`,\n" +
+                "\tADD COLUMN `conversation_id` VARCHAR(64) NULL COMMENT '历史对话定位：对话正文按保留期滚窗过期，本列永久——有值即\"当时确有一条对话\"，读不回正文＝已过保留期，NULL＝该会话没接对话层（纯后台型）' AFTER `extras`;\n");
     }
 }
