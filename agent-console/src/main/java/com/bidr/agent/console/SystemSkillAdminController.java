@@ -3,7 +3,7 @@ package com.bidr.agent.console;
 import com.bidr.agent.console.dao.entity.SkillAsset;
 import com.bidr.agent.console.skill.SystemSkillAdminService;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.exception.ServiceException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -69,7 +69,7 @@ public class SystemSkillAdminController {
         try {
             bytes = file.getBytes();
         } catch (Exception e) {
-            throw new NoticeException("skill 包读取失败: " + e.getMessage());
+            throw new ServiceException("skill 包读取失败: " + e.getMessage());
         }
         return adminService.upload(bytes);
     }

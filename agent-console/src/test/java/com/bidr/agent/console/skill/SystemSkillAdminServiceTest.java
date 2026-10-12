@@ -2,7 +2,7 @@ package com.bidr.agent.console.skill;
 
 import com.bidr.agent.console.dao.entity.SkillAsset;
 import com.bidr.agent.console.dao.repository.SkillAssetService;
-import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -45,6 +45,9 @@ import static org.mockito.Mockito.when;
  *   <li>同名再传＝新版本新行（save 不 update、key 递增到 v2.zip）；</li>
  *   <li>同名撞 BUILTIN＝拒绝（出厂包名是保留名），且<b>先查后写</b>：存储与表零写；</li>
  *   <li>坏包（缺 frontmatter / 非 zip 字节）＝契约尺拦下，存储与表零写；</li>
+ *   <li><b>六种拒绝一律 {@link ServiceException}</b>：框架把 NoticeException 渲染成 {@code code=0}＋
+ *       "SUCCESS"，拒绝若走 notice 就等于对调用方报成功（真机探针 10-13 就是这么抓出第一版写法的）；
+ *       契约尺抛的 notice 在 {@code parseAsRejection} 边界翻译一次，业务侧上传端点零漂移。</li>
  *   <li>墓碑 patch 只带 id+status：valid/origin/sha 全为 null（ignoreNull 语义＝不进 SET 不动列），存储零动作；</li>
  *   <li>状态机：UNPUBLISHED/OFFLINE→publish 放行、PUBLISHED→offline 放行、TOMBSTONE→publish 拒绝、
  *       UNPUBLISHED→offline 拒绝；</li>
@@ -137,7 +140,7 @@ class SystemSkillAdminServiceTest {
         stubLookup(asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED));
 
         assertThatThrownBy(() -> openGate().upload(syntheticZip()))
-                .isInstanceOf(NoticeException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining(SYNTHETIC);
 
         verify(store, never()).put(anyString(), any());
@@ -150,10 +153,10 @@ class SystemSkillAdminServiceTest {
     void badPackagesAreRejectedWithZeroSideEffects() {
         assertThatThrownBy(() -> openGate().upload(badFrontmatterZip()))
                 .as("缺 frontmatter 的包过不了契约尺")
-                .isInstanceOf(NoticeException.class);
+                .isInstanceOf(ServiceException.class);
         assertThatThrownBy(() -> openGate().upload("这不是 zip 的字节".getBytes(StandardCharsets.UTF_8)))
                 .as("非 zip 字节同样抛出")
-                .isInstanceOf(NoticeException.class);
+                .isInstanceOf(ServiceException.class);
 
         verifyNoInteractions(store, skillAssetService);
     }
@@ -198,7 +201,7 @@ class SystemSkillAdminServiceTest {
         stubGetById(3L, tombstoned);
         assertThatThrownBy(() -> openGate().publish(3L))
                 .as("注销不可逆")
-                .isInstanceOf(NoticeException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("3");
     }
 
@@ -213,7 +216,7 @@ class SystemSkillAdminServiceTest {
         stubGetById(2L, unpublished);
         assertThatThrownBy(() -> openGate().offline(2L))
                 .as("尚未发布，无需下线")
-                .isInstanceOf(NoticeException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("2");
     }
 
@@ -240,11 +243,11 @@ class SystemSkillAdminServiceTest {
     void missingRowIsReportedWithItsIdByEveryAction() {
         // getById 未桩＝返回 null，正是"行不存在"
         assertThatThrownBy(() -> openGate().publish(42L))
-                .isInstanceOf(NoticeException.class).hasMessageContaining("42");
+                .isInstanceOf(ServiceException.class).hasMessageContaining("42");
         assertThatThrownBy(() -> openGate().offline(42L))
-                .isInstanceOf(NoticeException.class).hasMessageContaining("42");
+                .isInstanceOf(ServiceException.class).hasMessageContaining("42");
         assertThatThrownBy(() -> openGate().tombstone(42L))
-                .isInstanceOf(NoticeException.class).hasMessageContaining("42");
+                .isInstanceOf(ServiceException.class).hasMessageContaining("42");
 
         verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
     }
@@ -270,7 +273,7 @@ class SystemSkillAdminServiceTest {
         assertThat(gated.isPlatformAdmin()).as("无 Spring 上下文取不到 permitService＝按非管理员").isFalse();
 
         assertThatThrownBy(() -> gated.upload(syntheticZip()))
-                .isInstanceOf(NoticeException.class);
+                .isInstanceOf(ServiceException.class);
 
         verifyNoInteractions(store, skillAssetService);
     }

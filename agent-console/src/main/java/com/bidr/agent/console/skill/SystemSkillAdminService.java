@@ -4,6 +4,7 @@ import com.bidr.agent.console.dao.entity.SkillAsset;
 import com.bidr.agent.console.dao.repository.SkillAssetService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.BeanUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,13 @@ import java.util.List;
  * （只带 id+status 的 patch 走 {@code updateAsset}，ignoreNull 语义保证 valid/对象/sha 全不动）、
  * 不删对象（存储层本来也没有删的口，对象留档可回滚）。</p>
  *
+ * <p><b>拒绝一律 {@link ServiceException}，不用 {@link NoticeException}</b>：框架的异常渲染是两条路——
+ * notice 落 {@code status.code=0}（"提示语义"，前端看到的就是成功），ServiceException 才落非零码。
+ * 本服务的六种"什么都没做成"（非管理员、坏包、撞保留名、状态不允许、行不存在、墓碑想发布）
+ * 全属拒绝，若走 notice 就等于对着管理员说"传成功了"而台账里根本没那行。
+ * {@code SkillPackageParser} 是业务侧上传共用的尺（它抛 notice，改动会漂移到业务端点上），
+ * 所以翻译只在本服务的边界做一次。</p>
+ *
  * <p><b>先存对象再落行</b>：行是账、对象是货；反过来会出现"账上有地址、货不在"的坏行。
  * 同名重传＝新版本新行（不 update 旧行），墓碑过的名字允许再传、视作新一档
  * （{@code findByName} 不过滤 valid，正是为了让版本从最近一行继续递增）。</p>
@@ -63,12 +71,12 @@ public class SystemSkillAdminService {
      */
     public SkillAsset upload(byte[] zipBytes) {
         requirePlatformAdmin();
-        SkillPackage pkg = SkillPackageParser.parse(zipBytes);
+        SkillPackage pkg = parseAsRejection(zipBytes);
         byte[] normalized = SkillPackageWriter.pack(pkg.getName(), pkg.getFiles());
         String sha = SkillPackageWriter.sha256Hex(normalized);
         SkillAsset existing = skillAssetService.findByName(pkg.getName());
         if (existing != null && SkillAsset.ORIGIN_BUILTIN.equals(existing.getOrigin())) {
-            throw new NoticeException("出厂包名保留，请改名或走业务侧上传: " + pkg.getName());
+            throw new ServiceException("出厂包名保留，请改名或走业务侧上传: " + pkg.getName());
         }
         int version = existing == null ? 1 : (existing.getVersion() == null ? 1 : existing.getVersion()) + 1;
         String key = SystemSkillStore.packageKey(pkg.getName(), version);
@@ -103,7 +111,7 @@ public class SystemSkillAdminService {
             return;
         }
         if (SkillAsset.STATUS_TOMBSTONE.equals(row.getStatus())) {
-            throw new NoticeException("已注销的技能包不可发布（注销不可逆），请重新上传: id=" + id);
+            throw new ServiceException("已注销的技能包不可发布（注销不可逆），请重新上传: id=" + id);
         }
         requireStatusIn(id, row, "发布", SkillAsset.STATUS_UNPUBLISHED, SkillAsset.STATUS_OFFLINE);
         writeStatus(id, SkillAsset.STATUS_PUBLISHED);
@@ -120,7 +128,7 @@ public class SystemSkillAdminService {
             return;
         }
         if (SkillAsset.STATUS_UNPUBLISHED.equals(row.getStatus())) {
-            throw new NoticeException("尚未发布，无需下线: id=" + id);
+            throw new ServiceException("尚未发布，无需下线: id=" + id);
         }
         requireStatusIn(id, row, "下线", SkillAsset.STATUS_PUBLISHED);
         writeStatus(id, SkillAsset.STATUS_OFFLINE);
@@ -151,10 +159,22 @@ public class SystemSkillAdminService {
 
     // ---------------------------------------------------------------- 内部
 
+    /**
+     * 包契约尺（{@link SkillPackageParser}）与业务侧上传共用，它按"提示语义"抛 notice；
+     * 在本服务的边界上坏包就是拒绝，必须换成非零码——只翻译这一处，业务端点行为零漂移。
+     */
+    private SkillPackage parseAsRejection(byte[] zipBytes) {
+        try {
+            return SkillPackageParser.parse(zipBytes);
+        } catch (NoticeException e) {
+            throw new ServiceException(e.getMessage());
+        }
+    }
+
     private SkillAsset requireById(Long id) {
         SkillAsset row = id == null ? null : skillAssetService.getById(id);
         if (row == null) {
-            throw new NoticeException("技能包不存在: id=" + id);
+            throw new ServiceException("技能包不存在: id=" + id);
         }
         return row;
     }
@@ -165,7 +185,7 @@ public class SystemSkillAdminService {
                 return;
             }
         }
-        throw new NoticeException("当前状态不可" + action + ": id=" + id + " status=" + row.getStatus());
+        throw new ServiceException("当前状态不可" + action + ": id=" + id + " status=" + row.getStatus());
     }
 
     /** 状态转换只写 status 一列：patch 不带 origin（所有权不是状态），空值不进 SET ⇒ valid/sha/对象全不动 */
@@ -179,7 +199,7 @@ public class SystemSkillAdminService {
 
     private void requirePlatformAdmin() {
         if (!isPlatformAdmin()) {
-            throw new NoticeException("仅平台管理员可操作系统级技能包");
+            throw new ServiceException("仅平台管理员可操作系统级技能包");
         }
     }
 
