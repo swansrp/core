@@ -74,8 +74,12 @@ public interface AgentLoopListener {
      * 交出来——含按上下文预算条件追加的回捞工具，故与"模型实际收到什么"逐字一致，
      * 业务侧从 {@code tools(...)} 钩子重算拿不到这一份。
      * 默认空实现：轻链路与票据链零改动即向后兼容；会话实现转交 {@link AgentToolSurfaceSink}
+     *
+     * @param toolNames  发给模型的工具名清单（定形正源）
+     * @param promptText 模型首轮请求收到的 system 槽原文（＝调用方交给 {@code run} 的 systemPrompt 逐字一份；
+     *                   业务把内容拼进 userPrompt 时这里只是框架通用纪律，无 system 槽即 null）
      */
-    default void onToolsResolved(List<String> toolNames) {
+    default void onToolsResolved(List<String> toolNames, String promptText) {
     }
 
     /**

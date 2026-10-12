@@ -402,6 +402,8 @@ public class AgentSessionService {
         try {
             String conversationId = conversationService.appendUser(
                     definition.conversationAgentCode(payload), null, state.getOperator(), question.trim(), null);
+            // 会话↔对话定位广播（M14 棒2 增量）：装配单这类永久面据此记住"这场会话有条对话"
+            conversationService.linkSession(state.getSessionId(), conversationId);
             String content;
             String status;
             if (AgentSessionState.FINISHED.equals(state.getStatus())) {

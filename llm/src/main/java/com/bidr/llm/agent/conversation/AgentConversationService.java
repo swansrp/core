@@ -73,12 +73,17 @@ public class AgentConversationService {
 
     private final ObjectProvider<AgentConversationRetentionProvider> retentionProvider;
 
+    /** 会话↔对话定位台账（可为空=没有永久面关心这个对应关系） */
+    private final ObjectProvider<AgentConversationLinkSink> linkProvider;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentConversationService(ObjectProvider<RedisService> redisProvider,
-                                    ObjectProvider<AgentConversationRetentionProvider> retentionProvider) {
+                                    ObjectProvider<AgentConversationRetentionProvider> retentionProvider,
+                                    ObjectProvider<AgentConversationLinkSink> linkProvider) {
         this.redisProvider = redisProvider;
         this.retentionProvider = retentionProvider;
+        this.linkProvider = linkProvider;
     }
 
     /**
@@ -116,6 +121,26 @@ public class AgentConversationService {
         AgentConversationMessage item = message("assistant", content, status, ext);
         append(conversation, item);
         return item.getMessageId();
+    }
+
+    /**
+     * 会话↔对话定位广播（M14 棒2 增量）：把"这场 agent 会话对应哪条对话"交给关心它的永久台账
+     * （装配单一类）。对话正文按保留期滚窗过期，而这个对应关系是要留下来的证据——永久面据此能表达
+     * "当时有条对话，现在还能不能取回"。业务自管对话 id（如按文档逐场建线）时显式调本方法接同一条腿。
+     * 无台账实现即静默返回；定位是复盘链路，任何异常只记日志，绝不打断对话写入
+     */
+    public void linkSession(String sessionId, String conversationId) {
+        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(conversationId)) {
+            return;
+        }
+        for (AgentConversationLinkSink sink : linkProvider) {
+            try {
+                sink.onConversationLinked(sessionId.trim(), conversationId.trim());
+            } catch (Exception e) {
+                log.warn("会话对话定位广播失败（不影响对话）: sink={}, session={}, error={}",
+                        sink.getClass().getSimpleName(), sessionId, e.getMessage());
+            }
+        }
     }
 
     /**

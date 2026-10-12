@@ -17,10 +17,11 @@ import java.util.List;
 
 /**
  * Title: ToolAgentRunnerToolSurfaceTest
- * Description: M14 棒 2「工具面定形上报」钩子契约测试。锁死三件事：① 装配单正源＝<b>真的发给模型的那份
+ * Description: M14 棒 2「工具面定形上报」钩子契约测试。锁死四件事：① 装配单正源＝<b>真的发给模型的那份
  * specs</b>（不是业务侧自己推导的清单——上下文治理开启时引擎还会追加 {@code recallToolResult}，
  * 业务侧推导必然少报一只）；② 上报失败绝不影响会话（台账是旁证，不是链路）；③ 钩子是 default 方法，
- * 老实现者与无台账形态零行为变化。全部用假模型，不依赖任何外部模型服务。
+ * 老实现者与无台账形态零行为变化；④ 棒 2 增量：system 槽全文逐字随定形一起带出（拼装文本用完即丢，
+ * 这一笔不落就永久只剩段名）。全部用假模型，不依赖任何外部模型服务。
  *
  * @author Sharp
  * @since 2026-10-12
@@ -41,10 +42,11 @@ public class ToolAgentRunnerToolSurfaceTest {
         }
     }
 
-    /** 记录上报的工具面清单，其余钩子按既有默认 */
+    /** 记录上报的工具面清单与提示词全文，其余钩子按既有默认 */
     private static final class SurfaceListener implements AgentLoopListener {
 
         private final List<List<String>> reports = new ArrayList<>();
+        private final List<String> prompts = new ArrayList<>();
         private final boolean fail;
 
         SurfaceListener(boolean fail) {
@@ -62,11 +64,12 @@ public class ToolAgentRunnerToolSurfaceTest {
         }
 
         @Override
-        public void onToolsResolved(List<String> toolNames) {
+        public void onToolsResolved(List<String> toolNames, String promptText) {
             if (fail) {
                 throw new IllegalStateException("台账写库炸了");
             }
             reports.add(new ArrayList<>(toolNames));
+            prompts.add(promptText);
         }
     }
 
@@ -90,6 +93,32 @@ public class ToolAgentRunnerToolSurfaceTest {
         }
         Assert.assertEquals("装配单必须等于模型实际拿到的工具面（含顺序）", expected, listener.reports.get(0));
         Assert.assertTrue("业务侧两只工具都要在案", listener.reports.get(0).containsAll(Arrays.asList("echo", "add")));
+    }
+
+    /**
+     * 🔴 棒 2 增量的存在理由：拼装出来的提示词文本用完即丢，事后按段名重拼拿不到"当时那份"
+     * （风格段运行期可改、技能清单随发布态变）。这条钉住全文逐字随行——含首尾空白，不 trim 不改写。
+     */
+    @Test
+    public void 提示词全文逐字随定形报出() {
+        SurfaceListener listener = new SurfaceListener(false);
+        String prompt = "  红线骨架\n\n风格段（运行期可改）  \n";
+
+        new ToolAgentRunner().run(oneCallThenAnswer(), prompt, "请调用 echo",
+                Collections.<Object>singletonList(new ProbeTools()), new AgentLoopOptions(5, 20), listener);
+
+        Assert.assertEquals("全文＝交给 run 的 systemPrompt 逐字一份", prompt, listener.prompts.get(0));
+    }
+
+    /** 空白 system 槽原样报出入参：框架侧不做空判定（该不该落 NULL 是台账的事，见 truncatePrompt） */
+    @Test
+    public void 空白system槽原样报出不加工() {
+        SurfaceListener listener = new SurfaceListener(false);
+
+        new ToolAgentRunner().run(oneCallThenAnswer(), "   ", "请调用 echo",
+                Collections.<Object>singletonList(new ProbeTools()), new AgentLoopOptions(5, 20), listener);
+
+        Assert.assertEquals("钩子只搬运事实，不替消费方判空", "   ", listener.prompts.get(0));
     }
 
     /**

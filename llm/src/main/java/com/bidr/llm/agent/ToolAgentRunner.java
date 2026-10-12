@@ -105,8 +105,10 @@ public class ToolAgentRunner {
             specs.addAll(ToolSpecifications.toolSpecificationsFrom(tools));
         }
         // M14 棒2：工具面定形上报（装配单正源）。清单取自 specs 本身⇒与发给模型的那份逐字一致，
-        // 含上面条件追加的回捞工具；台账缺席时 listener 默认空实现，异常一律不外溢进循环
-        notifyToolSurfaceResolved(specs, sink);
+        // 含上面条件追加的回捞工具；同批带出 system 槽原文＝"当时那份提示词"的唯一真源
+        // （它是本方法的入参，拼装过程不再可复现，不落这一笔就永久只能知道段名）；
+        // 台账缺席时 listener 默认空实现，异常一律不外溢进循环
+        notifyToolSurfaceResolved(specs, systemPrompt, sink);
         int fixedOverheadTokens = ContextTokenEstimator.estimateSpecs(specs);
         List<ChatMessage> messages = new ArrayList<>();
         // system 槽可空：无框架级纪律可发时不加 SystemMessage（业务内容由调用方拼入 user 提示）
@@ -355,9 +357,10 @@ public class ToolAgentRunner {
 
     /** 工具面定形上报：listener 默认空实现（无台账即零行为），实现方抛错也吞在这里——
      *  台账是复盘链路，绝不改写会话结局也不中断循环 */
-    private static void notifyToolSurfaceResolved(List<ToolSpecification> specs, AgentLoopListener sink) {
+    private static void notifyToolSurfaceResolved(List<ToolSpecification> specs, String systemPrompt,
+                                                  AgentLoopListener sink) {
         try {
-            sink.onToolsResolved(toolNamesOf(specs));
+            sink.onToolsResolved(toolNamesOf(specs), systemPrompt);
         } catch (Exception e) {
             log.warn("工具面定形上报失败（不影响会话）: error={}", e.getMessage());
         }

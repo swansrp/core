@@ -414,8 +414,8 @@ public class AgentSessionContext {
 
             /** 工具面定形 ⇒ 转交台账（M14 棒2 装配单）；台账缺席时静默跳过 */
             @Override
-            public void onToolsResolved(List<String> toolNames) {
-                reportToolSurface(toolNames);
+            public void onToolsResolved(List<String> toolNames, String promptText) {
+                reportToolSurface(toolNames, promptText);
             }
 
             /** 会话链事件流持工具结果全文（I4）⇒ 回捞的**优先**通道，可跨 run/跨实例取回
@@ -455,7 +455,7 @@ public class AgentSessionContext {
      * ⇒ 静默跳过，会话行为与改前逐字节一致。取 bean 与回调整体兜异常——台账是复盘链路，
      * 写不进去只记 warn，绝不把工具循环带崩（同 {@code AgentContextBudget} 的取参口径）。
      */
-    private void reportToolSurface(List<String> toolNames) {
+    private void reportToolSurface(List<String> toolNames, String promptText) {
         try {
             AgentToolSurfaceSink sink = BeanUtil.getBean(AgentToolSurfaceSink.class);
             if (sink == null) {
@@ -468,6 +468,7 @@ public class AgentSessionContext {
             facts.setDisplayName(state.getDisplayName());
             facts.setOperator(state.getOperator());
             facts.setToolNames(toolNames == null ? Collections.emptyList() : new ArrayList<>(toolNames));
+            facts.setPromptText(promptText);
             facts.setPayload(payload);
             sink.onToolsResolved(facts);
         } catch (Exception e) {
