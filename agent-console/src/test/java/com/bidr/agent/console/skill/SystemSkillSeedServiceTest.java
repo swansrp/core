@@ -13,6 +13,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -20,6 +21,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,7 +39,10 @@ import static org.mockito.Mockito.when;
  *   <li>sha 变＝就地覆盖同 key、同 v1，status 一字不动（管理员的"下线"活下来）；</li>
  *   <li>不合契约的包＝跳过且不碰存储。</li>
  * </ul>
- * 另钉指纹口径一条：确定性打包产物的 sha 稳定且为 64 位小写十六进制
+ * 另补棒 4 验收项「上传包在重启对账后仍在（不被当野包清理）」的负向腿：
+ * 对账器只按包名点查、从不反扫表（结构上就无从"清理"）；origin 为 NULL 的历史行同样让位；
+ * 一轮里一个包让位不阻断其余包；墓碑行即便 sha 恰好相同也不记成"未变"；
+ * jar 内没有包＝整轮零写。指纹口径一条：确定性打包产物的 sha 稳定且为 64 位小写十六进制
  * （业务侧 {@code Digests} 与本实现的等价性由业务侧测试守，见 BuiltinSkillSeedServiceTest）。
  *
  * @author Sharp
@@ -142,6 +148,26 @@ class SystemSkillSeedServiceTest {
         verify(store, never()).put(anyString(), any());
     }
 
+    // ---------------------------------------------------------------- seed：让位（origin 为 NULL 的历史行同样让位）
+
+    @Test
+    void sameNameWithNullOriginIsSkippedNeverClobbered() {
+        SkillAsset legacy = asset(null, SkillAsset.STATUS_PUBLISHED);
+        legacy.setPackageSha256(OTHER_SHA);
+        stubLookup(legacy);
+
+        SystemSkillSeedService.Outcome outcome = fixedSeed().seed();
+
+        // 钉住的风险：判据写成 existing.getOrigin().equals(...) 方向反了会 NPE，
+        // 加了 isNotBlank 之类前置又会把"来源不明的行"当成出厂包覆盖掉——NULL 同样不是 BUILTIN，必须让位
+        assertThat(outcome.skipped).as("来源不明的同名行让位: %s", outcome).isEqualTo(1);
+        assertThat(outcome.refreshed).as("NULL origin 不得走就地覆盖").isZero();
+        assertThat(outcome.notes).anyMatch(n -> n.contains(SYNTHETIC) && n.contains("让位"));
+        verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
+        verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
+        verify(store, never()).put(anyString(), any());
+    }
+
     // ---------------------------------------------------------------- seed：不复活
 
     @Test
@@ -154,6 +180,25 @@ class SystemSkillSeedServiceTest {
 
         assertThat(outcome.skipped).as("注销是人的决策: %s", outcome).isEqualTo(1);
         assertThat(outcome.refreshed).as("墓碑行不得走就地覆盖").isZero();
+        assertThat(outcome.notes).anyMatch(n -> n.contains(SYNTHETIC) && n.contains("不复活"));
+        verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
+        verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
+        verify(store, never()).put(anyString(), any());
+    }
+
+    @Test
+    void tombstonedRowWithMatchingShaIsSkippedNotCountedUnchanged() {
+        // 墓碑行的 sha 恰好等于合成包当前指纹——"内容也没变"最容易把分支顺序错误暴露成"未变"
+        SkillAsset tombstone = asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_TOMBSTONE);
+        tombstone.setPackageSha256(SkillPackageWriter.sha256Hex(syntheticZip()));
+        stubLookup(tombstone);
+
+        SystemSkillSeedService.Outcome outcome = fixedSeed().seed();
+
+        // 钉住的风险：分支顺序若被换成"先比 sha"，墓碑行会被记成未变，
+        // 将来发布动作查状态时会误判这个包还活着
+        assertThat(outcome.skipped).as("墓碑优先于 sha 比对: %s", outcome).isEqualTo(1);
+        assertThat(outcome.unchanged).as("TOMBSTONE∧sha 相同不得走未变分支").isZero();
         assertThat(outcome.notes).anyMatch(n -> n.contains(SYNTHETIC) && n.contains("不复活"));
         verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
         verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
@@ -189,6 +234,31 @@ class SystemSkillSeedServiceTest {
         verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
     }
 
+    @Test
+    void softDeletedBuiltinRowIsRestoredInPlaceByDesign() {
+        SkillAsset softDeleted = asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED);
+        softDeleted.setId(7L);
+        softDeleted.setValid("0");
+        softDeleted.setPackageSha256(SkillPackageWriter.sha256Hex(syntheticZip()));
+        stubLookup(softDeleted);
+
+        SystemSkillSeedService.Outcome outcome = fixedSeed().seed();
+
+        // 这是当前裁定（棒 4-D 复核项）：jar 是出厂包存在性的权威，
+        // 软删不进出厂包的"未变"分支（valid≠1），而是就地覆盖并把 valid 置回 1。
+        // 撤销出厂包的正确表达是 TOMBSTONE 而不是软删——若将来改判"软删也保留"，改这条用例。
+        assertThat(outcome.refreshed).as("软删的出厂行走就地覆盖: %s", outcome).isEqualTo(1);
+        assertThat(outcome.unchanged).as("valid=0 不得被记成未变").isZero();
+        ArgumentCaptor<SkillAsset> patch = ArgumentCaptor.forClass(SkillAsset.class);
+        verify(skillAssetService).updateAsset(patch.capture());
+        SkillAsset written = patch.getValue();
+        assertThat(written.getId()).isEqualTo(7L);
+        assertThat(written.getValid()).as("当前设计：refresh 把 valid 复活回 1").isEqualTo("1");
+        assertThat(written.getStatus()).as("patch 不带 status＝库里原状态不动").isNull();
+        verify(store).put(eq(SYNTHETIC_KEY), any());
+        verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
+    }
+
     // ---------------------------------------------------------------- seed：契约自检
 
     @Test
@@ -203,6 +273,74 @@ class SystemSkillSeedServiceTest {
         verify(store, never()).put(anyString(), any());
         verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
         verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
+    }
+
+    // ---------------------------------------------------------------- seed：从不反扫表（"上传包不被当野包清理"的结构性论证）
+
+    @Test
+    void seederOnlyLooksUpByPackNameAndNeverSweepsTheTable() {
+        stubLookup(null);
+
+        SystemSkillSeedService.Outcome outcome = fixedSeed().seed();
+
+        assertThat(outcome.added).as("%s", outcome).isEqualTo(1);
+        // 全部交互只有 findByName（且只被以包名调过一次）＋ saveAsset 两种
+        verify(skillAssetService).findByName(SYNTHETIC);
+        verify(skillAssetService).saveAsset(any(SkillAsset.class));
+        verifyNoMoreInteractions(skillAssetService);
+        // 显式钉住：反扫与清理的口一个都没开（verifyNoMoreInteractions 已兜底，这里点名是防将来"合法化"某个新调用）
+        verify(skillAssetService, never()).listPublished();
+        verify(skillAssetService, never()).listByOrigin(anyString());
+        verify(skillAssetService, never()).removeById(anyLong());
+        verify(skillAssetService, never()).removeByIds(any());
+        verify(skillAssetService, never()).remove(any());
+        // 存储侧除 put 外没有别的动作。注：SystemSkillStore 本身只有 put/get/readUrl，
+        // 没有删除对象的口——"清理"这件事对账器根本无从下手
+        verify(store).put(eq(SYNTHETIC_KEY), any());
+        verifyNoMoreInteractions(store);
+        verify(store, never()).get(anyString());
+        verify(store, never()).readUrl(anyString(), anyString());
+    }
+
+    // ---------------------------------------------------------------- seed：一包让位不阻断同轮其余包
+
+    @Test
+    void onePackYieldingDoesNotBlockSiblingsInSameRound() {
+        String yieldName = "seed-yield";
+        String siblingName = "seed-sibling";
+        SkillAsset uploaded = asset(yieldName, SkillAsset.ORIGIN_UPLOADED, SkillAsset.STATUS_UNPUBLISHED);
+        uploaded.setPackageSha256(OTHER_SHA);
+        when(skillAssetService.findByName(yieldName)).thenReturn(uploaded);
+        when(skillAssetService.findByName(siblingName)).thenReturn(null);
+        Map<String, byte[]> packs = new LinkedHashMap<>();
+        packs.put(yieldName, syntheticZipNamed(yieldName));
+        packs.put(siblingName, syntheticZipNamed(siblingName));
+
+        SystemSkillSeedService.Outcome outcome = new FixedSeed(packs).seed();
+
+        assertThat(outcome.skipped).as("A 让位: %s", outcome).isEqualTo(1);
+        assertThat(outcome.added).as("B 照常注册，不被 A 阻断: %s", outcome).isEqualTo(1);
+        SkillAsset registered = onlySaved();
+        assertThat(registered.getSkillName()).isEqualTo(siblingName);
+        assertThat(registered.getOrigin()).isEqualTo(SkillAsset.ORIGIN_BUILTIN);
+        // A 的行零写：不 save、不 update、存储里也不落 A 的 key
+        verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
+        verify(store, never()).put(eq("agent-skill/" + yieldName + "/v1.zip"), any());
+    }
+
+    // ---------------------------------------------------------------- seed：jar 内没有包＝整轮零写
+
+    @Test
+    void emptyJarMeansWhollyZeroSideEffects() {
+        // 钉住的风险：专有化部署把 agent-skills/ 资源摘掉后，启动对账不得对表有任何副作用
+        SystemSkillSeedService.Outcome outcome = new FixedSeed(Collections.emptyMap()).seed();
+
+        assertThat(outcome.added).as("%s", outcome).isZero();
+        assertThat(outcome.refreshed).isZero();
+        assertThat(outcome.unchanged).isZero();
+        assertThat(outcome.skipped).isZero();
+        assertThat(outcome.notes).isEmpty();
+        verifyNoInteractions(skillAssetService, store);
     }
 
     // ---------------------------------------------------------------- 指纹口径
@@ -225,9 +363,13 @@ class SystemSkillSeedServiceTest {
 
         private final Map<String, byte[]> packs;
 
-        FixedSeed(String name, byte[] zip) {
+        FixedSeed(Map<String, byte[]> packs) {
             super(skillAssetService, store);
-            this.packs = Collections.singletonMap(name, zip);
+            this.packs = packs;
+        }
+
+        FixedSeed(String name, byte[] zip) {
+            this(Collections.singletonMap(name, zip));
         }
 
         FixedSeed(byte[] zip) {
@@ -257,6 +399,11 @@ class SystemSkillSeedServiceTest {
         return SkillPackageWriter.pack(SYNTHETIC, syntheticFiles(SYNTHETIC));
     }
 
+    /** 换名的合成包（多包用例要包名与 frontmatter name 一致，契约才过） */
+    private static byte[] syntheticZipNamed(String name) {
+        return SkillPackageWriter.pack(name, syntheticFiles(name));
+    }
+
     /** 缺 frontmatter 的包：过不了上传闸门那把尺，也就该被对账器一样拒掉 */
     private static byte[] badFrontmatterZip() {
         Map<String, byte[]> files = new LinkedHashMap<>();
@@ -271,6 +418,13 @@ class SystemSkillSeedServiceTest {
         row.setOrigin(origin);
         row.setStatus(status);
         row.setValid("1");
+        return row;
+    }
+
+    /** 多包用例：桩行的包名要与喂进去的合成包名一一对应 */
+    private static SkillAsset asset(String name, String origin, String status) {
+        SkillAsset row = asset(origin, status);
+        row.setSkillName(name);
         return row;
     }
 
