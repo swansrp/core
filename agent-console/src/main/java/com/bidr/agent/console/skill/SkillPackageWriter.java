@@ -4,6 +4,7 @@ import com.bidr.kernel.exception.NoticeException;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.zip.CRC32;
@@ -66,5 +67,36 @@ public final class SkillPackageWriter {
             throw new NoticeException("skill 包打包失败（" + rootName + "）: " + e.getMessage());
         }
         return bos.toByteArray();
+    }
+
+    /**
+     * 确定性打包产物的指纹口径：对 {@link #pack} 的字节求 SHA-256，输出小写十六进制（64 字符）。
+     *
+     * <p>指纹只能跟着 {@code pack} 待在一起：{@code pack} 的全部意义就是"同内容必得同字节"，
+     * 而指纹正是这句话的读数器——启动对账拿它判断要不要覆盖，两处实现各写一遍就等于
+     * 允许两侧对同一内容报出不同的 sha。</p>
+     *
+     * <p>与业务文件域 {@code com.bidr.ai.inkhub.util.Digests.sha256Hex} 同算法、同编码、同输出格式，
+     * 这个等价性是<b>存量迁移与两侧对账的前提</b>：出厂包从业务侧搬到框架侧后，
+     * 库里已有的 {@code package_sha256} 必须还能对上重算出的值，否则每个存量包都会被认成"内容变了"
+     * 而就地重写一遍。等价性由测试钉住，不靠约定。</p>
+     *
+     * <p>{@code Digests} 仍是文件域内容寻址的正源（秒传判定、blob 台账唯一键都吃它），本方法不取代它——
+     * 只管 skill 包这一类确定性产物的指纹。</p>
+     *
+     * @param bytes 打包产物
+     * @return 小写十六进制 sha256
+     */
+    public static String sha256Hex(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 不可用", e);
+        }
     }
 }
