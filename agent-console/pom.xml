@@ -31,6 +31,8 @@
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <llm.version>${jarVersion}</llm.version>
+                <oss.version>${jarVersion}</oss.version>
+                <platform.version>${jarVersion}</platform.version>
             </properties>
         </profile>
         <profile>
@@ -44,6 +46,8 @@
                 <java.version>1.8</java.version>
                 <kernel.version>20261010031245-75</kernel.version>
                 <llm.version>20261010031245-75</llm.version>
+                <oss.version>20261010031245-75</oss.version>
+                <platform.version>20261010031245-75</platform.version>
             </properties>
         </profile>
     </profiles>
@@ -60,6 +64,22 @@
             <groupId>com.bidr</groupId>
             <artifactId>llm</artifactId>
             <version>${llm.version}</version>
+        </dependency>
+        <!--
+            oss：系统级技能包的字节通道只吃 ObjectStorageService 的按名直写/直读 SPI（putBytes/readBytes），
+            选型正源仍是 sys_config 的 OSS_SERVER_TYPE，与本模块是否认识某家 SDK 无关
+        -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>oss</artifactId>
+            <version>${oss.version}</version>
+        </dependency>
+        <!-- platform：读系统参数缓存（SysConfigCacheService）。llm 本就传递带它，但这里是我方直接 import 的类，
+             直接用的就直接声明——靠传递依赖声明，等于让 llm 的依赖变化决定本模块能否编译 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
