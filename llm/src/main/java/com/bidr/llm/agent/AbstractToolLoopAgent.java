@@ -4,6 +4,7 @@ import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.usage.ModelCallContexts;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +48,17 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
     /** 工具对象清单（@Tool 注解方法，任务作用域实例，可持有 state 内的连接/上下文等状态） */
     protected abstract List<Object> tools(S state, AgentSessionContext ctx, Map<String, Object> payload);
 
+    /**
+     * 函数式工具声明清单（默认空＝与改造前逐字节一致）。
+     * <p>覆写它即可把工具声明成"名字＋说明＋参数 schema＋一个处理器"，不必是 {@code @Tool} 反射方法；
+     * 三件声明字段都是可序列化的值，所以将来能从台账行里读出来直接喂进来（执行仍在进程内）。
+     * 与反射面的合并、收窄、同名裁决都在 {@link ToolAgentRunner} 一处收口，本钩子不做任何裁决。
+     */
+    protected List<FunctionalTool> functionalTools(S state, AgentSessionContext ctx,
+                                                   Map<String, Object> payload) {
+        return Collections.emptyList();
+    }
+
     /** 轮次/滑窗参数（默认 30/60，见 {@link AgentLoopOptions}） */
     protected AgentLoopOptions loopOptions() {
         return new AgentLoopOptions();
@@ -71,7 +83,8 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
         ModelCallContexts.set(ctx.usageIdentity());
         try {
             AgentLoopResult result = runner.run(model(state, ctx, payload), systemPrompt(state, ctx, payload),
-                    userPrompt(state, ctx, payload), tools(state, ctx, payload), loopOptions(), ctx.loopListener());
+                    userPrompt(state, ctx, payload), tools(state, ctx, payload),
+                    functionalTools(state, ctx, payload), loopOptions(), ctx.loopListener());
             if (result.isStopped()) {
                 // 与直接实现接口同口径：会话层捕获 InterruptedException 收口 STOPPED
                 throw new InterruptedException("用户停止");

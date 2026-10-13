@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,6 +71,21 @@ public class ToolAgentRunner {
      */
     public AgentLoopResult run(ChatLanguageModel model, String systemPrompt, String userPrompt,
                                List<Object> toolObjects, AgentLoopOptions options, AgentLoopListener listener) {
+        // 反射面重载＝既有调用点一律走这里：功能式清单为空，specs 采集与执行路由与改造前一字不差
+        return run(model, systemPrompt, userPrompt, toolObjects,
+                Collections.<FunctionalTool>emptyList(), options, listener);
+    }
+
+    /**
+     * 运行一个工具循环会话（带函数式工具声明，M14 之后档三前置实证）
+     *
+     * @param functionalTools 声明式工具清单（名字＋说明＋参数 schema＋处理器）；null／空＝纯反射面，行为与上面重载一致。
+     *                        与反射面合并成<b>同一份</b> specs 后才进收窄，所以勾选、装配单、准入名单对两条通道同源；
+     *                        🔴 与反射面同名的声明整份失效（代码优先），冲突显形为一条 warn
+     */
+    public AgentLoopResult run(ChatLanguageModel model, String systemPrompt, String userPrompt,
+                               List<Object> toolObjects, List<FunctionalTool> functionalTools,
+                               AgentLoopOptions options, AgentLoopListener listener) {
         AgentLoopListener sink = listener == null ? AgentLoopListener.NONE : listener;
         AgentLoopOptions opt = options == null ? new AgentLoopOptions() : options;
         // 停止检查透传至 LLM 等待层：等待期间轮询停止键，跨实例停止键也能快速收口（不只靠线程中断）
@@ -107,6 +123,9 @@ public class ToolAgentRunner {
         for (Object tools : effectiveTools) {
             specs.addAll(ToolSpecifications.toolSpecificationsFrom(tools));
         }
+        // 函数式声明并到同一份 specs 清单（在收窄之前），于是"发给模型的 schema／装配单／准入名单"
+        // 三处对两条通道仍是同一份数据；同名冲突在这里裁决＝代码优先，声明件整份不进面。
+        Map<String, FunctionalTool> functionalByName = mergeFunctionalDeclarations(functionalTools, specs);
         // M14 棒6：工具面收窄（平台勾选）——落点在采集之后、上报之前，于是下面三件事是同一份数据：
         // 发给模型的 schema、装配单记录的工具名清单、执行期的准入名单。
         // "装配单里不存在那只工具"与"会话手里真的没有"因此不是两判据；模型幻觉出一个已收窄的名字也执行不到。
@@ -187,7 +206,7 @@ public class ToolAgentRunner {
                     sink.log("调用工具 " + req.name() + "(" + fullText(req.arguments()) + ")");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
                     long toolStart = System.currentTimeMillis();
-                    String toolResult = executeTool(req, effectiveTools, admittedToolNames);
+                    String toolResult = executeTool(req, effectiveTools, admittedToolNames, functionalByName);
                     if (opt.getBudgetExemptTools().contains(req.name())) {
                         long waited = System.currentTimeMillis() - toolStart;
                         exemptMs += waited;
@@ -251,7 +270,7 @@ public class ToolAgentRunner {
                 for (ToolExecutionRequest req : last.content().toolExecutionRequests()) {
                     sink.log("收口例外：执行 " + req.name() + " 后无工具直出");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
-                    String closingResult = executeTool(req, effectiveTools, admittedToolNames);
+                    String closingResult = executeTool(req, effectiveTools, admittedToolNames, functionalByName);
                     sink.onToolResult(req.id(), req.name(), closingResult);
                     // I10 收口路径不卸载：最后一次 generate 之前追加的消息一律原文
                     // （此时省 token 已无意义，丢信息代价最大；allowOffload=false 双保险）
@@ -332,10 +351,16 @@ public class ToolAgentRunner {
      *  名字在反射面上找得到但不在准入名单＝平台本次把它勾掉了——这一条必须挡在执行期，
      *  否则"schema 里没有"只约束得住老实模型，约束不住幻觉出来的工具名。</p> */
     private static String executeTool(ToolExecutionRequest req, List<Object> toolObjects,
-                                      Set<String> admittedToolNames) {
+                                      Set<String> admittedToolNames, Map<String, FunctionalTool> functionalByName) {
         if (admittedToolNames != null && !admittedToolNames.contains(req.name())) {
             return "【工具调用失败】工具 '" + req.name() + "' 本次会话未启用（工具面已按平台勾选收窄），"
                     + "请改用可用工具清单里的名字";
+        }
+        // 函数式与反射两条通道的分流点：名字来自声明件即走 handler，否则原样进反射腿。
+        // 顺序在准入之后——被勾掉的声明件同样执行不到，两条通道共用同一把闸。
+        FunctionalTool declared = functionalByName == null ? null : functionalByName.get(req.name());
+        if (declared != null) {
+            return invokeFunctionalTool(req, declared);
         }
         Method method = toolMethodOf(toolObjects, req.name());
         if (method == null) {
@@ -356,6 +381,70 @@ public class ToolAgentRunner {
         } catch (Exception e) {
             return toolErrorText(req.name(), e);
         }
+    }
+
+    /**
+     * 函数式声明并入 specs 清单，并返回"名字 → 声明件"索引供执行期分流。
+     *
+     * <p>三条裁决顺序都收在这一个方法里：① 空名/null 声明跳过（数据面写坏一次，不该让整场会话手里没工具）；
+     * ② 🔴 反射面已有同名＝<b>代码优先</b>，整份声明不进面并 warn——"一条配置顶掉已上线行为"是最难查的一类事故；
+     * ③ 声明面内部同名只认第一份。被跳过的那份在执行期同样路由不到（索引里没有它），
+     * 所以"模型看到的面"与"会话手里能调到的手"仍是一件事，不存在半开态。</p>
+     */
+    private static Map<String, FunctionalTool> mergeFunctionalDeclarations(List<FunctionalTool> functionalTools,
+                                                                           List<ToolSpecification> specs) {
+        Map<String, FunctionalTool> byName = new LinkedHashMap<>();
+        if (functionalTools == null || functionalTools.isEmpty()) {
+            return byName;
+        }
+        Set<String> reflectionNames = new HashSet<>(toolNamesOf(specs));
+        for (FunctionalTool tool : functionalTools) {
+            if (tool == null || tool.name() == null || tool.name().trim().isEmpty()) {
+                log.warn("函数式工具声明无效（缺名字），本份忽略");
+                continue;
+            }
+            if (reflectionNames.contains(tool.name())) {
+                log.warn("函数式工具声明被忽略：反射面已有同名工具 {}（代码优先，配置不得顶掉已上线行为）",
+                        tool.name());
+                continue;
+            }
+            if (byName.containsKey(tool.name())) {
+                log.warn("函数式工具声明重复：同名 {} 只认第一份", tool.name());
+                continue;
+            }
+            byName.put(tool.name(), tool);
+            specs.add(tool.spec());
+        }
+        return byName;
+    }
+
+    /** 函数式执行：参数 JSON 解析成扁平 Map 后交给 handler；两类失败（参数解析、handler 抛错）的文案
+     *  与反射腿一字不差——模型看到的自纠提示不该因为工具来自哪条通道而不同 */
+    private static String invokeFunctionalTool(ToolExecutionRequest req, FunctionalTool tool) {
+        Map<String, Object> args;
+        try {
+            args = parseToolArgsToMap(req.arguments());
+        } catch (Exception e) {
+            return "【工具调用失败】工具 '" + req.name() + "' 参数解析失败：" + e.getMessage()
+                    + "。请修正参数（合法 JSON 且类型匹配）后重试";
+        }
+        try {
+            String result = tool.invoke(args);
+            return result == null ? "（工具无返回值）" : result;
+        } catch (Exception e) {
+            return toolErrorText(req.name(), e);
+        }
+    }
+
+    /** 工具参数 JSON → 扁平 Map（值＝JSON 原值，由 handler 自行按声明的 schema 取值转型）；
+     *  非对象形态按"参数解析失败"处理，与反射腿同一出口 */
+    private static Map<String, Object> parseToolArgsToMap(String argumentsJson) throws Exception {
+        String json = argumentsJson == null || argumentsJson.trim().isEmpty() ? "{}" : argumentsJson;
+        com.fasterxml.jackson.databind.JsonNode node = ARG_OM.readTree(json);
+        if (!node.isObject()) {
+            throw new IllegalArgumentException("参数不是 JSON 对象（实为 " + node.getNodeType() + "）");
+        }
+        return ARG_OM.convertValue(node, Map.class);
     }
 
     /** 工具面定形清单（按发给模型的 specs 原序去重；null 名跳过——理论不发生，防御性收口） */
