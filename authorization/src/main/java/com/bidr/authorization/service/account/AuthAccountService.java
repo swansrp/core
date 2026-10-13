@@ -30,7 +30,9 @@ public class AuthAccountService {
 
 
     public List<AccountRes> getAccount(AccountReq req) {
-        List<AcUser> res = acUserService.getUserByDeptAndName(req.getDeptIdList(), req.getName());
+        List<AcUser> res = Boolean.TRUE.equals(req.getMatchAllFields())
+                ? acUserService.searchUserByAnyField(req.getDeptIdList(), req.getName())
+                : acUserService.getUserByDeptAndName(req.getDeptIdList(), req.getName());
         return Resp.convert(res, AccountRes.class);
     }
 

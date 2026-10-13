@@ -26,7 +26,9 @@ public class AccountController {
 
     private final AuthAccountService accountService;
 
-    @ApiOperation(value = "获取用户")
+    @ApiOperation(value = "获取用户", notes = "按 deptIdList/name 查询人事表 ac_user；"
+            + "matchAllFields=true 时改为宽匹配（姓名/登录名/昵称/手机号/邮箱/工号 任一模糊命中），"
+            + "默认 false 保持原口径")
     @RequestMapping(value = "", method = RequestMethod.POST)
     public List<AccountRes> getAccount(@RequestBody @Validated AccountReq req) {
         return accountService.getAccount(req);

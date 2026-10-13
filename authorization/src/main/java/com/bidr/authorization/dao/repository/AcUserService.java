@@ -91,6 +91,28 @@ public class AcUserService extends BaseSqlRepo<AcUserDao, AcUser> {
 
     }
 
+    /**
+     * 人员搜索（宽匹配）：姓名/登录名/昵称/手机号/邮箱/工号 任一模糊命中即可，
+     * 供选择器输入任意已知信息定位一个人；与 getUserByDeptAndName（Excel 导入按姓名列精确匹配）分开，互不影响
+     */
+    public List<AcUser> searchUserByAnyField(List<String> deptIdList, String keyword) {
+        LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper();
+        wrapper.in(FuncUtil.isNotEmpty(deptIdList), AcUser::getDeptId, deptIdList);
+        if (FuncUtil.isNotEmpty(keyword)) {
+            wrapper.nested(w -> w.like(AcUser::getName, keyword).or()
+                    .like(AcUser::getUserName, keyword).or()
+                    .like(AcUser::getNickName, keyword).or()
+                    .like(AcUser::getPhoneNumber, keyword).or()
+                    .like(AcUser::getEmail, keyword).or()
+                    .like(AcUser::getCustomerNumber, keyword));
+        }
+        if (FuncUtil.isEmpty(deptIdList)) {
+            return super.select(wrapper, 1, 50, false).getRecords();
+        } else {
+            return super.select(wrapper);
+        }
+    }
+
     public AcUser getUserByUserName(String userName) {
         LambdaQueryWrapper<AcUser> wrapper = super.getQueryWrapper().eq(AcUser::getUserName, userName)
                 .eq(AcUser::getValid, CommonConst.YES);
