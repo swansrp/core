@@ -52,6 +52,26 @@ public class SystemSkillStore {
     }
 
     /**
+     * 回收包对象（台账行物理删除之后调用）。
+     *
+     * <p><b>失败只告警不回滚</b>：调用这一刻行已经没了，对象就成了无人引用的死字节——
+     * 没有"账上有地址、货不在"的坏行，也不会被任何读通道取到（读侧全靠行上的 package_key）。
+     * 而 {@code deleteObject} 在存储接口上是<b>有空实现档的</b>（不支持物理删除的底座），
+     * 为一次回收去探能力位、把已完成的删行再撤回来，等于让字节占住一条管理动作。
+     * 同名同版本再传时 {@link #put} 覆盖同一 key，不留坏账。</p>
+     */
+    public void delete(String key) {
+        ObjectStorageService storage = storage();
+        try {
+            storage.deleteObject(storage.buildAccessUrl(key));
+            log.info("系统技能包对象已回收: key={}", key);
+        } catch (Exception e) {
+            log.warn("系统技能包对象回收失败（台账行已删，对象留成无人引用的死字节，同名重传会覆盖它）: "
+                    + "key={} error={}", key, e.getMessage());
+        }
+    }
+
+    /**
      * 包的可访问地址（现签，有效期与签名语义由存储实现决定）——
      * 中文保存名走框架统一的 content-disposition 编码
      */

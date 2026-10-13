@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Title: SystemSkillAdminServiceTest
- * Description: 系统级技能包写面单测（M14 棒 4-E：上传/发布/下线/墓碑 + 管理员闸门）。
+ * Description: 系统级技能包写面单测（M14 棒 4-E：上传/发布/下线/墓碑/删除 + 管理员闸门）。
  * 分支用例喂<b>合成包</b>（{@link #syntheticZip}，与 SystemSkillSeedServiceTest 同法自建），
  * 闸门用 {@link OpenGate} 覆写 protected {@code isPlatformAdmin()} 放行。逐条钉住裁定：
  * <ul>
@@ -49,11 +49,15 @@ import static org.mockito.Mockito.when;
  *       "SUCCESS"，拒绝若走 notice 就等于对调用方报成功（真机探针 10-13 就是这么抓出第一版写法的）；
  *       契约尺抛的 notice 在 {@code parseAsRejection} 边界翻译一次，业务侧上传端点零漂移。</li>
  *   <li>墓碑 patch 只带 id+status：valid/origin/sha 全为 null（ignoreNull 语义＝不进 SET 不动列），存储零动作；</li>
+ *   <li>删除：上传档＝<b>先删行、再回收对象</b>（坏行比孤儿对象坏）；{@code origin=BUILTIN}＝拒绝且指路「注销」，
+ *       行与对象零动作（对账器会把删掉的出厂包重新登记，删了等于白删）；行上没有 packageKey 时只删行；</li>
  *   <li>状态机：UNPUBLISHED/OFFLINE→publish 放行、PUBLISHED→offline 放行、TOMBSTONE→publish 拒绝、
  *       UNPUBLISHED→offline 拒绝；</li>
  *   <li>目标态已达成＝幂等成功不写库（publish/offline/tombstone 三态各钉一条）；</li>
  *   <li>行不存在＝三动作各抛一次且文案带 id；</li>
  *   <li>台账列表复用 {@code listByOrigin(null)}（不筛 origin）；</li>
+ *   <li>可读集候选（勾选页「系统技能包」的选项源）＝{@code listPublished()} 同一把尺、同名只出一条，
+ *       且同样过管理员闸——台账全档含未发布/下线/墓碑，拿它当候选就会登记出读不到的名字；</li>
  *   <li>闸门 fail closed：不覆写的真实实例 {@code isPlatformAdmin()} 返回 false，
  *       调 upload 拒绝且 {@code verifyNoInteractions} 存储与表。</li>
  * </ul>
@@ -252,6 +256,52 @@ class SystemSkillAdminServiceTest {
         verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
     }
 
+    // ---------------------------------------------------------------- 删除：只给上传档，先删行再回收对象
+
+    @Test
+    void deleteUploadedReaderRowFirstThenRecyclesObject() {
+        SkillAsset uploaded = asset(SkillAsset.ORIGIN_UPLOADED, SkillAsset.STATUS_PUBLISHED);
+        uploaded.setId(7L);
+        uploaded.setPackageKey("agent-skill/" + SYNTHETIC + "/v3.zip");
+        stubGetById(7L, uploaded);
+
+        openGate().delete(7L);
+
+        InOrder order = inOrder(skillAssetService, store);
+        order.verify(skillAssetService).deleteById(7L);
+        order.verify(store).delete("agent-skill/" + SYNTHETIC + "/v3.zip");
+        verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
+    }
+
+    @Test
+    void deleteBuiltinRowIsRefusedAndPointsAtTombstone() {
+        SkillAsset builtin = asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED);
+        builtin.setId(8L);
+        builtin.setPackageKey(SYNTHETIC_KEY);
+        stubGetById(8L, builtin);
+
+        assertThatThrownBy(() -> openGate().delete(8L))
+                .as("出厂包的行删了会被对账器重新登记＝白删，撤销出厂包只有墓碑这一条路")
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("注销");
+
+        verify(skillAssetService, never()).deleteById(any(Long.class));
+        verifyNoInteractions(store);
+    }
+
+    @Test
+    void deleteWithoutPackageKeyRemovesTheRowOnly() {
+        // 夹具不给 packageKey＝行上没地址（历史/异常态）：行照删，但不去存储侧凭空造一个 key 删
+        SkillAsset uploaded = asset(SkillAsset.ORIGIN_UPLOADED, SkillAsset.STATUS_UNPUBLISHED);
+        uploaded.setId(9L);
+        stubGetById(9L, uploaded);
+
+        openGate().delete(9L);
+
+        verify(skillAssetService).deleteById(9L);
+        verify(store, never()).delete(anyString());
+    }
+
     // ---------------------------------------------------------------- 台账列表
 
     @Test
@@ -265,6 +315,32 @@ class SystemSkillAdminServiceTest {
         verify(skillAssetService).listByOrigin(null);
     }
 
+    // ---------------------------------------------------------------- 可读集候选
+
+    @Test
+    void readableNamesComeFromThePublishedSetAndOccupyOneSlotPerName() {
+        SkillAsset newer = asset(SkillAsset.ORIGIN_UPLOADED, SkillAsset.STATUS_PUBLISHED);
+        newer.setVersion(2);
+        SkillAsset older = asset(SkillAsset.ORIGIN_UPLOADED, SkillAsset.STATUS_PUBLISHED);
+        SkillAsset other = asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED);
+        other.setSkillName("doc-writing");
+        // listPublished 按 id 倒序，同名两版都发布过时新的在前
+        when(skillAssetService.listPublished()).thenReturn(java.util.Arrays.asList(newer, older, other));
+
+        assertThat(openGate().listReadableNames())
+                .as("候选源＝可读集那一把尺，同名只占一条（两条同名选项＝页面给出两个看着一样、正文不同的项）")
+                .containsExactly(SYNTHETIC, "doc-writing");
+    }
+
+    @Test
+    void readableNamesStandBehindTheSameAdminGate() {
+        SystemSkillAdminService gated = new SystemSkillAdminService(skillAssetService, store);
+
+        assertThatThrownBy(gated::listReadableNames).isInstanceOf(ServiceException.class);
+
+        verifyNoInteractions(skillAssetService);
+    }
+
     // ---------------------------------------------------------------- 闸门 fail closed
 
     @Test
@@ -273,6 +349,9 @@ class SystemSkillAdminServiceTest {
         assertThat(gated.isPlatformAdmin()).as("无 Spring 上下文取不到 permitService＝按非管理员").isFalse();
 
         assertThatThrownBy(() -> gated.upload(syntheticZip()))
+                .isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> gated.delete(1L))
+                .as("删除与上传同闸：物理撤档是最重的动作，不能是写面上唯一没过闸的一个")
                 .isInstanceOf(ServiceException.class);
 
         verifyNoInteractions(store, skillAssetService);

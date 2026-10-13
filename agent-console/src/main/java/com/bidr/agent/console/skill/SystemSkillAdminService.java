@@ -10,11 +10,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Title: SystemSkillAdminService
- * Description: 系统级技能包的<b>写面</b>（上传/发布/下线/墓碑），平台管理员专属（M14 棒 4-E）。
+ * Description: 系统级技能包的<b>写面</b>（上传/发布/下线/墓碑/删除）＋管理读面（台账全档、可读集候选），
+ * 平台管理员专属（M14 棒 4-E）。
  *
  * <p><b>上传 ≠ 可见</b>：读侧（棒 4-F）判"可读"的依据是 {@code status=PUBLISHED ∧ valid=1} 的行，
  * 上传只落 {@code UNPUBLISHED}——必须有显式的"发布"动作才进可读集。台账列表
@@ -29,15 +33,16 @@ import java.util.List;
  * {@code agent-skill/<name>/v1.zip} 这个 key、把 jar 的内容覆盖掉。上传遇到同名 BUILTIN 行直接拒绝；
  * 反方向（管理员把出厂包下线/注销）是本服务的合法动作——所有权（origin）不是状态，三种状态转换都不写它。</p>
  *
- * <p><b>墓碑是"撤销"的唯一正确表达，不是软删</b>：棒 4-D 已钉住对账器行为——
+ * <p><b>墓碑是"撤销出厂包"的唯一正确表达，不是软删</b>：棒 4-D 已钉住对账器行为——
  * {@code origin=BUILTIN} 的行若只置 {@code valid=0} 会被下次启动就地复活，
  * 而 {@code status=TOMBSTONE} 的行对账器永远跳过。所以墓碑动作<b>只写 status 一列</b>
  * （只带 id+status 的 patch 走 {@code updateAsset}，ignoreNull 语义保证 valid/对象/sha 全不动）、
- * 不删对象（存储层本来也没有删的口，对象留档可回滚）。</p>
+ * 不删对象（留档可回滚）。出厂包因此<b>没有"删除"这一档</b>：见 {@link #delete}——
+ * 行删了 jar 还在，重启就重新登记，所以那条路只给 {@code origin=UPLOADED} 的行。</p>
  *
  * <p><b>拒绝一律 {@link ServiceException}，不用 {@link NoticeException}</b>：框架的异常渲染是两条路——
  * notice 落 {@code status.code=0}（"提示语义"，前端看到的就是成功），ServiceException 才落非零码。
- * 本服务的六种"什么都没做成"（非管理员、坏包、撞保留名、状态不允许、行不存在、墓碑想发布）
+ * 本服务的"什么都没做成"（非管理员、坏包、撞保留名、状态不允许、行不存在、墓碑想发布、删出厂包）
  * 全属拒绝，若走 notice 就等于对着管理员说"传成功了"而台账里根本没那行。
  * {@code SkillPackageParser} 是业务侧上传共用的尺（它抛 notice，改动会漂移到业务端点上），
  * 所以翻译只在本服务的边界做一次。</p>
@@ -148,6 +153,35 @@ public class SystemSkillAdminService {
     }
 
     /**
+     * 物理删除：<b>删台账行 ＋ 回收包对象</b>，不可恢复。与 {@link #tombstone} 是两件事，别混用：
+     * 墓碑只写 status、留行留对象（可回滚），删除是把这一档彻底撤掉。
+     *
+     * <p>🔴 <b>{@code origin=BUILTIN} 一律拒绝</b>：启动对账器认"同名无行"＝没装过，下一次重启会按 jar
+     * 里的内容重新登记一行（{@code SystemSkillSeedService#applyOne} 的第一分支），所以删出厂包等于白删一次、
+     * 还顺手把管理员看到的"已经没了"变成假象。撤销出厂包只有墓碑这一条路，拒绝消息里就指这条路。</p>
+     *
+     * <p><b>先删行、再回收对象</b>：与上传的"先存对象再落行"是同一判据的镜像——坏行（账上有地址、货不在）
+     * 比孤儿对象坏得多，对象回收失败只在 {@link SystemSkillStore#delete} 里告警，不把已删掉的行塞回去。</p>
+     *
+     * <p>删的是哪一版就是哪一版：同名多版并存时（重传落新行、旧行仍 PUBLISHED）只删点到的这一行，
+     * 其余版本照常可读；这一行的名字因此可能仍在候选清单里，不是缺陷。</p>
+     */
+    public void delete(Long id) {
+        requirePlatformAdmin();
+        SkillAsset row = requireById(id);
+        if (SkillAsset.ORIGIN_BUILTIN.equals(row.getOrigin())) {
+            throw new ServiceException("出厂包不能删除：jar 里带着它，下次启动会按内容重新登记一行，删了等于白删。"
+                    + "要撤销出厂包请用「注销」: id=" + id + " name=" + row.getSkillName());
+        }
+        skillAssetService.deleteById(id);
+        if (row.getPackageKey() != null) {
+            store.delete(row.getPackageKey());
+        }
+        log.info("系统技能包已删除: id={} name={} v{}（行与对象都撤，不可恢复）",
+                id, row.getSkillName(), row.getVersion());
+    }
+
+    /**
      * 管理页台账列表：origin/status 都不筛（含未发布/下线/墓碑全档），同样过管理员闸。
      * 口径说明：复用仓库既有 {@code listByOrigin(null)}，故 valid=0 的软删历史行不进列表——
      * 墓碑行的 valid 恒为原值（写墓碑不碰 valid），全档语义由 status 表达。
@@ -155,6 +189,29 @@ public class SystemSkillAdminService {
     public List<SkillAsset> listAssets() {
         requirePlatformAdmin();
         return skillAssetService.listByOrigin(null);
+    }
+    /**
+     * 系统半<b>可读集</b>的包名清单＝勾选页「系统技能包」那一栏的候选源。
+     *
+     * <p><b>判据直接吃 {@link SkillAssetService#listPublished()}</b>：它与业务侧提示词装配读的那把尺
+     * 同一个方法，所以"候选里出现的名字，agent 一定读得到"是结构性成立。台账全档
+     * {@link #listAssets()} 不能当候选源——它含未发布/下线/墓碑，选了那一类名字就是登记一个读不到的意图，
+     * 而这一栏不参与运行期，错登记连报错都不会有。</p>
+     *
+     * <p>同名多版都发布过时名字只占一条（{@code listPublished} 按 id 倒序 ⇒ 新的那版赢），
+     * 与 {@code findPublishedByName} 的取行口径一致：清单里一个名字出现两次，
+     * 页面就会给出两个看起来一样、正文却不同的选项。</p>
+     */
+    public List<String> listReadableNames() {
+        requirePlatformAdmin();
+        List<String> names = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (SkillAsset row : skillAssetService.listPublished()) {
+            if (seen.add(row.getSkillName())) {
+                names.add(row.getSkillName());
+            }
+        }
+        return names;
     }
 
     // ---------------------------------------------------------------- 内部

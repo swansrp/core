@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * Title: SystemSkillAdminController
- * Description: 系统级技能包写面（M14 棒 4-E）：上传 / 发布 / 下线 / 注销墓碑 ＋ 台账列表。
+ * Description: 系统级技能包写面（M14 棒 4-E）：上传 / 发布 / 下线 / 注销墓碑 ＋ 台账列表 ＋ 可读集名单。
  * 读侧（哪些空间能读到）不在这只端点上——那是棒 4-F 的 {@code SkillCatalogPort} 并集，
  * 本端点只管"这个包在系统层面是什么状态"。
  * <p>
@@ -33,9 +33,11 @@ import java.util.List;
  * 拦截链仍走平台 {@code /web/api} 的登录校验。之所以不把闸写在控制器上：写面一旦有第二个入口
  * （后续 CLI／导入），控制器层的闸会漏，服务层的闸漏不掉。
  * <p>
- * <b>为什么"上线"这一档不叫 delete</b>：业务侧 {@code /web/api/skill/{id}/delete} 是软删语义，
- * 而系统半的"撤销出厂包"必须是 {@code TOMBSTONE}——只置 valid=0 的行会被下次启动的对账器就地复活
- * （棒 4-D 已用单测钉住），端点名直接把落库的状态写出来，免得调用方以为删了就没了。
+ * <b>撤销分两档，别混用</b>：出厂包（{@code origin=BUILTIN}）只能"注销"落 {@code TOMBSTONE}——
+ * 业务侧 {@code /web/api/skill/{id}/delete} 那种软删在这里是错的，只置 valid=0 的行会被下次启动的
+ * 对账器就地复活（棒 4-D 已用单测钉住），所以端点名直接把落库的状态写出来，免得调用方以为删了就没了。
+ * <b>物理删除只对上传档（{@code origin=UPLOADED}）开放</b>：行与包对象一起撤、不可恢复；
+ * 拿去删出厂包会被拒——jar 里带着那个包，行删了下次重启照样重新登记，等于白删一次还留下假象。
  *
  * @author Sharp
  * @since 2026-10-13
@@ -60,6 +62,15 @@ public class SystemSkillAdminController {
         }
         RespConvert.customBindConvert(views, SkillAssetView.class);
         return views;
+    }
+
+    @ApiOperation(value = "系统技能包可读集名单（勾选页「系统技能包」栏的候选源，仅平台管理员）",
+            notes = "判据＝status=PUBLISHED ∧ valid=1，与提示词注入读的是同一把尺 ⇒ 候选里出现的名字 agent 一定读得到；"
+                    + "同名多版都发布过时名字只出一条（按最新那版）。台账全档 /assets 含未发布/下线/墓碑，"
+                    + "选了那一类名字就是登记一个读不到的意图，不要拿它当候选源")
+    @GetMapping("/readable-names")
+    public List<String> readableNames() {
+        return adminService.listReadableNames();
     }
 
     /**
@@ -111,5 +122,15 @@ public class SystemSkillAdminController {
     public void tombstone(@ApiParam(value = "台账行 id", required = true) @PathVariable("id") Long id) {
         adminService.tombstone(id);
         Resp.notice("系统技能包已注销（墓碑），重启不再装回");
+    }
+
+    @ApiOperation(value = "删除（物理撤档：台账行与包对象一起删，不可恢复；只对上传档开放）",
+            notes = "只允许 origin=UPLOADED 的行。出厂包（BUILTIN）一律拒绝：jar 里带着那个包，"
+                    + "行删了下次启动对账器会重新登记一行，撤销出厂包请用 /{id}/tombstone。"
+                    + "同名多版并存时只删点到的这一版，其余版本照常可读；对象回收失败只告警不回滚已删的行")
+    @PostMapping("/{id}/delete")
+    public void delete(@ApiParam(value = "台账行 id", required = true) @PathVariable("id") Long id) {
+        adminService.delete(id);
+        Resp.notice("系统技能包已删除（行与包对象都撤，不可恢复）");
     }
 }
