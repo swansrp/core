@@ -1,5 +1,6 @@
 package com.bidr.llm.agent;
 
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.usage.ModelCallContext;
 import com.bidr.llm.usage.ModelCallContexts;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -106,6 +107,12 @@ public class ToolAgentRunner {
         for (Object tools : effectiveTools) {
             specs.addAll(ToolSpecifications.toolSpecificationsFrom(tools));
         }
+        // M14 棒6：工具面收窄（平台勾选）——落点在采集之后、上报之前，于是下面三件事是同一份数据：
+        // 发给模型的 schema、装配单记录的工具名清单、执行期的准入名单。
+        // "装配单里不存在那只工具"与"会话手里真的没有"因此不是两判据；模型幻觉出一个已收窄的名字也执行不到。
+        // 未装过滤器 Bean＝清单原样；没装台账的工程与改造前逐字符一致。
+        specs = restrictToolSurface(specs);
+        Set<String> admittedToolNames = new HashSet<>(toolNamesOf(specs));
         // M14 棒2：工具面定形上报（装配单正源）。清单取自 specs 本身⇒与发给模型的那份逐字一致，
         // 含上面条件追加的回捞工具；同批带出 system 槽原文＝"当时那份提示词"的唯一真源
         // （它是本方法的入参，拼装过程不再可复现，不落这一笔就永久只能知道段名）；
@@ -180,7 +187,7 @@ public class ToolAgentRunner {
                     sink.log("调用工具 " + req.name() + "(" + fullText(req.arguments()) + ")");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
                     long toolStart = System.currentTimeMillis();
-                    String toolResult = executeTool(req, effectiveTools);
+                    String toolResult = executeTool(req, effectiveTools, admittedToolNames);
                     if (opt.getBudgetExemptTools().contains(req.name())) {
                         long waited = System.currentTimeMillis() - toolStart;
                         exemptMs += waited;
@@ -244,7 +251,7 @@ public class ToolAgentRunner {
                 for (ToolExecutionRequest req : last.content().toolExecutionRequests()) {
                     sink.log("收口例外：执行 " + req.name() + " 后无工具直出");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
-                    String closingResult = executeTool(req, effectiveTools);
+                    String closingResult = executeTool(req, effectiveTools, admittedToolNames);
                     sink.onToolResult(req.id(), req.name(), closingResult);
                     // I10 收口路径不卸载：最后一次 generate 之前追加的消息一律原文
                     // （此时省 token 已无意义，丢信息代价最大；allowOffload=false 双保险）
@@ -319,8 +326,17 @@ public class ToolAgentRunner {
 
     /** 执行单次工具调用：自反射调用 @Tool 方法，所有异常（参数 JSON 解析失败、工具不存在、
      *  工具内部抛出）一律转错误文本回给 LLM 自纠——不用 0.33 DefaultToolExecutor（其参数解析在
-     *  try 外会击穿循环，且工具异常文案仅 t.toString()，NPE 等无 message 时模型无从自纠） */
-    private static String executeTool(ToolExecutionRequest req, List<Object> toolObjects) {
+     *  try 外会击穿循环，且工具异常文案仅 t.toString()，NPE 等无 message 时模型无从自纠）
+     *
+     *  <p>M14 棒6：准入名单是收窄后的那份（{@code admittedToolNames}），与发给模型的 schema 同源。
+     *  名字在反射面上找得到但不在准入名单＝平台本次把它勾掉了——这一条必须挡在执行期，
+     *  否则"schema 里没有"只约束得住老实模型，约束不住幻觉出来的工具名。</p> */
+    private static String executeTool(ToolExecutionRequest req, List<Object> toolObjects,
+                                      Set<String> admittedToolNames) {
+        if (admittedToolNames != null && !admittedToolNames.contains(req.name())) {
+            return "【工具调用失败】工具 '" + req.name() + "' 本次会话未启用（工具面已按平台勾选收窄），"
+                    + "请改用可用工具清单里的名字";
+        }
         Method method = toolMethodOf(toolObjects, req.name());
         if (method == null) {
             return "【工具调用失败】未找到工具 '" + req.name() + "'，请核对可用工具名后重试";
@@ -355,6 +371,71 @@ public class ToolAgentRunner {
             }
         }
         return names;
+    }
+
+    /**
+     * 工具面收窄（M14 棒6）：把平台勾选应用到已采集的工具清单上。
+     *
+     * <p>四条不变式，都在这一处收口：</p>
+     * <ol>
+     *   <li><b>没装过滤器＝零行为</b>：{@code BeanUtil} 取不到 Bean（含取 Bean 本身抛错）直接原样返回，
+     *       不查上下文、不写日志，与改造前逐字符一致；</li>
+     *   <li><b>只能减</b>：过滤器返回的名字必须是入参名字集的子集，出现未入参的名字＝越权加工具，
+     *       整次过滤作废并退回原清单——勾选界面不该有"发明工具"这条路；</li>
+     *   <li><b>空清单是合法结果</b>：返回空表＝"这一档一个都不勾"，照用；只有 {@code null} 表示不过滤，
+     *       两者不得混用（三态语义由实现方保，框架这里不翻译）；</li>
+     *   <li><b>故障退回未过滤</b>：过滤器抛异常＝额外收紧失败，结构性上限仍在代码的类型上，
+     *       所以这里 fail open；让会话因为台账读不到而手里没工具，是拿运维腿去砍业务腿。</li>
+     * </ol>
+     */
+    static List<ToolSpecification> restrictToolSurface(List<ToolSpecification> specs) {
+        AgentToolSurfaceFilter filter;
+        try {
+            filter = BeanUtil.getBean(AgentToolSurfaceFilter.class);
+        } catch (Exception e) {
+            // 未装台账的工程走到这里就是终点：不 warn（那是每条会话一次的噪声），行为与改前一致
+            return specs;
+        }
+        if (filter == null || specs == null || specs.isEmpty()) {
+            return specs;
+        }
+        String agentKey = null;
+        try {
+            ModelCallContext ctx = ModelCallContexts.current();
+            agentKey = ctx == null ? null : ctx.getAgentKey();
+        } catch (Exception e) {
+            log.warn("工具面收窄取会话身份失败（按不过滤处理）: error={}", e.getMessage());
+            return specs;
+        }
+        List<ToolSpecification> restricted;
+        try {
+            restricted = filter.restrict(agentKey, specs);
+        } catch (Exception e) {
+            log.warn("工具面收窄执行失败（本次会话退回完整工具面）: agent={} error={}", agentKey, e.getMessage());
+            return specs;
+        }
+        if (restricted == null) {
+            return specs;
+        }
+        Set<String> admitted = new HashSet<>(toolNamesOf(specs));
+        List<String> invented = new ArrayList<>();
+        for (String name : toolNamesOf(restricted)) {
+            if (!admitted.contains(name)) {
+                invented.add(name);
+            }
+        }
+        if (!invented.isEmpty()) {
+            log.warn("工具面收窄被拒绝：过滤器返回了本次没有的工具名（勾选只能减）: agent={} 多出={}",
+                    agentKey, invented);
+            return specs;
+        }
+        if (admitted.contains(AgentToolRecall.TOOL_NAME) && !toolNamesOf(restricted).contains(AgentToolRecall.TOOL_NAME)) {
+            // 回捞工具被勾掉＝上下文预算的取回路径没了（A9/I15 的半开态），如实 warn 让配置的人知道
+            log.warn("工具面收窄移除了回捞工具 {}：本会话的超长工具结果将无法取回", AgentToolRecall.TOOL_NAME);
+        }
+        log.info("工具面收窄生效：agent={} 完整 {} 只 → 收窄后 {} 只", agentKey, admitted.size(),
+                toolNamesOf(restricted).size());
+        return new ArrayList<>(restricted);
     }
 
     /** 工具面定形上报：listener 默认空实现（无台账即零行为），实现方抛错也吞在这里——
