@@ -7,6 +7,7 @@ import com.bidr.agent.console.dao.entity.SkillAsset;
 import com.bidr.agent.console.dao.repository.AgentManifestService;
 import com.bidr.agent.console.dto.AgentDefinitionView;
 import com.bidr.agent.console.dto.AgentManifestView;
+import com.bidr.agent.console.dto.AgentSelectionCmd;
 import com.bidr.agent.console.dto.SkillAssetView;
 import com.bidr.agent.console.selection.AgentDefinitionAdminService;
 import com.bidr.agent.console.skill.SystemSkillAdminService;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Title: AgentConsoleUserNameBindTest
  * Description: 管理页把工号翻成姓名的读侧契约（M14 棒 2 增量补 ＋ 棒 6 同族）。钉四条：
- * ① 两条读腿都把工号翻成姓名，且 <b>工号列一律原样保留</b>——装配单的 asked_by 是原文展开权限的比对依据，
+ * ① 每个把视图还给页面的端点都翻姓名（清单／单条／保存三腿同形），且 <b>工号列一律原样保留</b>——装配单的 asked_by 是原文展开权限的比对依据，
  * 换成姓名就等于把闸拆了；勾选行的 update_by 是审计列，同理不许动；② 查不到的工号与空工号都留空，
  * 页面按"姓名∨工号"回落，不许编造；③ 行 → 视图（{@code of}）不查库，派生列只由端点回填；
  * ④ {@code @BindUser} 的靶子钉死（工号列 → ac_user.customer_number，取 name），改注解必先过这条腿。
@@ -181,6 +182,18 @@ class AgentConsoleUserNameBindTest {
         AgentDefinitionView pure = AgentDefinitionView.of("flow:ask", definitionRow(ADMIN_NUMBER));
         assertEquals(ADMIN_NUMBER, pure.getUpdateBy());
         assertNull(pure.getUpdateByName());
+    }
+
+    @Test
+    @DisplayName("保存腿同形：响应里也带姓名（与清单／单条一致，页面无需靠重读列表才出姓名）")
+    void definitionSaveLegFillsNameSameAsReadLegs() {
+        Mockito.when(adminService.save("flow:ask", new AgentSelectionCmd()))
+                .thenReturn(AgentDefinitionView.of("flow:ask", definitionRow(ADMIN_NUMBER)));
+
+        AgentDefinitionView saved = definitionController.save("flow:ask", new AgentSelectionCmd());
+
+        assertEquals(ADMIN_NAME, saved.getUpdateByName());
+        assertEquals(ADMIN_NUMBER, saved.getUpdateBy());
     }
 
     @Test

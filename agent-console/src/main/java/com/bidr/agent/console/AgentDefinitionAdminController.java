@@ -84,6 +84,8 @@ public class AgentDefinitionAdminController {
             @PathVariable("agentKey") String agentKey,
             @ApiParam(value = "五栏勾选清单（三态）", required = true)
             @RequestBody AgentSelectionCmd cmd) {
-        return adminService.save(agentKey, cmd);
+        AgentDefinitionView view = adminService.save(agentKey, cmd);
+        RespConvert.customBindConvert(view, AgentDefinitionView.class);
+        return view;
     }
 }
