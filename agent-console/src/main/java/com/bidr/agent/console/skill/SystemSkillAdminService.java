@@ -46,9 +46,9 @@ import java.util.List;
  * 同名重传＝新版本新行（不 update 旧行），墓碑过的名字允许再传、视作新一档
  * （{@code findByName} 不过滤 valid，正是为了让版本从最近一行继续递增）。</p>
  *
- * <p><b>管理员闸门走反射，不加 authorization 依赖</b>：与棒 2 已定的
- * {@code AgentManifestController#isAdmin()} 同一口径——本模块不编译依赖 authorization，
- * bean 取不到＝按非管理员（fail closed，宁可拒绝也不放开）。</p>
+ * <p><b>管理员闸门走反射，不吃 authorization 的编译依赖</b>：与棒 2 已定的
+ * {@code AgentManifestController#isAdmin()} 同一口径——本模块虽为 {@code @BindUser} 的姓名翻译
+ * 编译依赖 authorization，权限判定仍只反射取 bean，取不到＝按非管理员（fail closed，宁可拒绝也不放开）。</p>
  *
  * @author Sharp
  * @since 2026-10-13
@@ -204,8 +204,9 @@ public class SystemSkillAdminService {
     }
 
     /**
-     * 管理员判定走 authorization 的 permitService（本模块不编译依赖它，
-     * bean 取不到＝按非管理员处理，同 {@code AgentManifestController} 口径——
+     * 管理员判定走 authorization 的 permitService（反射取 bean，本模块对 authorization 的编译依赖
+     * 只服务 {@code @BindUser} 的姓名翻译，权限判定不吃它；bean 取不到＝按非管理员处理，
+     * 同 {@code AgentManifestController} 口径——
      * 宁可拒绝一个操作，不能让缺 bean 变成放开写面）。protected 是为单测放行留的缝。
      */
     protected boolean isPlatformAdmin() {

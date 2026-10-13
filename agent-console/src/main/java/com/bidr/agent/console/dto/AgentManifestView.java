@@ -2,6 +2,7 @@ package com.bidr.agent.console.dto;
 
 import com.bidr.agent.console.dao.entity.AgentManifest;
 import com.bidr.agent.console.manifest.AgentManifestSkillRef;
+import com.bidr.authorization.bind.annotation.BindUser;
 import com.bidr.llm.agent.conversation.AgentConversation;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +44,14 @@ public class AgentManifestView {
 
     @ApiModelProperty(value = "发起人")
     private String askedBy;
+
+    /**
+     * 发起人姓名（读侧派生，非表列）：{@code asked_by} 存的是工号，且它同时是原文展开权限的比对依据，
+     * 不能改成姓名——所以姓名另挂一列，由端点在返回前经框架 {@code @BindUser} 批量翻译回填
+     */
+    @BindUser("askedBy")
+    @ApiModelProperty(value = "发起人姓名（按工号查 ac_user.name，查不到为空，页面回落到工号）")
+    private String askedByName;
 
     @ApiModelProperty(value = "工具面定形时刻")
     private Date createAt;
@@ -86,7 +95,7 @@ public class AgentManifestView {
     @ApiModelProperty(value = "业务标注（featureId/spaceId 等）")
     private Map<String, String> extras = new LinkedHashMap<>();
 
-    /** 落库行 → 读视图（null 入参返回 null，由端点渲染成"没有这场的装配单"）；重载荷列不在此填 */
+    /** 落库行 → 读视图（null 入参返回 null，由端点渲染成"没有这场的装配单"）；重载荷列与姓名派生列不在此填 */
     public static AgentManifestView of(AgentManifest row) {
         if (row == null) {
             return null;

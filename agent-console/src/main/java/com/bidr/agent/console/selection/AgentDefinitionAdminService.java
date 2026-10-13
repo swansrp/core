@@ -237,7 +237,8 @@ public class AgentDefinitionAdminService {
     }
 
     /**
-     * 管理员判定走 authorization 的 permitService（本模块不编译依赖它，取不到＝按非管理员处理，
+     * 管理员判定走 authorization 的 permitService（反射取 bean，本模块对 authorization 的编译依赖
+     * 只服务 {@code @BindUser} 的姓名翻译，权限判定不吃它；取不到＝按非管理员处理，
      * 同 {@code SystemSkillAdminService}／{@code AgentManifestController} 口径——
      * 宁可拒掉一次操作，不能让缺 bean 变成放开写面）。protected 是为单测放行留的缝。
      */

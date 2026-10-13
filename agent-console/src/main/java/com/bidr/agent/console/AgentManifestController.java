@@ -3,6 +3,7 @@ package com.bidr.agent.console;
 import com.bidr.agent.console.dao.entity.AgentManifest;
 import com.bidr.agent.console.dao.repository.AgentManifestService;
 import com.bidr.agent.console.dto.AgentManifestView;
+import com.bidr.kernel.config.response.RespConvert;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.agent.OperatorResolver;
@@ -70,6 +71,7 @@ public class AgentManifestController {
                                        @RequestParam(value = "include", required = false) String include) {
         AgentManifest row = repo.findBySession(sessionId);
         AgentManifestView view = AgentManifestView.of(row);
+        RespConvert.customBindConvert(view, AgentManifestView.class);
         if (view == null || !StringUtils.hasText(include)) {
             return view;
         }
@@ -93,13 +95,15 @@ public class AgentManifestController {
         for (AgentManifest row : repo.listRecent(agentKey, size)) {
             views.add(AgentManifestView.of(row));
         }
+        RespConvert.customBindConvert(views, AgentManifestView.class);
         return views;
     }
 
     /**
      * 展开权限：发起人本人（按装配单落的 asked_by 比服务端权威身份）或平台管理员。
-     * 管理员判定走 authorization 的 permitService（本模块不编译依赖它，取不到＝按非管理员处理，
-     * 宁可少给一个入口，不能让缺 bean 变成放开原文）
+     * 管理员判定走 authorization 的 permitService 反射取 bean（本模块对 authorization 的编译依赖只服务
+     * {@code @BindUser} 的姓名翻译，权限判定不吃它），取不到＝按非管理员处理，
+     * 宁可少给一个入口，不能让缺 bean 变成放开原文
      */
     private void requireExpandable(AgentManifest row) {
         String operator = currentOperator();

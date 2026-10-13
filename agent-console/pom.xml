@@ -33,6 +33,7 @@
                 <llm.version>${jarVersion}</llm.version>
                 <oss.version>${jarVersion}</oss.version>
                 <platform.version>${jarVersion}</platform.version>
+                <authorization.version>${jarVersion}</authorization.version>
             </properties>
         </profile>
         <profile>
@@ -48,6 +49,7 @@
                 <llm.version>20261010031245-75</llm.version>
                 <oss.version>20261010031245-75</oss.version>
                 <platform.version>20261010031245-75</platform.version>
+                <authorization.version>20261010031245-75</authorization.version>
             </properties>
         </profile>
     </profiles>
@@ -80,6 +82,16 @@
             <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
+        </dependency>
+        <!--
+            authorization：只吃它的 @BindUser 显示绑定（装配单读视图把发起人工号翻成姓名，走 kernel
+            BindRepoHandler 的批量 IN，不逐行查库）。口径同 core/oss 的 OssWikiCollaboratorVO。
+            🔴 管理员闸门仍不走它——权限判定继续用反射取 permitService（见 AgentManifestController#isAdmin）
+        -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization</artifactId>
+            <version>${authorization.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
