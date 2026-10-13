@@ -1,6 +1,10 @@
 package com.bidr.llm.model;
 
 import com.bidr.llm.provider.ModelConfigProvider;
+import com.bidr.llm.usage.ModelCallContext;
+import com.bidr.llm.usage.ModelCallContexts;
+import com.bidr.llm.usage.ModelUsageFacts;
+import com.bidr.llm.usage.ModelUsageReporter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -127,6 +131,10 @@ public class RawSseStreamingChatModel {
             String apiKey = provider.getApiKey(purpose, null);
             String modelName = provider.getModelName(purpose);
             long timeoutSecs = provider.getTimeoutSeconds(purpose);
+            // 计量要素在发起线程一次取齐（M14 棒5）：下面的收口发生在 okhttp 回调线程，
+            // 那一层既没有会话上下文、也不再持有明文 key，身份与指纹只能在此快照
+            UsageScope usageScope = new UsageScope(modelName, ModelUsageReporter.keyFingerprint(apiKey),
+                    ModelCallContexts.current(), System.currentTimeMillis());
             // 空闲读超时：取总超时与空闲上限的较小值——静默挂起快速失败，不再陪跑满全量超时；
             // 总时长仍由 callTimeout 控制（慢但持续吐数据的长生成不受影响）
             long idleSecs = Math.min(timeoutSecs, idleCapSeconds);
@@ -160,7 +168,7 @@ public class RawSseStreamingChatModel {
                 @Override
                 public void onResponse(Call call, okhttp3.Response response) {
                     try (okhttp3.Response resp = response) {
-                        handleResponse(resp, sink);
+                        handleResponse(resp, sink, usageScope);
                     } catch (Exception e) {
                         sink.onError(toError(e));
                     }
@@ -190,7 +198,7 @@ public class RawSseStreamingChatModel {
     }
 
     /** HTTP 层收口：非 2xx / 非 SSE 内容类型均带原始响应体报错（网关真实错误可见，不再被库层吞没） */
-    private void handleResponse(okhttp3.Response resp, Listener sink) throws Exception {
+    private void handleResponse(okhttp3.Response resp, Listener sink, UsageScope usageScope) throws Exception {
         String contentType = resp.header("Content-Type", "");
         if (!resp.isSuccessful() || contentType == null || !contentType.contains("text/event-stream")) {
             String errBody = resp.body() == null ? "" : resp.body().string();
@@ -199,14 +207,14 @@ public class RawSseStreamingChatModel {
                     + " · " + brief(errBody, 500)));
             return;
         }
-        parseSse(resp, sink);
+        parseSse(resp, sink, usageScope);
     }
 
     /**
      * SSE 逐行解析：data 行取 JSON delta（content / reasoning_content / tool_calls 增量），
      * [DONE] 或流正常结束时拼装最终响应收口；流被截断（无 [DONE] 且零产出）时报错
      */
-    private void parseSse(okhttp3.Response resp, Listener sink) throws Exception {
+    private void parseSse(okhttp3.Response resp, Listener sink, UsageScope usageScope) throws Exception {
         if (resp.body() == null) {
             sink.onError(new RuntimeException("LLM SSE 响应无正文体（HTTP " + resp.code() + "）"));
             return;
@@ -215,6 +223,7 @@ public class RawSseStreamingChatModel {
         StringBuilder reasoning = new StringBuilder();
         Map<Integer, ToolCallAcc> toolCalls = new HashMap<>();
         int[] usage = null;
+        String finish = null;
         boolean doneSeen = false;
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(resp.body().byteStream(), StandardCharsets.UTF_8))) {
@@ -245,6 +254,12 @@ public class RawSseStreamingChatModel {
                 if (usageNode.isObject()) {
                     usage = new int[]{usageNode.path("prompt_tokens").asInt(0),
                             usageNode.path("completion_tokens").asInt(0)};
+                }
+                // finish_reason 通常只在末片给（其余片为 null）：留最后一次非空值。
+                // 放在 delta 守卫之前——usage-only 的收尾片 choices 为空数组，走不到下面
+                String chunkFinish = textOf(chunk.path("choices").path(0), "finish_reason");
+                if (chunkFinish != null && !chunkFinish.isEmpty()) {
+                    finish = chunkFinish;
                 }
                 JsonNode delta = chunk.path("choices").path(0).path("delta");
                 if (delta.isMissingNode() || !delta.isObject()) {
@@ -294,10 +309,13 @@ public class RawSseStreamingChatModel {
                         .arguments(acc.arguments.toString())
                         .build());
             }
+            // 工具轮同样落一行：一次模型调用一行是计量的粒度，按形态分流的只有 token 栏
+            reportUsage(usageScope, usage, reqs.size(), finish);
             sink.onComplete(Response.from(AiMessage.from(reqs), tokenUsage));
             return;
         }
         if (content.length() > 0 || doneSeen) {
+            reportUsage(usageScope, usage, 0, finish);
             sink.onComplete(Response.from(AiMessage.from(content.toString()), tokenUsage));
             return;
         }
@@ -405,6 +423,46 @@ public class RawSseStreamingChatModel {
         String id;
         String name;
         final StringBuilder arguments = new StringBuilder();
+    }
+
+    /**
+     * 一次流式调用的计量要素（发起线程取齐、回调线程读，M14 棒5）：okhttp 回调跑在 Dispatcher 线程上，
+     * 那一层既没有会话 ThreadLocal、也不再持有 key，身份与指纹只能在发起那一刻快照成不可变对象带过去。
+     * 开始时刻也记在这里——流式耗时是"发起到收口"的用户等待时长，不是解析循环自身的时长
+     */
+    private static final class UsageScope {
+        private final String modelName;
+        private final String keyFingerprint;
+        private final ModelCallContext identity;
+        private final long startMs;
+
+        UsageScope(String modelName, String keyFingerprint, ModelCallContext identity, long startMs) {
+            this.modelName = modelName;
+            this.keyFingerprint = keyFingerprint;
+            this.identity = identity;
+            this.startMs = startMs;
+        }
+    }
+
+    /**
+     * 流式收口交用量（M14 棒5）：只在两条正常收口腿调用——失败腿（非 2xx／流提前结束／异常）不落，
+     * 失败时网关不给 usage，落一行空读数对计量无意义，失败本身已有 warn 日志。
+     *
+     * <p>token 栏按 {@code usage == null} 如实留空：本客户端<b>没有</b>在请求体追加
+     * {@code stream_options.include_usage}（改共享件的默认请求体要点名），网关不主动回吐时
+     * 这一路只有模型名与耗时。</p>
+     */
+    private void reportUsage(UsageScope scope, int[] usage, int toolCount, String finish) {
+        ModelUsageFacts facts = ModelUsageReporter.newFacts(ModelUsageFacts.VIA_SSE, purpose, scope.modelName,
+                scope.keyFingerprint, scope.identity);
+        if (usage != null) {
+            facts.setPromptTokens(usage[0]);
+            facts.setCompletionTokens(usage[1]);
+        }
+        facts.setToolCount(toolCount);
+        facts.setFinishReason(finish);
+        facts.setCostMs(System.currentTimeMillis() - scope.startMs);
+        ModelUsageReporter.report(facts);
     }
 
     private static String trimEnd(String s, char c) {

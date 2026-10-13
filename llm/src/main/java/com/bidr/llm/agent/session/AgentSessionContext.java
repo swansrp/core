@@ -4,6 +4,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.agent.AgentLoopListener;
 import com.bidr.llm.agent.AgentToolSurfaceSink;
 import com.bidr.llm.agent.ToolSurfaceFacts;
+import com.bidr.llm.usage.ModelCallContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +69,14 @@ public class AgentSessionContext {
 
     public AgentSessionState getState() {
         return state;
+    }
+
+    /**
+     * 本会话的用量计量身份（M14 棒5）：只装框架知道的三栏——会话标识、agent 键、发起人。
+     * 空间/业务归属不在这里（框架不认空间语义），业务侧要按空间拆账自己经 sessionId 关联
+     */
+    public ModelCallContext usageIdentity() {
+        return new ModelCallContext(state.getSessionId(), state.getAgentKey(), state.getOperator());
     }
 
     /** 启动参数（Controller 透传的业务结构，只读视图） */

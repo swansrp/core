@@ -1,5 +1,7 @@
 package com.bidr.llm.agent;
 
+import com.bidr.llm.usage.ModelCallContext;
+import com.bidr.llm.usage.ModelCallContexts;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
@@ -813,7 +815,18 @@ public class ToolAgentRunner {
          *  被停止时恢复中断标记并抛 RuntimeException（上层 isInterrupted 收口为 STOPPED），
          *  子线程的调用不强行取消（OkHttp 无法即时切断），跑完自然回收、结果丢弃 */
         private static Response<AiMessage> interruptibly(Supplier<Response<AiMessage>> call, BooleanSupplier stopCheck) {
-            java.util.concurrent.Future<Response<AiMessage>> future = LLM_CALLS.submit(call::get);
+            // 会话身份显式带进子线程（M14 棒5）：实际 HTTP 调用与用量收口都发生在池线程，
+            // 那一层读不到发起线程的上下文——不传，计量行就永远没有会话归属
+            // （同装配单把身份当参数交出去的口径，不指望 ThreadLocal 跨线程）
+            ModelCallContext identity = ModelCallContexts.current();
+            java.util.concurrent.Future<Response<AiMessage>> future = LLM_CALLS.submit(() -> {
+                ModelCallContexts.set(identity);
+                try {
+                    return call.get();
+                } finally {
+                    ModelCallContexts.clear();
+                }
+            });
             try {
                 while (true) {
                     try {

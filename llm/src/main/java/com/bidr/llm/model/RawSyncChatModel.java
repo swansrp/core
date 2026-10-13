@@ -1,6 +1,9 @@
 package com.bidr.llm.model;
 
 import com.bidr.llm.provider.ModelConfigProvider;
+import com.bidr.llm.usage.ModelCallContexts;
+import com.bidr.llm.usage.ModelUsageFacts;
+import com.bidr.llm.usage.ModelUsageReporter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -171,6 +174,8 @@ public class RawSyncChatModel implements ChatLanguageModel {
         String apiKey = provider.getApiKey(purposeType, null);
         String modelName = provider.getModelName(purposeType);
         long timeoutSecs = provider.getTimeoutSeconds(purposeType);
+        // 指纹在发起线程算好往下带：只有这里见过明文 key，台账侧拿到的一直是摘要
+        String keyFingerprint = ModelUsageReporter.keyFingerprint(apiKey);
         OkHttpClient http = clientOf(baseUrl, modelName, timeoutSecs, apiKey);
 
         String body;
@@ -222,7 +227,7 @@ public class RawSyncChatModel implements ChatLanguageModel {
                     + "截断不应原样重试", purposeType);
         }
 
-        trace(modelName, usage, reasoningTokens, toolCalls.size(), finish, costMs,
+        trace(modelName, keyFingerprint, usage, reasoningTokens, toolCalls.size(), finish, costMs,
                 toolCalls.isEmpty() ? null : text);
 
         if (toolCalls.isEmpty() && !hasText(text)) {
@@ -418,7 +423,7 @@ public class RawSyncChatModel implements ChatLanguageModel {
     }
 
     /** 每次调用一行审计轨迹（业务可落库核对思考纪律/成本/截断）；preambleText 非空表示工具轮丢弃的模型前言 */
-    private void trace(String modelName, JsonNode usage, int reasoningTokens, int toolCount,
+    private void trace(String modelName, String keyFingerprint, JsonNode usage, int reasoningTokens, int toolCount,
                        String finish, long costMs, String preambleText) {
         String line = "model=" + modelName + " tokens=" + usage.path("prompt_tokens").asInt(0)
                 + "/" + usage.path("completion_tokens").asInt(0)
@@ -428,6 +433,32 @@ public class RawSyncChatModel implements ChatLanguageModel {
         if (traceSink != null) {
             traceSink.accept(line + (hasText(preambleText) ? " 前言=" + brief(preambleText, 60) : ""));
         }
+        reportUsage(modelName, keyFingerprint, usage, reasoningTokens, toolCount, finish, costMs);
+    }
+
+    /**
+     * 结构化用量交台账（M14 棒5）：与上面那行文案<b>并行</b>——文案给人读、事实给表读，
+     * 撤掉文案会同时弄坏既有 IT 断言和运维读日志的习惯。sink 不装时静默跳过（零行为变化）。
+     * token 栏只在网关给了 usage 对象时才填：NULL＝没拿到，不等于 0
+     */
+    private void reportUsage(String modelName, String keyFingerprint, JsonNode usage, int reasoningTokens,
+                             int toolCount, String finish, long costMs) {
+        ModelUsageFacts facts = ModelUsageReporter.newFacts(ModelUsageFacts.VIA_SYNC, purposeType, modelName,
+                keyFingerprint, ModelCallContexts.current());
+        if (usage.isObject()) {
+            facts.setPromptTokens(usage.path("prompt_tokens").asInt(0));
+            facts.setCompletionTokens(usage.path("completion_tokens").asInt(0));
+            if (usage.path("total_tokens").isNumber()) {
+                facts.setTotalTokens(usage.path("total_tokens").asInt(0));
+            }
+        }
+        if (reasoningTokens > 0) {
+            facts.setReasoningTokens(reasoningTokens);
+        }
+        facts.setToolCount(toolCount);
+        facts.setFinishReason(finish);
+        facts.setCostMs(costMs);
+        ModelUsageReporter.report(facts);
     }
 
     private JsonNode parse(String raw) {

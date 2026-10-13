@@ -1,6 +1,7 @@
 package com.bidr.llm.agent;
 
 import com.bidr.llm.agent.session.AgentSessionContext;
+import com.bidr.llm.usage.ModelCallContexts;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 
 import java.util.List;
@@ -64,6 +65,10 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
     @Override
     public final void start(AgentSessionContext ctx, Map<String, Object> payload) throws Exception {
         S state = prepare(ctx, payload);
+        // 用量计量的身份锚点（M14 棒5）：整场循环期间本线程带会话身份，模型层收口时现读；
+        // 循环里的同步调用发生在 llm-call 子线程，那一跳由 ToolAgentRunner 显式把快照带过去。
+        // 线程池会复用线程，clear 必须在 finally——漏一次就是把上一场的身份写给下一场
+        ModelCallContexts.set(ctx.usageIdentity());
         try {
             AgentLoopResult result = runner.run(model(state, ctx, payload), systemPrompt(state, ctx, payload),
                     userPrompt(state, ctx, payload), tools(state, ctx, payload), loopOptions(), ctx.loopListener());
@@ -73,6 +78,7 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
             }
             ctx.setSummary(summary(result, state, ctx, payload));
         } finally {
+            ModelCallContexts.clear();
             release(state);
         }
     }

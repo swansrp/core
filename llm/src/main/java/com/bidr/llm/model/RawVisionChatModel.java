@@ -1,6 +1,9 @@
 package com.bidr.llm.model;
 
 import com.bidr.llm.provider.ModelConfigProvider;
+import com.bidr.llm.usage.ModelCallContexts;
+import com.bidr.llm.usage.ModelUsageFacts;
+import com.bidr.llm.usage.ModelUsageReporter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -187,6 +190,19 @@ public class RawVisionChatModel {
         if (traceSink != null) {
             traceSink.accept(line);
         }
+        // 结构化用量交台账（M14 棒5）：视觉链路不发工具，toolCount 留 NULL＝不适用，不填 0 冒充"调了 0 只"
+        ModelUsageFacts facts = ModelUsageReporter.newFacts(ModelUsageFacts.VIA_VISION, purposeType, modelName,
+                ModelUsageReporter.keyFingerprint(apiKey), ModelCallContexts.current());
+        if (usage.isObject()) {
+            facts.setPromptTokens(usage.path("prompt_tokens").asInt(0));
+            facts.setCompletionTokens(usage.path("completion_tokens").asInt(0));
+            if (usage.path("total_tokens").isNumber()) {
+                facts.setTotalTokens(usage.path("total_tokens").asInt(0));
+            }
+        }
+        facts.setFinishReason(finish);
+        facts.setCostMs(costMs);
+        ModelUsageReporter.report(facts);
 
         if (!hasText(text)) {
             throw new IllegalStateException("LLM 视觉调用返回空 content: " + usage);
