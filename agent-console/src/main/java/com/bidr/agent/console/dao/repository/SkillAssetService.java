@@ -65,6 +65,29 @@ public class SkillAssetService extends BaseSqlRepo<SkillAssetMapper, SkillAsset>
     }
 
     /**
+     * 按名取<b>可读</b>的一行（无则 null）：读侧闸门用，与 {@link #listPublished()} 是同一把尺
+     * （{@code status=PUBLISHED ∧ valid=1}），差别只在这里按名收口。
+     *
+     * <p><b>可读的单位是行、不是名字</b>：同名重传落的是 {@code UNPUBLISHED} 的新行，
+     * 上一个已发布行仍然活着——"发布的是那一版"，新版本没发布就不生效。若这里改成
+     * {@code findByName}（取最近一行、不过滤状态）再判状态，就会出现"清单里有它、读了报不存在"
+     * 的分裂（{@code listPublished} 按行筛、清单里那个旧发布行在，闸门却看新行）。
+     * 可见集与读闸门必须同一处判据，所以同名多行取 id 最大（最新那一版）。</p>
+     */
+    public SkillAsset findPublishedByName(String skillName) {
+        if (skillName == null || skillName.trim().isEmpty()) {
+            return null;
+        }
+        return lambdaQuery()
+                .eq(SkillAsset::getSkillName, skillName.trim())
+                .eq(SkillAsset::getStatus, SkillAsset.STATUS_PUBLISHED)
+                .eq(SkillAsset::getValid, CommonConst.YES)
+                .orderByDesc(SkillAsset::getId)
+                .last("limit 1")
+                .one();
+    }
+
+    /**
      * 落一行新档案。
      *
      * <p>方法名不叫 {@code save}：基类 {@code IService#save} 已占同名同参（返回 boolean），
