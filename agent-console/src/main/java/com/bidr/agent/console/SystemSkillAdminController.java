@@ -1,8 +1,10 @@
 package com.bidr.agent.console;
 
 import com.bidr.agent.console.dao.entity.SkillAsset;
+import com.bidr.agent.console.dto.SkillAssetView;
 import com.bidr.agent.console.skill.SystemSkillAdminService;
 import com.bidr.kernel.config.response.Resp;
+import com.bidr.kernel.config.response.RespConvert;
 import com.bidr.kernel.exception.ServiceException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -47,10 +50,16 @@ public class SystemSkillAdminController {
     private final SystemSkillAdminService adminService;
 
     @ApiOperation(value = "系统级技能包台账（含未发布/下线/墓碑全档，仅平台管理员可读）",
-            notes = "不做 origin/status 筛选：管理页要看全。valid=0 的软删历史行不在列（撤销的正确表达是 status=TOMBSTONE）")
+            notes = "不做 origin/status 筛选：管理页要看全。valid=0 的软删历史行不在列（撤销的正确表达是 status=TOMBSTONE）。"
+                    + "登记人两列并给：createBy＝工号（审计列），createByName＝姓名（读侧按工号批量查 ac_user，查不到为空）")
     @GetMapping("/assets")
-    public List<SkillAsset> assets() {
-        return adminService.listAssets();
+    public List<SkillAssetView> assets() {
+        List<SkillAssetView> views = new ArrayList<>();
+        for (SkillAsset row : adminService.listAssets()) {
+            views.add(SkillAssetView.of(row));
+        }
+        RespConvert.customBindConvert(views, SkillAssetView.class);
+        return views;
     }
 
     /**
@@ -63,15 +72,17 @@ public class SystemSkillAdminController {
                     + "同名重传＝版本递增的新行，旧行不动；入库字节是确定性重打包产物，"
                     + "sha 按归一化后的字节算（与对账器同一把尺）")
     @PostMapping("/upload")
-    public SkillAsset upload(@ApiParam(value = "skill 包 zip 文件（单根文件夹结构）", required = true)
-                             @RequestPart("file") MultipartFile file) {
+    public SkillAssetView upload(@ApiParam(value = "skill 包 zip 文件（单根文件夹结构）", required = true)
+                                 @RequestPart("file") MultipartFile file) {
         byte[] bytes;
         try {
             bytes = file.getBytes();
         } catch (Exception e) {
             throw new ServiceException("skill 包读取失败: " + e.getMessage());
         }
-        return adminService.upload(bytes);
+        SkillAssetView view = SkillAssetView.of(adminService.upload(bytes));
+        RespConvert.customBindConvert(view, SkillAssetView.class);
+        return view;
     }
 
     @ApiOperation(value = "发布（进入系统半可读集）",

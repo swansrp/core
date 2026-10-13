@@ -3,6 +3,7 @@ package com.bidr.agent.console;
 import com.bidr.agent.console.dto.AgentDefinitionView;
 import com.bidr.agent.console.dto.AgentSelectionCmd;
 import com.bidr.agent.console.selection.AgentDefinitionAdminService;
+import com.bidr.kernel.config.response.RespConvert;
 import com.bidr.kernel.exception.ServiceException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -54,7 +55,9 @@ public class AgentDefinitionAdminController {
                     + "只有 runtimeColumn 指到的 capabilityPackages 参与运行期，其余四栏本棒只登记")
     @GetMapping("/list")
     public List<AgentDefinitionView> list() {
-        return adminService.list();
+        List<AgentDefinitionView> views = adminService.list();
+        RespConvert.customBindConvert(views, AgentDefinitionView.class);
+        return views;
     }
 
     @ApiOperation(value = "单个 agent 的勾选视图",
@@ -64,7 +67,9 @@ public class AgentDefinitionAdminController {
     public AgentDefinitionView get(
             @ApiParam(value = "agent 运行时注册键（如 inkhub-doc-writer、flow:ask）", required = true)
             @PathVariable("agentKey") String agentKey) {
-        return adminService.get(agentKey);
+        AgentDefinitionView view = adminService.get(agentKey);
+        RespConvert.customBindConvert(view, AgentDefinitionView.class);
+        return view;
     }
 
     @ApiOperation(value = "整组覆盖五栏勾选（一次给齐；null＝该栏置回未启用＝全部放行）",

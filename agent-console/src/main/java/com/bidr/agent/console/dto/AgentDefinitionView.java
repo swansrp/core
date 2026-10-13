@@ -2,6 +2,7 @@ package com.bidr.agent.console.dto;
 
 import com.bidr.agent.console.dao.entity.AgentDefinition;
 import com.bidr.agent.console.selection.SelectionColumn;
+import com.bidr.authorization.bind.annotation.BindUser;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -69,10 +70,19 @@ public class AgentDefinitionView {
     @ApiModelProperty(value = "最后改勾选的人（平台管理员；无行则空）")
     private String updateBy;
 
+    /**
+     * 最后改勾选的人的姓名（读侧派生，非表列）：{@code update_by} 存工号，且它由
+     * {@code @AccountContextFill} 写入、不是本页能改的东西，所以姓名另挂一列，
+     * 由读端点在返回前经框架 {@code @BindUser} 批量翻译回填。
+     */
+    @BindUser("updateBy")
+    @ApiModelProperty(value = "最后改勾选的人姓名（按工号查 ac_user.name，查不到为空，页面回落到工号）")
+    private String updateByName;
+
     @ApiModelProperty(value = "最后改勾选的时刻")
     private Date updateAt;
 
-    /** 库行 → 读视图（row 为 null＝无行，五列一律留 null＝未启用） */
+    /** 库行 → 读视图（row 为 null＝无行，五列一律留 null＝未启用）；姓名派生列不在此填 */
     public static AgentDefinitionView of(String agentKey, AgentDefinition row) {
         AgentDefinitionView view = new AgentDefinitionView();
         view.setAgentKey(agentKey);
