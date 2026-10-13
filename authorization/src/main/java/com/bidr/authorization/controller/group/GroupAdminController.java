@@ -5,6 +5,7 @@ import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.vo.group.GroupRes;
+import com.bidr.authorization.vo.group.GroupTransferVO;
 import com.bidr.authorization.vo.group.GroupTypeRes;
 import com.bidr.authorization.vo.group.UserGroupTreeRes;
 import com.bidr.kernel.config.response.Resp;
@@ -53,6 +54,18 @@ public class GroupAdminController extends BaseAdminTreeController<AcGroup, Group
     public void deleteGroupType(@RequestBody IdReqVO vo) {
         userGroupService.deleteGroupType(String.valueOf(vo.getId()));
         Resp.notice("删除用户组类型成功");
+    }
+
+    @ApiOperation(value = "导出用户组类型（跨环境迁移文件）")
+    @RequestMapping(value = "/export", method = RequestMethod.GET)
+    public GroupTransferVO exportGroupType(String groupType) {
+        return userGroupService.exportGroupType(groupType);
+    }
+
+    @ApiOperation(value = "导入用户组类型（同 id 类型已存在则整体替换）")
+    @RequestMapping(value = "/import", method = RequestMethod.POST)
+    public void importGroupType(@RequestBody GroupTransferVO req) {
+        Resp.notice(userGroupService.importGroupType(req));
     }
 
 

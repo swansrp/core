@@ -42,6 +42,11 @@ public class AcGroupService extends BaseSqlRepo<AcGroupDao, AcGroup> {
         return super.selectOne(wrapper);
     }
 
+    public void deleteByType(String type) {
+        LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper().eq(AcGroup::getType, type);
+        super.delete(wrapper);
+    }
+
     public List<AcGroup> getAllGroups() {
         LambdaQueryWrapper<AcGroup> wrapper = super.getQueryWrapper()
                 .orderByAsc(AcGroup::getDisplayOrder);

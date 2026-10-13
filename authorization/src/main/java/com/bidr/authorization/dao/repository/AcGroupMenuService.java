@@ -60,5 +60,14 @@ public class AcGroupMenuService extends BaseSqlRepo<AcGroupMenuMapper, AcGroupMe
         } else {
             return new ArrayList<>();
         }
-    }    // 仅包含业务逻辑方法，不包含DDL定义
-}
+    }
+
+    public void deleteByGroupIds(List<Long> groupIds) {
+        if (FuncUtil.isEmpty(groupIds)) {
+            return;
+        }
+        LambdaQueryWrapper<AcGroupMenu> wrapper = super.getQueryWrapper()
+                .in(AcGroupMenu::getGroupId, groupIds);
+        super.delete(wrapper);
+    }
+}    // 仅包含业务逻辑方法，不包含DDL定义
