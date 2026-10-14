@@ -128,7 +128,7 @@ public interface SsoUserHandler {
 2. **子系统 auth 取舍**：SSO 能力随 core 默认可用；子系统若不需要对外签发，可只用回查/校验侧（`introspect`、`verifyToken`、上下文注入、空间隔离），把签发口当作"存在但不入口"。具体裁剪口径见 `docs/立项-M15-平台化架构.md`。
 3. **不改既有行为**：本模块 SSO 全部为纯加法，既有文件零修改；`login` 三分支与既有 bidr 形态逐支等价。
 4. 🔴 **`/web/sso/*` 不进 `bidr.idm.security-path`**：idm 验签拦截器只守该路径清单（现值 `/web/auth/login`），把出票/签发口加进去＝挂到 idm 验签下，与"core 不感知 idm"直接冲突。bidr 形态下本组口无 Idm 前置，`IdmHolder` 空 ⇒ 走"未接入SSO身份源"业务拒绝＝**预期降级，不是故障**（真机已验）。
-5. 🔴 **接入方前端 `VITE_ssoDomain` 必填**：缺省时框架推导出的 `/sso` 落点无人服务（404）。出票方（IdP）侧需要一张中转页（墨枢＝`#/sso/authorize`，参与登录守卫、页面自查登录态分流）；**验票方（子系统）侧不需要任何中转页**。
+5. 🔴 **接入方前端 `VITE_ssoDomain` 必填**：缺省时框架推导出的 `/sso` 落点无人服务（404）。出票方（IdP）侧需要一张中转页——**前端用本框架时随框架自带**（`#/sso/authorize` 已在 framework router 静态注册 `meta.public`，应用侧零改动；不走登录守卫，登录态分流由页面挂载自查。2026-10-14 自墨枢业务仓下沉框架）；**验票方（子系统）侧不需要任何中转页**。
 6. 🔴 **"登录后还要做的附加动作"＝加 `LoginFillTokenInf` fillToken bean，不写 controller**：core `afterLogin()` 已遍历该 SPI（`SpaceLoginTokenFill` 是现成实现）。子系统只是换了身份解析段，登录后段本来就是继承的。
 7. 🔴 **回调地址口径**：白名单只收**不带裸 query 的地址**，跳转时整串百分号编码——`&` 不编码会被截断，票挂在 query 上、再带裸 query 必丢参；出票/中转页的回调地址入参名＝**`sso_redirect_uri`**，不得叫 `redirect_uri`（与出票口服务端参数名及 OAuth 习惯名撞车、易误传）。命中判定＝**全串等值**（列 collation `utf8mb4_bin`），禁前缀/like，防子域延伸绕过。
 8. 🔴 **两侧 NTP 同步，时钟偏移预算 <30 秒**：票 `exp = 签发 + ttl`（部署键 `sso.ticket.ttl-seconds`，部署档 60；core 不写兜底默认、缺席即拒；硬上界 900 秒——无 jti 吊销且票走 URL 参数可从浏览器历史/访问日志捞到，误填毫秒口径＝发不可撤的长命凭证）。验签侧 exp 判定含 30 秒偏移容忍（跨机 NTP 漂移不得把刚签出的票判死）⇒ **实际最大存活＝ttl + 30 秒**（60 档即 **90 秒**）。对外文案与风险评估一律按 90 秒口径。
