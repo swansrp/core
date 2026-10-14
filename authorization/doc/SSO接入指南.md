@@ -159,7 +159,7 @@ curl -X POST http://<host>/<ctx>/web/sso/introspect \
 
 ## 八、子系统接入（接墨枢出票面）
 
-目标形态：子系统登录改走"墨枢签票 → 本地验票换本系统会话"，**后端零 Java 改动、前端只改两处配置＋一行 api path**。
+目标形态：子系统登录改走"墨枢签票 → 本地验票换本系统会话"，**后端零 Java 改动、前端只改三处配置（零代码）**。
 
 ### 8.1 三处配置
 
@@ -167,7 +167,7 @@ curl -X POST http://<host>/<ctx>/web/sso/introspect \
 |---|----|------|------|
 | ① | 子系统后端 | `sso.jwt.public-key=<墨枢公钥单行 base64>` | 验票公钥（X.509）。配了才出生内置 handler（§五 形态三）。公钥由墨枢方**线下交付**（本项目现值备在 `sso-key/pub-oneline.txt`，392 字节单行；私钥永不出墨枢 `server/.env`）。 |
 | ② | 子系统前端 | `VITE_ssoDomain=<墨枢前端域名>` | 框架拼墨枢 authorize 中转页跳转地址用；不配＝跳转落点 404（§六 第 5 条）。 |
-| ③ | 子系统前端 | login api path 指向本实例 `/web/sso/login` | 票换会话走的就是 core 签发口（§三）。框架 `apis/login/login.ts` 的 `ssoLogin` 即该形态，子系统把它从 `/auth/login` 改指本实例即可。 |
+| ③ | 子系统前端 | `VITE_ssoType='core'` | 票换会话走本实例 core 签发口 `/web/sso/login`（§三；出参与 `/web/login` 同形）。框架 `ssoLogin` 见此键**非空即改打该口**（值本身不参与判断，建议 `'core'`）；缺省空＝照旧认证中心 `/auth/login`（IdaaS 形态零位移）。2026-10-14 由"手改框架一行 api path"改拍为配置开关。 |
 
 ### 8.2 一条登记 SQL（白名单出厂为空＝默认全拒，谁要接入谁先插行）
 
