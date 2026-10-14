@@ -3,6 +3,7 @@ package com.bidr.authorization.service.login;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.SsoConfigKeys;
 import com.bidr.authorization.dao.entity.AcPartner;
+import com.bidr.authorization.dao.entity.AcSsoRedirect;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcPartnerService;
 import com.bidr.authorization.dao.repository.AcSsoRedirectService;
@@ -18,6 +19,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
 
 /**
  * Title: SsoTicketService
@@ -32,9 +36,12 @@ import javax.servlet.http.HttpServletRequest;
  *       该分层判据由用例的 {@code verifyNoInteractions} 钉住；</li>
  *   <li>partner 闸：按 {@code app_id} 查 {@link AcPartnerService#getByAppKey}（app_key＝app_id）取 partner_id，
  *       查不到 ⇒ 拒（文案点名"app_id 未登记"）；</li>
- *   <li>白名单闸：按 {@code (partner_id, redirect_uri)} 组合、<b>全串等值</b> ∧ valid='1' 查
- *       {@link AcSsoRedirectService#existsValid}，未命中 ⇒ 拒（文案点名"redirect_uri 未登记"）。
- *       🔴 禁止退化成"只按 redirect_uri 全局查"——组合判据是 10-14 用户改拍已定案；</li>
+ *   <li>白名单闸：按 partner_id 取该 partner 全部 valid='1' 登记行（{@link AcSsoRedirectService#listValid}），
+ *       Java 侧做 <b>origin 等值</b>比较（{@link #originMatches}）：scheme 精确等值 ∧ host 等值（大小写不敏感）
+ *       ∧ port 按「缺省口规格化（http→80、https→443）后等值」；任一侧解析失败（无 scheme／无 host／
+ *       URISyntaxException／IllegalArgumentException）⇒ 不命中 ⇒ 拒（文案点名"redirect_uri 未登记"）。
+ *       🔴 禁止退化成"只按 redirect_uri 全局查"——partner 组合判据是 10-14 用户改拍已定案；
+ *       M-11 裁定：解析与比较放 Java 侧，mapper SQL 不动，登记行个位数无性能面；</li>
  *   <li>配置：私钥缺席/空白、ttl 缺席/非正 ⇒ 拒绝。🔴 core 不写死 60 秒兜底——缺省值属部署档 yml
  *       （棒 0b-2），静默用默认值出票是被禁止的行为；</li>
  *   <li>签票：{@link SsoJwtUtil#signWithExp}（G-8＝exp 在此只算一次，票内 {@code exp} 与响应
@@ -65,7 +72,7 @@ public class SsoTicketService {
      */
     private final AcPartnerService acPartnerService;
     /**
-     * 白名单闸：(partner_id, redirect_uri) 组合全串等值 ∧ valid='1'，core 自有表 ac_sso_redirect。
+     * 白名单闸：partner 名下登记行的 origin 与传入串 origin 等值（scheme+host+port），core 自有表 ac_sso_redirect。
      */
     private final AcSsoRedirectService acSsoRedirectService;
     /**
@@ -96,7 +103,7 @@ public class SsoTicketService {
      * 签发 SSO 票。
      *
      * @param appId       子系统应用标识（对应 ac_partner.app_key，必须已登记）
-     * @param redirectUri 回调地址（必须已登记在该 app_id 所属 partner 名下，全串等值）
+     * @param redirectUri 回调地址（其 origin 必须已登记在该 app_id 所属 partner 名下；出票后原串回显）
      * @param request     当前请求（登录态从 Authorization 头手抽，不依赖线程态）
      * @return 票串＋过期时刻（epoch 秒）＋回调地址回填
      */
@@ -116,8 +123,11 @@ public class SsoTicketService {
         Validator.assertNotNull(partner, ErrCodeSys.SYS_ERR_MSG,
                 SsoConfigKeys.TICKET_PARAM_APP_ID + " 未登记（不在ac_partner），拒绝签发SSO票据");
 
-        // 3) 白名单闸：(partner_id, redirect_uri) 组合全串等值 ∧ valid='1'；原串整体入查，不截断不比较前缀
-        boolean whitelisted = acSsoRedirectService.existsValid(partner.getId(), redirectUri);
+        // 3) 白名单闸：按 partner 取全部 valid='1' 登记行，Java 侧 origin 等值比较（M-11）；
+        //    解析失败⇒不命中，原串不做任何截断/加工参与比较
+        List<AcSsoRedirect> registered = acSsoRedirectService.listValid(partner.getId());
+        boolean whitelisted = registered != null && registered.stream()
+                .anyMatch(row -> originMatches(row.getRedirectUri(), redirectUri));
         Validator.assertTrue(whitelisted, ErrCodeSys.SYS_ERR_MSG,
                 SsoConfigKeys.TICKET_PARAM_REDIRECT_URI + " 未登记（不在该应用的SSO回调白名单），拒绝签发SSO票据");
 
@@ -144,5 +154,53 @@ public class SsoTicketService {
         log.info("[SSO出票]登录名: {}, 工号: {}, app_id: {}, partner: {}, 回调: {}, 存活秒: {}",
                 loginName, caller.getCustomerNumber(), appId, partner.getId(), redirectUri, ticketTtlSeconds);
         return res;
+    }
+
+    /**
+     * 白名单判据唯一真相（M15 追加棒 1，M-11）：两侧 URL 各解析出 origin 后做等值比较。
+     * <ul>
+     *   <li>scheme：精确等值（大小写敏感——http 与 https 本就不同源，别名也不放行）；</li>
+     *   <li>host：等值，大小写不敏感（DNS 语义）；</li>
+     *   <li>port：-1 按 scheme 默认口规格化（http→80、https→443；其它 scheme 保持 -1）后等值；</li>
+     *   <li>任一侧解析失败（无 scheme／无 host／{@link URISyntaxException}／{@link IllegalArgumentException}）
+     *       ⇒ false ⇒ 走既有"redirect_uri 未登记"拒绝文案。</li>
+     * </ul>
+     * 纯函数、无副作用，登记行串与传入串都只读不加工。
+     */
+    static boolean originMatches(String registeredUri, String candidateUri) {
+        String registeredOrigin = originOf(registeredUri);
+        return registeredOrigin != null && registeredOrigin.equals(originOf(candidateUri));
+    }
+
+    /**
+     * 解析出 {@code scheme://host:port} 规格化串；解析不出 ⇒ null。
+     * port 缺省只对 http/https 补默认口（80/443），其它 scheme 保持 -1——两侧走同一规则，
+     * 比较仍自洽，只是非 http(s) 腿不做默认口等值。
+     * 🔴 只取 {@code #}（hash）之前的部分即本判据语义——{@link URI} 解析天然丢弃 fragment，
+     * path/query 也不参与，天然实现"只看 origin"。
+     */
+    private static String originOf(String uri) {
+        if (uri == null || uri.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            URI parsed = new URI(uri.trim());
+            String scheme = parsed.getScheme();
+            String host = parsed.getHost();
+            if (scheme == null || host == null) {
+                return null;
+            }
+            int port = parsed.getPort();
+            if (port == -1) {
+                if ("http".equals(scheme)) {
+                    port = 80;
+                } else if ("https".equals(scheme)) {
+                    port = 443;
+                }
+            }
+            return scheme + "://" + host.toLowerCase(java.util.Locale.ROOT) + ":" + port;
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            return null;
+        }
     }
 }

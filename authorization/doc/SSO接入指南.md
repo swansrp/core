@@ -130,7 +130,7 @@ public interface SsoUserHandler {
 4. 🔴 **`/web/sso/*` 不进 `bidr.idm.security-path`**：idm 验签拦截器只守该路径清单（现值 `/web/auth/login`），把出票/签发口加进去＝挂到 idm 验签下，与"core 不感知 idm"直接冲突。bidr 形态下本组口无 Idm 前置，`IdmHolder` 空 ⇒ 走"未接入SSO身份源"业务拒绝＝**预期降级，不是故障**（真机已验）。
 5. 🔴 **接入方前端 `VITE_ssoDomain` 必填**：缺省时框架推导出的 `/sso` 落点无人服务（404）。出票方（IdP）侧需要一张中转页——**前端用本框架时随框架自带**（`#/sso/authorize` 已在 framework router 静态注册 `meta.public`，应用侧零改动；不走登录守卫，登录态分流由页面挂载自查。2026-10-14 自墨枢业务仓下沉框架）；**验票方（子系统）侧不需要任何中转页**。
 6. 🔴 **"登录后还要做的附加动作"＝加 `LoginFillTokenInf` fillToken bean，不写 controller**：core `afterLogin()` 已遍历该 SPI（`SpaceLoginTokenFill` 是现成实现）。子系统只是换了身份解析段，登录后段本来就是继承的。
-7. 🔴 **回调地址口径**：白名单只收**不带裸 query 的地址**，跳转时整串百分号编码——`&` 不编码会被截断，票挂在 query 上、再带裸 query 必丢参；出票/中转页的回调地址入参名＝**`sso_redirect_uri`**，不得叫 `redirect_uri`（与出票口服务端参数名及 OAuth 习惯名撞车、易误传）。命中判定＝**全串等值**（列 collation `utf8mb4_bin`），禁前缀/like，防子域延伸绕过。
+7. 🔴 **回调地址口径**：白名单**登记行**收 **origin**（`#` 之前，即 `scheme://host:port`，不带路径/fragment/query）；跳转时整串百分号编码——`&` 不编码会被截断，票挂在 query 上、再带裸 query 必丢参；出票/中转页的回调地址入参名＝**`sso_redirect_uri`**，不得叫 `redirect_uri`（与出票口服务端参数名及 OAuth 习惯名撞车、易误传）。命中判定＝**origin 等值**（M15 追加棒 1，10-14 改拍）：传入完整回调 URL 与登记行各自解析出 origin 后比较——scheme 精确等值（**大小写也敏感**，`HTTP://` 不命中——按字面比较，不做 scheme 归一）、host 等值（大小写不敏感）、port 按缺省口规格化（http→80、https→443）后等值；任一侧解析失败（无 scheme/无 host/非法 URL）⇒ 不命中 ⇒ 拒。**子域延伸**（`a.b.com.evil.com`）、**换 port**、**换 scheme** 一律不命中。落地页路径/hash 由调用方自选，服务端只校验 origin；出票响应的 `redirectUri` 回显调用方原串（非登记行值）。
 8. 🔴 **两侧 NTP 同步，时钟偏移预算 <30 秒**：票 `exp = 签发 + ttl`（部署键 `sso.ticket.ttl-seconds`，部署档 60；core 不写兜底默认、缺席即拒；硬上界 900 秒——无 jti 吊销且票走 URL 参数可从浏览器历史/访问日志捞到，误填毫秒口径＝发不可撤的长命凭证）。验签侧 exp 判定含 30 秒偏移容忍（跨机 NTP 漂移不得把刚签出的票判死）⇒ **实际最大存活＝ttl + 30 秒**（60 档即 **90 秒**）。对外文案与风险评估一律按 90 秒口径。
 
 ---
@@ -173,12 +173,13 @@ curl -X POST http://<host>/<ctx>/web/sso/introspect \
 
 ```sql
 -- app_id 反查 partner：SELECT id FROM ac_partner WHERE app_key = '<子系统 app_id>';
+-- redirect_uri 登记值＝origin（# 之前，scheme://host:port；不带路径/fragment/query）
 INSERT INTO ac_sso_redirect (partner_id, redirect_uri, remark, create_by, create_at, valid)
-VALUES (<partner_id>, '<回调地址全串，不带裸 query>', '<用途/环境说明>', '<登记人>', NOW(), '1');
+VALUES (<partner_id>, 'http://127.0.0.1:5174', '<用途/环境说明>', '<登记人>', NOW(), '1');
 ```
 
 - 表 `ac_sso_redirect` 由 core 启动期自动建（`MybatisPlusConfig.initTables()` 收容器内全部 Schema bean），无需手工 DDL。
-- 🔴 `(partner_id, redirect_uri)` **普通索引、故意非 UNIQUE**＋`valid` 软删位（§六 第 7 条等值口径）：撤销登记＝置 `valid='0'`，再登记＝插新行。
+- 🔴 `(partner_id, redirect_uri)` **普通索引、故意非 UNIQUE**＋`valid` 软删位（§六 第 7 条 origin 等值口径）：撤销登记＝置 `valid='0'`，再登记＝插新行。
 - 管理入口两选一：直接跑该 SQL；或墨枢 partner 管理页（Channel）的"回调地址"登记区（Portal 表 `AcSsoRedirect`，需先把 Channel 页挂进菜单）。
 
 ### 8.3 出票调用样例（凭据用占位符）
@@ -196,6 +197,17 @@ curl -X POST 'http://<墨枢host>/<ctx>/web/sso/ticket?app_id=<子系统app_id>&
 ### 8.4 回调页归属
 
 飞书等第三方 IdP 的回调页天生是**宿主项目自己的件**：框架只给后端两口（签发 `/web/sso/login`、出票 `/web/sso/ticket`）。pan 项目那张在 `D:/workspace/plsintec/pan/view/src/views/pan/FeishuCallback.vue`，不在框架仓；墨枢自己要飞书登录才需要自建一张（本批未做）。
+
+### 8.5 会话过期自动回墨枢（可选）
+
+子系统前端配一枚环境变量即可把"会话失效"从本地登录页改道为整页跳回墨枢：
+
+```bash
+# 子系统前端 .env
+VITE_ssoLoginUrl=http://<墨枢域名>/#/sso/authorize?app_id=<app_id>&sso_redirect_uri=<默认落页完整URL>
+```
+
+行为：子系统会话失效时框架整页跳该地址 → 到墨枢 authorize 中转页，墨枢侧已登录则**直接出票**回跳（免再输一遍账号）；`sso_redirect_uri` 填子系统默认落页的完整 URL（含 hash）——中转页优先用它（框架已落地 `target_url` 优先级：优先落回过期前正在看的页面，缺省回落 `sso_redirect_uri`）。**不配该键＝失效照旧走本地登录页（现状），行为零变化。**
 
 ---
 

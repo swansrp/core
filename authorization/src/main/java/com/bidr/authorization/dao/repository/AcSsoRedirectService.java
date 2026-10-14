@@ -7,6 +7,9 @@ import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Title: AcSsoRedirectService
  * Description: Copyright: Copyright (c) 2026 Company: Bidr Ltd.
@@ -18,6 +21,25 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class AcSsoRedirectService extends BaseSqlRepo<AcSsoRedirectDao, AcSsoRedirect> {
+
+    /**
+     * 取某 partner 名下全部有效登记行（valid='1'）——供出票口白名单闸做 origin 等值比较用
+     * （M-11：解析与比较放 Java 侧，mapper SQL 不动；单 partner 登记行个位数，无性能面）。
+     * <p>🔴 登记面查重（{@link #existsValid} / {@link #existsValidExcludingId}）仍按全串等值走 SQL，
+     * 不改用本方法。</p>
+     *
+     * @param partnerId ac_partner 口径 id（null ⇒ 空列表，不抛）
+     * @return 该 partner 名下全部 valid='1' 登记行
+     */
+    public List<AcSsoRedirect> listValid(Long partnerId) {
+        if (partnerId == null) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<AcSsoRedirect> wrapper = super.getQueryWrapper();
+        wrapper.eq(AcSsoRedirect::getPartnerId, partnerId);
+        wrapper.eq(AcSsoRedirect::getValid, CommonConst.YES);
+        return super.select(wrapper);
+    }
 
     /**
      * 白名单命中判定：(partner_id, redirect_uri) 组合全串等值 ∧ valid='1'。

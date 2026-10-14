@@ -4,6 +4,7 @@ import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.common.RequestConst;
 import com.bidr.authorization.constants.token.TokenType;
 import com.bidr.authorization.dao.entity.AcPartner;
+import com.bidr.authorization.dao.entity.AcSsoRedirect;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcPartnerService;
 import com.bidr.authorization.dao.repository.AcSsoRedirectService;
@@ -21,7 +22,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,10 +32,12 @@ import java.util.Map;
  * Title: SsoTicketServiceTest
  * Description: 出票编排判定矩阵（M15 棒 0b-4 改拍回灌：SPI 整层撤销，mock 目标＝core 自有仓储
  * AcPartnerService＋AcSsoRedirectService；纯 Mockito + MockHttpServletRequest，离线）。
- * <p>覆盖：组合判据 (app_id→partner_id, redirect_uri) 全串等值命中签出且票可被公钥验回 username／
- * redirect_uri 未登记拒／<b>🔴 判别针：地址登记在另一家名下必拒（防"全局按 URI 查"回潮）</b>／
- * app_id 空白或查不到 ac_partner 拒且不透出白名单查询／前缀或子域形态地址不命中且入查的是原串全值
- * （防子域绕过）／未登录拒且 verifyNoInteractions 扩到 ac_user／ac_partner／ac_sso_redirect 三侧／
+ * <p>覆盖：白名单 origin 判据（M15 追加棒 1）——partner 名下登记行 origin 与传入串 origin 等值
+ * （scheme 精确 ∧ host 不敏感 ∧ port 缺省规格化）命中签出且票可被公钥验回 username／
+ * redirect_uri origin 未登记拒／<b>🔴 判别针：origin 登记在另一家名下必拒（防"全局按 origin 查"回潮）</b>／
+ * app_id 空白或查不到 ac_partner 拒且不透出白名单查询／origin 负向矩阵（子域延伸、换 port、换 scheme、
+ * 缺 port、无 scheme、非法 URL）与正向矩阵（同 origin 异 hash 出票且回显原串）／host 大小写不敏感、
+ * scheme 敏感／未登录拒且 verifyNoInteractions 扩到 ac_user／ac_partner／ac_sso_redirect 三侧／
  * 会话无效拒／脏 Authorization 头按框架口径业务拒绝／私钥缺席拒（非 NPE）／ttl 缺席或非正拒且不静默兜底 60。
  * 🔴 取号口径腿：票的 username claim＝ac_user.user_name（登录名）而非工号——工号与登录名取两个不同串；
  * 工号查不到 ac_user 行 ⇒ 拒签。</p>
@@ -53,8 +58,15 @@ public class SsoTicketServiceTest {
     private static final String APP_ID = "inkhub-sub-a";
     /** app_id 空白腿用的另一个合法 app（证明空白拒因在 partner 查询之前就发生） */
     private static final String REGISTERED_URI = "https://sub.example.com/sso/cb";
-    /** 登记在"另一家"（OTHER_PARTNER_ID）名下的合法地址——组合判据判别针的靶子 */
-    private static final String OTHER_PARTNER_URI = "https://sub.example.com/other/cb";
+    /** 登记行形态＝origin（# 之前，scheme+host+port；不带路径/fragment）——与传入的完整 URL 有形状差 */
+    private static final String REGISTERED_ORIGIN = "https://sub.example.com";
+    /** 登记在"另一家"（OTHER_PARTNER_ID）名下的合法地址——组合判据判别针的靶子（origin 只在 8 名下） */
+    private static final String OTHER_PARTNER_URI = "https://other.example.com/other/cb";
+    private static final String OTHER_PARTNER_ORIGIN = "https://other.example.com";
+    /** 本机开发口 origin——origin 语义矩阵（换 port／换 scheme／子域延伸）的靶心 */
+    private static final String LOCAL_ORIGIN = "http://127.0.0.1:5174";
+    /** 登记行大小写靶（host 不敏感腿）：登记形态故意用大写 Host */
+    private static final String CASED_ORIGIN = "http://Example.com:5174";
     private static final long PARTNER_ID = 9L;
     private static final long OTHER_PARTNER_ID = 8L;
 
@@ -84,17 +96,15 @@ public class SsoTicketServiceTest {
         partner.setId(PARTNER_ID);
         partner.setAppKey(APP_ID);
         Mockito.when(acPartnerService.getByAppKey(APP_ID)).thenReturn(partner);
-        // 白名单桩：组合 (partner_id, redirect_uri) 全串等值 ∧ valid='1' 才命中——
-        // (9, REGISTERED_URI) 登记过；OTHER_PARTNER_URI 只登记在 (8, ·) 名下，(9, ·) 组合不命中。
-        Mockito.when(acSsoRedirectService.existsValid(Mockito.anyLong(), Mockito.anyString()))
-                .thenAnswer(invocation -> {
-                    Long partnerId = invocation.getArgument(0);
-                    String uri = invocation.getArgument(1);
-                    if (PARTNER_ID == partnerId && REGISTERED_URI.equals(uri)) {
-                        return true;
-                    }
-                    return OTHER_PARTNER_ID == partnerId && OTHER_PARTNER_URI.equals(uri);
-                });
+        // 白名单桩（origin 语义）：按 partner_id 取 valid='1' 登记行，Java 侧 origin 等值。
+        // 🔴 登记行串＝origin 形态（不带路径/fragment），传入串＝完整回调 URL——形状差就是本矩阵的靶：
+        // partner 9 名下登记 https://sub.example.com、http://127.0.0.1:5174、http://Example.com:5174 三条；
+        // https://other.example.com 只登记在 partner 8 名下。
+        Mockito.when(acSsoRedirectService.listValid(Mockito.any())).thenReturn(Collections.emptyList());
+        Mockito.when(acSsoRedirectService.listValid(PARTNER_ID)).thenReturn(Arrays.asList(
+                row(PARTNER_ID, REGISTERED_ORIGIN), row(PARTNER_ID, LOCAL_ORIGIN), row(PARTNER_ID, CASED_ORIGIN)));
+        Mockito.when(acSsoRedirectService.listValid(OTHER_PARTNER_ID))
+                .thenReturn(Collections.singletonList(row(OTHER_PARTNER_ID, OTHER_PARTNER_ORIGIN)));
         Mockito.when(tokenService.verifyToken(Mockito.any(TokenInfo.class)))
                 .thenAnswer(invocation -> "tk-ticket".equals(((TokenInfo) invocation.getArgument(0)).getToken()));
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
@@ -113,6 +123,15 @@ public class SsoTicketServiceTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(RequestConst.TOKEN, callerToken);
         return request;
+    }
+
+    /** 登记行构造（只 partner_id＋redirect_uri 参与判据） */
+    private static AcSsoRedirect row(long partnerId, String redirectUri) {
+        AcSsoRedirect entity = new AcSsoRedirect();
+        entity.setPartnerId(partnerId);
+        entity.setRedirectUri(redirectUri);
+        entity.setValid("1");
+        return entity;
     }
 
     // ==================== 通腿：白名单内签出 ====================
@@ -136,9 +155,9 @@ public class SsoTicketServiceTest {
         Assert.assertTrue("exp 仍须落在 now+ttl 量级: " + expInTicket,
                 expInTicket >= System.currentTimeMillis() / 1000L + 59
                         && expInTicket <= System.currentTimeMillis() / 1000L + 61);
-        // 组合判据自证：partner 解析出的 id 与原串整值一起入查（core 不截断不加工）
+        // origin 判据自证：partner 解析出的 id 入查登记行列表（M-11：取行在 Java 侧比较，原串不截断）
         Mockito.verify(acPartnerService).getByAppKey(APP_ID);
-        Mockito.verify(acSsoRedirectService).existsValid(PARTNER_ID, REGISTERED_URI);
+        Mockito.verify(acSsoRedirectService).listValid(PARTNER_ID);
     }
 
     /**
@@ -207,41 +226,88 @@ public class SsoTicketServiceTest {
     }
 
     /**
-     * 🔴 判别针（防"全局按 URI 查"回潮，必须自证活着）：
-     * app_id 合法（partner 9）、redirect_uri 也在白名单表里登记过——但登记在**另一家**（partner 8）名下，
-     * 组合 (9, uri) 未命中 ⇒ 必拒；且入查参数必须带解析出的 partner_id，不得只按 URI 查。
+     * 🔴 判别针（防"全局按 origin 查"回潮，必须自证活着）：
+     * app_id 合法（partner 9）、传入串的 origin 也在白名单表里登记过——但登记在**另一家**（partner 8）名下，
+     * partner 9 名下取不到该 origin ⇒ 必拒；且入查必须带解析出的 partner_id，不得只按 origin 全局查。
      */
     @Test
     public void uriRegisteredUnderAnotherPartnerRejectedForThisApp() {
         try {
             newService(privCfg, 60L).issue(APP_ID, OTHER_PARTNER_URI, loggedInRequest());
-            Assert.fail("地址登记在另一家名下，本 app 组合未命中必须拒");
+            Assert.fail("origin 登记在另一家名下，本 app 取不到必须拒");
         } catch (ServiceException e) {
             Assert.assertTrue("文案应含根因短语: " + e.getMessage(), e.getMessage().contains("redirect_uri 未登记"));
         }
-        Mockito.verify(acSsoRedirectService).existsValid(PARTNER_ID, OTHER_PARTNER_URI);
-        Mockito.verify(acSsoRedirectService, Mockito.never()).existsValid(OTHER_PARTNER_ID, OTHER_PARTNER_URI);
+        Mockito.verify(acSsoRedirectService).listValid(PARTNER_ID);
+        Mockito.verify(acSsoRedirectService, Mockito.never()).listValid(OTHER_PARTNER_ID);
     }
 
+    /**
+     * 🔴 origin 判据负向矩阵（M15 追加棒 1）：登记 {@code http://127.0.0.1:5174}，传入串各变种全拒——
+     * 子域延伸（host 前缀套娃）／换 port／换 scheme（scheme 敏感）／缺 port＝默认口 80≠5174；
+     * 另盖传入无 scheme 与非法 URL（解析失败⇒不命中⇒走既有拒绝文案）。
+     */
     @Test
-    public void prefixOrSubdomainLookalikeRedirectNotWhitelistedAndFullStringPassed() {
+    public void originMismatchVariantsRejected() {
         SsoTicketService service = newService(privCfg, 60L);
-        // 前缀延伸（子域/路径追加）不命中：命中判定＝全串等值，core 侧无 startsWith/like 逻辑
-        for (String lookalike : new String[]{REGISTERED_URI + "/evil", "https://sub.example.com",
-                REGISTERED_URI + ".evil.com"}) {
+        String[] negatives = {
+                "http://127.0.0.1:5174.evil.com/#/x",   // 子域延伸
+                "http://127.0.0.1:5175/#/x",            // 换 port
+                "https://127.0.0.1:5174/#/x",           // 换 scheme
+                "http://127.0.0.1/#/x",                 // 缺 port＝默认口 80 ≠ 5174
+                "127.0.0.1:5174/#/x",                   // 无 scheme（解析失败）
+                "http://127.0.0.1:5174/#/x with space"  // 非法 URL（含空格，URI 解析失败）
+        };
+        for (String bad : negatives) {
             try {
-                service.issue(APP_ID, lookalike, loggedInRequest());
-                Assert.fail("近似地址不得命中白名单: " + lookalike);
+                service.issue(APP_ID, bad, loggedInRequest());
+                Assert.fail("origin 不命中的传入串必须拒绝: " + bad);
             } catch (ServiceException e) {
-                Assert.assertTrue(e.getMessage().contains("redirect_uri 未登记"));
+                Assert.assertTrue("文案应含根因短语: " + e.getMessage(), e.getMessage().contains("redirect_uri 未登记"));
             }
         }
-        // 针还活着：白名单必须以 (解析出的 partner_id, 原串整值) 被调用（若 core 截断/前缀化，这里参数对不上即翻红）
-        Mockito.verify(acSsoRedirectService).existsValid(PARTNER_ID, REGISTERED_URI + "/evil");
-        Mockito.verify(acSsoRedirectService).existsValid(PARTNER_ID, "https://sub.example.com");
-        Mockito.verify(acSsoRedirectService).existsValid(PARTNER_ID, REGISTERED_URI + ".evil.com");
+        // 判别针：每腿都按 partner 取了登记行（比较确实发生在取回的行上），且只查本 partner
+        Mockito.verify(acSsoRedirectService, Mockito.times(negatives.length)).listValid(PARTNER_ID);
+        Mockito.verify(acSsoRedirectService, Mockito.never()).listValid(OTHER_PARTNER_ID);
     }
 
+    /**
+     * origin 判据正向腿：登记 origin、传入带 hash（含 query/碎片形态各异）的完整 URL 均出票，
+     * 且 {@code res.getRedirectUri()} 必须**等于传入原串**（回显，不是登记行值）。
+     */
+    @Test
+    public void sameOriginDifferentHashesAllIssueAndEchoCallerString() {
+        SsoTicketService service = newService(privCfg, 60L);
+        String[] positives = {
+                "http://127.0.0.1:5174/#/ai/ai",
+                "http://127.0.0.1:5174/#/x?y=1",
+                "http://127.0.0.1:5174/#/"
+        };
+        for (String incoming : positives) {
+            SsoTicketRes res = service.issue(APP_ID, incoming, loggedInRequest());
+            Assert.assertNotNull("同 origin 传入必须出票: " + incoming, res.getIdToken());
+            Assert.assertEquals("回显必须是调用方原串，不是登记行值", incoming, res.getRedirectUri());
+        }
+    }
+
+    /**
+     * host 大小写不敏感腿：登记 {@code http://Example.com:5174}、传入小写 host ⇒ 命中；
+     * scheme 仍敏感（https 同 host 同 port 不命中）。
+     */
+    @Test
+    public void hostCaseInsensitiveButSchemeSensitive() {
+        SsoTicketService service = newService(privCfg, 60L);
+        SsoTicketRes res = service.issue(APP_ID, "http://example.com:5174/#/x", loggedInRequest());
+        Assert.assertEquals("http://example.com:5174/#/x", res.getRedirectUri());
+        try {
+            service.issue(APP_ID, "https://example.com:5174/#/x", loggedInRequest());
+            Assert.fail("同 host 同 port 换 scheme 必须拒绝");
+        } catch (ServiceException e) {
+            Assert.assertTrue(e.getMessage().contains("redirect_uri 未登记"));
+        }
+    }
+
+    /** 参数格式腿：空白 redirect_uri 仍参数拒绝（origin 语义不影响入口参数闸） */
     @Test
     public void blankRedirectRejectedAsParamFormat() {
         try {
