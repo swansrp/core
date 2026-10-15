@@ -35,7 +35,7 @@ public class GroupAccountRes {
     private Long groupId;
 
     @BindRepo(entity = AcUserGroup.class, matchField = "groupId", matchField2 = "userId",
-            sourceField = "groupId", sourceField2 = "userId")
+            sourceField = "groupId", sourceField2 = "userId", extractField = "dataScope")
     private String dataScope;
 
     @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")

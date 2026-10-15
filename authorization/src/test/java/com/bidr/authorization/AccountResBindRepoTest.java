@@ -41,7 +41,10 @@ public class AccountResBindRepoTest {
     private static AcDeptService acDeptService;
 
     @BeforeClass
-    public static void setUp() {
+    public static void setUp() throws Exception {
+        // RespConvert 的 handler/binder 静态缓存跨测试类共享，先清空保证任意执行顺序下各用各的上下文
+        GroupAccountResDataScopeBindTest.resetRespConvertCaches();
+
         acDeptService = Mockito.mock(AcDeptService.class);
         Mockito.when(acDeptService.getEntityClass()).thenReturn(AcDept.class);
         Mockito.when(acDeptService.select(Mockito.any(Wrapper.class))).thenAnswer(invocation ->

@@ -29,7 +29,7 @@ public class DepartmentAccountRes {
     private Long deptId;
 
     @BindRepo(entity = AcUserDept.class, matchField = "deptId", matchField2 = "userId",
-            sourceField = "deptId", sourceField2 = "userId")
+            sourceField = "deptId", sourceField2 = "userId", extractField = "dataScope")
     private String dataScope;
 
     @BindDict(type = "DATA_PERMIT_SCOPE_DICT", field = "dataScope")
