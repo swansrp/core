@@ -89,6 +89,20 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
         this.liveVerbose = liveVerbose;
     }
 
+    /**
+     * live 状态行判别（发射端词汇表的单源出口）：本类 push() 的四类字面前缀——
+     * 思考/应答进度、等待心跳、流式降级提示——消费方（agent 会话/问数链的 liveSink）
+     * 据此把状态行分流进替换式 live 通道，其余过程行（轮末思考归档等）走事件流留痕。
+     * 改上方 push() 各发射点的文案前缀时必须同步这里。
+     */
+    public static boolean isLiveStatusLine(String line) {
+        if (line == null) {
+            return false;
+        }
+        return line.startsWith("思考中") || line.startsWith("应答中")
+                || line.startsWith("等待 LLM") || line.startsWith("流式通道");
+    }
+
     private boolean syncOnly() {
         return fallback != null && streamBroken.get();
     }
