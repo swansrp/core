@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,5 +21,9 @@ public class AccountInfo extends UserInfo {
     private String token;
     private String clientType;
     private Map<Long, RoleInfo> role;
+    /**
+     * 归属租户 id 集合（显式字段，非 extraData）；null＝老 token/旁路形态无此档
+     */
+    private List<Long> tenantIds;
     private Map<String, Object> extraData = new HashMap<>(0);
 }

@@ -86,6 +86,14 @@ public enum AccountErrCode implements ErrCode {
 
     AC_AUDIT_OWN_APPLY(1035, "不能审批自己提交的权限申请"),
 
+    AC_TENANT_CODE_ALREADY_EXISTED(1036, "租户编码已存在"),
+
+    AC_TENANT_NOT_MEMBER(1037, "不是该租户成员，无权操作该租户"),
+
+    AC_TENANT_MEMBER_ALREADY_EXISTED(1038, "该用户已是租户成员"),
+
+    AC_TENANT_NOT_AVAILABLE(1039, "该租户不存在或已停用"),
+
     ;
 
     private final Integer errCode;

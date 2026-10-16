@@ -56,6 +56,8 @@ public enum TokenItem {
      * 角色列表
      */
     ROLE_MAP,
+    // 用户归属租户id集合（登录签发时烤入；缺键＝老项目/老 token 旁路形态）
+    TENANT_IDS,
 
     TIMESTAMP,
     EXPIRED

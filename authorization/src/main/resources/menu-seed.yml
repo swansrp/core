@@ -1,0 +1,134 @@
+# menu-seed.yml —— 框架菜单声明（core/authorization 交付面）
+# 声明即嵌套树：根＝顶级导航（topnav，menu_type=0），children 递归；
+# 父子关系来自本文件结构，不做库反查（判重与插入语义见 MenuSeeder 类注释）。
+# 内容正源＝现库 ac_menu 基线（2026-10-17 只读导出，menu_id 1..40 共 29 行）按树重排，
+# 首跑对既有行零新增零改动；末尾「补缺挂」三块是刻意新增（partner 2 页＋agent 第 4 页＋租户管理）。
+# 目录行（权限管理/表格配置/Agent）component 留空＝按结构判重；叶子行 component 为自然键、只插不覆盖。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: 权限管理
+        path: permit
+        icon: UsergroupAddOutlined
+        children:
+          - title: 菜单管理
+            path: MenuMaintenance
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/MenuMaintenance
+            icon: ClusterOutlined
+          - title: 角色-权限管理
+            path: RolePermissionMaintenance
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/RolePermissionMaintenance
+            icon: BlockOutlined
+          - title: 权限切换
+            path: PermissionSwitch
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/PermissionSwitch
+            icon: UserSwitchOutlined
+          - title: 人员-角色管理
+            path: UserRoleMaintenance
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/UserRoleMaintenance
+            icon: ApiOutlined
+          - title: 部门-权限管理
+            path: dept
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/DeptPermissionMaintenance
+            icon: SettingOutlined
+          - title: 个人权限查看
+            path: userPermit
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/UserPermit/userPermit.vue
+            icon: SettingOutlined
+          - title: 个人权限申请
+            path: apply
+            component: /framework/views/MainContent/SystemManage/PermissionMaintenance/PermitApply
+            icon: SettingOutlined
+      - title: 字典维护
+        path: DictionaryMaintenance
+        component: /framework/views/MainContent/Portal/dict
+        icon: ProfileOutlined
+      - title: 账号管理
+        path: account
+        component: /framework/views/MainContent/Portal/user
+        icon: UserOutlined
+      - title: 部门管理
+        path: department
+        component: /framework/views/MainContent/Portal/department
+        icon: BankOutlined
+      - title: 参数管理
+        path: ParamsManage
+        component: /framework/views/MainContent/Portal/parameter
+        icon: SettingOutlined
+      - title: 用户组管理
+        path: UserGroupMaintenance
+        component: /framework/views/MainContent/SystemManage/UserGroupMaintenance
+        icon: TeamOutlined
+      - title: 缓存管理
+        path: redis
+        component: /framework/views/MainContent/redis/index.vue
+        icon: SettingOutlined
+      - title: 表格配置
+        path: portal
+        icon: InsertRowAboveOutlined
+        children:
+          - title: 表单配置
+            path: config
+            component: /framework/views/MainContent/PortalConfig
+            icon: InsertRowAboveOutlined
+          - title: 动态表格
+            path: forge
+            component: /framework/views/MainContent/dynamic/forge/index.vue
+            icon: SettingOutlined
+          - title: 动态数据集
+            path: dataset
+            component: /framework/views/MainContent/dynamic/dataset/index.vue
+            icon: SettingOutlined
+          - title: 动态表单
+            path: form
+            component: /framework/views/MainContent/dynamic/form/manage.vue
+            icon: SettingOutlined
+      - title: 对象存储管理
+        path: SaObjectStorage
+        component: /framework/views/MainContent/Portal
+        icon: SettingOutlined
+      - title: 日志
+        path: log
+        component: /framework/views/MainContent/Log/index.vue
+        icon: SettingOutlined
+      - title: Agent
+        path: agent
+        icon: SettingOutlined
+        children:
+          - title: 技能装配
+            path: capability
+            component: /framework/views/MainContent/SystemManage/AgentCapability/index.vue
+            icon: SettingOutlined
+          - title: 技能勾选
+            path: definition
+            component: /framework/views/MainContent/SystemManage/AgentDefinition/index.vue
+            icon: SettingOutlined
+          - title: 系统skill
+            path: skill
+            component: /framework/views/MainContent/SystemManage/SystemSkill/index.vue
+            icon: SettingOutlined
+          # ——补缺挂③：agent 第 4 页（识别依据：framework views 现存管理页 Insight/Agent/Admin，
+          #   页面 table-id=agentManageTable、走 @/framework/apis/smartAgent，系 Agent 目录四页中唯一未挂者）——
+          - title: 智能体管理
+            path: AgentAdmin
+            component: /framework/views/Insight/Agent/Admin/index.vue
+            icon: SettingOutlined
+      # ——补缺挂①：partner 2 页（识别依据：manage/partner/controller/AcPartnerHistoryPortalController
+      #   ＋前端 apiType.channel='/partner/admin' 调用面；页面文件均在盘、组件地址可被 import.meta.glob 命中）——
+      - title: 渠道管理
+        path: Channel
+        component: /framework/views/MainContent/SystemManage/Channel/index.vue
+        icon: SettingOutlined
+      - title: 渠道历史
+        path: channelHistory
+        component: /framework/views/MainContent/Portal/channelHistory/index.vue
+        icon: SettingOutlined
+      # ——补缺挂②：租户管理（棒4 交付页 views/MainContent/SystemManage/TenantManage/index.vue，
+      #   挂系统管理目录下、与权限管理同级）——
+      - title: 租户管理
+        path: TenantManage
+        component: /framework/views/MainContent/SystemManage/TenantManage
+        icon: TeamOutlined

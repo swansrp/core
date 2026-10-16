@@ -4,6 +4,7 @@ import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.config.log.MdcConfig;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.authorization.holder.TenantContext;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.kernel.config.db.DynamicTableNameHolder;
 import com.bidr.kernel.utils.FuncUtil;
@@ -14,11 +15,12 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * 把当前线程的 MDC / RequestAttributes / AccountContext / TokenHolder / DynamicTableNameHolder
- * 五类上下文复制到工作线程，保证异步任务行为与 Web 请求线程一致。
+ * 把当前线程的 MDC / RequestAttributes / AccountContext / TokenHolder / DynamicTableNameHolder / TenantContext
+ * 六类上下文复制到工作线程，保证异步任务行为与 Web 请求线程一致。
  * <p>
  * 供各业务模块自定义线程池时复用：{@code executor.setTaskDecorator(new ContextCopyingTaskDecorator())}。
  *
@@ -30,12 +32,15 @@ public class ContextCopyingTaskDecorator implements TaskDecorator {
     @Override
     @NonNull
     public Runnable decorate(@NonNull Runnable runnable) {
-        // 在「提交任务」的线程（Web 请求线程）上抓取 5 类上下文快照
+        // 在「提交任务」的线程（Web 请求线程）上抓取 6 类上下文快照
         Map<String, String> copyOfContextMap = getMdcMap();
         RequestAttributes context = getMvcContext();
         AccountInfo accountInfo = AccountContext.get();
         TokenInfo tokenInfo = TokenHolder.get();
         Map<String, String> dynamicTableNameInfo = DynamicTableNameHolder.get();
+        // 租户档快照（棒2）：与 AccountContext 同抓取/恢复/清理，异步任务的数据闸视图与发起线程一致
+        List<Long> tenantIds = TenantContext.getTenantIds();
+        boolean platform = TenantContext.isPlatform();
         return () -> {
             try {
                 // 在工作线程恢复上下文
@@ -44,6 +49,7 @@ public class ContextCopyingTaskDecorator implements TaskDecorator {
                 AccountContext.set(accountInfo);
                 TokenHolder.set(tokenInfo);
                 DynamicTableNameHolder.set(dynamicTableNameInfo);
+                TenantContext.set(tenantIds, platform);
                 runnable.run();
             } finally {
                 // 工作线程是池化复用的，必须清理，避免污染下一个任务
@@ -61,6 +67,8 @@ public class ContextCopyingTaskDecorator implements TaskDecorator {
         AccountContext.remove();
         TokenHolder.remove();
         DynamicTableNameHolder.remove();
+        // 池化工作线程必须清租户档，否则下一个任务串档（棒2）
+        TenantContext.remove();
     }
 
     /**

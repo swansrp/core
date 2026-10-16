@@ -10,6 +10,7 @@ import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.constants.token.TokenType;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.authorization.holder.TenantContext;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -23,6 +24,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +84,9 @@ public class AuthLogin implements AuthRole {
         userInfo.setPermitInfoList(permitInfoList);
         AccountInfo accountInfo = buildAccountInfo(userInfo, map);
         AccountContext.set(accountInfo);
+        // 租户档接线（棒2）：token 缺 TENANT_IDS（老项目/老 token）⇒ null＝旁路形态，数据闸放行；
+        // 空集合＝无归属，按主线程裁定同样旁路。平台档由 AuthAdmin 通过路径另行置位。
+        TenantContext.set(accountInfo.getTenantIds());
     }
 
     private UserInfo buildUserInfo(Map<String, Object> map) {
@@ -114,8 +120,39 @@ public class AuthLogin implements AuthRole {
         if (map.get(TokenItem.CLIENT_TYPE.name()) != null) {
             accountInfo.setClientType(String.valueOf(map.get(TokenItem.CLIENT_TYPE.name())));
         }
+        accountInfo.setTenantIds(parseTenantIds(map));
         accountInfo.setExtraData(map);
         return accountInfo;
+    }
+
+    /**
+     * TENANT_IDS 解析收口（登录解析唯一入口 buildAccountInfo 调用；包可见静态供离线单测直断）。
+     * <p>三态口径：缺键/null ⇒ {@code null}（老项目、老 token、dev 冒烟 map 均落此态＝旁路形态，
+     * 绝不抛错）；空集合 ⇒ 空 List（用户无租户归属）；有值 ⇒ 逐项转 Long，
+     * 脏元素（非数字/坏 JSON 串）按缺键旁路或跳过——token 经 redis 回读，
+     * List 实形与 JSON 串形（{@code "[1,2]"}）都必须兼容。</p>
+     */
+    static List<Long> parseTenantIds(Map<String, Object> map) {
+        Object raw = map == null ? null : map.get(TokenItem.TENANT_IDS.name());
+        if (raw instanceof String) {
+            raw = JsonUtil.readJson(((String) raw).trim(), List.class, Long.class);
+        }
+        if (!(raw instanceof Collection)) {
+            return null;
+        }
+        List<Long> tenantIds = new ArrayList<>();
+        for (Object item : (Collection<?>) raw) {
+            if (item instanceof Number) {
+                tenantIds.add(((Number) item).longValue());
+            } else if (item != null) {
+                try {
+                    tenantIds.add(Long.parseLong(String.valueOf(item).trim()));
+                } catch (NumberFormatException ignored) {
+                    // 脏元素跳过：解析宽度问题不应打断登录态构建
+                }
+            }
+        }
+        return tenantIds;
     }
 
     /**

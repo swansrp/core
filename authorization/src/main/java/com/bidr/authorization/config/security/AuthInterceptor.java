@@ -10,6 +10,7 @@ import com.bidr.authorization.constants.common.ClientType;
 import com.bidr.authorization.constants.common.RequestConst;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.ClientTypeHolder;
+import com.bidr.authorization.holder.TenantContext;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.captcha.CaptchaService;
 import com.bidr.authorization.service.sms.MsgVerificationService;
@@ -161,6 +162,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         authCompletion(request, response);
         TokenHolder.remove();
         AccountContext.remove();
+        // 租户档与账号档同生命周期收尾（棒2）：Tomcat 线程池复用，不并列清就会串档
+        TenantContext.remove();
     }
 
     private void authCompletion(HttpServletRequest request, HttpServletResponse response) {

@@ -30,7 +30,10 @@ import java.util.stream.Stream;
  * {@code /reject} 方法级 AuthAdmin，{@code POST ""}（自助申请）与 {@code GET /my}（登录档查自己）
  * 保持登录态，故腿 1 对它只要求"至少一处"而非类级；② {@code GroupBindController}／
  * {@code GroupUserBindController} 类级 AuthAdmin 之下，本人端点以方法级 {@code @Auth(AuthLogin.class)}
- * 反向豁免，腿 2 对这两个文件额外断言该豁免针仍在。
+ * 反向豁免，腿 2 对这两个文件额外断言该豁免针仍在；③（批乙修1 增补）
+ * {@code AcTenantPortalController} 类级 AuthAdmin 之下 {@code /my/*} 四条端点方法级 AuthLogin
+ * 豁免（判权收口在 AcTenantPortalService.guardTenantAdmin），同入 LOGIN_EXEMPT 清单，
+ * 并由新增两针钉死豁免注解计数＝4 与 service guard 调用点＝4（防漂移，R-C M-3）。
  * </p>
  * <p>
  * 🔴 针自证纪律（判据必须证明自己活着）：腿 3 喂合成"无注解 controller"文本给腿 1 同一判定函数、
@@ -52,8 +55,9 @@ public class AuthAdminGateConventionTest {
     /**
      * auth 模块写面 controller 点名清单（相对 authorization 模块根）。
      * 批甲棒 1 共改 18 个 auth 文件，其中 {@code PasswordServiceImpl}／{@code UserInfoController}
-     * 非 controller 不入此单；此处 16 条即全部涉闸 controller。{@code PasswordController} 是
-     * 方法级（/reset 挂闸、/change 走本人校验），判定同样只看字面量，无需区分层级。
+     * 非 controller 不入此单；批甲收口时此处 16 条即全部涉闸 controller；
+     * 批乙棒 4 增补 {@code AcTenantPortalController}（租户管理面，类级 AuthAdmin）成 17 条。
+     * {@code PasswordController} 是方法级（/reset 挂闸、/change 走本人校验），判定同样只看字面量，无需区分层级。
      */
     private static final List<String> AUTH_NAMED_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
             "src/main/java/com/bidr/authorization/controller/admin/AdminUserRoleBindController.java",
@@ -68,15 +72,17 @@ public class AuthAdminGateConventionTest {
             "src/main/java/com/bidr/authorization/controller/admin/AdminRoleController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AdminRoleMenuBindController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AdminPartnerController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AcTenantPortalController.java",
             "src/main/java/com/bidr/authorization/controller/group/GroupAdminController.java",
             "src/main/java/com/bidr/authorization/controller/group/GroupBindController.java",
             "src/main/java/com/bidr/authorization/controller/group/GroupUserBindController.java",
             "src/main/java/com/bidr/authorization/controller/login/PasswordController.java"));
 
-    /** 反向豁免腿：这两个类必须在类级 AuthAdmin 之外保有 AuthLogin 方法级豁免针 */
+    /** 反向豁免腿：这三个类必须在类级 AuthAdmin 之外保有 AuthLogin 方法级豁免针 */
     private static final List<String> LOGIN_EXEMPT_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
             "src/main/java/com/bidr/authorization/controller/group/GroupBindController.java",
-            "src/main/java/com/bidr/authorization/controller/group/GroupUserBindController.java"));
+            "src/main/java/com/bidr/authorization/controller/group/GroupUserBindController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AcTenantPortalController.java"));
 
     /** 正对照：admin 模块里批甲之前就挂了 AuthAdmin 的既有真闸（相对 admin 模块根） */
     private static final String PREEXISTING_GATE_CONTROL =
@@ -247,5 +253,66 @@ public class AuthAdminGateConventionTest {
         Assert.assertTrue("合成合规样本未含闸针（正对照样本失效）", compliant.contains(ADMIN_GATE_NEEDLE));
         Assert.assertTrue("正对照失效：合规样本被判违规",
                 missingAdminGate("SampleController.java", compliant).isEmpty());
+    }
+
+    // ==================== 批乙修1 新增：/my 豁免与判权收口的防漂移针（R-C M-3） ====================
+
+    /** 行首注解/调用计数（trim 后以正则整行匹配）——javadoc 里的 {@code @Auth(AuthLogin.class)} 提及不算 */
+    private static int countMatchingLines(String content, String lineRegex) {
+        int count = 0;
+        for (String line : content.split("\n")) {
+            if (line.trim().matches(lineRegex)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static final String TENANT_PORTAL_CONTROLLER =
+            "src/main/java/com/bidr/authorization/controller/admin/AcTenantPortalController.java";
+    private static final String TENANT_PORTAL_SERVICE =
+            "src/main/java/com/bidr/authorization/service/tenant/AcTenantPortalService.java";
+
+    /**
+     * 针 1：AcTenantPortalController 的方法级 {@code @Auth(AuthLogin.class)} 豁免出现次数必须＝4
+     * （/my 四条端点；类级 AuthAdmin 之下的反向豁免端点每加/删一条都要显式改这里）。
+     * 自证：计数函数喂合成 2 行样本数得出 2、喂空文本数 0（防空转恒 0/恒真）。
+     */
+    @Test
+    public void tenantPortalControllerLoginExemptionCountPinned() throws IOException {
+        Path controller = locateAuthorizationModule().resolve(TENANT_PORTAL_CONTROLLER);
+        Assert.assertTrue("controller 定位失效（针会空转）: " + controller, Files.isRegularFile(controller));
+        String content = read(controller);
+        int exemptions = countMatchingLines(content, "@Auth\\(AuthLogin\\.class\\)");
+        Assert.assertEquals("AcTenantPortalController 的 @Auth(AuthLogin.class) 豁免端点数漂移（裁定＝/my 四条）",
+                4, exemptions);
+        // 针自证：正/负合成样本
+        Assert.assertEquals("计数函数失效（正样本数不出）", 2, countMatchingLines(
+                "public class C {\n    @Auth(AuthLogin.class)\n    @Auth(AuthLogin.class)\n}\n",
+                "@Auth\\(AuthLogin\\.class\\)"));
+        Assert.assertEquals("计数函数过宽（javadoc 提及被算进）", 0, countMatchingLines(
+                "/** {@code @Auth(AuthLogin.class)} 说明 */\npublic class C {}\n",
+                "@Auth\\(AuthLogin\\.class\\)"));
+    }
+
+    /**
+     * 针 2：AcTenantPortalService 的 {@code guardTenantAdmin(tenantId);} 调用点必须＝4
+     * （list/add/remove/授admin 四条 /my 行为同一闸门，R-C M-1 上提后口径；新增旁开闸门的
+     * 本租户端点或漏挂 guard 都会被抓）。自证同上：合成样本能数出、定义行不算调用。
+     */
+    @Test
+    public void tenantPortalServiceGuardCallSitesPinned() throws IOException {
+        Path service = locateAuthorizationModule().resolve(TENANT_PORTAL_SERVICE);
+        Assert.assertTrue("service 定位失效（针会空转）: " + service, Files.isRegularFile(service));
+        String content = read(service);
+        int calls = countMatchingLines(content, "guardTenantAdmin\\(tenantId\\);");
+        Assert.assertEquals("AcTenantPortalService 的 guardTenantAdmin 调用点漂移（判权唯一收口＝四条 /my 全过闸）",
+                4, calls);
+        // 针自证：定义行不被算进 + 合成调用数得出
+        Assert.assertEquals("定义行被误算", 0, countMatchingLines(
+                "void guardTenantAdmin(Long tenantId) {\n}\n", "guardTenantAdmin\\(tenantId\\);"));
+        Assert.assertEquals("合成调用数不出（判定恒 0 空转）", 3, countMatchingLines(
+                "guardTenantAdmin(tenantId);\n  guardTenantAdmin(tenantId);\n    guardTenantAdmin(tenantId);\n",
+                "guardTenantAdmin\\(tenantId\\);"));
     }
 }

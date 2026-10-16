@@ -11,6 +11,7 @@ import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.holder.ClientTypeHolder;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,6 +52,7 @@ import java.util.Map;
 public class LoginServiceImpl implements LoginService {
 
     private final AcUserService acUserService;
+    private final AcUserTenantService acUserTenantService;
     private final SysConfigCacheService frameCacheService;
     private final TokenService tokenService;
     private final AcUserRoleMenuService acUserRoleMenuService;
@@ -296,7 +299,20 @@ public class LoginServiceImpl implements LoginService {
                 clientType);
         buildPermitTree(info, accessToken);
         buildAccountInfo(info, accessToken);
+        buildTenantIds(acUser.getUserId(), accessToken);
         TokenHolder.set(accessToken);
+    }
+
+    /**
+     * 登录签发时把用户租户集烤进 access token（承诺面：经 AcUserTenantService 现查，非缓存）。
+     * <p>空集合＝不写入——AuthLogin.parseTenantIds 按缺键解析为 null＝旁路形态，
+     * 老项目零感知口径与此一致。</p>
+     */
+    private void buildTenantIds(Long userId, TokenInfo accessToken) {
+        List<Long> tenantIds = acUserTenantService.listTenantIdsByUserId(userId);
+        if (FuncUtil.isNotEmpty(tenantIds)) {
+            tokenService.putItem(accessToken, TokenItem.TENANT_IDS.name(), tenantIds);
+        }
     }
 
     private TokenInfo buildAccessToken(Long userId, String customerNumber, String nickName) {
