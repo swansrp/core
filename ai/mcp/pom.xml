@@ -38,7 +38,7 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <solon.version>3.3.3-M2</solon.version>
-                <kernel.version>20261016033744-79</kernel.version>
+                <kernel.version>20261017043007-80</kernel.version>
             </properties>
         </profile>
     </profiles>
