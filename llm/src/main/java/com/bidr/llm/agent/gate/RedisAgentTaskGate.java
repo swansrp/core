@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 
 /**
  * Title: RedisAgentTaskGate
@@ -24,18 +25,30 @@ public class RedisAgentTaskGate implements AgentTaskGate {
     private final RedisService redisService;
     private final ObjectMapper objectMapper;
     private final String keyPrefix;
-    /** 失联阈值（毫秒）：锁内心跳超时即判定属主失联，可强删自愈 */
-    private final long orphanMillis;
+    /**
+     * 失联阈值（毫秒）：锁内心跳超时即判定属主失联，可强删自愈。
+     * 🔴 每次判定取一次（非构造期固化）⇒ 系统参数「Agent任务失联阈值(毫秒)」改了不用重启，下一次判定即生效
+     */
+    private final LongSupplier orphanMillisSupplier;
 
     /** Redis 运行时异常的进程内降级锁（同原业务 localRunning 口径；键=taskKey，值=属主令牌） */
     private final ConcurrentHashMap<String, String> localFallback = new ConcurrentHashMap<>();
 
     public RedisAgentTaskGate(RedisService redisService, ObjectMapper objectMapper,
                               String keyPrefix, long orphanMillis) {
+        this(redisService, objectMapper, keyPrefix, () -> orphanMillis);
+    }
+
+    public RedisAgentTaskGate(RedisService redisService, ObjectMapper objectMapper,
+                              String keyPrefix, LongSupplier orphanMillisSupplier) {
         this.redisService = redisService;
         this.objectMapper = objectMapper;
         this.keyPrefix = keyPrefix;
-        this.orphanMillis = orphanMillis;
+        this.orphanMillisSupplier = orphanMillisSupplier;
+    }
+
+    private long orphanMillis() {
+        return orphanMillisSupplier.getAsLong();
     }
 
     @Override
@@ -105,10 +118,16 @@ public class RedisAgentTaskGate implements AgentTaskGate {
     public boolean forceUnlockIfOrphan(String taskKey) {
         try {
             GateLock lock = read(taskKey);
-            if (lock != null && System.currentTimeMillis() - lock.getHeartbeat() > orphanMillis) {
+            if (lock == null) {
+                return false;
+            }
+            // 阈值按本次判定现取；日志把「生效阈值」与「已静默时长」两者都记（调参现场需要自证这次用的是哪个值）
+            long threshold = orphanMillis();
+            long silentMillis = System.currentTimeMillis() - lock.getHeartbeat();
+            if (silentMillis > threshold) {
                 redisService.delete(lockKey(taskKey));
-                log.warn("闸门属主失联强解锁（心跳超 {}ms）, taskKey={}, owner={}",
-                        System.currentTimeMillis() - lock.getHeartbeat(), taskKey, lock.getOwnerToken());
+                log.warn("闸门属主失联强解锁, taskKey={}, owner={}, 生效阈值={}ms, 心跳已静默={}ms",
+                        taskKey, lock.getOwnerToken(), threshold, silentMillis);
                 return true;
             }
             return false;

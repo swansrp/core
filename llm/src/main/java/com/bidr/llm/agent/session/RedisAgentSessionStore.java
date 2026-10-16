@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.IntSupplier;
 
 /**
  * Title: RedisAgentSessionStore
@@ -42,14 +43,29 @@ public class RedisAgentSessionStore implements AgentSessionStore {
     private final RedisService redisService;
     private final ObjectMapper objectMapper;
     private final String keyPrefix;
-    private final int ttlSeconds;
+    /**
+     * 🔴 寿命按<b>每次写入</b>取，不是构造期固化一次：这样系统参数「Agent会话保留(秒)」改了不必重启，
+     * 下一次写入即按新值续期。代价是同一会话的历史键可能带着不同 TTL（旧值写的键等它下次被写才换新寿命），
+     * 这是 Redis setex 的固有形态，不是本实现的缺陷——语义＝「最后一次写入后再活多久」。
+     */
+    private final IntSupplier ttlSupplier;
 
     public RedisAgentSessionStore(RedisService redisService, ObjectMapper objectMapper,
                                   String keyPrefix, int ttlSeconds) {
+        this(redisService, objectMapper, keyPrefix, () -> ttlSeconds);
+    }
+
+    public RedisAgentSessionStore(RedisService redisService, ObjectMapper objectMapper,
+                                  String keyPrefix, IntSupplier ttlSupplier) {
         this.redisService = redisService;
         this.objectMapper = objectMapper;
         this.keyPrefix = keyPrefix;
-        this.ttlSeconds = ttlSeconds;
+        this.ttlSupplier = ttlSupplier;
+    }
+
+    /** 当前生效的会话存活秒数（每次写入取一次，供运行期改参即时生效） */
+    private int ttlSeconds() {
+        return ttlSupplier.getAsInt();
     }
 
     @Override
@@ -114,7 +130,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         event.setTime(System.currentTimeMillis());
         events.add(event);
         try {
-            redisService.set(key, ttlSeconds, objectMapper.writeValueAsString(events));
+            redisService.set(key, ttlSeconds(), objectMapper.writeValueAsString(events));
         } catch (Exception e) {
             log.warn("agent 会话事件写入失败（会话退化无过程可见）key={}, error={}", key, e.getMessage());
             return -1;
@@ -140,17 +156,17 @@ public class RedisAgentSessionStore implements AgentSessionStore {
 
     @Override
     public void pause(String sessionId, String note) {
-        redisService.set(pauseKey(sessionId), ttlSeconds, note == null ? "1" : note);
+        redisService.set(pauseKey(sessionId), ttlSeconds(), note == null ? "1" : note);
     }
 
     @Override
     public void touchView(String sessionId) {
-        redisService.set(viewKey(sessionId), ttlSeconds, String.valueOf(System.currentTimeMillis()));
+        redisService.set(viewKey(sessionId), ttlSeconds(), String.valueOf(System.currentTimeMillis()));
     }
 
     @Override
     public void touchRun(String sessionId) {
-        redisService.set(runKey(sessionId), ttlSeconds, String.valueOf(System.currentTimeMillis()));
+        redisService.set(runKey(sessionId), ttlSeconds(), String.valueOf(System.currentTimeMillis()));
     }
 
     @Override
@@ -183,7 +199,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
     public void resume(String sessionId, String guidance) {
         redisService.delete(pauseKey(sessionId));
         if (guidance != null && !guidance.trim().isEmpty()) {
-            redisService.set(guidanceKey(sessionId), ttlSeconds, guidance);
+            redisService.set(guidanceKey(sessionId), ttlSeconds(), guidance);
         }
     }
 
@@ -204,7 +220,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
 
     @Override
     public void submitAnswer(String sessionId, String answerJson) {
-        redisService.set(answerKey(sessionId), ttlSeconds, answerJson);
+        redisService.set(answerKey(sessionId), ttlSeconds(), answerJson);
     }
 
     @Override
@@ -241,7 +257,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
 
     private void write(String key, Object value) {
         try {
-            redisService.set(key, ttlSeconds, objectMapper.writeValueAsString(value));
+            redisService.set(key, ttlSeconds(), objectMapper.writeValueAsString(value));
         } catch (Exception e) {
             log.warn("agent 会话 Redis 写入失败（会话退化无过程可见）key={}, error={}", key, e.getMessage());
         }

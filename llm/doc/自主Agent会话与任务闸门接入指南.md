@@ -228,14 +228,30 @@ agentTaskGate.release(TASK_KEY, INSTANCE_ID);
 
 ## 五、配置项速查
 
-| 配置项 | 默认值 | 说明 |
-| --- | --- | --- |
-| `llm.agent-session.key-prefix` | `llm:agent:session:` | 会话存储 Redis 键前缀 |
-| `llm.agent-session.ttl-seconds` | `86400` | 会话快照/事件流 TTL |
-| `llm.agent-task-gate.key-prefix` | `llm:agent:task-gate:` | 闸门 Redis 键前缀 |
-| `llm.agent-task-gate.orphan-millis` | `90000` | 闸门失联阈值（锁内心跳超时即强删） |
+| 配置项 | 默认值 | 运行期可改 | 说明 |
+| --- | --- | --- | --- |
+| `llm.agent-session.key-prefix` | `llm:agent:session:` | ✋ 改了要重启 | 会话存储 Redis 键前缀 |
+| `llm.agent-session.ttl-seconds` | `86400` | 🔁 系统参数「Agent会话保留(秒)」 | 会话快照/事件流的键存活秒数，**每次写入按当前值续期** |
+| `llm.agent-task-gate.key-prefix` | `llm:agent:task-gate:` | ✋ 改了要重启 | 闸门 Redis 键前缀 |
+| `llm.agent-task-gate.orphan-millis` | `90000` | 🔁 系统参数「Agent任务失联阈值(毫秒)」 | 闸门失联阈值（锁内心跳超时即强删自愈） |
+
+🔁 那两格的取值链＝**系统参数（合法正数）→ 上面的 yml 值 → core 默认**，参数出厂**留空**（＝"本键未启用、按 yml 来"），所以升级 core 不会顶掉任何项目显式写在 yml 里的值。回落分两层，如实记在这：
+
+- **留空／纯空白＝静默回落地板**（不记日志）——出厂就是留空，每次取值都 WARN 等于刷屏噪声，这是常态路径。
+- **非数字／非正（0、负数）／超出可表示范围＝回落地板并记 WARN**，一律不炸装配。会话 TTL 的 int 形态尤其不收口到上界：超出 `Integer.MAX_VALUE` 的"秒数"几乎必然是单位填错（把毫秒当秒填），按上界生效＝约 68 年的永生键，所以与其余非法形态同处置＝回落。⚠️ 但 86400000（"一天"按毫秒口径填进秒数键）仍在 int 域内，这一层拦不住，代价只能记在参数说明里。
+
+两个口径的生效时机不同，别混：
+
+- **会话 TTL**：Redis `setex` 的寿命在写入那一刻定死，改参数只影响**之后的写入**——已存在的键寿命不变，活跃会话每次写入都续期，所以"寿命"实质＝**最后一次写入后的静默时长**。
+- **失联阈值**：每次判定现读，改完下一次判定即生效。⚠️ 调小于任务心跳间隔会把正常在跑的任务误判失联⇒ 双跑，代价比"锁残留等 TTL"严重。
+
+两形态（Redis／内存兜底）按同一口径取值——兜底形态若固化在构造期，dev 侧改参数页没反应，两形态生效语义必须一致。
 
 实现自动装配（`AgentSessionAutoConfiguration`）：类路径有 `core/redis` → Redis 实现（分布式）；否则内存实现（单实例 fallback）。
+
+> 本模块读取的**全部** yml 键（含上面四把）带填空说明列在
+> `llm/src/main/resources/llm-config.template.yml`，新项目可以直接抄段落逐项填；
+> 它与代码的对账有守卫（`LlmConfigTemplateCoverageTest`），加了新键忘了写进模板会当场报红。
 
 ---
 

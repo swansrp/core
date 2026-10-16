@@ -11,6 +11,11 @@ import lombok.Getter;
  * 管理页修改后经 ParamService.refresh() 广播生效（{@link com.bidr.llm.provider.DbAwareModelConfigProvider}
  * 每次调用实时读取，配置变化自动重建底层模型，无需重启）。
  * 数据库值优先于应用配置 {@code llm.*}；API_KEY 为占位符（sk-****）时视为未填写，回落 llm.api-key。
+ * <p>
+ * 🔴 两类出厂形态，别混：<b>连接类</b>（地址/模型/超时）出厂给可用值；<b>容量与寿命类</b>
+ * （{@link #AGENT_SESSION_TTL_SECONDS}、{@link #AGENT_TASK_GATE_ORPHAN_MILLIS}）出厂<b>留空</b>＝
+ * 空值不代表"0"，代表"本键未启用、按应用配置来"。这样共享件升级时，任何项目 yml 里显式覆写过的值
+ * 都不会被库里新种的出厂值静默顶掉（新口径一律挂默认关闭的参数）。
  *
  * @author Sharp
  * @since 2026/8/16
@@ -51,6 +56,20 @@ public enum LlmParam implements Param {
      */
     AGENT_TIMEOUT_SECONDS("Agent长任务超时(秒)", "600",
             "【出厂默认即可】Agent 编排单次调用可达数分钟故高于普通超时；动它前先确认确是长任务超时而非服务故障；非法值回落 llm.agent.timeout-seconds"),
+
+    /**
+     * agent 会话快照与事件流的 Redis 键存活秒数。
+     * 🔴 出厂留空＝维持应用配置 {@code llm.agent-session.ttl-seconds}（core 默认 86400＝24 小时），
+     * 共享件默认行为不许改：任何项目 yml 里显式覆写过这一键，都不该因为升级 core 被库值静默顶掉
+     */
+    AGENT_SESSION_TTL_SECONDS("Agent会话保留(秒)", "",
+            "【按需调整】agent 会话快照与过程事件在 Redis 里存活多久（出厂 24 小时）。留空＝按应用配置 llm.agent-session.ttl-seconds（core 默认 86400）；填正数即改后下一次写入生效、不用重启。⚠️ 只影响之后的写入：已存在的键寿命不变，活跃会话每次写入都续期，所以「寿命」实质是最后一次写入后的静默时长；非正/非数字/超出可表示范围一律回落应用配置"),
+
+    /**
+     * 任务闸门判定「属主失联」的心跳超时毫秒数（超阈值即强删锁自愈）
+     */
+    AGENT_TASK_GATE_ORPHAN_MILLIS("Agent任务失联阈值(毫秒)", "",
+            "【按需调整】同一条任务键上属主心跳超过这个毫秒数即判失联、强删锁让下一跑接上。留空＝按应用配置 llm.agent-task-gate.orphan-millis（core 默认 90000＝90 秒）；填正数即下一次判定生效、不用重启。⚠️ 调小于任务心跳间隔会把正常在跑的任务误判失联造成双跑；非正/非数字一律回落应用配置"),
 
     /**
      * 多模态（视觉）模型服务地址：扫描件/图片转 Markdown 用；留空回落默认模型地址
