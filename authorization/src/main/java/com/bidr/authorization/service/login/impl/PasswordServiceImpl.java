@@ -91,6 +91,10 @@ public class PasswordServiceImpl implements PasswordService {
             user = acUserService.getByCustomerNumber(AccountContext.getOperator());
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
+        if (FuncUtil.isNotEmpty(req.getLoginId())) {
+            Validator.assertEquals(user.getCustomerNumber(), AccountContext.getOperator(),
+                    AccountErrCode.AC_PASSWORD_OWNER_MISMATCH);
+        }
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
         if (FuncUtil.isNotEmpty(user.getPassword())) {

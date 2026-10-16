@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.authorization.dao.entity.AcRole;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.service.admin.AdminRoleService;
 import com.bidr.authorization.vo.admin.QueryRoleReq;
 import com.bidr.authorization.vo.admin.RoleReq;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = "系统管理 - 角色 - 权限管理")
 @RestController("AdminRoleController")
 @RequestMapping(value = "/web/admin/role/menu")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AdminRoleController extends BaseAdminController<AcRole, RoleRes> {
 

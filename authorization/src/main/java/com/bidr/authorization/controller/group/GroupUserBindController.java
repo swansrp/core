@@ -2,6 +2,9 @@ package com.bidr.authorization.controller.group;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcGroup;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
+import com.bidr.authorization.annotation.auth.AuthLogin;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.service.admin.AdminUserGroupBindService;
@@ -35,6 +38,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController("GroupUserBindController")
 @RequestMapping(value = "/web/group/user")
+@Auth(AuthAdmin.class)
 public class GroupUserBindController extends BaseBindController<AcGroup, AcUserGroup, AcUser, AcGroup, GroupAccountRes> {
 
     private final AdminUserGroupBindService adminUserGroupBindService;
@@ -93,6 +97,7 @@ public class GroupUserBindController extends BaseBindController<AcGroup, AcUserG
     }
 
     @ApiOperation(value = "获取指定用户组类型下所有用户")
+    @Auth(AuthLogin.class)
     @RequestMapping(value = "/bind/list/all", method = RequestMethod.GET)
     public Collection<GroupAccountRes> getUserListByGroupType(String name) {
         return Resp.convert(adminUserGroupBindService.getDataScopeUserListByGroupType(name), GroupAccountRes.class);

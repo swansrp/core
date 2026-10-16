@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.manage.partner.service.AcPartnerHistoryPortalService;
 import com.bidr.admin.manage.partner.vo.AcPartnerHistoryVO;
 import com.bidr.admin.manage.role.vo.AcRoleVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcPartnerHistory;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.kernel.controller.BaseAdminController;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = "系统管理 - 访问记录")
 @AdminPortal
 @RequestMapping(value = "/web/admin/partner/history")
+@Auth(AuthAdmin.class)
 public class AcPartnerHistoryPortalController extends BaseAdminController<AcPartnerHistory, AcPartnerHistoryVO> {
 
     private final AcPartnerHistoryPortalService acPartnerHistoryPortalService;

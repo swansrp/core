@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.dao.entity.SysPortalPivotColumn;
 import com.bidr.admin.service.table.SysPortalPivotColumnPortalService;
 import com.bidr.admin.vo.PortalPivotColumnVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @AdminPortal
 @RequestMapping(value = "/web/admin/portal/table/pivot/column")
+@Auth(AuthAdmin.class)
 public class PortalPivotColumnPortalController extends BaseAdminOrderController<SysPortalPivotColumn, PortalPivotColumnVO> {
 
     private final SysPortalPivotColumnPortalService sysPortalPivotColumnPortalService;

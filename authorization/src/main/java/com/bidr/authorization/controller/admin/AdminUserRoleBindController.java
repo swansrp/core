@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcRole;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.service.admin.AdminUserRoleBindService;
@@ -29,6 +31,7 @@ import java.util.List;
 @Api(tags = "系统管理 - 人员-角色 - 绑定管理")
 @RestController("AdminUserRoleBindController")
 @RequestMapping(value = "/web/admin/user/role")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AdminUserRoleBindController extends BaseBindController<AcUser, AcUserRole, AcRole, AccountRes, RoleRes> {
 

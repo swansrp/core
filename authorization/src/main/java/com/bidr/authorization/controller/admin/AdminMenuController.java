@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.constants.dict.MenuTypeDict;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.admin.AdminMenuService;
@@ -32,6 +34,7 @@ import java.util.List;
 @Api(tags = "系统管理 - 菜单管理")
 @RestController("AdminMenuController")
 @RequestMapping(value = "/web/admin/menu")
+@Auth(AuthAdmin.class)
 public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu> {
 
     @Resource

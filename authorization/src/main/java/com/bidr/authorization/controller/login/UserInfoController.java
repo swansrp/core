@@ -58,8 +58,8 @@ public class UserInfoController {
 
     @Auth(AuthToken.class)
     @RequestMapping(value = "/existed", method = RequestMethod.GET)
-    public UserRes userExisted(UserExistedReq req) {
-        return userInfoService.userExisted(req);
+    public void userExisted(UserExistedReq req) {
+        userInfoService.userExisted(req);
     }
 
     @Auth(AuthToken.class)

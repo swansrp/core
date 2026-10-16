@@ -1,6 +1,8 @@
 package com.bidr.admin.manage.group.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.vo.group.GroupRes;
@@ -31,6 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController("AdminGroupController")
 @RequestMapping(value = "/web/admin/group")
+@Auth(AuthAdmin.class)
 public class AdminGroupController extends BaseAdminTreeController<AcGroup, AcGroup> {
 
     @Override

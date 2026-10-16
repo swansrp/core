@@ -2,6 +2,8 @@ package com.bidr.admin.manage.account.controller;
 
 import com.bidr.admin.manage.account.service.AdminAccountServiceImpl;
 import com.bidr.admin.manage.account.vo.AccountVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.service.PortalCommonService;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController("AdminAccountController")
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/account"})
+@Auth(AuthAdmin.class)
 public class AdminAccountController extends BaseAdminController<AcAccount, AccountVO> {
     private final AdminAccountServiceImpl accountService;
 

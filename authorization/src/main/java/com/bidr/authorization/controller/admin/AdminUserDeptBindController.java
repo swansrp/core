@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcDept;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.service.admin.AdminUserDeptBindService;
@@ -30,6 +32,7 @@ import java.util.List;
 @Api(tags = "系统管理 - 部门-人员 - 绑定管理")
 @RestController("AdminUserDeptBindController")
 @RequestMapping(value = "/web/admin/dept/user")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AdminUserDeptBindController extends BaseBindController<AcDept, AcUserDept, AcUser, DepartmentItem, DepartmentAccountRes> {
 

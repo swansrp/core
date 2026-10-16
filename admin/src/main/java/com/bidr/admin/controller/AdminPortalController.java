@@ -3,6 +3,8 @@ package com.bidr.admin.controller;
 import com.bidr.admin.service.PortalConfigService;
 import com.bidr.admin.service.PortalService;
 import com.bidr.admin.vo.*;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.JsonUtil;
@@ -35,6 +37,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/admin"})
+@Auth(AuthAdmin.class)
 public class AdminPortalController {
 
     private final PortalService portalService;

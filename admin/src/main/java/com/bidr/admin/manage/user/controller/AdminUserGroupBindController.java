@@ -2,6 +2,8 @@ package com.bidr.admin.manage.user.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.manage.user.vo.UserAdminRes;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/user/AcGroup"})
+@Auth(AuthAdmin.class)
 public class AdminUserGroupBindController extends BaseBindController<AcUser, AcUserGroup, AcGroup, UserAdminRes,
         AcGroup> {
 

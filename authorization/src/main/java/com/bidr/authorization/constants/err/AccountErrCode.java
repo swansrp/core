@@ -82,6 +82,10 @@ public enum AccountErrCode implements ErrCode {
 
     AC_ROLE_SYSTEM(1032, "系统内置角色，不可删除"),
 
+    AC_PASSWORD_OWNER_MISMATCH(1034, "不能修改他人密码"),
+
+    AC_AUDIT_OWN_APPLY(1035, "不能审批自己提交的权限申请"),
+
     ;
 
     private final Integer errCode;

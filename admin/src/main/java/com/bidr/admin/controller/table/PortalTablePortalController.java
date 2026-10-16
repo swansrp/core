@@ -3,6 +3,8 @@ package com.bidr.admin.controller.table;
 import com.bidr.admin.dao.entity.SysPortalTable;
 import com.bidr.admin.service.table.SysPortalTablePortalService;
 import com.bidr.admin.vo.PortalTableVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @AdminPortal
 @RequestMapping(value = "/web/admin/portal/table")
+@Auth(AuthAdmin.class)
 public class PortalTablePortalController extends BaseAdminController<SysPortalTable, PortalTableVO> {
 
     private final SysPortalTablePortalService sysPortalTablePortalService;

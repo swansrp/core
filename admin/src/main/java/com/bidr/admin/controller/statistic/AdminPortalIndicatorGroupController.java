@@ -6,6 +6,8 @@ import com.bidr.admin.service.statistic.AdminPortalIndicatorGroupService;
 import com.bidr.admin.service.statistic.IndicatorService;
 import com.bidr.admin.vo.statistic.IndicatorRes;
 import com.bidr.admin.vo.statistic.PortalIndicatorGroupVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.controller.BaseAdminTreeController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
@@ -30,6 +32,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/indicator/group"})
+@Auth(AuthAdmin.class)
 public class AdminPortalIndicatorGroupController extends BaseAdminTreeController<SysPortalIndicatorGroup, PortalIndicatorGroupVO> {
 
     private final AdminPortalIndicatorGroupService adminPortalIndicatorGroupService;

@@ -1,6 +1,8 @@
 package com.bidr.authorization.controller.admin;
 
 import com.bidr.authorization.dao.entity.AcResourcePerm;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.repository.AcResourcePermService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.permit.ResourcePermFilterService;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 @Api(tags = "系统管理 - 通用资源权限")
 @RestController
 @RequestMapping(value = "/web/resource-perm")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AcResourcePermController {
 

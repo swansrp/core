@@ -3,11 +3,13 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcPermitApply;
+import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.dao.mapper.AcPermitApplyDao;
 import com.bidr.kernel.constant.dict.common.ApprovalDict;
 import com.bidr.kernel.mybatis.dao.repository.RecursionService;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,10 @@ public class AcPermitApplyService extends BaseSqlRepo<AcPermitApplyDao, AcPermit
         if (apply == null) {
             return;
         }
+
+        // 审批人≠申请人逻辑闸： auditor 取自 AccountContext.getOperator()（工号，M-3 与 customerNumber 同键可比），
+        // 自审（无论 pass 还是 reject）一律拒绝，堵死"自助申请→自审→直写授权表"提权闭环
+        Validator.assertFalse(FuncUtil.equals(auditor, apply.getCustomerNumber()), AccountErrCode.AC_AUDIT_OWN_APPLY);
 
         if (pass) {
             apply.setStatus(ApprovalDict.APPROVAL.getValue());

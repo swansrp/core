@@ -1,6 +1,7 @@
 package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.annotation.auth.AuthNone;
 import com.bidr.authorization.service.login.PasswordService;
 import com.bidr.authorization.vo.login.pwd.ChangePasswordReq;
@@ -32,6 +33,7 @@ public class PasswordController {
     protected PasswordService passwordService;
 
     @ApiOperation("重置密码")
+    @Auth(AuthAdmin.class)
     @RequestMapping(value = "/reset", method = RequestMethod.POST)
     public String resetPassword(@Validated @RequestBody ResetPasswordReq req) {
         return passwordService.resetPassword(req.getCustomerNumber());

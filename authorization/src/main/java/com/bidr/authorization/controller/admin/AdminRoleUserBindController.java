@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcRole;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.service.admin.AdminRoleUserBindService;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = "系统管理 - 角色-人员 - 绑定管理")
 @RestController("AdminRoleUserBindController")
 @RequestMapping(value = "/web/admin/role/user")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AdminRoleUserBindController extends BaseBindController<AcRole, AcUserRole, AcUser, RoleRes, UserRes> {
 

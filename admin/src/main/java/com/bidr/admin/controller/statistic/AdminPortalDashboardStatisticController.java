@@ -5,6 +5,8 @@ import com.bidr.admin.dao.entity.SysPortalDashboardStatistic;
 import com.bidr.admin.service.statistic.AdminPortalDashboardStatisticService;
 import com.bidr.admin.vo.statistic.DashboardStatisticRes;
 import com.bidr.admin.vo.statistic.DashboardStatisticVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.controller.BaseAdminTreeController;
@@ -31,6 +33,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/dashboard/statistic"})
+@Auth(AuthAdmin.class)
 public class AdminPortalDashboardStatisticController extends BaseAdminTreeController<SysPortalDashboardStatistic, DashboardStatisticVO> {
 
     private final AdminPortalDashboardStatisticService adminPortalDashboardStatisticService;

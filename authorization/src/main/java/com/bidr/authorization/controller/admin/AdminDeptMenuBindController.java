@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcDept;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcDeptMenu;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.vo.department.DepartmentItem;
@@ -26,6 +28,7 @@ import java.util.List;
 @Api(tags = "系统管理 - 部门 - 权限 - 绑定管理")
 @RestController("AdminDeptMenuBindController")
 @RequestMapping(value = "/web/admin/dept/menu")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AdminDeptMenuBindController extends BaseBindController<AcDept, AcDeptMenu, AcMenu, DepartmentItem, AcMenu> {
 

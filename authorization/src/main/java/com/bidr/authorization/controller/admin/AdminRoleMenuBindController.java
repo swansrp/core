@@ -2,6 +2,8 @@ package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcMenu;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.authorization.dao.entity.AcRoleMenu;
 import com.bidr.authorization.vo.admin.RoleRes;
@@ -28,6 +30,7 @@ import java.util.List;
 @Api(tags = "系统管理 - 角色 - 权限 - 绑定管理")
 @RestController("AdminRoleMenuBindController")
 @RequestMapping(value = "/web/admin/role/menu")
+@Auth(AuthAdmin.class)
 @RequiredArgsConstructor
 public class AdminRoleMenuBindController extends BaseBindController<AcRole, AcRoleMenu, AcMenu, RoleRes, AcMenu> {
 

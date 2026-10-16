@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.dao.entity.SysPortalIndicator;
 import com.bidr.admin.service.statistic.AdminPortalIndicatorService;
 import com.bidr.admin.vo.statistic.PortalIndicatorVO;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/indicator"})
+@Auth(AuthAdmin.class)
 public class AdminPortalIndicatorController extends BaseAdminOrderController<SysPortalIndicator, PortalIndicatorVO> {
 
     private final AdminPortalIndicatorService adminPortalIndicatorService;

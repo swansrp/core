@@ -3,7 +3,7 @@ package com.bidr.admin.manage.permit.controller;
 import com.bidr.admin.manage.permit.service.AcPermitApplyPortalService;
 import com.bidr.admin.manage.permit.vo.AcPermitApplyVO;
 import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthNone;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.dao.entity.AcPermitApply;
 import com.bidr.authorization.holder.AccountContext;
@@ -55,11 +55,17 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
         permitApplyService.applyUserPermit(AccountContext.getOperator(), url, reason);
     }
 
-    @Auth(AuthNone.class)
-    @ApiOperation(value = "获取页面权限现状", notes = "登录后准入")
+    @Auth(AuthAdmin.class)
+    @ApiOperation(value = "获取页面权限现状", notes = "管理员按工号查询任意人")
     @RequestMapping(value = "", method = RequestMethod.GET)
     public PermitApplyVO getUserPermitStatus(String url, String customerNumber) {
         return permitApplyService.getUserPermit(url, customerNumber);
+    }
+
+    @ApiOperation(value = "获取本人页面权限现状", notes = "登录后准入，服务端按当前登录工号查询")
+    @RequestMapping(value = "/my", method = RequestMethod.GET)
+    public PermitApplyVO getMyPermitStatus(String url) {
+        return permitApplyService.getUserPermit(url, AccountContext.getOperator());
     }
 
     @Auth(AuthToken.class)
@@ -69,12 +75,14 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
         return permitApplyService.isPathExists(url);
     }
 
+    @Auth(AuthAdmin.class)
     @ApiOperation(value = "同意权限申请")
     @RequestMapping(value = "/approve", method = RequestMethod.POST)
     public void approvePermit(Long id) {
         permitApplyService.approvePermit(id);
     }
 
+    @Auth(AuthAdmin.class)
     @ApiOperation(value = "拒绝权限申请")
     @RequestMapping(value = "/reject", method = RequestMethod.POST)
     public void rejectPermit(Long id, String remark) {

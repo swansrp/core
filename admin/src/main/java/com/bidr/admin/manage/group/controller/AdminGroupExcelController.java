@@ -5,6 +5,8 @@ import com.bidr.admin.controller.common.BaseExcelParseController;
 import com.bidr.admin.manage.group.service.AdminGroupExcelService;
 import com.bidr.admin.manage.group.vo.GroupUserVO;
 import com.bidr.admin.service.common.BaseExcelParseService;
+import com.bidr.authorization.annotation.auth.Auth;
+import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcUserGroup;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping(value = "/web/group/user/excel")
+@Auth(AuthAdmin.class)
 public class AdminGroupExcelController extends BaseExcelParseController<AcUserGroup, GroupUserVO> {
 
     private final AdminGroupExcelService adminGroupExcelService;
