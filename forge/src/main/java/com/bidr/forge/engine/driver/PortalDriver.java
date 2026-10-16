@@ -404,6 +404,11 @@ public interface PortalDriver<VO> extends DriverTreeInf<VO> {
                 if (FuncUtil.isNotEmpty(alias)) {
                     // 在统计查询中，字段名映射到其在子查询中使用的别名
                     aliasMap.put(alias, alias);
+                    // 前端字段名统一是驼峰口径（与 buildAliasMap 一致），别名为下划线形态时补登记一个驼峰 key；
+                    // value 仍是子查询真实暴露的 alias，不能写成驼峰，否则外层引用不到
+                    if (alias.contains("_")) {
+                        aliasMap.putIfAbsent(StringUtil.underlineToCamel(alias), alias);
+                    }
                 }
             }
         }

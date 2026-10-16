@@ -176,7 +176,6 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
     @Override
     public Map<String, Object> summary(AdvancedSummaryReq req, String portalName, Long roleId) {
         DatasetColumns datasetColumns = driverStatisticSupportService.getDatasetColumns(portalName);
-        Map<String, String> aliasMap = buildAliasMap(portalName, roleId);
         // 保存当前线程进入本方法前的数据源（可能为空=默认），用于后续精确恢复
         String prevDataSource = jdbcConnectService.getCurrentDataSourceName();
 
@@ -196,8 +195,9 @@ public class DatasetDriver implements PortalDriver<Map<String, Object>> {
         // 列级授权：无权列不进入内层子查询与上下文，避免被直传真实列名绕过
         columns = retainPermittedDatasetColumns(columns);
 
-        // 为统计查询构建特殊的别名映射，使用Dataset中定义的columnAlias作为键值
-//        Map<String, String> aliasMap = buildStatisticAliasMap(columns);
+        // 汇总 SQL 的条件拼在预览子查询的“外层”，外层只能看到 columnAlias（驼峰输出列名），
+        // 看不到物理列；用 portal 的 buildAliasMap（value=columnSql）会拼出 t.pmp_state 这种外层不可见的列
+        Map<String, String> aliasMap = buildStatisticAliasMap(columns);
 
         // 2) 在 Dataset 指定的数据源中执行统计 SQL
         Set<String> hiddenFields = resolveHiddenColumnFields(portalName);

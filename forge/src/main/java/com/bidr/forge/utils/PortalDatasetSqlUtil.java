@@ -46,6 +46,9 @@ public class PortalDatasetSqlUtil {
             if (i > 0) {
                 sumSql.append(", ");
             }
+            // 列名来自请求体且直接拼进 SUM(...)，含 ) 或反引号即可改写整句：与透视标识同口径先验字符集
+            Validator.assertTrue(SqlIdentifierUtil.isSafeIdentifier(columns.get(i)),
+                    ErrCodeSys.SYS_ERR_MSG, "汇总列名非法：" + columns.get(i));
             sumSql.append("SUM(").append(columns.get(i)).append(") AS ").append(columns.get(i));
         }
         sumSql.append(" FROM (").append(sql).append(") AS tmp");

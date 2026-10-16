@@ -122,6 +122,7 @@ public class DriverStatisticSupportService {
         List<String> outerSelectParts = new ArrayList<>();
 
         for (String column : columns) {
+            assertSafeSummaryColumn(column);
             innerSelectParts.add(column + " AS " + column);
             outerSelectParts.add("SUM(" + column + ") AS " + column);
         }
@@ -151,6 +152,15 @@ public class DriverStatisticSupportService {
     }
 
     /**
+     * 汇总列名不参与参数化，直接拼进 {@code SUM(col) AS col}：请求体里含 ) 或反引号即可逃逸改写整句。
+     * 口径同透视列标识与度量字段名——先验字符集再拼，拒绝而非剔字（静默删字留下假字段名，表现为查不到数据，更难排查）。
+     */
+    private static void assertSafeSummaryColumn(String column) {
+        Validator.assertTrue(SqlIdentifierUtil.isSafeIdentifier(column),
+                ErrCodeSys.SYS_ERR_MSG, "汇总列名非法：" + column);
+    }
+
+    /**
      * Dataset 汇总统计：
      * - 有条件查询（req.condition 非空）：使用 Dataset 预览 SQL 作为子查询，并在外层用“输出列别名”做过滤（例如 projectName）；
      * - 无条件查询：直接复用 ctx.getFromSql()，保留 Dataset 默认 ORDER BY（行为与原来一致）。
@@ -168,6 +178,7 @@ public class DriverStatisticSupportService {
         List<String> innerSelectParts = new ArrayList<>();
         List<String> outerSelectParts = new ArrayList<>();
         for (String column : columns) {
+            assertSafeSummaryColumn(column);
             innerSelectParts.add(column + " AS " + column);
             outerSelectParts.add("SUM(" + column + ") AS " + column);
         }
