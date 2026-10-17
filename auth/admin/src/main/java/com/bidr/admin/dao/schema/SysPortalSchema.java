@@ -53,18 +53,9 @@ public class SysPortalSchema extends BaseMybatisSchema<SysPortal> {
                 "ADD INDEX `idx_portal_datamode` (`data_mode`), " +
                 "ADD INDEX `idx_portal_referenceid` (`reference_id`);");
 
-        // 初始化基础Portal数据
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(1, 0, 'AcUser', '系统-用户信息表', 'portal/user', 'adminUserController', 'small', '0', '0', 'userId', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '1');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(2, 0, 'AcDept', '系统-部门表', 'portal/department', 'adminDeptController', 'small', '0', '0', 'deptId', 'pid', '1', 'name', 'showOrder', '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(3, 0, 'SaObjectStorage', '系统-对象存储记录', 'SaObjectStorage', 'ossController', 'small', '0', '0', 'id', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(4, 0, 'SysConfig', '系统-参数配置表', 'config/admin', 'adminConfigController', 'small', '0', '0', 'configId', '', '1', 'configName', NULL, '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(5, 0, 'SysDict', '系统-字典数据表', 'dict/item/admin', 'adminDictController', 'small', '0', '0', 'dictId', '', '1', 'dictItem', NULL, '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(6, 0, 'SysDictType', '系统-字典类型表', 'dict/admin', 'adminDictTypeController', 'small', '0', '0', 'dictName', '', '1', 'dictTitle', NULL, '0', 60, 60, 60, 2, '1', '0');");
+        // 基础 Portal 行（AcUser/AcDept/SaObjectStorage/SysConfig/SysDict/SysDictType）不再由 initData 硬编码：
+        // PortalConfigService 启动扫描 @AdminPortal 时自动注册（url 从 @RequestMapping 现读，不会漂移）。
+        // 🔴 原 6 行 initData 是本次对象存储页 404 的根因：硬编码 url 停在 OssController 改挂 /web/oss 之前，
+        //   "行存在即不覆盖 url" 的保护使其永驻（2026-10-17 修正，已上线库已由运维修正行数据）。
     }
 }
