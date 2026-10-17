@@ -700,10 +700,10 @@ private String valid;
 **Java代码示例**：
 
 ```java
-import com.bidr.admin.config.PortalIdField;
-import com.bidr.admin.config.PortalNameField;
-import com.bidr.admin.config.PortalOrderField;
-import com.bidr.admin.config.PortalPidField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalOrderField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalPidField;
 import com.bidr.admin.vo.BaseVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -751,10 +751,10 @@ public class SchemaModuleVO extends BaseVO {
 **树形结构VO示例**（包含pid字段）：
 
 ```java
-import com.bidr.admin.config.PortalIdField;
-import com.bidr.admin.config.PortalNameField;
-import com.bidr.admin.config.PortalOrderField;
-import com.bidr.admin.config.PortalPidField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalOrderField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalPidField;
 import com.bidr.admin.vo.BaseVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -805,7 +805,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalIdField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalIdField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalIdField`
 - 作用：标记VO中的主键字段，用于Portal层识别实体的唯一标识
 - 使用规则：
     - 每个VO类必须有且仅有一个被 `@PortalIdField` 标注的字段（通常是 `id`）
@@ -814,7 +814,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalNameField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalNameField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalNameField`
 - 作用：标记VO中表述名字的字段，用于Portal层显示实体名称
 - 适用字段：`name`、`title`、`displayName`、`label` 等名称类字段
 - 使用规则：
@@ -823,7 +823,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalOrderField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalOrderField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalOrderField`
 - 作用：标记VO中表述顺序的字段，用于Portal层排序显示
 - 适用字段：`sort`、`order`、`displayOrder`、`display_order` 等排序类字段
 - 使用规则：
@@ -832,7 +832,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalPidField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalPidField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalPidField`
 - 作用：标记VO中表述父ID的字段，用于Portal层树形结构显示
 - 适用字段：`pid`、`parentId`、`parent_id` 等父节点关联字段
 - 使用规则：
@@ -842,7 +842,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalTextAreaField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalTextAreaField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalTextAreaField`
 - 作用：标记VO中的文本域字段，用于Portal层使用多行文本输入框显示
 - 适用字段：数据库中的`text`、`longtext`类型字段
 - 常见字段名：`description`、`content`、`remark`、`comment`、`message` 等
@@ -852,7 +852,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalMoneyField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalMoneyField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalMoneyField`
 - 作用：标记VO中的金钱类型字段，用于Portal层格式化显示和输入金额
 - 适用字段：数据库中存储金额的字段（通常为`DECIMAL`或`BIGINT`类型）
 - 常见字段名：`price`、`amount`、`money`、`cost`、`fee`、`salary` 等
@@ -868,7 +868,7 @@ public class SchemaProductionVO extends BaseVO {
 
 **@PortalPercentField注解说明**：
 
-- 位置：`com.bidr.admin.config.PortalPercentField`
+- 位置：`com.bidr.kernel.constant.dict.portal.anno.PortalPercentField`
 - 作用：标记VO中的百分比类型字段，用于Portal层格式化显示和输入百分比
 - 适用字段：数据库中存储百分比的字段（通常为`DECIMAL`或`INT`类型）
 - 常见字段名：`rate`、`ratio`、`percent`、`percentage`、`discount` 等
@@ -890,13 +890,13 @@ public class SchemaProductionVO extends BaseVO {
 
 1. 继承 `BaseVO`
 2. 使用 `@EqualsAndHashCode(callSuper = true)` 注解（与Lombok的@Data注解配合，确保正確处理父类字段）
-3. 主键字段id使用 `@PortalIdField` 注解（源于`com.bidr.admin.config.PortalIdField`）
-4. 名称字段（title/name/displayName/label）使用 `@PortalNameField` 注解（源于`com.bidr.admin.config.PortalNameField`）
-5. 排序字段（sort/order/displayOrder）使用 `@PortalOrderField` 注解（源于`com.bidr.admin.config.PortalOrderField`）
-6. **树形结构**：父ID字段（pid/parentId）使用 `@PortalPidField` 注解（源于`com.bidr.admin.config.PortalPidField`）
-7. **文本域字段**：数据库text/longtext类型字段使用 `@PortalTextAreaField` 注解（源于`com.bidr.admin.config.PortalTextAreaField`）
-8. **金钱字段**：金额类型字段使用 `@PortalMoneyField` 注解（源于`com.bidr.admin.config.PortalMoneyField`）
-9. **百分比字段**：百分比类型字段使用 `@PortalPercentField` 注解（源于`com.bidr.admin.config.PortalPercentField`）
+3. 主键字段id使用 `@PortalIdField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalIdField`）
+4. 名称字段（title/name/displayName/label）使用 `@PortalNameField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalNameField`）
+5. 排序字段（sort/order/displayOrder）使用 `@PortalOrderField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalOrderField`）
+6. **树形结构**：父ID字段（pid/parentId）使用 `@PortalPidField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalPidField`）
+7. **文本域字段**：数据库text/longtext类型字段使用 `@PortalTextAreaField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalTextAreaField`）
+8. **金钱字段**：金额类型字段使用 `@PortalMoneyField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalMoneyField`）
+9. **百分比字段**：百分比类型字段使用 `@PortalPercentField` 注解（源于`com.bidr.kernel.constant.dict.portal.anno.PortalPercentField`）
 10. 其他字段使用 `@ApiModelProperty` 注解
 11. 添加JavaDoc注释（@author sharp，@since 当前日期）
 
