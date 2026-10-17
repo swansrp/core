@@ -1,0 +1,27 @@
+# menu-seed.yml —— 框架菜单声明（core/insight 交付面）
+# 智能体管理页端点＝AdminSmartAgentController（insight/smartquery）；
+# 前端组件在 views/Insight/Agent/Admin（table-id=agentManageTable、走 apis/smartAgent），
+# 系 Agent 目录四页中唯一不归 agent-console 者（补缺挂③，批乙棒5 识别）。
+# 智能问数＝独立全宽页（views/Insight/ChatBi，页头注释自证入口＝DB 菜单「智能问数」ChatBiAsk；
+# 面板是 components/common/chatbi 组件，页面只是壳包面板、路由直达本 vue 文件），
+# 后端 ChatBi*Controller 群住本模块；2026-10-17 用户点名入册、直挂系统管理导航。
+# 导航＋Agent 目录两级锚点为骨架（同名 topnav 由 MenuDeclaration.mergeAll 并集合并）；
+# 骨架字段必须与 authorization 份逐字一致，宿主缺席时 MenuSeeder 整支剪枝不种。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: Agent
+        path: agent
+        icon: SettingOutlined
+        children:
+          - title: 智能体管理
+            path: AgentAdmin
+            component: /framework/views/Insight/Agent/Admin/index.vue
+            icon: SettingOutlined
+      - title: 智能问数
+        path: ChatBiAsk
+        component: /framework/views/Insight/ChatBi/index.vue
+        icon: RobotOutlined

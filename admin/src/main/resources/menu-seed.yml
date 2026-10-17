@@ -1,0 +1,27 @@
+# menu-seed.yml —— 框架菜单声明（core/admin 交付面）
+# 表单配置页走 apis/portal（AdminPortalController /config，admin 模块）；
+# 渠道管理/渠道历史两页＝manage/partner AcPartnerHistoryPortalController＋前端 apiType.channel='/partner/admin'（批甲盘点的 partner 族，admin 模块）。
+# 导航＋表格配置目录两级锚点为骨架（同名 topnav 由 MenuDeclaration.mergeAll 并集合并）；
+# 骨架字段必须与 authorization 份逐字一致，宿主缺席时 MenuSeeder 整支剪枝不种。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: 表格配置
+        path: portal
+        icon: InsertRowAboveOutlined
+        children:
+          - title: 表单配置
+            path: config
+            component: /framework/views/MainContent/PortalConfig
+            icon: InsertRowAboveOutlined
+      - title: 渠道管理
+        path: Channel
+        component: /framework/views/MainContent/SystemManage/Channel/index.vue
+        icon: SettingOutlined
+      - title: 渠道历史
+        path: channelHistory
+        component: /framework/views/MainContent/Portal/channelHistory/index.vue
+        icon: SettingOutlined

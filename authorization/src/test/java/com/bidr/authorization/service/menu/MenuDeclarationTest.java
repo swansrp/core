@@ -20,8 +20,10 @@ import java.util.List;
  * Description: 菜单声明纯函数离线单测（纯 JUnit4、不起 Spring、不碰库）——
  * 覆盖：校验负/正对照（component 全局唯一、同父 title 唯一，针自证纪律：每个负例配一个正对照，
  * 证明校验器不是"逢配置必抛"）；嵌套树归并腿（同 topnav 按 title∨path 合并、子树并集、
- * 字段不一致 fail-fast）；两份真实 menu-seed.yml 的解析正对照腿（authorization classpath 一份
- * 必读，inkhub-common 一份按模块在场判定——独立构建 core 仓时该腿 assume 跳过并在报告注明）。
+ * 字段不一致 fail-fast）；跨模块锚点骨架的在场剪枝腿（宿主缺席整支移除、在场不误删）；
+ * menu-seed.yml 分布正对照腿（按模块拆十份：authorization 份走 classpath 必读，
+ * platform/redis/forge/admin/agent-console/insight/oss/mcp 与 inkhub-common 九份按磁盘路径在场判定——
+ * 独立构建 core 仓时缺模块的腿 assume 跳过并在报告注明）。
  * MenuSeeder 的 DB 写路径不在本测覆盖（交真机腿，见 MenuSeeder 类注释）。
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
@@ -202,27 +204,105 @@ public class MenuDeclarationTest {
         validate(merged);
     }
 
+    // ==================== 锚点骨架：在场剪枝（宿主缺席整支移除＝薄装机不炸） ====================
+
+    @Test
+    public void anchorSkeletonWithoutHostIsPruned() {
+        List<Node> skeleton = one(""
+                + "menus:\n"
+                + "  - title: 系统管理\n"
+                + "    path: SystemManage\n"
+                + "    component: SystemManage\n"
+                + "    children:\n"
+                + "      - {title: Agent, path: agent, icon: SettingOutlined}\n");
+        List<Node> pruned = MenuDeclaration.pruneAnchorSkeletons(skeleton);
+        Assert.assertEquals("无宿主骨架应剪除 1 支", 1, pruned.size());
+        Assert.assertEquals("Agent/agent", pruned.get(0).title + "/" + pruned.get(0).path);
+        Assert.assertTrue("剪后导航 children 应空", skeleton.get(0).children.isEmpty());
+        // 剪后必须能过 validate（不剪则"空挂节点"必抛——danglingNode 腿已证）
+        validate(skeleton);
+    }
+
+    @Test
+    public void mergedSkeletonWithHostIsNotPruned() {
+        List<Node> skeleton = one(""
+                + "menus:\n"
+                + "  - title: 系统管理\n"
+                + "    path: SystemManage\n"
+                + "    component: SystemManage\n"
+                + "    children:\n"
+                + "      - {title: Agent, path: agent, icon: SettingOutlined}\n");
+        List<Node> host = one(""
+                + "menus:\n"
+                + "  - title: 系统管理\n"
+                + "    path: SystemManage\n"
+                + "    component: SystemManage\n"
+                + "    children:\n"
+                + "      - title: Agent\n"
+                + "        path: agent\n"
+                + "        icon: SettingOutlined\n"
+                + "        children:\n"
+                + "          - {title: 技能装配, path: capability, component: /framework/views/a.vue}\n");
+        List<Node> merged = MenuDeclaration.mergeAll(wrap(skeleton, host));
+        Assert.assertEquals("宿主在场不应剪", 0, MenuDeclaration.pruneAnchorSkeletons(merged).size());
+        Assert.assertEquals("合并后 Agent 一棵带一页", 1, merged.get(0).children.size());
+        validate(merged);
+    }
+
     // ==================== 真实声明文件：解析＋校验正对照 ====================
 
     @Test
     public void classpathDeclarationParsesAndPassesValidation() throws IOException {
+        // authorization 单测 classpath＝auth 份＋其依赖模块（platform/redis）份；
+        // 全八份分布的合并全集断言在 fullDistributionMergesToCompleteTree 腿（磁盘路径读，不吃 classpath 差异）。
         List<Node> roots = MenuDeclaration.parseAll(MenuDeclarationTest.class.getClassLoader());
         Assert.assertFalse("authorization classpath 上必须能扫到 menu-seed.yml（打包资源断言）", roots.isEmpty());
+        MenuDeclaration.pruneAnchorSkeletons(roots);
         validate(roots);
         Node sysNav = findRootByPath(roots, "SystemManage");
         Assert.assertEquals("顶级导航", "系统管理", sysNav.title);
         Assert.assertTrue("系统管理导航行保留库基线形态 component=SystemManage",
                 sysNav.hasComponent());
-        // 补缺挂三块必须在声明里
+        // auth 自有页与棒4 补缺挂必须在册
         Assert.assertNotNull("租户管理页（棒4 交付）", findNode(sysNav, "TenantManage"));
-        Assert.assertNotNull("partner 页一：渠道管理", findNode(sysNav, "Channel"));
-        Assert.assertNotNull("partner 页二：渠道历史", findNode(sysNav, "channelHistory"));
+        Assert.assertNotNull("权限管理七页之首：菜单管理", findNode(sysNav, "MenuMaintenance"));
+        Assert.assertNotNull("账号管理", findNode(sysNav, "account"));
+    }
+
+    @Test
+    public void fullDistributionMergesToCompleteTree() throws IOException {
+        // 拆分回归针：框架九份按归属模块分布后，磁盘全集合并必须仍是"一棵系统管理"
+        // （现库 26 行＋4 补缺挂＋2 点名入册（MCP配置、智能问数）＝32）；缺任一宿主模块即 assume 跳过（core 独立构建形态不判死）。
+        String[] owners = {"authorization", "platform", "redis", "forge", "admin", "agent-console", "insight", "oss", "mcp"};
+        List<List<Node>> framework = new ArrayList<>();
+        for (String module : owners) {
+            File pom = new File("../" + module + "/pom.xml");
+            Assume.assumeTrue("宿主模块不在场：" + module, pom.isFile());
+            File yml = new File("../" + module + "/src/main/resources/menu-seed.yml");
+            Assert.assertTrue("模块在场则声明文件必须存在：" + yml.getAbsolutePath(), yml.isFile());
+            framework.add(MenuDeclaration.parseTree(readAll(yml), yml.getPath()));
+        }
+        List<Node> merged = MenuDeclaration.mergeAll(framework);
+        Assert.assertEquals("全部骨架归并后仍是一棵顶级导航", 1, merged.size());
+        Assert.assertEquals("prune 不应误删任何补全骨架", 0, MenuDeclaration.pruneAnchorSkeletons(merged).size());
+        validate(merged);
+        Node sysNav = merged.get(0);
+        // 现库系统管理子树 26 行全部在册＋4 补缺挂＋2 点名入册（MCP配置、智能问数，库均无基线行）＝32
+        Assert.assertEquals(32, MenuDeclaration.flatten(Collections.singletonList(sysNav)).size());
+        // 跨模块归属逐一定位（每处都是"骨架在 auth、内容在宿主"的接缝）
         Node agent = findNode(sysNav, "agent");
-        Assert.assertNotNull("Agent 目录", agent);
-        Assert.assertNotNull("agent 第 4 页：智能体管理", findNode(agent, "AgentAdmin"));
-        Assert.assertEquals("Agent 目录四页", 4, agent.children.size());
-        // 现库系统管理子树 26 行全部在册：展平后节点数＝26 基线＋4 补缺挂＝30
-        Assert.assertEquals(30, MenuDeclaration.flatten(Collections.singletonList(sysNav)).size());
+        Assert.assertEquals("Agent 目录四页（agent-console 三页＋insight 一页）", 4, agent.children.size());
+        Node portal = findNode(sysNav, "portal");
+        Assert.assertEquals("表格配置四页（admin 表单配置＋forge 动态三页）", 4, portal.children.size());
+        Assert.assertNotNull("platform：参数管理", findNode(sysNav, "ParamsManage"));
+        Assert.assertNotNull("platform：字典维护", findNode(sysNav, "DictionaryMaintenance"));
+        Assert.assertNotNull("platform：日志", findNode(sysNav, "log"));
+        Assert.assertNotNull("redis：缓存管理", findNode(sysNav, "redis"));
+        Assert.assertNotNull("admin：渠道管理", findNode(sysNav, "Channel"));
+        Assert.assertNotNull("admin：渠道历史", findNode(sysNav, "channelHistory"));
+        Assert.assertNotNull("oss：对象存储管理", findNode(sysNav, "SaObjectStorage"));
+        Assert.assertNotNull("mcp：MCP配置（独立页、点名入册）", findNode(sysNav, "Mcp"));
+        Assert.assertNotNull("insight：智能问数（独立全宽页、点名入册）", findNode(sysNav, "ChatBiAsk"));
     }
 
     @Test
@@ -236,6 +316,8 @@ public class MenuDeclarationTest {
         validate(biz);
         List<Node> framework = MenuDeclaration.parseAll(MenuDeclarationTest.class.getClassLoader());
         List<Node> merged = MenuDeclaration.mergeAll(wrap(framework, biz));
+        // 与 MenuSeeder 运行序一致：先剪无宿主骨架（core 独立构建＝forge/admin 等缺席的薄形态），再校验
+        MenuDeclaration.pruneAnchorSkeletons(merged);
         validate(merged);
         Assert.assertEquals("框架 topnav＋墨枢 topnav", 2, merged.size());
         Node moShu = findRootByPath(merged, "inkhub");

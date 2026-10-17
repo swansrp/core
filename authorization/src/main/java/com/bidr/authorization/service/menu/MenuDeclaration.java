@@ -21,7 +21,9 @@ import java.util.regex.Pattern;
  * Description: 菜单声明文件（menu-seed.yml）的解析/归并/校验纯函数——不依赖 Spring、不查库，可离线单测。
  * 声明即嵌套树：根节点＝顶级导航（topnav，menu_type=0），children 递归；父子关系来自 yml 结构，
  * 不做库反查（定案见 dev-logs M-20/M-21/M-22）。
- * 多模块同名 topnav 按结构并集合并，同节点字段不一致 fail-fast；
+ * 多模块同名 topnav 按结构并集合并，同节点字段不一致 fail-fast；跨模块锚点骨架
+ * （无 component 无 children 的同名占位节点）由宿主模块声明补全，宿主缺席时
+ * pruneAnchorSkeletons 整支剪除（不因他人模块未打包而炸）；
  * 校验＝component 全局唯一（非空者）＋同父 title 唯一＋path 单段合法——冲突即抛，配置错误开发期炸。
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
@@ -283,6 +285,32 @@ public final class MenuDeclaration {
             dfs(root, out);
         }
         return out;
+    }
+
+    /**
+     * 锚点骨架的在场剪枝：跨模块分布后，一份 yml 里可能只写"他人子树的骨架"
+     * （既无 component 又无 children 的节点，靠宿主模块同名声明合并补全）。
+     * 宿主模块 jar 缺席（该模块不在场的部署形态）时骨架不会被补全——整支移除，
+     * 返回被移除节点的深度优先序（调用方逐条告警）。绝不因别人的模块没打进来而炸启动。
+     */
+    public static List<Node> pruneAnchorSkeletons(List<Node> roots) {
+        List<Node> pruned = new ArrayList<>();
+        for (Node root : roots) {
+            pruneChildren(root, pruned);
+        }
+        return pruned;
+    }
+
+    private static void pruneChildren(Node parent, List<Node> pruned) {
+        java.util.Iterator<Node> it = parent.children.iterator();
+        while (it.hasNext()) {
+            Node child = it.next();
+            pruneChildren(child, pruned);
+            if (!child.hasComponent() && child.children.isEmpty()) {
+                pruned.add(child);
+                it.remove();
+            }
+        }
     }
 
     private static void dfs(Node node, List<Node> out) {

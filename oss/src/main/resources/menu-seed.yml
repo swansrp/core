@@ -1,0 +1,14 @@
+# menu-seed.yml —— 框架菜单声明（core/oss 交付面）
+# 对象存储管理：现库基线行（id=26），前端为 Portal 容器页（views/MainContent/SystemManage/Oss，
+# table-id=SaObjectStorage），后端端点 /web/oss 住本模块（OssController）。
+# 顶级导航「系统管理」锚点字段必须与 authorization 份逐字一致（不一致＝合并期 fail-fast）。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: 对象存储管理
+        path: SaObjectStorage
+        component: /framework/views/MainContent/Portal
+        icon: SettingOutlined

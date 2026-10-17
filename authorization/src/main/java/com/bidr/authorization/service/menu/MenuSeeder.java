@@ -35,6 +35,10 @@ import java.util.List;
  * 插入行形态照库基线：menu_type / visible='1' / status='1' / client_type='0'
  * （生效值是 '1'，与列注释相反，menu-add.js L8-12 已钉）。
  *
+ * 跨模块分布：声明按页面宿主模块拆成多份（auth/platform/redis/forge/admin/agent-console/insight＋业务），
+ * 他人子树只留同名 path 骨架，先 pruneAnchorSkeletons（宿主缺席整支剪除＋告警）再 validate——
+ * 薄装机形态不因缺模块炸启动，全量装机形态剪枝零命中（回归针见 MenuDeclarationTest）。
+ *
  * ⚠ 本类的 DB 写路径（insert/updateById/ac_role_menu 绑定）不在离线单测覆盖（交真机腿：
  * 起服务后跑一次，重启第二次应零新增）；离线腿覆盖的是 MenuDeclaration 解析/归并/校验纯函数。
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
@@ -62,6 +66,9 @@ public class MenuSeeder implements ApplicationRunner {
         List<Node> roots = MenuDeclaration.parseAll(getClass().getClassLoader());
         if (roots.isEmpty()) {
             return;
+        }
+        for (Node dangling : MenuDeclaration.pruneAnchorSkeletons(roots)) {
+            log.warn("[menu-seed] 锚点骨架无宿主声明（模块缺席？），整支跳过：{}", dangling);
         }
         MenuDeclaration.validate(roots);
         Long adminRoleId = sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID);

@@ -1,0 +1,26 @@
+# menu-seed.yml —— 框架菜单声明（core/forge 交付面）
+# 动态表格/动态数据集/动态表单三页端点＝Dynamic*Controller（forge）。
+# 导航＋表格配置目录两级锚点为骨架（同名 topnav 由 MenuDeclaration.mergeAll 并集合并）；
+# 骨架字段必须与 authorization 份逐字一致，宿主缺席时 MenuSeeder 整支剪枝不种。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: 表格配置
+        path: portal
+        icon: InsertRowAboveOutlined
+        children:
+          - title: 动态表格
+            path: forge
+            component: /framework/views/MainContent/dynamic/forge/index.vue
+            icon: SettingOutlined
+          - title: 动态数据集
+            path: dataset
+            component: /framework/views/MainContent/dynamic/dataset/index.vue
+            icon: SettingOutlined
+          - title: 动态表单
+            path: form
+            component: /framework/views/MainContent/dynamic/form/manage.vue
+            icon: SettingOutlined

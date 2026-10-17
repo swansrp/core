@@ -1,0 +1,27 @@
+# menu-seed.yml —— 框架菜单声明（core/agent-console 交付面）
+# 技能装配/技能勾选/系统skill 三页端点＝AgentCapabilityController、AgentDefinitionAdminController、
+# SystemSkillAdminController（agent-console）。
+# 导航＋Agent 目录两级锚点为骨架（同名 topnav 由 MenuDeclaration.mergeAll 并集合并）；
+# 骨架字段必须与 authorization 份逐字一致，宿主缺席时 MenuSeeder 整支剪枝不种。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: Agent
+        path: agent
+        icon: SettingOutlined
+        children:
+          - title: 技能装配
+            path: capability
+            component: /framework/views/MainContent/SystemManage/AgentCapability/index.vue
+            icon: SettingOutlined
+          - title: 技能勾选
+            path: definition
+            component: /framework/views/MainContent/SystemManage/AgentDefinition/index.vue
+            icon: SettingOutlined
+          - title: 系统skill
+            path: skill
+            component: /framework/views/MainContent/SystemManage/SystemSkill/index.vue
+            icon: SettingOutlined

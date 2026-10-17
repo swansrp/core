@@ -1,0 +1,15 @@
+# menu-seed.yml —— 框架菜单声明（core/mcp 交付面）
+# MCP 配置：独立单页（views/MainContent/Mcp，tab=端点类别×类型卡片网格），
+# 后端端点 /web/sys/mcp/config 住本模块（McpConfigController＋SysMcp）。
+# 现库基线从未挂过此行（initData 21 行外的"代码在、菜单缺"页，2026-10-17 用户点名入册）。
+# mcp jar 不在部署 classpath 时本声明不被 MenuSeeder 扫到——模块在场即自动播种。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: MCP配置
+        path: Mcp
+        component: /framework/views/MainContent/Mcp
+        icon: SettingOutlined

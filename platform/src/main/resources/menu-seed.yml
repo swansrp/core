@@ -1,0 +1,23 @@
+# menu-seed.yml —— 框架菜单声明（core/platform 交付面）
+# 系统参数（sys_config 管理）＋字典维护＋日志：三页端点均住 platform
+# （AdminConfigController /web/config/admin、AdminDictController /web/dict、LogController /web/log/fetch）。
+# 导航与目录锚点为骨架（同名 topnav 由 MenuDeclaration.mergeAll 并集合并）；
+# 骨架字段必须与 authorization 份逐字一致，宿主缺席时 MenuSeeder 整支剪枝不种。
+menus:
+  - title: 系统管理
+    path: SystemManage
+    component: SystemManage
+    icon: RightSquareOutlined
+    children:
+      - title: 参数管理
+        path: ParamsManage
+        component: /framework/views/MainContent/Portal/parameter
+        icon: SettingOutlined
+      - title: 字典维护
+        path: DictionaryMaintenance
+        component: /framework/views/MainContent/Portal/dict
+        icon: ProfileOutlined
+      - title: 日志
+        path: log
+        component: /framework/views/MainContent/Log/index.vue
+        icon: SettingOutlined
