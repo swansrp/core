@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.bidr</groupId>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>agent-console</artifactId>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+    <description>Agent 资产化控制面（M14）：能力包登记 SPI 与只读清单——工具/技能/模型档的"系统级"资产目录与装配单。
+        运行时仍在 core/llm，本模块只出机制（登记、聚合、只读端点），不含业务语义、不自持空间概念。</description>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
+                <llm.version>${jarVersion}</llm.version>
+                <oss.version>${jarVersion}</oss.version>
+                <platform.version>${jarVersion}</platform.version>
+                <authorization.version>${jarVersion}</authorization.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>20261016033744-79</kernel.version>
+                <llm.version>20261016033744-79</llm.version>
+                <oss.version>20261016033744-79</oss.version>
+                <platform.version>20261016033744-79</platform.version>
+                <authorization.version>20261016033744-79</authorization.version>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <!-- kernel：web 基座（@RestController / jackson） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <!-- 运行时与本模块的依赖方向＝console → llm：登记件引用 llm 的工具名常量，llm 反向不感知本模块 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>llm</artifactId>
+            <version>${llm.version}</version>
+        </dependency>
+        <!--
+            oss：系统级技能包的字节通道只吃 ObjectStorageService 的按名直写/直读 SPI（putBytes/readBytes），
+            选型正源仍是 sys_config 的 OSS_SERVER_TYPE，与本模块是否认识某家 SDK 无关
+        -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>oss</artifactId>
+            <version>${oss.version}</version>
+        </dependency>
+        <!-- platform：读系统参数缓存（SysConfigCacheService）。llm 本就传递带它，但这里是我方直接 import 的类，
+             直接用的就直接声明——靠传递依赖声明，等于让 llm 的依赖变化决定本模块能否编译 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
+        </dependency>
+        <!--
+            authorization：只吃它的 @BindUser 显示绑定（装配单读视图把发起人工号翻成姓名，走 kernel
+            BindRepoHandler 的批量 IN，不逐行查库）。口径同 core/oss 的 OssWikiCollaboratorVO。
+            🔴 管理员闸门仍不走它——权限判定继续用反射取 permitService（见 AgentManifestController#isAdmin）
+        -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization</artifactId>
+            <version>${authorization.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- 传递依赖含 JUnit4 时 surefire 会选错 provider，表现为 Tests run: 0（必须显式指定） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>2.22.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+</project>

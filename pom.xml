@@ -7,31 +7,31 @@
     <artifactId>core</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <modules>
-        <module>kernel</module>
-        <module>platform</module>
-        <module>xxl-job</module>
-        <module>email</module>
-        <module>redis</module>
-        <module>authorization</module>
-        <module>sms</module>
-        <module>mqtt</module>
-        <module>neo4j</module>
-        <module>admin</module>
-        <module>oss</module>
-        <module>wechat</module>
-        <module>ocr</module>
-        <module>qichacha</module>
-        <module>mongo</module>
-        <module>socket-io</module>
-        <module>mcp</module>
-        <module>elasticsearch</module>
-        <module>forge</module>
-        <module>kafka</module>
-        <module>td</module>
-        <module>llm</module>
-        <module>insight</module>
-        <module>agent-runtime</module>
-        <module>agent-console</module>
+        <module>base/kernel</module>
+        <module>base/platform</module>
+        <module>tool/xxl-job</module>
+        <module>comm/email</module>
+        <module>store/redis</module>
+        <module>auth/authorization</module>
+        <module>comm/sms</module>
+        <module>comm/mqtt</module>
+        <module>store/neo4j</module>
+        <module>auth/admin</module>
+        <module>store/oss</module>
+        <module>comm/wechat</module>
+        <module>tool/ocr</module>
+        <module>tool/qichacha</module>
+        <module>store/mongo</module>
+        <module>comm/socket-io</module>
+        <module>ai/mcp</module>
+        <module>store/elasticsearch</module>
+        <module>lowcode/forge</module>
+        <module>comm/kafka</module>
+        <module>store/td</module>
+        <module>ai/llm</module>
+        <module>lowcode/insight</module>
+        <module>ai/agent-runtime</module>
+        <module>ai/agent-console</module>
     </modules>
     <packaging>pom</packaging>
 
