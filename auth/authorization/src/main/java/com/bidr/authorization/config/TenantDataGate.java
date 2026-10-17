@@ -3,6 +3,7 @@ package com.bidr.authorization.config;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.bidr.authorization.holder.TenantContext;
 import net.sf.jsqlparser.JSQLParserException;
+import com.bidr.kernel.config.db.TenantGateSuppressor;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -102,8 +103,14 @@ public class TenantDataGate implements DataPermissionHandler {
      * 闸是否处于"会改写"的活跃档（判序②③的短路形态）：无档/空集/平台档 ⇒ false——
      * {@code beforeQuery} 据此在解析之前就跳过，老项目连"压缩+重序列化"的文本抖动都不发生，
      * 是比"改写后原样"更强的零感知。仅短路，不新增语义。
+     * <p>翻译读旁路（{@link TenantGateSuppressor}）同样落在这里：BindRepo 族的展示值批查
+     * 在 kernel，闸在 authorization（依赖方向不可逆），故由闸反向读 kernel 的调用帧位。
+     * 该位只在 {@code runSuppressed} 帧内为真，业务读写不受影响。</p>
      */
     public static boolean gateActive() {
+        if (TenantGateSuppressor.isSuppressed()) {
+            return false;
+        }
         List<Long> tenantIds = TenantContext.getTenantIds();
         return tenantIds != null && !tenantIds.isEmpty() && !TenantContext.isPlatform();
     }

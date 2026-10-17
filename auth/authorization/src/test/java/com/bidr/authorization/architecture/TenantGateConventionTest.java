@@ -5,6 +5,7 @@ import com.bidr.authorization.config.TenantDataGate;
 import com.bidr.authorization.config.TenantGateConfiguration;
 import com.bidr.authorization.dao.mapper.AcUserDao;
 import com.bidr.authorization.holder.TenantContext;
+import com.bidr.kernel.config.db.TenantGateSuppressor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -51,7 +52,8 @@ import java.util.stream.Collectors;
  * 腿 8 ac_user_role/ac_user_dept 族不改写；腿 9 带别名 SQL 用别名列限定（解除旧限制的证据）；
  * 腿 10 无档/平台档旁路＋负对照；腿 11 {@code @InterceptorIgnore(dataPermission)} 旁路口
  * 真实链生效（M-24 的离线等价腿）＋负对照；腿 12 解析失败保守旁路不抛穿；
- * 腿 13 resolveAnchor 单元形态（库名限定/反引号/子查询 FROM）。</p>
+ * 腿 13 resolveAnchor 单元形态（库名限定/反引号/子查询 FROM）；
+ * 腿 17 kernel 侧翻译读旁路位（{@code @BindRepo} 族展示值批查）在真实链生效＋帧外负对照。</p>
  * <p>C 组：腿 14 全模块 {@code @InterceptorIgnore} 命中数＝1 且住在 AcUserDao 的点名方法、
  * service 消费该口（M-24 窄口纪律，可 grep 针自证）。</p>
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
@@ -325,6 +327,30 @@ public class TenantGateConventionTest {
                 "SELECT d.id FROM ac_dept d JOIN ac_user u ON u.dept_id = d.id WHERE d.valid = ?").getSql();
         Assert.assertTrue("JOIN 锚定整链必须挂闸，实际: " + out, out.contains("EXISTS"));
         Assert.assertTrue("别名限定必须落进 EXISTS，实际: " + out, out.contains("aut.user_id = u.user_id"));
+    }
+
+    /**
+     * 腿 17（翻译读旁路，BindRepo 族）：有档非空但取数落在 {@link TenantGateSuppressor} 的调用帧内
+     * ⇒ 真实链文本逐字不动（{@code gateActive()} 短路，连解析都不进）；
+     * 负对照＝同 SQL 同 ms id 在帧外必须挂闸——证明旁路位是帧级开关，不是恒真。
+     */
+    @Test
+    public void realChainBypassesInsideTranslationReadFrame() throws Exception {
+        TenantContext.set(Arrays.asList(1L));
+        Assert.assertTrue("帧外基线：有档非空闸必须活跃", TenantDataGate.gateActive());
+        String sql = "SELECT user_id, name FROM ac_user WHERE customer_number IN (?)";
+        String inFrame = TenantGateSuppressor.runSuppressed(() -> {
+            Assert.assertFalse("帧内 gateActive 必须判不活跃", TenantDataGate.gateActive());
+            try {
+                return runChain(DAO_ID_PREFIX + "selectList", sql).getSql();
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        Assert.assertEquals("翻译读帧内不得改写", sql, inFrame);
+        Assert.assertFalse("帧退出后旁路位必须已恢复", TenantGateSuppressor.isSuppressed());
+        Assert.assertTrue("负对照失效：帧外同 SQL 未改写",
+                runChain(DAO_ID_PREFIX + "selectList", sql).getSql().contains("EXISTS"));
     }
 
     /** 腿 13：resolveAnchor 单元形态——库名限定/反引号/别名/子查询 FROM 不命中 */

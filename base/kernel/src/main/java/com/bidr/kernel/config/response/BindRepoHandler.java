@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.config.db.TenantGateSuppressor;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
@@ -35,6 +36,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * 一个 Handler 处理所有 @BindRepo 注解（包括 @BindUser、@BindDept 等通过元注解桥接的快捷注解），
  * 无需为每种实体编写子类。
+ * <p>
+ * 三条取数通道（batchConvert / selectIn / queryAndGroup）的目标实体批查一律在
+ * {@link TenantGateSuppressor} 的旁路调用帧内执行——绑定是"引用值→展示值"的翻译，
+ * 按归属租户筛会把跨租户引用静默翻译成空白。
  *
  * @author Sharp
  * @since 2026/07/09
@@ -128,7 +133,9 @@ public class BindRepoHandler {
             log.warn("@BindRepo: 未找到 {} 的 select(Wrapper) 方法，跳过绑定", entityClass.getName());
             return result;
         }
-        List<?> entities = (List<?>) ReflectionUtil.invoke(repo, selectMethod, wrapper);
+        // 翻译读不是业务读：批查只为回填展示值，这段进租户数据闸旁路态（见 TenantGateSuppressor 类注释）
+        List<?> entities = TenantGateSuppressor.runSuppressed(
+                () -> (List<?>) ReflectionUtil.invoke(repo, selectMethod, wrapper));
         if (FuncUtil.isNotEmpty(entities)) {
             for (Object entity : entities) {
                 Object matchValue = ReflectionUtil.getValue(entity, matchField, Object.class);
@@ -289,7 +296,8 @@ public class BindRepoHandler {
             log.warn("@BindRepo(List): 未找到 {} 的 select(Wrapper) 方法，跳过绑定", entityClass.getName());
             return Collections.emptyList();
         }
-        List<?> list = (List<?>) ReflectionUtil.invoke(repo, selectMethod, wrapper);
+        List<?> list = TenantGateSuppressor.runSuppressed(
+                () -> (List<?>) ReflectionUtil.invoke(repo, selectMethod, wrapper));
         return list != null ? list : Collections.emptyList();
     }
 
@@ -447,7 +455,8 @@ public class BindRepoHandler {
             log.warn("@BindRepo(condition): 未找到 {} 的 select(Wrapper) 方法，跳过绑定", nodeClass.getName());
             return Collections.emptyMap();
         }
-        List<?> list = (List<?>) ReflectionUtil.invoke(repo, selectMethod, wrapper);
+        List<?> list = TenantGateSuppressor.runSuppressed(
+                () -> (List<?>) ReflectionUtil.invoke(repo, selectMethod, wrapper));
         Map<String, List<Object>> byKey = new HashMap<>();
         if (FuncUtil.isNotEmpty(list)) {
             for (Object inst : list) {
