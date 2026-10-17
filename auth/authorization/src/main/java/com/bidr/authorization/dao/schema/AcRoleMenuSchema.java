@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 /**
  * Title: AcRoleMenuSchema
  *
+ * 角色绑定不在此播种：menu_id 是 ac_menu 的自增主键，硬编码跨表引用会在全新装机时
+ * 与 MenuSeeder 新插菜单撞 (role_id,menu_id) 唯一键（启动失败退出码 0，无限重启）。
+ * 绑定由 MenuSeeder 对自己新插的菜单行自动完成。
+ *
  * @author Sharp
  * @since 2025/11/28
  */
@@ -19,28 +23,5 @@ public class AcRoleMenuSchema extends BaseMybatisSchema<AcRoleMenu> {
                 "  `menu_id` bigint(20) NOT NULL COMMENT '菜单ID',\n" +
                 "  PRIMARY KEY (`role_id`,`menu_id`)\n" +
                 ") COMMENT='角色和菜单关联表';");
-
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 1);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 2);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 3);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 4);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 5);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 6);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 7);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 8);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 9);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 10);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 12);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 13);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 14);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 15);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 16);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 26);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 27);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 28);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 29);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 30);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 31);");
-        setInitData("INSERT INTO `ac_role_menu` (`role_id`, `menu_id`) VALUES\n\t(1, 32);");
     }
 }
