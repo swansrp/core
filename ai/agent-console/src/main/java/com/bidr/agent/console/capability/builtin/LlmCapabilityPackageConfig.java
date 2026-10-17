@@ -13,10 +13,12 @@ import java.util.Set;
 
 /**
  * Title: LlmCapabilityPackageConfig
- * Description: core/llm 侧 5 个能力包（共 11 只纯通用工具）的登记件。
+ * Description: core/llm 侧 6 个能力包（共 12 只纯通用工具）的登记件。
  * <p>
  * 登记住在 console 侧、<b>工具代码一行不改</b>：依赖方向是 agent-console → llm（引用其注册名常量），
- * llm 不感知本模块。这样"框架自带的通用能力"先进目录，业务模块照同一 SPI 追加自己的包。
+ * llm 不感知本模块。这样"框架自带的通用能力"先进目录，业务模块照同一 SPI 追加自己的包
+ * （如墨枢 writer 把 suggest_next_steps 登记在自己的 next-steps 包——类已下沉 core，
+ * 谁挂谁登记，避免与本目录重名）。
  * <p>
  * 🔴 工具名一律取自框架常量或 {@code @Tool} 方法的 camelCase 注册名；
  * {@link LlmCapabilityPackageConfigTest} 逐类反射比对，防"手写名字静默失配"。
@@ -81,5 +83,17 @@ public class LlmCapabilityPackageConfig {
                 "按 flowKey 调用一条已编排好的流程并取其输出；流程内部做什么由编排侧决定。",
                 tags(CapabilityTag.EXTERNAL_EFFECT),
                 "runFlow");
+    }
+
+    /**
+     * 读文件（read_file，2026-10-18）：http(s)/本地路径 → Markdown 正文，
+     * 长文件带 offset 分页续读；能力面即 FileMarkdownService 门面（外部转录腿挂不挂对模型不可见）
+     */
+    @Bean
+    public AgentCapabilityPackage fileReadCapabilityPackage() {
+        return AgentCapabilityPackage.of("file-read", "读文件", MODULE,
+                "把一份文件读取为 Markdown 正文（pdf/图片/office/文本），长文件可分页续读。只读。",
+                tags(CapabilityTag.READ),
+                "readFile");
     }
 }

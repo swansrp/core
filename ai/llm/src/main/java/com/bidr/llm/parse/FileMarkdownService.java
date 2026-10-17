@@ -57,6 +57,11 @@ import java.util.Locale;
  * 多模态模型配置解析顺序：调用时显式传入的 {@link VisionModelConfig} →
  * {@link ModelConfigProvider}（purpose = {@link #PURPOSE_VISION}，数据库 sys_config 优先），
  * 与现有 LLM 调用同一套配置机制。
+ * <p>
+ * 🔴 <b>外部转录腿前置（2026-10-17）</b>：装配时若存在 {@link DocumentTranscriber} Bean
+ * （如 core/ai/mineru——引包才亮，不引＝零变化），格式分发前先咨询它：
+ * 它认领的文件先走外部转写（MinerU 云优先本地兜底），转写失败/返回空时<b>回落本类既有路径</b>
+ * （文本直读/POI/PDFBox/多模态转录），外部服务挂掉不拖垮解析。
  * </p>
  *
  * @author Sharp
@@ -107,13 +112,28 @@ public class FileMarkdownService {
      */
     private final Proxy proxy;
 
+    /**
+     * 外部转录腿（可选）：classpath 上引了实现模块（如 core/ai/mineru）并装配后非空；
+     * null＝无外部腿，行为与本类历史完全一致
+     */
+    private final DocumentTranscriber transcriber;
+
     public FileMarkdownService(ModelConfigProvider configProvider) {
-        this(configProvider, null);
+        this(configProvider, null, null);
     }
 
     public FileMarkdownService(ModelConfigProvider configProvider, Proxy proxy) {
+        this(configProvider, proxy, null);
+    }
+
+    /**
+     * 全参构造（自动装配走这档）：外部转录腿经 {@code ObjectProvider<DocumentTranscriber>}
+     * 注入，缺席传 null
+     */
+    public FileMarkdownService(ModelConfigProvider configProvider, Proxy proxy, DocumentTranscriber transcriber) {
         this.configProvider = configProvider;
         this.proxy = proxy;
+        this.transcriber = transcriber;
     }
 
     // ---------------- 对外入口：url / File / Path / InputStream ----------------
@@ -181,6 +201,18 @@ public class FileMarkdownService {
     // ---------------- 格式分发 ----------------
 
     private String parseBytes(byte[] bytes, String filename, VisionModelConfig vision) throws IOException {
+        // 外部转录腿前置：认领的文件先走外部转写（失败/空结果回落下面的既有分发，不拖垮解析）
+        if (transcriber != null && transcriber.isAvailable(filename)) {
+            try {
+                String markdown = transcriber.transcribe(bytes, filename);
+                if (hasText(markdown)) {
+                    return markdown;
+                }
+                log.warn("外部转录返回空结果，回落本地解析: {}", filename);
+            } catch (Exception e) {
+                log.warn("外部转录失败，回落本地解析: {} 原因: {}", filename, e.getMessage());
+            }
+        }
         String ext = extensionOf(filename);
         switch (ext) {
             case "md":

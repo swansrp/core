@@ -3,6 +3,7 @@ package com.bidr.llm.config;
 import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
+import com.bidr.llm.parse.DocumentTranscriber;
 import com.bidr.llm.parse.FileMarkdownService;
 import com.bidr.llm.provider.DbAwareModelConfigProvider;
 import com.bidr.llm.provider.ModelConfigProvider;
@@ -127,12 +128,25 @@ public class LlmDefaultAutoConfiguration {
      * 扫描件与图片需多模态模型，配置解析顺序：调用时传入 VisionModelConfig →
      * {@link ModelConfigProvider}（purpose = VISION，数据库系统参数优先）；
      * 多模态调用的 HTTP 代理复用 {@link #buildProxy()}（与文本模型同源 {@code llm.proxy.*}），
-     * 无 Provider 的应用也可自行 new FileMarkdownService(null) 后纯靠调用传参使用
+     * 无 Provider 的应用也可自行 new FileMarkdownService(null) 后纯靠调用传参使用。
+     * 外部转录腿（{@link com.bidr.llm.parse.DocumentTranscriber}，如 core/ai/mineru 实现）
+     * 经 ObjectProvider 可选注入：classpath 上有实现包才亮，转写失败由门面回落既有本地路径
      */
     @Bean
     @ConditionalOnMissingBean
-    public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider) {
-        return new FileMarkdownService(configProvider.getIfAvailable(), buildProxy());
+    public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider,
+            ObjectProvider<DocumentTranscriber> transcriber) {
+        return new FileMarkdownService(configProvider.getIfAvailable(), buildProxy(), transcriber.getIfAvailable());
+    }
+
+    /**
+     * 通用「读文件」agent 工具（read_file）：包 {@link FileMarkdownService}，挂进 agent 工具清单即用；
+     * 默认 2 万字截断防大文档灌爆上下文，失败回文本不抛（模型可自纠）
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public com.bidr.llm.agent.FileMarkdownTool fileMarkdownTool(FileMarkdownService fileMarkdownService) {
+        return new com.bidr.llm.agent.FileMarkdownTool(fileMarkdownService);
     }
 
     /**

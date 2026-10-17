@@ -7,6 +7,7 @@ import com.bidr.agent.console.capability.CapabilityTag;
 import com.bidr.llm.agent.AgentAskUserTool;
 import com.bidr.llm.agent.AgentPlanTools;
 import com.bidr.llm.agent.AgentToolRecall;
+import com.bidr.llm.agent.FileMarkdownTool;
 import com.bidr.llm.agent.tools.ExternalRuntimeTools;
 import com.bidr.llm.agent.tools.RunFlowTools;
 import dev.langchain4j.agent.tool.Tool;
@@ -38,17 +39,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LlmCapabilityPackageConfigTest {
 
-    /** 被登记的 llm 工具类（11 只的宿主） */
+    /** 被登记的 llm 工具类（12 只的宿主） */
     private static final List<Class<?>> TOOL_CLASSES = Arrays.asList(
             AgentPlanTools.class, AgentAskUserTool.class, AgentToolRecall.class,
-            ExternalRuntimeTools.class, RunFlowTools.class);
+            ExternalRuntimeTools.class, RunFlowTools.class, FileMarkdownTool.class);
 
     private final LlmCapabilityPackageConfig config = new LlmCapabilityPackageConfig();
 
     private List<AgentCapabilityPackage> declared() {
         return Arrays.asList(config.planCapabilityPackage(), config.askUserCapabilityPackage(),
                 config.toolRecallCapabilityPackage(), config.externalTaskCapabilityPackage(),
-                config.runFlowCapabilityPackage());
+                config.runFlowCapabilityPackage(), config.fileReadCapabilityPackage());
     }
 
     /** 反射取实际注册名：@Tool(name=...) 非空取 name，否则取 camelCase 方法名 */
@@ -65,7 +66,7 @@ class LlmCapabilityPackageConfigTest {
     }
 
     @Test
-    @DisplayName("登记的 11 只工具名与反射取到的实际注册名双向相等（不多不少不拼错）")
+    @DisplayName("登记的 12 只工具名与反射取到的实际注册名双向相等（不多不少不拼错）")
     void declaredToolNamesMatchRuntimeRegistration() {
         Set<String> declaredNames = new TreeSet<>();
         Map<String, String> ownerByTool = new LinkedHashMap<>();
@@ -85,16 +86,16 @@ class LlmCapabilityPackageConfigTest {
 
         assertEquals(reflectedNames, declaredNames,
                 "登记清单与 @Tool 实际注册名不一致（左=真名，右=登记值）");
-        assertEquals(11, declaredNames.size(), "llm 侧纯通用工具应为 11 只");
-        assertEquals(11, ownerByTool.size());
+        assertEquals(12, declaredNames.size(), "llm 侧纯通用工具应为 12 只");
+        assertEquals(12, ownerByTool.size());
     }
 
     @Test
-    @DisplayName("五个能力包齐备且副作用档明确（外部效应不能标成只读）")
+    @DisplayName("六个能力包齐备且副作用档明确（外部效应不能标成只读）")
     void packagesAndTags() {
         AgentCapabilityPackageRegistry registry = new AgentCapabilityPackageRegistry(declared());
         List<CapabilityPackageDescriptor> all = registry.all();
-        assertEquals(5, all.size());
+        assertEquals(6, all.size());
 
         Map<String, Set<String>> tagsByName = new LinkedHashMap<>();
         for (CapabilityPackageDescriptor descriptor : all) {
@@ -104,10 +105,11 @@ class LlmCapabilityPackageConfigTest {
         }
 
         assertEquals(new TreeSet<>(Arrays.asList("plan", "ask-user", "tool-recall",
-                "external-task", "run-flow")), new TreeSet<>(tagsByName.keySet()));
+                "external-task", "run-flow", "file-read")), new TreeSet<>(tagsByName.keySet()));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.SESSION.name())), tagsByName.get("plan"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.SESSION.name())), tagsByName.get("ask-user"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.READ.name())), tagsByName.get("tool-recall"));
+        assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.READ.name())), tagsByName.get("file-read"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.EXTERNAL_EFFECT.name())),
                 tagsByName.get("external-task"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.EXTERNAL_EFFECT.name())),

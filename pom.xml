@@ -29,6 +29,7 @@
         <module>comm/kafka</module>
         <module>store/td</module>
         <module>ai/llm</module>
+        <module>ai/mineru</module>
         <module>lowcode/insight</module>
         <module>ai/agent-runtime</module>
         <module>ai/agent-console</module>

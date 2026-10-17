@@ -1,0 +1,74 @@
+# =============================================================================
+# core/ai/mineru 模块读取的全部 yml 键（18 把，正源＝MineruProperties 字段）
+#   机器对账腿＝MineruConfigTemplateCoverageTest（模板叶子键集合与 MineruProperties
+#   反射展开的键集合必须**完全相等**：漏写一把＝现场照模板填完仍缺配置，
+#   多写一把＝模板承诺了代码不读的键，两种都判红）
+#
+# 用法：把 mineru: 段整块复制进你项目的 application-{profile}.yml 按需填空。
+#   不填＝用标注的默认值；接入键（地址/令牌）🔴 不进 sys_config，真值走 .env：
+#     mineru.local.base-url: ${MINERU_BASE_URL:}     # 与既有 .env 键名对齐
+#     mineru.cloud.token: ${MINERU_CLOUD_TOKEN:}     # 同上
+#   门面：引本包（core/ai/mineru）后 FileMarkdownService 的 pdf/图片先走 MinerU
+#   （云优先本地兜底、失败回落既有本地路径）；不引包＝零变化。业务自定义腿＝
+#   自己注册 DocumentTranscriber Bean（本装配让位）。
+# =============================================================================
+mineru:
+
+  # 总开关：false＝整模块无效（门面回落既有本地解析，一键回滚用）；两腿全空配同效。[true]
+  enabled:
+
+  # 轮询间隔毫秒（两腿共用）。[3000]
+  poll-interval-ms:
+
+  # 同步门面单文档最长等待秒数：超时抛异常由门面回落，不把任务吊在轮询里。
+  # 后台任务链场景调大（InkHub 引擎侧原口径 3600）。[300]
+  max-wait-seconds:
+
+  # 连接超时毫秒。[15000]
+  connect-timeout-ms:
+
+  # 读取超时毫秒（结果 zip 可能较大）。[120000]
+  read-timeout-ms:
+
+  # 解析语言（自建腿 lang_list 缺省；官方语种表 ch/en/ja/...）。[ch]
+  lang:
+
+  # ---------------------------------------------------------------------------
+  # ① 自建腿（mineru-api 3.x：multipart POST /tasks）——内网/本地部署形态
+  # ---------------------------------------------------------------------------
+  local:
+    # 服务地址（如 http://10.3.5.103:8002）。🔴 留空＝无本地腿，只剩云腿可用。[空]
+    base-url:
+    # 解析后端：hybrid-auto-engine（默认）/ vlm-auto-engine（纯 VLM）/ pipeline
+    # （内层 vLLM 挂掉时的降级档，此时 /health 仍报 healthy 只在任务上报错）。[hybrid-auto-engine]
+    backend:
+
+  # ---------------------------------------------------------------------------
+  # ② 公网腿（mineru.net v4：预签名直传＋batch 轮询）——额度按页计（免费 1000 页）
+  # ---------------------------------------------------------------------------
+  cloud:
+    # 服务地址（缺省＝官方公网域名）。[https://mineru.net]
+    base-url:
+    # 访问令牌（用户中心「令牌管理」）。🔴 只走 .env 不进库不回显；留空＝无云腿。[空]
+    token:
+    # 解析模型档：vlm（官方推荐，精度高）/ pipeline（快，复杂版面精度低）。[vlm]
+    model-version:
+    # 是否强制 OCR（Boolean 包装防 lombok 属性名坑）。[true]
+    is-ocr:
+    # 解析公式（LaTeX）。[true]
+    enable-formula:
+    # 解析表格。[true]
+    enable-table:
+    # 文档语言。[ch]
+    language:
+
+  # ---------------------------------------------------------------------------
+  # ③ HTTP 代理（每服务一套，与 llm.proxy.*、my.rest.proxy.* 互不耦合；两腿与结果下载共用）
+  # ---------------------------------------------------------------------------
+  proxy:
+    # 是否启用。[false]
+    enable:
+    # 主机（enable=true 必填）。[空]
+    host:
+    # 端口。[0]
+    port:

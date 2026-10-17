@@ -452,7 +452,47 @@ String md = fileMarkdownService.toMarkdown(file, vision);
 2. **sys_config 数据库参数**（经 `ModelConfigProvider`）：`VISION_BASE_URL` / `VISION_API_KEY` / `VISION_MODEL_NAME` / `VISION_TIMEOUT_SECONDS`，已注册为 `LlmParam`，系统参数页可直接维护；任一项留空则该项继续回落下一级。
 3. **yaml 默认**：`llm.vision.*`（见下表），其中 base-url/api-key/model-name 留空时回落默认模型配置（`llm.*`）。
 
+**外部转录腿前置（可选，2026-10-17）**：classpath 上引了 `core/ai/mineru`（`com.bidr:mineru`）并注册
+`DocumentTranscriber` Bean 后，**pdf/图片在进入上表流程之前先走 MinerU 转写**——云腿令牌配了→云优先
+（mineru.net v4）、失败或没配→本地腿（mineru-api 3.x）、再失败→回落本节既有路径（外部服务挂掉
+不拖垮解析）。不引包＝零配置零变化。业务要接别的转录引擎＝自己实现 `com.bidr.llm.parse.DocumentTranscriber`
+注册 Bean（自动装配让位）。配置面＝`mineru.*`（见该模块的 `mineru-config.template.yml`，
+18 把键有机器对账守卫），接入键不进 sys_config、真值走 `.env`。
+
 内置约束：单文件上限 100MB；PDF 走多模态的页数上限 50 页（超出部分跳过并注明）；渲染 DPI 150。
+
+**agent 工具形态**：`FileMarkdownTool`（自动装配 Bean，`read_file`）＝本服务的 agent 包装——LLM 持有
+http(s) 地址或服务器本地路径即可调 `read_file` 拿正文，挂进 agent 工具清单即用。长文件**分页续读**：
+入参 `offset`（0 起）＋`maxChars`，未到末尾时末尾注记下一页 offset，续读传那个数——已读段落不重灌
+上下文；续读取同一份解析快照（单条 SoftReference 缓存），分页大件不逐页重解析。默认每段 2 万字
+（对齐 `AGENT_TOOL_RECALL_MAX_CHARS` 口径）；失败回文本不抛（模型可自纠）。业务只认自己句柄
+（fileId 等）的场景＝业务侧写薄壳把句柄解成地址再交给它。能力目录登记＝agent-console 的
+`file-read` 包（`LlmCapabilityPackageConfig`）。
+
+## 框架自带 agent 工具（7 类 12 只，挂进工具清单即用）
+
+core/llm 的 agent 包自带一组**纯通用工具**（业务零绑定），业务 agent 把实例加进工具清单即可；
+能力目录登记在 agent-console 的 `LlmCapabilityPackageConfig`（`file-read` 等 6 包），
+名字对账有反射守卫测试钉死。共同语义：
+
+- **失败回文本不抛**（模型可自纠重试）——拒绝/失败一律返回可读文本，不抛异常打断循环；
+- **分页语义统一**（`PagedText`）：offset/长度归一＋**长度硬上限**（模型请求再大也收口，防自放大灌爆上下文）
+  ＋注记带下一页 offset 指令（模型照抄续读，不用自己算数）；默认页长/上限是调用方策略；
+- **谁挂谁登记**：类在 core 不等于目录里就有——业务面自己决定挂不挂、挂了在自己模块登记能力包
+  （墨枢 writer 的 `suggest_next_steps` 就是这形态）。
+
+| 工具类 | @Tool | 用途 | 会话态 |
+|---|---|---|---|
+| `AgentAskUserTool` | `askUser` | 真歧义交用户决策（阻塞等答/超时自决/停止打断） | 是（传 `AgentSessionContext` 或 `Awaiter`） |
+| `FileMarkdownTool` | `readFile` | 文件地址（http(s)/本地路径）→Markdown 正文，长文件 offset 分页续读；能力面即 `FileMarkdownService`（转录腿挂不挂对模型不可见） | 否（自动装配 Bean） |
+| `NextStepTools` | `suggest_next_steps` | 收口前给 1-3 条可点下一步候选（emit 事件，前端渲染，点哪条发回那句原文） | 是 |
+| `AgentPlanTools` | `submitPlan` / `startPlanItem` / `donePlanItem` | 计划台账：拆待办→开工→勾完（只动会话运行态） | 是 |
+| `AgentToolRecall` | `recallToolResult` | 按 `tool_call_id` 回捞被上下文治理卸载/驱逐的工具结果原文 | 否 |
+| `ExternalRuntimeTools` | `submitExternalTask` / `waitExternalTask` / `queryExternalTask` / `readExternalTaskResult` / `cancelExternalTask` | 沙箱/外部 agent runtime 的派发与终态（有界等待，不在 @Tool 里同步挂分钟级） | 混合 |
+| `RunFlowTools` | `runFlow` | 调一条已编排流程（仅同步链；深度 1 防递归、30s 超时） | 否 |
+
+不算数的两档：`FunctionalTool`（lambda→工具的机制件）；insight 的 smartquery 工具是智能问数**域级**
+（在 core 仓但不是通用面）。业务只认自己句柄（fileId 等）的场景＝业务写薄壳解句柄再交给这些工具。
 
 ## yaml 配置项
 
