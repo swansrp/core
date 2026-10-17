@@ -1,21 +1,18 @@
-package com.bidr.admin.config;
+package com.bidr.kernel.constant.dict.portal.anno;
 
 import java.lang.annotation.*;
 
 /**
- * Title: PortalMoneyField
+ * Title: PortalTextAreaField
  * Description: Copyright: Copyright (c) 2024 Company: Bidr Ltd.
  *
  * @author Sharp
- * @since 2024/9/27 8:59
+ * @since 2024/10/22 15:16
  */
 
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface PortalMoneyField {
-    int unit() default 10000;
-
-    int fix() default 2;
+public @interface PortalTextAreaField {
 }

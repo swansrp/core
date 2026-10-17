@@ -1,18 +1,18 @@
-package com.bidr.admin.config;
+package com.bidr.kernel.constant.dict.portal.anno;
 
 import java.lang.annotation.*;
 
 /**
- * Title: PortalSortField
+ * Title: PortalPidField
  * Description: Copyright: Copyright (c) 2024 Company: Bidr Ltd.
  *
  * @author Sharp
- * @since 2024/10/22 15:06
+ * @since 2024/10/23 8:39
  */
 
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface PortalSortField {
+public @interface PortalPidField {
 }

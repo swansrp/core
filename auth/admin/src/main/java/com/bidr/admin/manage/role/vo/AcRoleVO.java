@@ -1,9 +1,9 @@
 package com.bidr.admin.manage.role.vo;
 
-import com.bidr.admin.config.PortalDictField;
-import com.bidr.admin.config.PortalIdField;
-import com.bidr.admin.config.PortalNameField;
-import com.bidr.admin.config.PortalOrderField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalOrderField;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModelProperty;

@@ -1,9 +1,9 @@
 package com.bidr.admin.vo;
 
-import com.bidr.admin.config.PortalDisplayNoneField;
-import com.bidr.admin.config.PortalDisplayOnlyField;
-import com.bidr.admin.config.PortalNoFilterField;
-import com.bidr.admin.config.PortalSortField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayNoneField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayOnlyField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNoFilterField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalSortField;
 import com.bidr.authorization.bind.annotation.BindUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;

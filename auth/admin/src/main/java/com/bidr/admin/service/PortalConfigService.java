@@ -2,6 +2,7 @@ package com.bidr.admin.service;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.bidr.admin.config.*;
+import com.bidr.kernel.constant.dict.portal.anno.*;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
 import com.bidr.admin.controller.inf.PortalSqlInf;
@@ -288,6 +289,9 @@ public class PortalConfigService implements LoginFillTokenInf {
         handlePortalImageField(field, column);
         handlePortalAudioField(field, column);
         handlePortalTextAreaField(field, column);
+        handlePortalDisableField(field, column);
+        handlePortalEditAbleField(field, column);
+        handlePortalLargeField(field, column);
         column.setRoleId(roleId);
         return column;
     }
@@ -347,6 +351,9 @@ public class PortalConfigService implements LoginFillTokenInf {
             portal.setNameColumn(field.getName());
             column.setWidth(0);
         }
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalImportField.class))) {
+            portal.setImportAble(CommonConst.YES);
+        }
         if (FuncUtil.isNotEmpty(field.getAnnotation(PortalPidField.class))) {
             portal.setPidColumn(field.getName());
             column.setShow(CommonConst.NO);
@@ -372,7 +379,8 @@ public class PortalConfigService implements LoginFillTokenInf {
                 column.setFieldType(PortalFieldDict.ENTITY.getValue());
                 column.setReference(entityField.entity().getSimpleName());
                 column.setDbField(entityField.joinField());
-                column.setEntityField(entityField.field());
+                column.setEntityField(FuncUtil.isNotEmpty(entityField.entityField())
+                        ? entityField.entityField() : entityField.field());
                 column.setEditShow(CommonConst.YES);
                 column.setAddShow(CommonConst.YES);
             } else {
@@ -397,12 +405,15 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
+    /**
+     * 排序默认开：列配置正源是 VO 声明，不排序须用 {@link PortalNoSortField} 显式关闭；
+     * {@link PortalSortField} 保留为显式声明（与默认同值，兼容存量写法）。
+     */
     private void handlePortalSortField(Field field, SysPortalColumn column) {
-        PortalSortField portalSortField = field.getAnnotation(PortalSortField.class);
-        if (FuncUtil.isNotEmpty(portalSortField)) {
-            column.setSortAble(CommonConst.YES);
-        } else {
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalNoSortField.class))) {
             column.setSortAble(CommonConst.NO);
+        } else {
+            column.setSortAble(CommonConst.YES);
         }
     }
 
@@ -513,11 +524,34 @@ public class PortalConfigService implements LoginFillTokenInf {
         }
     }
 
+    /**
+     * 长文本列只声明字段类型；可筛选性由 {@link PortalNoFilterField} 一处管辖（本 handler 不写 filter，
+     * 避免叠在 Convert/Bind/集合列上时把它们的 filter=NO 翻回 YES；备注类长文本按种子口径可筛）。
+     */
     private void handlePortalTextAreaField(Field field, SysPortalColumn column) {
-        PortalTextAreaField portalTextAreaField = field.getAnnotation(PortalTextAreaField.class);
-        if (FuncUtil.isNotEmpty(portalTextAreaField)) {
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalTextAreaField.class))) {
             column.setFieldType(PortalFieldDict.TEXT.getValue());
-            column.setFilterAble(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalDisableField(Field field, SysPortalColumn column) {
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalDisableField.class))) {
+            column.setEnable(CommonConst.NO);
+        }
+    }
+
+    private void handlePortalEditAbleField(Field field, SysPortalColumn column) {
+        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalEditAbleField.class))) {
+            column.setEditAble(CommonConst.YES);
+        }
+    }
+
+    private void handlePortalLargeField(Field field, SysPortalColumn column) {
+        PortalLargeField portalLargeField = field.getAnnotation(PortalLargeField.class);
+        if (FuncUtil.isNotEmpty(portalLargeField)) {
+            column.setDetailSize(portalLargeField.size());
+            column.setAddSize(portalLargeField.size());
+            column.setEditSize(portalLargeField.size());
         }
     }
 

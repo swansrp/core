@@ -1,5 +1,12 @@
 package com.bidr.authorization.vo.admin;
 
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisableField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalOrderField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalPidField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -17,19 +24,25 @@ import java.util.Date;
 @Data
 public class DepartmentRes {
 
+    @PortalIdField
+    @PortalDisableField
     @ApiModelProperty(value = "部门id")
     @Size(max = 20, message = "部门id最大长度要小于 20")
     @NotBlank(message = "部门id不能为空")
     private String deptId;
 
+    @PortalPidField
+    @PortalDisableField
     @ApiModelProperty(value = "父部门id")
     @Size(max = 20, message = "父部门id最大长度要小于 20")
     private String pid;
 
+    @PortalDisableField
     @ApiModelProperty(value = "祖父id")
     @Size(max = 20, message = "祖父id最大长度要小于 20")
     private String grandId;
 
+    @PortalNameField
     @ApiModelProperty(value = "部门名称")
     @Size(max = 30, message = "部门名称最大长度要小于 30")
     private String name;
@@ -65,9 +78,11 @@ public class DepartmentRes {
     @Size(max = 50, message = "地址最大长度要小于 50")
     private String address;
 
+    @PortalDictField(ActiveStatusDict.class)
     @ApiModelProperty(value = "部门状态")
     private Integer status;
 
+    @PortalOrderField
     @ApiModelProperty(value = "显示顺序")
     private Integer showOrder;
 }

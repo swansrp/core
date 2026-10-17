@@ -1,5 +1,7 @@
 package com.bidr.oss.vo;
 
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
 import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -17,11 +19,13 @@ import java.util.Date;
 @Data
 public class OssRes {
 
+    @PortalIdField
     @ApiModelProperty(value = "id")
 
     private Long id;
 
 
+    @PortalNameField
     @ApiModelProperty(value = "文件名")
 
     private String name;

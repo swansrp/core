@@ -1,5 +1,7 @@
 package com.bidr.platform.dao.entity;
 
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -26,6 +28,7 @@ public class SysDictType {
     /**
      * 字典类型
      */
+    @PortalIdField
     @TableId(value = "dict_name", type = IdType.AUTO)
     @ApiModelProperty(value = "字典类型")
     private String dictName;
@@ -33,6 +36,7 @@ public class SysDictType {
     /**
      * 字典显示名称
      */
+    @PortalNameField
     @TableField(value = "dict_title")
     @ApiModelProperty(value = "字典显示名称")
     private String dictTitle;

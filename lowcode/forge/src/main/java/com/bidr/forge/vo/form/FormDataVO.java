@@ -1,6 +1,6 @@
 package com.bidr.forge.vo.form;
 
-import com.bidr.admin.config.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
 import com.bidr.admin.vo.BaseVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

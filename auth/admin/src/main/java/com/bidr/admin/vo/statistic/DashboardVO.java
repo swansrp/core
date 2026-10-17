@@ -1,8 +1,8 @@
 package com.bidr.admin.vo.statistic;
 
-import com.bidr.admin.config.PortalDisplayNoneField;
-import com.bidr.admin.config.PortalEntityField;
-import com.bidr.admin.config.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayNoneField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalEntityField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
 import com.bidr.admin.dao.entity.SysPortalDashboardStatistic;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;

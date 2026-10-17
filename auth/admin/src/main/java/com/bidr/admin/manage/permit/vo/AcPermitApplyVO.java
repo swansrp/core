@@ -1,9 +1,9 @@
 package com.bidr.admin.manage.permit.vo;
 
-import com.bidr.admin.config.PortalDictField;
-import com.bidr.admin.config.PortalDisplayNoneField;
-import com.bidr.admin.config.PortalEntityField;
-import com.bidr.admin.config.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayNoneField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalEntityField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
 import com.bidr.admin.vo.BaseVO;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcUser;

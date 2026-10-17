@@ -1,8 +1,8 @@
 package com.bidr.admin.vo;
 
-import com.bidr.admin.config.PortalIdField;
-import com.bidr.admin.config.PortalNameField;
-import com.bidr.admin.config.PortalOrderField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalOrderField;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

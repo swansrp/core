@@ -1,5 +1,11 @@
 package com.bidr.platform.dao.entity;
 
+import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisableField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayOnlyField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -12,53 +18,44 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.util.Date;
 
- /**
+/**
  * Title: SysDict
  * Description: Copyright: Copyright (c) 2023
  *
  * @author Sharp
- * @since 2023/05/24 13:33
+ * @since 2023-05-24 13:33
  */
 
 /**
  * 字典数据表
+ * <p>
+ * 🔴 本类同时是字典数据页的 Portal VO（AdminDictController&lt;SysDict, SysDict&gt;），
+ * 字段声明顺序＋Portal 注解即该页列配置的正源（同 UserRes），勿随手重排。
  */
 @ApiModel(description = "字典数据表")
 @Data
 @TableName(value = "sys_dict")
 public class SysDict {
     /**
-     * 字典编码
-     */
-    @TableId(value = "dict_id", type = IdType.AUTO)
-    @ApiModelProperty(value = "字典编码")
-    @Size(max = 50, message = "字典编码最大长度要小于 50")
-    @NotBlank(message = "字典编码不能为空")
-    private String dictId;
-
-    /**
-     * 字典父节点
-     */
-    @TableField(value = "dict_pid")
-    @ApiModelProperty(value = "字典父节点")
-    @Size(max = 50, message = "字典父节点最大长度要小于 50")
-    private String dictPid;
-
-    /**
-     * 字典排序
-     */
-    @TableField(value = "dict_sort")
-    @ApiModelProperty(value = "字典排序")
-    private Integer dictSort;
-
-    /**
      * 字典类型
      */
+    @PortalDisableField
     @TableField(value = "dict_name")
     @ApiModelProperty(value = "字典类型")
     @Size(max = 100, message = "字典类型最大长度要小于 100")
     @NotBlank(message = "字典类型不能为空")
     private String dictName;
+
+    /**
+     * 字典编码
+     */
+    @PortalIdField
+    @PortalDisableField
+    @TableId(value = "dict_id", type = IdType.AUTO)
+    @ApiModelProperty(value = "字典编码")
+    @Size(max = 50, message = "字典编码最大长度要小于 50")
+    @NotBlank(message = "字典编码不能为空")
+    private String dictId;
 
     /**
      * 字典显示名称
@@ -72,19 +69,11 @@ public class SysDict {
     /**
      * 字典项名称
      */
+    @PortalNameField
     @TableField(value = "dict_item")
     @ApiModelProperty(value = "字典项名称")
     @Size(max = 100, message = "字典项名称最大长度要小于 100")
     private String dictItem;
-
-    /**
-     * 字典键值
-     */
-    @TableField(value = "dict_value")
-    @ApiModelProperty(value = "字典键值")
-    @Size(max = 100, message = "字典键值最大长度要小于 100")
-    @NotBlank(message = "字典键值不能为空")
-    private String dictValue;
 
     /**
      * 字典标签
@@ -96,8 +85,34 @@ public class SysDict {
     private String dictLabel;
 
     /**
+     * 字典排序
+     */
+    @TableField(value = "dict_sort")
+    @ApiModelProperty(value = "字典排序")
+    private Integer dictSort;
+
+    /**
+     * 字典键值
+     */
+    @TableField(value = "dict_value")
+    @ApiModelProperty(value = "字典键值")
+    @Size(max = 100, message = "字典键值最大长度要小于 100")
+    @NotBlank(message = "字典键值不能为空")
+    private String dictValue;
+
+    /**
+     * 字典父节点
+     */
+    @PortalDisableField
+    @TableField(value = "dict_pid")
+    @ApiModelProperty(value = "字典父节点")
+    @Size(max = 50, message = "字典父节点最大长度要小于 50")
+    private String dictPid;
+
+    /**
      * 是否默认（1是 0否）
      */
+    @PortalDictField(BoolDict.class)
     @TableField(value = "is_default")
     @ApiModelProperty(value = "是否默认（1是 0否）")
     @Size(max = 1, message = "是否默认（1是 0否）最大长度要小于 1")
@@ -106,6 +121,7 @@ public class SysDict {
     /**
      * 状态（0正常 1停用）
      */
+    @PortalDictField(BoolDict.class)
     @TableField(value = "`status`")
     @ApiModelProperty(value = "状态（0正常 1停用）")
     @Size(max = 1, message = "状态（0正常 1停用）最大长度要小于 1")
@@ -115,6 +131,7 @@ public class SysDict {
     /**
      * 是否显示
      */
+    @PortalDictField(BoolDict.class)
     @TableField(value = "`show`")
     @ApiModelProperty(value = "是否显示")
     @Size(max = 1, message = "是否显示最大长度要小于 1")
@@ -124,6 +141,8 @@ public class SysDict {
     /**
      * 只读
      */
+    @PortalDictField(BoolDict.class)
+    @PortalDisplayOnlyField
     @TableField(value = "read_only")
     @ApiModelProperty(value = "只读")
     @Size(max = 1, message = "只读最大长度要小于 1")

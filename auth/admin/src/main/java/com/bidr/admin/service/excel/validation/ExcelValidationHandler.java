@@ -4,7 +4,7 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.write.handler.SheetWriteHandler;
 import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
 import com.alibaba.excel.write.metadata.holder.WriteWorkbookHolder;
-import com.bidr.admin.config.PortalDictField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
 import com.bidr.kernel.utils.BeanUtil;

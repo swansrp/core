@@ -1,7 +1,7 @@
 package com.bidr.admin.manage.sso.vo;
 
-import com.bidr.admin.config.PortalIdField;
-import com.bidr.admin.config.PortalNameField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

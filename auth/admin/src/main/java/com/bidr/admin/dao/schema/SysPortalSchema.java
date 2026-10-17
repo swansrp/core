@@ -53,23 +53,13 @@ public class SysPortalSchema extends BaseMybatisSchema<SysPortal> {
                 "ADD INDEX `idx_portal_datamode` (`data_mode`), " +
                 "ADD INDEX `idx_portal_referenceid` (`reference_id`);");
 
-        // 🔴 这 6 行必须保留且 id 钉死 1–6：SysPortalColumnSchema 的 69 行列配置 initData 按
-        //   portal_id=1..6 硬编码引用本表（refreshPortalColumn 按 portal.getId() 取列，引用就是 id）。
-        //   摘除后新库由 PortalConfigService 扫描注册、自增 id 不可控 ⇒ 列配置整体悬空。
-        // url 口径＝控制器 @RequestMapping 剥 /web/ 前缀（parseUrl），2026-10-17 逐行与六个控制器比对核验；
-        //   原 SaObjectStorage 行 url 停在 OssController 改挂 /web/oss 之前的旧值（"行存在即不覆盖 url"
-        //   的保护使其永驻），全新库 0-1 首跑即 404——本行已修正为 'oss'，其余 5 行与现值一致。
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(1, 0, 'AcUser', '系统-用户信息表', 'portal/user', 'adminUserController', 'small', '0', '0', 'userId', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '1');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(2, 0, 'AcDept', '系统-部门表', 'portal/department', 'adminDeptController', 'small', '0', '0', 'deptId', 'pid', '1', 'name', 'showOrder', '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(3, 0, 'SaObjectStorage', '系统-对象存储记录', 'oss', 'ossController', 'small', '0', '0', 'id', '', '1', 'name', NULL, '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(4, 0, 'SysConfig', '系统-参数配置表', 'config/admin', 'adminConfigController', 'small', '0', '0', 'configId', '', '1', 'configName', NULL, '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(5, 0, 'SysDict', '系统-字典数据表', 'dict/item/admin', 'adminDictController', 'small', '0', '0', 'dictId', '', '1', 'dictItem', NULL, '0', 60, 60, 60, 2, '1', '0');");
-        setInitData("INSERT INTO `sys_portal` (`id`, `role_id`, `name`, `display_name`, `url`, `bean`, `size`, `read_only`, `summary`, `id_column`, `pid_column`, `tree_drag`, `name_column`, `order_column`, `table_drag`, `add_width`, `edit_width`, `detail_width`, `description_count`, `export_able`, `import_able`) VALUES " +
-                "(6, 0, 'SysDictType', '系统-字典类型表', 'dict/admin', 'adminDictTypeController', 'small', '0', '0', 'dictName', '', '1', 'dictTitle', NULL, '0', 60, 60, 60, 2, '1', '0');");
+
+        // 基础 Portal 行（AcUser/AcDept/SaObjectStorage/SysConfig/SysDict/SysDictType）不再由 initData 硬编码：
+        // PortalConfigService 启动扫描 @AdminPortal 时自动注册（url 从 @RequestMapping 现读，不会漂移；
+        // id_column/name_column/pid_column/import_able 等原种子硬值改由 VO 的 @Portal* 注解声明，
+        // 见 UserRes/DepartmentRes/SysConfigRes/SysDict/SysDictType/OssRes）。
+        // 原 6 行曾把 id 钉死 1–6 供 SysPortalColumnSchema 的列种子按 portal_id 硬引用；列种子已摘除，
+        //   id 不再需要可控（2026-10-17）。SaObjectStorage 行 url 停在 OssController 改挂 /web/oss 之前的
+        //   旧值且"行存在即不覆盖"永驻，是 2026-10 对象存储页 404 的根因——正是这类漂移的实证。
     }
 }
