@@ -1,5 +1,6 @@
 package com.bidr.authorization.service.login;
 
+import com.bidr.authorization.annotation.auth.AuthLogin;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -82,6 +83,9 @@ public class SsoTokenIntrospectService {
                 res.setName(acUser.getName());
             }
             res.setExpireSeconds(calcRemainSeconds(target));
+            // 租户集透出（v2 裁定）：子系统验票拿"账号＋租户"后落本地记录；解析复用登录侧唯一收口，
+            // 三态口径一致（老 token 缺 claim ⇒ null＝旁路形态，绝不抛错）
+            res.setTenantIds(AuthLogin.parseTenantIds(tokenService.getTokenValue(target)));
             // C10 明细命中留痕：调用方身份 + 被查 token 前 8 位（不落全量 token）+ 命中用户
             log.info("[token回查]调用方: {}, 被查token: {}…, 命中用户: {}",
                     caller.getCustomerNumber(), StringUtils.substring(token, 0, 8), res.getUserId());

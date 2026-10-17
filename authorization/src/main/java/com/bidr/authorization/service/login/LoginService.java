@@ -87,6 +87,17 @@ public interface LoginService {
     LoginRes register(String loginId, String password);
 
     /**
+     * 用户名密码注册（带租户码）：租户注册模式（ACCOUNT_REGISTER_MODE=tenant）下码必填且须命中有效租户，
+     * 注册即挂该租户（ac_user_tenant，is_admin=false）；open 模式选填、给了同样校验并挂。
+     *
+     * @param loginId    用户名
+     * @param password   密码
+     * @param tenantCode 租户码（可空）
+     * @return 登录返回信息
+     */
+    LoginRes register(String loginId, String password, String tenantCode);
+
+    /**
      * 用户名密码邮箱注册.
      *
      * @param loginId  用户名
@@ -105,6 +116,17 @@ public interface LoginService {
      * @return 登录返回信息
      */
     LoginRes registerWithPhoneNumber(String loginId, String password, String phoneNumber);
+
+    /**
+     * 用户名密码手机号注册（带租户码）：租户语义同 {@link #register(String, String, String)}。
+     *
+     * @param loginId     用户名
+     * @param password    密码
+     * @param phoneNumber 手机号
+     * @param tenantCode  租户码（可空）
+     * @return 登录返回信息
+     */
+    LoginRes registerWithPhoneNumber(String loginId, String password, String phoneNumber, String tenantCode);
 
     /**
      * 超管账户假借用户登录

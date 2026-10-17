@@ -26,4 +26,7 @@ public class MsgRegReq extends MsgLoginReq {
     @NotBlank(message = "密码不能为空")
     @ApiModelProperty(value = "密码")
     private String password;
+
+    @ApiModelProperty(value = "租户码（自助注册模式=tenant 时必填，open 模式选填）")
+    private String tenantCode;
 }

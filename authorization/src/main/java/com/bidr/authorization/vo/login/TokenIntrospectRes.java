@@ -35,4 +35,9 @@ public class TokenIntrospectRes {
 
     @ApiModelProperty(value = "剩余有效秒数（由会话时间戳与超时秒数推算）；仅调用方自身带有效登录态时返回，无法计算留空")
     private Long expireSeconds;
+
+    @ApiModelProperty(value = "归属用户的租户集（ac_user_tenant 现查后烤进会话的 TENANT_IDS）；"
+            + "仅调用方自身带有效登录态时返回——子系统据此把账号连同租户落成本地记录；"
+            + "null＝会话缺该 claim（老 token，旁路形态），[]＝新 token 且用户无任何租户归属")
+    private java.util.List<Long> tenantIds;
 }

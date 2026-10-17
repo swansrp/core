@@ -12,6 +12,7 @@ import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -70,13 +71,18 @@ public class AcTenantPortalService {
     }
 
     /**
-     * 建租户：code 非空时先做有效行查重，命中即拒（AC_TENANT_CODE_ALREADY_EXISTED）。
+     * 建租户：code 缺省时自动生成（8 位随机码、查重重试，见 {@link #generateTenantCode()}）；
+     * 手工传入仍优先并查重，命中即拒（AC_TENANT_CODE_ALREADY_EXISTED）。
      */
     @Transactional(rollbackFor = Exception.class)
     public AcTenant createTenant(String name, String code) {
         Validator.assertNotBlank(name, ErrCodeSys.PA_PARAM_NULL, "租户名称");
         String trimmedCode = FuncUtil.isNotEmpty(code) ? code.trim() : null;
-        assertCodeFree(acTenantService.getByCode(trimmedCode), null);
+        if (trimmedCode == null) {
+            trimmedCode = generateTenantCode();
+        } else {
+            assertCodeFree(acTenantService.getByCode(trimmedCode), null);
+        }
         AcTenant tenant = new AcTenant();
         String operator = AccountContext.getOperator();
         Date now = new Date();
@@ -89,6 +95,41 @@ public class AcTenantPortalService {
         tenant.setUpdateAt(now);
         acTenantService.insert(tenant);
         return tenant;
+    }
+
+    /**
+     * 租户码随机字符表：数字＋大写字母，剔除易混的 0/O/1/I（念读与抄录不歧义）。
+     */
+    static final String CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    /** 租户码长度：31 字符集 8 位 ≈ 8.5e11 组合，碰撞概率可忽略 */
+    static final int CODE_LENGTH = 8;
+    /** 查重碰撞重试上限：超过即视为数据异常硬拒，不静默降级 */
+    private static final int CODE_RETRY_MAX = 5;
+
+    /** 租户码随机源：SecureRandom 线程安全，静态单例避免每次调用重建 */
+    private static final java.security.SecureRandom CODE_RANDOM = new java.security.SecureRandom();
+
+    /**
+     * 缺省租户码生成：SecureRandom 不可推测（非时间戳非序号），入库前按有效行查重、碰撞重试。
+     * 包可见静态入口（{@code generateCode}）供离线单测直断字符集与长度。
+     */
+    private String generateTenantCode() {
+        for (int attempt = 0; attempt < CODE_RETRY_MAX; attempt++) {
+            String candidate = generateCode(CODE_RANDOM);
+            if (acTenantService.getByCode(candidate) == null) {
+                return candidate;
+            }
+        }
+        throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                "租户码生成连续 " + CODE_RETRY_MAX + " 次撞号，疑似数据异常，请人工核对 ac_tenant");
+    }
+
+    static String generateCode(java.security.SecureRandom random) {
+        StringBuilder sb = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            sb.append(CODE_ALPHABET.charAt(random.nextInt(CODE_ALPHABET.length())));
+        }
+        return sb.toString();
     }
 
     /**

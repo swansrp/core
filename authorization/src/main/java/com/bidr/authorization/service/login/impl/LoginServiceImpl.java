@@ -10,7 +10,10 @@ import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcAccount;
+import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.entity.AcUserTenant;
+import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
@@ -52,6 +55,7 @@ import java.util.Map;
 public class LoginServiceImpl implements LoginService {
 
     private final AcUserService acUserService;
+    private final AcTenantService acTenantService;
     private final AcUserTenantService acUserTenantService;
     private final SysConfigCacheService frameCacheService;
     private final TokenService tokenService;
@@ -204,25 +208,112 @@ public class LoginServiceImpl implements LoginService {
         return buildLoginRes(user);
     }
 
+    /**
+     * 旧兼容签名（无租户码）：委托经 this 自调用<b>不过 Spring 代理</b>，故不走事务——
+     * 与历史实现（原 register 也无事务注解）语义一致；业务入口请用带 tenantCode 的重载。
+     */
     @Override
     public LoginRes register(String userName, String password) {
-        return this.registerWithEmail(userName, password, null);
+        return this.register(userName, password, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginRes register(String userName, String password, String tenantCode) {
+        AcTenant tenant = assertRegisterAllowed(tenantCode);
+        AcUser user = acUserService.getUserByUserName(userName);
+        Validator.assertNull(user, AccountErrCode.AC_USER_ALREADY_EXISTED);
+        user = creatUserService.createUser(userName, password, userName, null, null, null);
+        bindRegisterTenant(user.getUserId(), tenant);
+        return buildLoginRes(user);
     }
 
     @Override
     public LoginRes registerWithEmail(String userName, String password, String email) {
+        // 语义是"注册"不是"登录"：同样过三态闸（closed 拒；tenant 态无码拒），防成 closed 态的漏网建号口
+        AcTenant tenant = assertRegisterAllowed(null);
         AcUser user = acUserService.getUserByUserName(userName);
         Validator.assertNull(user, AccountErrCode.AC_USER_ALREADY_EXISTED);
         user = creatUserService.createUser(userName, password, userName, null, email, null);
+        bindRegisterTenant(user.getUserId(), tenant);
         return buildLoginRes(user);
     }
 
+    /**
+     * 旧兼容签名（无租户码）：委托经 this 自调用<b>不过 Spring 代理</b>，故不走事务——
+     * 与历史实现语义一致；业务入口请用带 tenantCode 的重载。
+     */
     @Override
     public LoginRes registerWithPhoneNumber(String userName, String password, String phoneNumber) {
+        return this.registerWithPhoneNumber(userName, password, phoneNumber, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginRes registerWithPhoneNumber(String userName, String password, String phoneNumber, String tenantCode) {
+        AcTenant tenant = assertRegisterAllowed(tenantCode);
         AcUser user = acUserService.getUserByUserName(userName);
         Validator.assertNull(user, AccountErrCode.AC_USER_ALREADY_EXISTED);
         user = creatUserService.createUser(userName, password, userName, phoneNumber, null, null);
+        bindRegisterTenant(user.getUserId(), tenant);
         return buildLoginRes(user);
+    }
+
+    /** 自助注册三态取值 */
+    private static final String REGISTER_MODE_OPEN = "open";
+    private static final String REGISTER_MODE_TENANT = "tenant";
+    private static final String REGISTER_MODE_CLOSED = "closed";
+
+    /**
+     * 三态归一（离线可测）：tenant/closed 之外的一切取值（含空、未知、大小写、空白）回落 open
+     * ——共享兼容口径：参数缺行或写错不得把存量开放注册项目突然锁死。
+     */
+    static String normalizeRegisterMode(String raw) {
+        String v = raw == null ? "" : raw.trim().toLowerCase();
+        return REGISTER_MODE_TENANT.equals(v) || REGISTER_MODE_CLOSED.equals(v) ? v : REGISTER_MODE_OPEN;
+    }
+
+    /**
+     * 自助注册三态闸（ACCOUNT_REGISTER_MODE，读 sys_config 运行值）：closed 拒绝一切自助注册；
+     * tenant 模式码必填且须命中有效租户（getByCode 只回 valid='1' 行）；open 模式码选填、给了同样
+     * 校验并挂（/register/CODE 链接在 open 态同样可用）。返回 null＝注册为全局账号不挂租户。
+     * 🔴 闸在服务端：前端隐藏入口只是形态，直打 API 缺码/错码同样在此被拒。
+     * 包可见＝离线单测直断（LoginRegisterModeTest 的 mock 腿），不构成对外入口。
+     */
+    AcTenant assertRegisterAllowed(String tenantCode) {
+        String normalized = normalizeRegisterMode(
+                frameCacheService.getParamValueAvail(AccountParam.ACCOUNT_REGISTER_MODE.name()));
+        if (REGISTER_MODE_CLOSED.equals(normalized)) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "自助注册已关闭，账号请联系管理员创建");
+        }
+        String trimmed = tenantCode == null ? null : tenantCode.trim();
+        if (FuncUtil.isEmpty(trimmed)) {
+            if (REGISTER_MODE_TENANT.equals(normalized)) {
+                throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "当前仅支持租户注册，请通过租户注册链接进入");
+            }
+            return null;
+        }
+        AcTenant tenant = acTenantService.getByCode(trimmed);
+        if (tenant == null) {
+            // 不提"租户/码/停用"语义：不给试探者确认字段性质与存在性的信息面，统一按链接失效口径
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "注册链接无效或已失效，请联系管理员获取");
+        }
+        return tenant;
+    }
+
+    /**
+     * 注册即挂租户：is_admin 恒 false（租户管理员由成员管理面另行授予，注册入口不得自授管理员）。
+     * 包可见＝离线单测直断 is_admin 针（不构成对外入口）。
+     */
+    void bindRegisterTenant(Long userId, AcTenant tenant) {
+        if (tenant == null) {
+            return;
+        }
+        AcUserTenant relation = new AcUserTenant();
+        relation.setUserId(userId);
+        relation.setTenantId(tenant.getId());
+        relation.setIsAdmin(Boolean.FALSE);
+        acUserTenantService.insert(relation);
     }
 
     @Override

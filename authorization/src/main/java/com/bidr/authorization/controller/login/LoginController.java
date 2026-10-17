@@ -112,7 +112,8 @@ public class LoginController {
     @RequestMapping(value = "/register/msg", method = RequestMethod.POST)
     @MsgCodeVerify("REGISTER_MSG_CODE")
     public LoginRes regAndLogin(@Validated MsgRegReq req) {
-        LoginRes res = loginService.registerWithPhoneNumber(req.getLoginId(), req.getPassword(), req.getPhoneNumber());
+        LoginRes res = loginService.registerWithPhoneNumber(req.getLoginId(), req.getPassword(),
+                req.getPhoneNumber(), req.getTenantCode());
         afterLogin(res);
         return res;
     }
@@ -121,7 +122,7 @@ public class LoginController {
     @RequestMapping(value = "/register", method = RequestMethod.POST)
     @CaptchaVerify("REGISTER_CAPTCHA")
     public LoginRes register(@Validated LoginReq req) {
-        LoginRes res = loginService.register(req.getLoginId(), req.getPassword());
+        LoginRes res = loginService.register(req.getLoginId(), req.getPassword(), req.getTenantCode());
         afterLogin(res);
         return res;
     }

@@ -355,4 +355,45 @@ public class AcTenantPortalServiceTest {
         Assert.assertEquals("展示列必须经旁路口解析出姓名（非闸内批量口的静默 null）", "张三", rows.get(0).get("name"));
         Mockito.verify(dao).selectTenantPortalUser(777L, null);
     }
+
+    @Test
+    public void generatedTenantCodeFitsAlphabetAndLength() {
+        // 自动生成租户码（自助注册链接的准入凭证）：长度固定、字符集锁定、易混字符必须缺席
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        for (int i = 0; i < 200; i++) {
+            String code = AcTenantPortalService.generateCode(random);
+            Assert.assertEquals("租户码长度", AcTenantPortalService.CODE_LENGTH, code.length());
+            for (char c : code.toCharArray()) {
+                Assert.assertTrue("字符必须在字符表内：" + code, AcTenantPortalService.CODE_ALPHABET.indexOf(c) >= 0);
+            }
+            Assert.assertFalse("不得含易混字符 0/O/1/I", code.matches(".*[0O1I].*"));
+        }
+        // 随机性自证：连续 50 枚生成不得出现重复（31^8 空间下 50 次碰撞概率可忽略）
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (int i = 0; i < 50; i++) {
+            seen.add(AcTenantPortalService.generateCode(random));
+        }
+        Assert.assertEquals("连续生成必须互不重复（不可推测性的统计面）", 50, seen.size());
+    }
+
+    @Test
+    public void createTenantCodeGenerationExhaustionHardDenies() {
+        // 码查重连续撞号 ⇒ 业务异常硬拒，绝不静默复用已占用码（重试耗尽腿，reviewer C 轴补）
+        AcTenantService repo = Mockito.mock(AcTenantService.class);
+        Mockito.when(repo.getByCode(Mockito.anyString())).thenReturn(tenant(TENANT_ID, CommonConst.YES));
+        AcTenantPortalService service = new AcTenantPortalService(
+                repo, Mockito.mock(AcUserTenantService.class), null, Mockito.mock(AcUserDao.class));
+        AccountInfo accountInfo = new AccountInfo();
+        accountInfo.setCustomerNumber(OPERATOR);
+        AccountContext.set(accountInfo);
+        try {
+            service.createTenant("撞号压测租户", null);
+            Assert.fail("重试耗尽必须抛 ServiceException，不得静默落库");
+        } catch (ServiceException e) {
+            Assert.assertTrue("文案必须指向撞号，实际：" + e.getMessage(),
+                    String.valueOf(e.getMessage()).contains("撞号"));
+        } finally {
+            AccountContext.remove();
+        }
+    }
 }

@@ -131,8 +131,9 @@ public class AuthLogin implements AuthRole {
      * 绝不抛错）；空集合 ⇒ 空 List（用户无租户归属）；有值 ⇒ 逐项转 Long，
      * 脏元素（非数字/坏 JSON 串）按缺键旁路或跳过——token 经 redis 回读，
      * List 实形与 JSON 串形（{@code "[1,2]"}）都必须兼容。</p>
+     * <p>public＝解析收口唯一入口，token 回查面（SsoTokenIntrospectService）透出租户集复用同一解析。</p>
      */
-    static List<Long> parseTenantIds(Map<String, Object> map) {
+    public static List<Long> parseTenantIds(Map<String, Object> map) {
         Object raw = map == null ? null : map.get(TokenItem.TENANT_IDS.name());
         if (raw instanceof String) {
             raw = JsonUtil.readJson(((String) raw).trim(), List.class, Long.class);
