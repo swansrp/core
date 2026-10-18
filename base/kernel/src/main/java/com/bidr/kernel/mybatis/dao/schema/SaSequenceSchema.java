@@ -29,8 +29,12 @@ public class SaSequenceSchema extends BaseMybatisSchema<SaSequence> {
                 "  PRIMARY KEY (`seq_name`)\n" +
                 ") ENGINE=InnoDB COMMENT='队列表'\n"
         );
+        // 🔴 工号序列的出厂起点不写死：库重建后若从同一个数重新起发，会把上一代已发过的工号再发一遍，
+        // 而 Redis 里按工号建键的东西不跟着库重建（agent 历史对话索引 llm:agent:conversation:index:{工号}、
+        // 登录令牌 AuthTokenUtil.getKey(工号, tokenType)）⇒ 新账号一进站就继承别人的历史与令牌。
+        // 按建表那一刻取"月日时分"当偏移，每代库的号段都落在自己的创建分钟上、互不重叠（仍在 8 位段内）。
         setInitData("INSERT INTO `sa_sequence` (`seq_name`, `platform`, `value`, `prefix`, `suffix`, `min_value`, `max_value`, `step`) VALUES\n" +
                 "\t('AC_DEPT_ID_SEQ', 'sys', 10000000, '', '', 10000000, 99999999, 1),\n" +
-                "\t('AC_USER_CUSTOMER_NUMBER_SEQ', 'sys', 10000000, '', '', 10000000, 99999999, 1)\n");
+                "\t('AC_USER_CUSTOMER_NUMBER_SEQ', 'sys', 10000000 + CAST(DATE_FORMAT(NOW(), '%m%d%H%i') AS UNSIGNED), '', '', 10000000, 99999999, 1)\n");
     }
 }
