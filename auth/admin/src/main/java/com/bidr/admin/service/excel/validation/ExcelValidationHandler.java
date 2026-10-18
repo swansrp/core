@@ -4,6 +4,7 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.write.handler.SheetWriteHandler;
 import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
 import com.alibaba.excel.write.metadata.holder.WriteWorkbookHolder;
+import com.bidr.kernel.constant.dict.portal.PortalAnnotationUtil;
 import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.MetaTreeDict;
@@ -60,7 +61,8 @@ public class ExcelValidationHandler implements SheetWriteHandler {
                 if (FuncUtil.isNotEmpty(apiModelProperty)) {
                     columnName = apiModelProperty.value();
                 }
-                PortalDictField dictFieldAnno = field.getAnnotation(PortalDictField.class);
+                PortalDictField dictFieldAnno = PortalAnnotationUtil.fetch(field,
+                        com.bidr.admin.config.PortalDictField.class);
                 if (FuncUtil.isNotEmpty(dictFieldAnno)) {
                     MetaDict metaDictAnno = dictFieldAnno.value().getAnnotation(MetaDict.class);
                     if (FuncUtil.isNotEmpty(metaDictAnno)) {

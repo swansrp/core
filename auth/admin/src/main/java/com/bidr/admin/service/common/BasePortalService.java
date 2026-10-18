@@ -3,6 +3,7 @@ package com.bidr.admin.service.common;
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.admin.config.PortalDynamicColumn;
+import com.bidr.kernel.constant.dict.portal.PortalAnnotationUtil;
 import com.bidr.kernel.constant.dict.portal.anno.PortalEntityField;
 import com.bidr.kernel.constant.dict.portal.anno.PortalNoFilterField;
 import com.bidr.admin.config.PortalSelect;
@@ -104,11 +105,13 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     protected void setAlias(Field field, Map<String, String> map) {
-        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+        PortalNoFilterField portalNoFilterField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalNoFilterField.class);
         if (FuncUtil.isNotEmpty(portalNoFilterField)) {
             return;
         }
-        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        PortalEntityField portalEntityField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalEntityField.class);
         if (FuncUtil.isNotEmpty(portalEntityField)) {
             if (FuncUtil.isNotEmpty(portalEntityField.alias())) {
                 map.put(field.getName(),
@@ -130,11 +133,13 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     protected void setSummaryAlias(Field field, Map<String, String> map) {
-        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+        PortalNoFilterField portalNoFilterField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalNoFilterField.class);
         if (FuncUtil.isNotEmpty(portalNoFilterField)) {
             return;
         }
-        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        PortalEntityField portalEntityField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalEntityField.class);
         if (FuncUtil.isNotEmpty(portalEntityField)) {
             if (FuncUtil.isNotEmpty(portalEntityField.origFieldName())) {
                 map.put(field.getName(), portalEntityField.origFieldName());
@@ -158,7 +163,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
     }
 
     protected void setHavingField(Field field, Set<String> set) {
-        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        PortalEntityField portalEntityField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalEntityField.class);
         if (FuncUtil.isNotEmpty(portalEntityField)) {
             if (portalEntityField.aggregation()) {
                 set.add(field.getName());
@@ -343,7 +349,8 @@ public abstract class BasePortalService<ENTITY, VO> implements PortalCommonServi
 
 
     private boolean parsePortalEntityField(MPJLambdaWrapper<ENTITY> wrapper, Field field) {
-        PortalEntityField portalEntityField = field.getAnnotation(PortalEntityField.class);
+        PortalEntityField portalEntityField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalEntityField.class);
         if (FuncUtil.isNotEmpty(portalEntityField) && !getSelectApplyMap().containsKey(field.getName())) {
             if (!portalEntityField.select()) {
                 return true;

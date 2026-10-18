@@ -1,7 +1,7 @@
 package com.bidr.admin.service;
 
 import com.alibaba.excel.annotation.ExcelProperty;
-import com.bidr.admin.config.*;
+import com.bidr.kernel.constant.dict.portal.PortalAnnotationUtil;
 import com.bidr.kernel.constant.dict.portal.anno.*;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
@@ -340,28 +340,28 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalField(SysPortal portal, Field field, SysPortalColumn column) {
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalIdField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalIdField.class)) {
             portal.setIdColumn(field.getName());
             column.setShow(CommonConst.NO);
             column.setDetailShow(CommonConst.NO);
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
         }
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalNameField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalNameField.class)) {
             portal.setNameColumn(field.getName());
             column.setWidth(0);
         }
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalImportField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalImportField.class)) {
             portal.setImportAble(CommonConst.YES);
         }
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalPidField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalPidField.class)) {
             portal.setPidColumn(field.getName());
             column.setShow(CommonConst.NO);
             column.setDetailShow(CommonConst.NO);
             column.setAddShow(CommonConst.NO);
             column.setEditShow(CommonConst.NO);
         }
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalOrderField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalOrderField.class)) {
             portal.setOrderColumn(field.getName());
             portal.setDefaultSort(JsonUtil.toJson(Collections.singletonList(
                     new SortVO(field.getName(), PortalSortDict.ASC.getValue()))));
@@ -373,7 +373,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalEntityField(SysPortal portal, Field field, SysPortalColumn column) {
-        PortalEntityField entityField = field.getAnnotation(PortalEntityField.class);
+        PortalEntityField entityField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalEntityField.class);
         if (FuncUtil.isNotEmpty(entityField)) {
             if (FuncUtil.isNotEmpty(entityField.joinField())) {
                 column.setFieldType(PortalFieldDict.ENTITY.getValue());
@@ -397,7 +398,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalNoFilterField(Field field, SysPortalColumn column) {
-        PortalNoFilterField portalNoFilterField = field.getAnnotation(PortalNoFilterField.class);
+        PortalNoFilterField portalNoFilterField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalNoFilterField.class);
         if (FuncUtil.isNotEmpty(portalNoFilterField)) {
             column.setFilterAble(CommonConst.NO);
         } else {
@@ -410,7 +412,7 @@ public class PortalConfigService implements LoginFillTokenInf {
      * {@link PortalSortField} 保留为显式声明（与默认同值，兼容存量写法）。
      */
     private void handlePortalSortField(Field field, SysPortalColumn column) {
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalNoSortField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalNoSortField.class)) {
             column.setSortAble(CommonConst.NO);
         } else {
             column.setSortAble(CommonConst.YES);
@@ -418,7 +420,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalDisplayOnlyField(Field field, SysPortalColumn column) {
-        PortalDisplayOnlyField portalDisplayOnlyField = field.getAnnotation(PortalDisplayOnlyField.class);
+        PortalDisplayOnlyField portalDisplayOnlyField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalDisplayOnlyField.class);
         if (FuncUtil.isNotEmpty(portalDisplayOnlyField)) {
             column.setShow(portalDisplayOnlyField.table());
             column.setDetailShow(portalDisplayOnlyField.detail());
@@ -428,7 +431,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalDisplayNoneField(Field field, SysPortalColumn column) {
-        PortalDisplayNoneField portalDisplayNoneField = field.getAnnotation(PortalDisplayNoneField.class);
+        PortalDisplayNoneField portalDisplayNoneField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalDisplayNoneField.class);
         if (FuncUtil.isNotEmpty(portalDisplayNoneField)) {
             column.setShow(CommonConst.NO);
             column.setDetailShow(CommonConst.NO);
@@ -438,7 +442,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handleGroupDisplayField(Field field, SysPortalColumn column) {
-        PortalGroupDisplayField portalGroupDisplayField = field.getAnnotation(PortalGroupDisplayField.class);
+        PortalGroupDisplayField portalGroupDisplayField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalGroupDisplayField.class);
         if (FuncUtil.isNotEmpty(portalGroupDisplayField)) {
             column.setDisplayGroupName(portalGroupDisplayField.value());
         }
@@ -472,7 +477,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalDictField(Field field, SysPortalColumn column) {
-        PortalDictField portalDictField = field.getAnnotation(PortalDictField.class);
+        PortalDictField portalDictField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalDictField.class);
         if (FuncUtil.isNotEmpty(portalDictField)) {
             MetaDict metaDict = portalDictField.value().getAnnotation(MetaDict.class);
             if (FuncUtil.isNotEmpty(metaDict)) {
@@ -488,7 +494,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalMoneyField(Field field, SysPortalColumn column) {
-        PortalMoneyField portalMoneyField = field.getAnnotation(PortalMoneyField.class);
+        PortalMoneyField portalMoneyField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalMoneyField.class);
         if (FuncUtil.isNotEmpty(portalMoneyField)) {
             column.setFieldType(PortalFieldDict.MONEY.getValue());
             column.setReference(StringUtil.joinWith(",", Integer.valueOf(portalMoneyField.fix()).toString(),
@@ -499,7 +506,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalPercentField(Field field, SysPortalColumn column) {
-        PortalPercentField portalPercentField = field.getAnnotation(PortalPercentField.class);
+        PortalPercentField portalPercentField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalPercentField.class);
         if (FuncUtil.isNotEmpty(portalPercentField)) {
             column.setFieldType(PortalFieldDict.PERCENT.getValue());
             column.setReference(StringUtil.joinWith(",", Integer.valueOf(portalPercentField.fix()).toString(),
@@ -509,7 +517,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalImageField(Field field, SysPortalColumn column) {
-        PortalImageField portalImageField = field.getAnnotation(PortalImageField.class);
+        PortalImageField portalImageField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalImageField.class);
         if (FuncUtil.isNotEmpty(portalImageField)) {
             column.setFieldType(PortalFieldDict.IMAGE.getValue());
             column.setFilterAble(CommonConst.NO);
@@ -517,7 +526,8 @@ public class PortalConfigService implements LoginFillTokenInf {
     }
 
     private void handlePortalAudioField(Field field, SysPortalColumn column) {
-        PortalAudioField portalAudioField = field.getAnnotation(PortalAudioField.class);
+        PortalAudioField portalAudioField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalAudioField.class);
         if (FuncUtil.isNotEmpty(portalAudioField)) {
             column.setFieldType(PortalFieldDict.AUDIO.getValue());
             column.setFilterAble(CommonConst.NO);
@@ -529,25 +539,26 @@ public class PortalConfigService implements LoginFillTokenInf {
      * 避免叠在 Convert/Bind/集合列上时把它们的 filter=NO 翻回 YES；备注类长文本按种子口径可筛）。
      */
     private void handlePortalTextAreaField(Field field, SysPortalColumn column) {
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalTextAreaField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalTextAreaField.class)) {
             column.setFieldType(PortalFieldDict.TEXT.getValue());
         }
     }
 
     private void handlePortalDisableField(Field field, SysPortalColumn column) {
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalDisableField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalDisableField.class)) {
             column.setEnable(CommonConst.NO);
         }
     }
 
     private void handlePortalEditAbleField(Field field, SysPortalColumn column) {
-        if (FuncUtil.isNotEmpty(field.getAnnotation(PortalEditAbleField.class))) {
+        if (PortalAnnotationUtil.has(field, com.bidr.admin.config.PortalEditAbleField.class)) {
             column.setEditAble(CommonConst.YES);
         }
     }
 
     private void handlePortalLargeField(Field field, SysPortalColumn column) {
-        PortalLargeField portalLargeField = field.getAnnotation(PortalLargeField.class);
+        PortalLargeField portalLargeField = PortalAnnotationUtil.fetch(field,
+                com.bidr.admin.config.PortalLargeField.class);
         if (FuncUtil.isNotEmpty(portalLargeField)) {
             column.setDetailSize(portalLargeField.size());
             column.setAddSize(portalLargeField.size());
