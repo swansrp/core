@@ -50,6 +50,8 @@ public class BindRepoConditionTest {
         repos.put("bRepo", repo(B.class, Arrays.asList(b(1L, 5L), b(7L, 8L))));
         repos.put("cRepo", repo(C.class, Arrays.asList(c(5L, 9L), c(8L, 11L))));
         repos.put("dRepo", repo(D.class, Arrays.asList(d(9L, "deep"), d(11L, "deep2"))));
+        repos.put("tgtColRepo", repo(TgtCol.class, Arrays.asList(
+                tgtCol("PRJ1", 2025, "p1"), tgtCol("PRJ2", 2025, "p2"))));
 
         WebApplicationContext ctx = Mockito.mock(WebApplicationContext.class);
         Mockito.when(ctx.getBeanNamesForType(BindRepoHandler.class)).thenReturn(new String[]{"bindRepoHandler"});
@@ -168,6 +170,37 @@ public class BindRepoConditionTest {
         Assert.assertNotNull(list.get(0).getTgt());
         Assert.assertEquals(Long.valueOf(1L), list.get(0).getTgt().getTid());
         Assert.assertEquals("one", list.get(0).getTgt().getName());
+    }
+
+    // ======================== 场景 11：diboot 迁移兼容——condition 裸名用 @TableField 列名（生产 ProjectOverviewVO.pmpList 原串） ========================
+
+    @Test
+    public void columnNameStyleConditionBindsList() {
+        List<VoCol> list = new ArrayList<>(Arrays.asList(voCol("PRJ1", 2025)));
+        RespConvert.customBindConvert(list, VoCol.class);
+        // 生产原串 this.projectCode = project_code and this.dy = dy：裸名是列名，须经列→属性反查后命中
+        Assert.assertEquals(1, list.get(0).getPmpList().size());
+        Assert.assertEquals("p1", list.get(0).getPmpList().get(0).getPmpName());
+    }
+
+    // ======================== 场景 12：契约正对照——裸名为 Java 属性名的写法不受影响 ========================
+
+    @Test
+    public void propertyNameStyleConditionStillBinds() {
+        List<VoColProp> list = new ArrayList<>(Arrays.asList(voColProp("PRJ1", 2025)));
+        RespConvert.customBindConvert(list, VoColProp.class);
+        Assert.assertEquals(1, list.get(0).getPmpList().size());
+        Assert.assertEquals("p1", list.get(0).getPmpList().get(0).getPmpName());
+    }
+
+    // ======================== 场景 13：负对照——列名风格下无匹配仍为空（防反查过宽） ========================
+
+    @Test
+    public void columnStyleNoMatchStaysEmpty() {
+        List<VoCol> list = new ArrayList<>(Arrays.asList(voCol("PRJ9", 1999)));
+        RespConvert.customBindConvert(list, VoCol.class);
+        Assert.assertNotNull(list.get(0).getPmpList());
+        Assert.assertTrue(list.get(0).getPmpList().isEmpty());
     }
 
     // ======================== 测试实体 / VO 与工厂方法 ========================
@@ -579,6 +612,113 @@ public class BindRepoConditionTest {
     private static Vo8 vo8(Long id) {
         Vo8 o = new Vo8();
         o.id = id;
+        return o;
+    }
+
+    /** 生产形态夹具：属性驼峰、列名 snake_case，复刻 DimPmProjectDyf */
+    public static class TgtCol {
+        @com.baomidou.mybatisplus.annotation.TableField(value = "project_code")
+        private String projectCode;
+        @com.baomidou.mybatisplus.annotation.TableField(value = "dy")
+        private Integer dy;
+        private String pmpName;
+
+        public String getProjectCode() {
+            return projectCode;
+        }
+
+        public Integer getDy() {
+            return dy;
+        }
+
+        public String getPmpName() {
+            return pmpName;
+        }
+    }
+
+    /** 生产原串：裸名是列名（diboot 时代合法写法） */
+    public static class VoCol {
+        private String projectCode;
+        private Integer dy;
+        @BindRepo(entity = TgtCol.class, condition = "this.projectCode = project_code and this.dy = dy")
+        private List<TgtCol> pmpList;
+
+        public String getProjectCode() {
+            return projectCode;
+        }
+
+        public void setProjectCode(String projectCode) {
+            this.projectCode = projectCode;
+        }
+
+        public Integer getDy() {
+            return dy;
+        }
+
+        public void setDy(Integer dy) {
+            this.dy = dy;
+        }
+
+        public List<TgtCol> getPmpList() {
+            return pmpList;
+        }
+
+        public void setPmpList(List<TgtCol> pmpList) {
+            this.pmpList = pmpList;
+        }
+    }
+
+    /** 契约写法：裸名是 Java 属性名 */
+    public static class VoColProp {
+        private String projectCode;
+        private Integer dy;
+        @BindRepo(entity = TgtCol.class, condition = "this.projectCode = projectCode and this.dy = dy")
+        private List<TgtCol> pmpList;
+
+        public String getProjectCode() {
+            return projectCode;
+        }
+
+        public void setProjectCode(String projectCode) {
+            this.projectCode = projectCode;
+        }
+
+        public Integer getDy() {
+            return dy;
+        }
+
+        public void setDy(Integer dy) {
+            this.dy = dy;
+        }
+
+        public List<TgtCol> getPmpList() {
+            return pmpList;
+        }
+
+        public void setPmpList(List<TgtCol> pmpList) {
+            this.pmpList = pmpList;
+        }
+    }
+
+    private static TgtCol tgtCol(String projectCode, Integer dy, String pmpName) {
+        TgtCol t = new TgtCol();
+        t.projectCode = projectCode;
+        t.dy = dy;
+        t.pmpName = pmpName;
+        return t;
+    }
+
+    private static VoCol voCol(String projectCode, Integer dy) {
+        VoCol o = new VoCol();
+        o.projectCode = projectCode;
+        o.dy = dy;
+        return o;
+    }
+
+    private static VoColProp voColProp(String projectCode, Integer dy) {
+        VoColProp o = new VoColProp();
+        o.projectCode = projectCode;
+        o.dy = dy;
         return o;
     }
 }

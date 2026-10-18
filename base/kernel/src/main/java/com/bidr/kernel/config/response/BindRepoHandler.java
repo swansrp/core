@@ -433,8 +433,14 @@ public class BindRepoHandler {
             log.warn("@BindRepo(condition): 未找到 {} 对应的 BaseSqlRepo Bean，跳过绑定", nodeClass.getName());
             return Collections.emptyMap();
         }
-        QueryWrapper wrapper = new QueryWrapper();
+        // 目标侧裸名一次解析：属性名优先，兼容 @TableField 列名写法；IN 条件与实例取键必须用同一份解析结果
+        List<String> toProps = new ArrayList<>(incoming.size());
         for (Edge e : incoming) {
+            toProps.add(resolveTargetProp(nodeClass, e.toProp));
+        }
+        QueryWrapper wrapper = new QueryWrapper();
+        for (int i = 0; i < incoming.size(); i++) {
+            Edge e = incoming.get(i);
             Set<Object> vals = new HashSet<>();
             for (Path row : rows) {
                 Object v = fromValue(row, e);
@@ -445,7 +451,7 @@ public class BindRepoHandler {
             if (vals.isEmpty()) {
                 return Collections.emptyMap();
             }
-            wrapper.in(resolveColumnName(nodeClass, e.toProp), vals);
+            wrapper.in(resolveColumnName(nodeClass, toProps.get(i)), vals);
         }
         if (ReflectionUtil.existedField(nodeClass, VALID_FIELD)) {
             wrapper.eq(resolveColumnName(nodeClass, VALID_FIELD), CommonConst.YES);
@@ -460,7 +466,7 @@ public class BindRepoHandler {
         Map<String, List<Object>> byKey = new HashMap<>();
         if (FuncUtil.isNotEmpty(list)) {
             for (Object inst : list) {
-                String k = instKey(inst, incoming);
+                String k = instKey(inst, toProps);
                 if (k == null) {
                     continue;
                 }
@@ -489,12 +495,12 @@ public class BindRepoHandler {
     }
 
     /**
-     * 实例在 incoming 边上的组合键（各 toProp 值以 "||" 连接）；任一值为 null 时返回 null。
+     * 实例在绑定键上的组合键（各属性值以 "||" 连接）；任一值为 null 时返回 null。
      */
-    private String instKey(Object inst, List<Edge> incoming) {
+    private String instKey(Object inst, List<String> toProps) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < incoming.size(); i++) {
-            Object v = ReflectionUtil.getValue(inst, incoming.get(i).toProp, Object.class);
+        for (int i = 0; i < toProps.size(); i++) {
+            Object v = ReflectionUtil.getValue(inst, toProps.get(i), Object.class);
             if (v == null) {
                 return null;
             }
@@ -504,6 +510,31 @@ public class BindRepoHandler {
             sb.append(v);
         }
         return sb.toString();
+    }
+
+    /**
+     * condition 目标侧裸名解析：优先按 Java 属性名；找不到时按 @TableField/@TableId 列名反查属性名，
+     * 兼容 diboot 迁移注解中的列名写法（如 project_code）。两者皆不中时告警并原样返回。
+     */
+    private String resolveTargetProp(Class<?> entityClass, String propOrColumn) {
+        for (Field field : ReflectionUtil.getFields(entityClass)) {
+            if (field.getName().equals(propOrColumn)) {
+                return propOrColumn;
+            }
+        }
+        for (Field field : ReflectionUtil.getFields(entityClass)) {
+            TableField tableField = field.getAnnotation(TableField.class);
+            if (tableField != null && propOrColumn.equals(tableField.value())) {
+                return field.getName();
+            }
+            TableId tableId = field.getAnnotation(TableId.class);
+            if (tableId != null && propOrColumn.equals(tableId.value())) {
+                return field.getName();
+            }
+        }
+        log.warn("@BindRepo(condition): 裸名 {} 既非 {} 的属性也无对应列注解，该键将无法匹配",
+                propOrColumn, entityClass.getName());
+        return propOrColumn;
     }
 
     /**
