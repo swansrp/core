@@ -37,10 +37,10 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20261017043007-80</kernel.version>
-                <platform.version>20261017043007-80</platform.version>
-                <redis.version>20261017043007-80</redis.version>
-                <email.version>20261017043007-80</email.version>
+                <kernel.version>20261018135648-81</kernel.version>
+                <platform.version>20261018135648-81</platform.version>
+                <redis.version>20261018135648-81</redis.version>
+                <email.version>20261018135648-81</email.version>
             </properties>
         </profile>
     </profiles>
