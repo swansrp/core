@@ -42,9 +42,9 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <admin.version>20261018135648-81</admin.version>
-                <forge.version>20261018135648-81</forge.version>
-                <llm.version>20261018135648-81</llm.version>
+                <admin.version>20261019011254-82</admin.version>
+                <forge.version>20261019011254-82</forge.version>
+                <llm.version>20261019011254-82</llm.version>
             </properties>
         </profile>
     </profiles>
