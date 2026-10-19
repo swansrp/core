@@ -80,7 +80,7 @@ public class MineruConfigTemplateCoverageTest {
      * 纯注释行（以 # 开头，冒号前只有空白）跳过
      */
     static Set<String> templateLeaves(String text) {
-        List<String[]> lines = Stream.of(text.split("\n", -1))
+        List<String[]> lines = Stream.of(text.split("\r?\n", -1))
                 .map(LINE::matcher)
                 .filter(Matcher::matches)
                 .map(m -> new String[]{m.group(1), m.group(2)})
