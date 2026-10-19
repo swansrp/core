@@ -1,10 +1,7 @@
 package com.bidr.agent.console.skill;
 
-import com.bidr.kernel.utils.DictEnumUtil;
-import com.bidr.oss.constant.dict.OssServiceTypeDict;
-import com.bidr.oss.constant.param.OssParam;
 import com.bidr.oss.service.ObjectStorageService;
-import com.bidr.platform.service.cache.SysConfigCacheService;
+import com.bidr.oss.service.OssServiceSelector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,8 +10,9 @@ import org.springframework.stereotype.Service;
  * Title: SystemSkillStore
  * Description: 系统级技能包的字节通道：key 规则 {@code agent-skill/{skill_name}/v{n}.zip}。
  *
- * <p><b>走框架通用门面、不认厂商</b>：底座可能是 MinIO、本机盘、阿里云或火山，选型正源＝sys_config 的
- * {@code OSS_SERVER_TYPE}（与框架 {@code /web/oss} 上传同一个值），本类只调
+ * <p><b>走框架通用门面、不认厂商</b>：底座可能是 MinIO、本机盘、阿里云或火山，选型一律经
+ * {@link OssServiceSelector}（与框架 {@code /web/oss} 上传同一个正源：系统参数 {@code OSS_SERVER_TYPE}
+ * 优先、配置文件 {@code oss.server-type} 兜底），本类只调
  * {@link ObjectStorageService} 的按对象名直写/直读 SPI。<b>每次现读</b>而不是启动时缓存：
  * 选型是运行期可改的系统参数，缓存就等于改了参数还得重启才生效。</p>
  *
@@ -35,7 +33,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SystemSkillStore {
 
-    private final SysConfigCacheService sysConfigCacheService;
+    private final OssServiceSelector ossServiceSelector;
 
     /** 当前版本包的 key（历史版本同规则递增留档，可回滚） */
     public static String packageKey(String skillName, int version) {
@@ -81,7 +79,6 @@ public class SystemSkillStore {
     }
 
     private ObjectStorageService storage() {
-        String type = sysConfigCacheService.getParamValueAvail(OssParam.OSS_SERVER_TYPE);
-        return DictEnumUtil.getEnumByValue(type, OssServiceTypeDict.class).getService();
+        return ossServiceSelector.select();
     }
 }

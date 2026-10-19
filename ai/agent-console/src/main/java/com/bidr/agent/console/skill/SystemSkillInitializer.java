@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>失败策略与框架侧其余启动初始化同口径：只记 ERROR、不阻断启动——对账本身幂等，
  * 存储或表暂时不可用时下次启动自然重试；把启动搞挂的代价大于晚一个周期对齐账目。
- * 这条路径不是假设：存储选型走 sys_config 的 {@code OSS_SERVER_TYPE}，而参数行缺失时现读是抛异常
- * 而非回默认值（专有化形态没种过这一行就是这种情形），必须靠这里吞掉。</p>
+ * 这条路径不是假设：存储选型经 {@code OssServiceSelector} 现读（系统参数优先、配置文件 {@code oss.server-type}
+ * 兜底），两头都没给、或参数行尚未种出而 yml 也未给时是抛异常而非回默认值，必须靠这里吞掉。</p>
  *
  * <p>开关 {@code agent.console.skill-seed.enabled}：缺省即开（开箱可用，接入方不写一行配置就能拿到出厂包），
  * 但留一条关闭路径——对账器会写 {@code sys_skill_asset} 与对象存储，
