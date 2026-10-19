@@ -1,7 +1,7 @@
 package com.bidr.platform.dao.entity;
 
-import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.config.anno.portal.PortalIdField;
+import com.bidr.kernel.config.anno.portal.PortalNameField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;

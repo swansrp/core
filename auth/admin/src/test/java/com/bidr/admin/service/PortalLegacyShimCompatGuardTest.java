@@ -1,11 +1,11 @@
 package com.bidr.admin.service;
 
 import com.bidr.kernel.constant.dict.common.BoolDict;
-import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayOnlyField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalEntityField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalFieldAnnos;
-import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
+import com.bidr.kernel.config.anno.portal.PortalDictField;
+import com.bidr.kernel.config.anno.portal.PortalDisplayOnlyField;
+import com.bidr.kernel.config.anno.portal.PortalEntityField;
+import com.bidr.kernel.config.anno.portal.PortalFieldAnnos;
+import com.bidr.kernel.config.anno.portal.PortalIdField;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -46,33 +46,33 @@ public class PortalLegacyShimCompatGuardTest {
      */
     private static final Class<?>[][] SHIM_PAIRS = {
             {com.bidr.admin.config.PortalAudioField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalAudioField.class},
+                    com.bidr.kernel.config.anno.portal.PortalAudioField.class},
             {com.bidr.admin.config.PortalDictField.class, PortalDictField.class},
             {com.bidr.admin.config.PortalDisplayNoneField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalDisplayNoneField.class},
+                    com.bidr.kernel.config.anno.portal.PortalDisplayNoneField.class},
             {com.bidr.admin.config.PortalDisplayOnlyField.class, PortalDisplayOnlyField.class},
             {com.bidr.admin.config.PortalEntityField.class, PortalEntityField.class},
             {com.bidr.admin.config.PortalGroupDisplayField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalGroupDisplayField.class},
+                    com.bidr.kernel.config.anno.portal.PortalGroupDisplayField.class},
             {com.bidr.admin.config.PortalIdField.class, PortalIdField.class},
             {com.bidr.admin.config.PortalImageField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalImageField.class},
+                    com.bidr.kernel.config.anno.portal.PortalImageField.class},
             {com.bidr.admin.config.PortalMoneyField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalMoneyField.class},
+                    com.bidr.kernel.config.anno.portal.PortalMoneyField.class},
             {com.bidr.admin.config.PortalNameField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalNameField.class},
+                    com.bidr.kernel.config.anno.portal.PortalNameField.class},
             {com.bidr.admin.config.PortalNoFilterField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalNoFilterField.class},
+                    com.bidr.kernel.config.anno.portal.PortalNoFilterField.class},
             {com.bidr.admin.config.PortalOrderField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalOrderField.class},
+                    com.bidr.kernel.config.anno.portal.PortalOrderField.class},
             {com.bidr.admin.config.PortalPercentField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalPercentField.class},
+                    com.bidr.kernel.config.anno.portal.PortalPercentField.class},
             {com.bidr.admin.config.PortalPidField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalPidField.class},
+                    com.bidr.kernel.config.anno.portal.PortalPidField.class},
             {com.bidr.admin.config.PortalSortField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalSortField.class},
+                    com.bidr.kernel.config.anno.portal.PortalSortField.class},
             {com.bidr.admin.config.PortalTextAreaField.class,
-                    com.bidr.kernel.constant.dict.portal.anno.PortalTextAreaField.class},
+                    com.bidr.kernel.config.anno.portal.PortalTextAreaField.class},
     };
 
     private static final String[] CONSUMER_FILES = {
@@ -150,7 +150,8 @@ public class PortalLegacyShimCompatGuardTest {
     }
 
     /**
-     * 闸门二：Portal 列注解一律经 PortalFieldAnnos 读取，消费文件里不得残留 field.getAnnotation(Portal*)——
+     * 闸门二：Portal 列注解一律经双识别门面读取（PortalFieldAnnos 按正源类型认旧包同名垫片，
+     * PortalAnnotationUtil 按镜像类反查正源，两者等价），消费文件里不得残留 field.getAnnotation(Portal*)——
      * 旧包写法被裸读时会静默返回 null（列配置整列消失），编译与启动都不报错。
      */
     @Test
@@ -160,7 +161,8 @@ public class PortalLegacyShimCompatGuardTest {
             File file = new File(relative);
             Assert.assertTrue(file.isFile(), "闸门失效：消费文件不存在，扫描面为空＝" + file.getAbsolutePath());
             String source = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-            Assert.assertTrue(source.contains("PortalFieldAnnos."), relative + " 未经门面读取 Portal 注解");
+            Assert.assertTrue(source.contains("PortalFieldAnnos.") || source.contains("PortalAnnotationUtil."),
+                    relative + " 未经门面读取 Portal 注解");
             Matcher matcher = RAW_READ.matcher(source);
             while (matcher.find()) {
                 matched++;

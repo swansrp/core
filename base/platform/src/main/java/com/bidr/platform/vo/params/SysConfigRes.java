@@ -1,9 +1,9 @@
 package com.bidr.platform.vo.params;
 
-import com.bidr.kernel.constant.dict.portal.anno.PortalDisableField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalTextAreaField;
+import com.bidr.kernel.config.anno.portal.PortalDisableField;
+import com.bidr.kernel.config.anno.portal.PortalIdField;
+import com.bidr.kernel.config.anno.portal.PortalNameField;
+import com.bidr.kernel.config.anno.portal.PortalTextAreaField;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;

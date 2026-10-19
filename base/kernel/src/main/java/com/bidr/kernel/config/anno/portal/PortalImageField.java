@@ -1,21 +1,18 @@
-package com.bidr.kernel.constant.dict.portal.anno;
+package com.bidr.kernel.config.anno.portal;
 
 import java.lang.annotation.*;
 
 /**
- * Title: PortalPercentField
+ * Title: PortalImageField
  * Description: Copyright: Copyright (c) 2024 Company: Bidr Ltd.
  *
  * @author Sharp
- * @since 2024/9/27 8:59
+ * @since 2024/10/22 15:08
  */
 
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface PortalPercentField {
-    int unit() default 100;
-
-    int fix() default 2;
+public @interface PortalImageField {
 }

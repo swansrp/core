@@ -1,4 +1,4 @@
-package com.bidr.kernel.constant.dict.portal;
+package com.bidr.kernel.config.anno.portal;
 
 import com.bidr.kernel.utils.FuncUtil;
 import java.lang.annotation.Annotation;
@@ -10,7 +10,7 @@ import java.lang.reflect.Proxy;
 /**
  * Portal 字段注解双口径读取工具。
  *
- * <p>列配置注解的正源在 kernel（constant/dict/portal/anno），但历史契约里它们位于
+ * <p>列配置注解的正源在 kernel（config/anno/portal，与本类同包），但历史契约里它们位于
  * com.bidr.admin.config，业务 VO 尚有大量该包 import。两包各持一份同名同成员的注解定义，
  * Java 注解按类型精确匹配，消费方必须两枚都认：{@link #has} 判存在、{@link #fetch} 取实例。
  *
@@ -27,7 +27,7 @@ public final class PortalAnnotationUtil {
      * 取字段上的 Portal 注解：正源（kernel 包）优先；仅挂镜像（admin 包）时适配为正源类型返回。
      *
      * @param field       VO 字段
-     * @param mirrorClass admin 包同名镜像注解类，正源类按简单名在 kernel anno 包推导
+     * @param mirrorClass admin 包同名镜像注解类，正源类按简单名在本类同包推导
      * @return 正源类型的注解实例，两者皆无时 null
      */
     public static <A extends Annotation> A fetch(Field field, Class<? extends Annotation> mirrorClass) {
@@ -57,8 +57,9 @@ public final class PortalAnnotationUtil {
             throw new IllegalArgumentException("Portal 镜像注解须位于 " + MIRROR_PREFIX + "，实际: " + fqcn);
         }
         try {
+            // 从本类所在包推导正源包名，不落字面量——注解再搬家时字符串双写是会静默漂移的
             return (Class<A>) Class.forName(
-                    "com.bidr.kernel.constant.dict.portal.anno." + mirrorClass.getSimpleName());
+                    PortalAnnotationUtil.class.getPackage().getName() + "." + mirrorClass.getSimpleName());
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("kernel 缺少 Portal 注解正源: " + mirrorClass.getSimpleName(), e);
         }

@@ -1,4 +1,4 @@
-package com.bidr.kernel.constant.dict.portal.anno;
+package com.bidr.kernel.config.anno.portal;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -8,7 +8,7 @@ import java.lang.reflect.Proxy;
 
 /**
  * Title: PortalFieldAnnos
- * Description: Portal 列注解读取门面——正源在 {@code com.bidr.kernel.constant.dict.portal.anno}，
+ * Description: Portal 列注解读取门面——正源在 {@code com.bidr.kernel.config.anno.portal}，
  * 旧包 {@code com.bidr.admin.config} 保留同名 @Deprecated 垫片供存量代码继续引用，本类负责把
  * 垫片实例归一成同名的正源注解实例（属性名与类型一致，正源独有成员回落其默认值）。
  *

@@ -1,11 +1,11 @@
 package com.bidr.admin.service;
 
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
-import com.bidr.kernel.constant.dict.portal.PortalAnnotationUtil;
-import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalEntityField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalMoneyField;
+import com.bidr.kernel.config.anno.portal.PortalAnnotationUtil;
+import com.bidr.kernel.config.anno.portal.PortalEntityField;
+import com.bidr.kernel.config.anno.portal.PortalMoneyField;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Field;
@@ -101,27 +101,27 @@ public class PortalAnnotationDualGuardTest {
     @Test
     public void mirrorFamilyMatchesPortalMembers() {
         Class<?>[] portals = {
-                com.bidr.kernel.constant.dict.portal.anno.PortalAudioField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalDictField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalDisableField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalDisplayNoneField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalDisplayOnlyField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalEditAbleField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalEntityField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalGroupDisplayField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalIdField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalImageField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalImportField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalLargeField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalMoneyField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalNameField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalNoFilterField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalNoSortField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalOrderField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalPercentField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalPidField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalSortField.class,
-                com.bidr.kernel.constant.dict.portal.anno.PortalTextAreaField.class,
+                PortalAudioField.class,
+                PortalDictField.class,
+                PortalDisableField.class,
+                PortalDisplayNoneField.class,
+                PortalDisplayOnlyField.class,
+                PortalEditAbleField.class,
+                PortalEntityField.class,
+                PortalGroupDisplayField.class,
+                PortalIdField.class,
+                PortalImageField.class,
+                PortalImportField.class,
+                PortalLargeField.class,
+                PortalMoneyField.class,
+                PortalNameField.class,
+                PortalNoFilterField.class,
+                PortalNoSortField.class,
+                PortalOrderField.class,
+                PortalPercentField.class,
+                PortalPidField.class,
+                PortalSortField.class,
+                PortalTextAreaField.class,
         };
         for (Class<?> portal : portals) {
             Class<?> mirror;

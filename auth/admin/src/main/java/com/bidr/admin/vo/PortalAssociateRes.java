@@ -1,7 +1,7 @@
 package com.bidr.admin.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.bidr.kernel.constant.dict.portal.anno.*;
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.admin.constant.dict.AllPortalDict;
 import com.bidr.admin.constant.dict.BindTypeDict;
 import com.bidr.admin.dao.entity.SysPortal;

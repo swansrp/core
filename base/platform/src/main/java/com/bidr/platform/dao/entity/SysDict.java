@@ -1,10 +1,10 @@
 package com.bidr.platform.dao.entity;
 
-import com.bidr.kernel.constant.dict.portal.anno.PortalDictField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalDisableField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalDisplayOnlyField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalNameField;
+import com.bidr.kernel.config.anno.portal.PortalDictField;
+import com.bidr.kernel.config.anno.portal.PortalDisableField;
+import com.bidr.kernel.config.anno.portal.PortalDisplayOnlyField;
+import com.bidr.kernel.config.anno.portal.PortalIdField;
+import com.bidr.kernel.config.anno.portal.PortalNameField;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;

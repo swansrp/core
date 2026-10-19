@@ -1,8 +1,8 @@
 package com.bidr.admin.service;
 
 import com.alibaba.excel.annotation.ExcelProperty;
-import com.bidr.kernel.constant.dict.portal.PortalAnnotationUtil;
-import com.bidr.kernel.constant.dict.portal.anno.*;
+import com.bidr.kernel.config.anno.portal.*;
+import com.bidr.kernel.config.anno.portal.PortalAnnotationUtil;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
 import com.bidr.admin.controller.inf.PortalSqlInf;

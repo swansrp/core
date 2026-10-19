@@ -1,4 +1,4 @@
-package com.bidr.kernel.constant.dict.portal.anno;
+package com.bidr.kernel.config.anno.portal;
 
 import java.lang.annotation.*;
 

@@ -1,8 +1,8 @@
 package com.bidr.forge.vo.dataset;
 
-import com.bidr.kernel.constant.dict.portal.anno.PortalIdField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalOrderField;
-import com.bidr.kernel.constant.dict.portal.anno.PortalTextAreaField;
+import com.bidr.kernel.config.anno.portal.PortalIdField;
+import com.bidr.kernel.config.anno.portal.PortalOrderField;
+import com.bidr.kernel.config.anno.portal.PortalTextAreaField;
 import com.bidr.admin.vo.BaseVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

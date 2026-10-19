@@ -1,6 +1,6 @@
 package com.bidr.admin.vo.statistic;
 
-import com.bidr.kernel.constant.dict.portal.anno.*;
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.authorization.bind.annotation.BindUser;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
