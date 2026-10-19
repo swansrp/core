@@ -12,4 +12,5 @@ package com.bidr.wechat.constant;
 public class WechatRedisKeyConst {
     public static final String ACCESS_TOKEN_KEY = "wechat_public_accessToken";
     public static final String JS_API_TICKET_KEY = "wechat_public_js_api_ticket";
+    public static final String MINI_ACCESS_TOKEN_KEY = "wechat_mini_accessToken";
 }

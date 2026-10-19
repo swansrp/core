@@ -15,4 +15,5 @@ public class AuthRes {
     private String nickName;
     private String userId;
     private String headImgUrl;
+    private String unionId;
 }

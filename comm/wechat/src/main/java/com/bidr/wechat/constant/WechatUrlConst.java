@@ -16,6 +16,16 @@ public class WechatUrlConst {
     public static final String WECHAT_MINI_OPENID_GET_URL_FORMAT =
             "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&grant_type=authorization_code&js_code=%s";
     /**
+     * 微信小程序stable_token获取地址（幂等，不互相踢；appid/secret走JSON body）
+     */
+    public static final String WECHAT_MINI_STABLE_TOKEN_URL =
+            "https://api.weixin.qq.com/cgi-bin/stable_token";
+    /**
+     * 微信小程序获取用户手机号地址
+     */
+    public static final String WECHAT_MINI_PHONE_GET_URL =
+            "https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=%s";
+    /**
      * 微信公众号获取token地址
      */
     public static final String WECHAT_PUBLIC_ACCESS_TOKEN_GET_URL_FORMAT =
