@@ -5,11 +5,7 @@ import com.bidr.insight.smartquery.layer.EntityDef;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: DimensionDeriveSupport

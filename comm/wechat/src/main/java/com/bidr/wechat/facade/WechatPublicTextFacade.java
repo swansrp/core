@@ -1,9 +1,9 @@
 package com.bidr.wechat.facade;
 
+import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.platform.utils.file.FreeMarkerUtil;
 import com.bidr.wechat.po.platform.msg.ReceiveUserMsg;
 import com.bidr.wechat.po.platform.msg.ReplyTextMsg;
-import com.bidr.kernel.utils.ReflectionUtil;
 import org.springframework.stereotype.Service;
 
 /**

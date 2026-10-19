@@ -6,11 +6,7 @@ import com.bidr.insight.smartquery.meta.DimensionDeriveSupport;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 /**
  * Title: DimensionDeriveTest

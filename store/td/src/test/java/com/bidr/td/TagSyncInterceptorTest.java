@@ -3,7 +3,7 @@ package com.bidr.td;
 import com.bidr.td.sync.TagSyncInterceptor;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * TagSyncInterceptor 测试

@@ -1,10 +1,10 @@
 package com.bidr.llm.agent;
 
+import com.bidr.llm.agent.ScriptedModel.Step;
 import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.agent.session.AgentSessionState;
 import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
-import com.bidr.llm.agent.ScriptedModel.Step;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -14,16 +14,9 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static com.bidr.llm.agent.ScriptedModel.Step.done;
-import static com.bidr.llm.agent.ScriptedModel.Step.tool;
-import static com.bidr.llm.agent.ScriptedModel.Step.tools;
+import static com.bidr.llm.agent.ScriptedModel.Step.*;
 
 /**
  * Title: ToolAgentRunnerOffloadTest

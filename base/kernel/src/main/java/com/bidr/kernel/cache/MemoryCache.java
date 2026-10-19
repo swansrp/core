@@ -1,6 +1,5 @@
 package com.bidr.kernel.cache;
 
-import com.bidr.kernel.cache.StaticMemoryCacheManager;
 import org.springframework.cache.Cache;
 import org.springframework.context.annotation.Lazy;
 

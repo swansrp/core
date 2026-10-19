@@ -1,7 +1,6 @@
 package com.bidr.socket.io.vo.room;
 
 
-import com.bidr.socket.io.constant.dict.RoomRoleDict;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 

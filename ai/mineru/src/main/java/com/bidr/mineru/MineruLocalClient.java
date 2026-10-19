@@ -8,7 +8,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 

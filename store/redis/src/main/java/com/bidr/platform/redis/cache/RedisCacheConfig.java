@@ -1,7 +1,6 @@
 package com.bidr.platform.redis.cache;
 
 import com.bidr.kernel.utils.BeanUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;

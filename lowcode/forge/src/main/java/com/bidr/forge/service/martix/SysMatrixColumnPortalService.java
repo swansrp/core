@@ -1,13 +1,13 @@
 package com.bidr.forge.service.martix;
 
 import com.bidr.admin.service.common.BasePortalService;
-import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.SysMatrix;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.forge.vo.matrix.SysMatrixColumnVO;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdReqVO;
 import lombok.RequiredArgsConstructor;

@@ -2,8 +2,6 @@ package com.bidr.platform.utils.file;
 
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.validate.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;

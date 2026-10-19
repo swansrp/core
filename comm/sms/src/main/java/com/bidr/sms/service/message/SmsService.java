@@ -1,8 +1,8 @@
 package com.bidr.sms.service.message;
 
+import com.bidr.sms.bo.SmsReq;
 import com.bidr.sms.vo.SendSmsReq;
 import com.bidr.sms.vo.SendSmsRes;
-import com.bidr.sms.bo.SmsReq;
 
 /**
  * Title: SmsService

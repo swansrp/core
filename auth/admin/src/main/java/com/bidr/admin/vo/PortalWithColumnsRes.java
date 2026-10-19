@@ -1,6 +1,5 @@
 package com.bidr.admin.vo;
 
-import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

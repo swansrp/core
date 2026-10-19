@@ -2,8 +2,6 @@ package com.bidr.admin.manage.user.controller;
 
 import com.bidr.admin.manage.user.service.AdminUserServiceImpl;
 import com.bidr.admin.manage.user.vo.UserAdminRes;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.config.response.Resp;
@@ -30,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/user"})
-@Auth(AuthAdmin.class)
 public class AdminUserController extends BaseAdminController<AcUser, UserAdminRes> {
 
     private final CreateUserService createUserService;

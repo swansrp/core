@@ -2,7 +2,10 @@ package com.bidr.td.repository;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.td.annotation.*;
+import com.bidr.td.annotation.TdColumn;
+import com.bidr.td.annotation.TdStable;
+import com.bidr.td.annotation.TdTag;
+import com.bidr.td.annotation.TdTimestamp;
 import com.bidr.td.constant.TdReservedWords;
 import com.bidr.td.sync.TdAdvancedQueryParser;
 import com.bidr.td.vo.*;

@@ -3,15 +3,8 @@ package com.bidr.insight.smartquery.validate;
 import com.bidr.insight.smartquery.layer.DimensionDef;
 import com.bidr.insight.smartquery.layer.EntityDef;
 import com.bidr.insight.smartquery.layer.MetricDef;
-import com.bidr.insight.smartquery.layer.ValueDomainDef;
-import com.bidr.insight.smartquery.model.FilterNode;
-import com.bidr.insight.smartquery.model.OrderByItem;
-import com.bidr.insight.smartquery.model.ScopeFilter;
-import com.bidr.insight.smartquery.model.SemanticQuery;
-import com.bidr.insight.smartquery.model.TimeSpec;
-import com.bidr.insight.smartquery.model.ValidationResult;
+import com.bidr.insight.smartquery.model.*;
 import com.bidr.insight.smartquery.model.ValidationResult.Issue;
-import com.bidr.insight.smartquery.model.WindowSpec;
 import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +14,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: SemanticQueryValidator

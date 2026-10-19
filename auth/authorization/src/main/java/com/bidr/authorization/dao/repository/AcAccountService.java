@@ -3,7 +3,6 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcDept;
-import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.mapper.AcAccountDao;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;

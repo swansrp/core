@@ -1,15 +1,11 @@
 package com.bidr.platform.dao.entity;
 
-import com.bidr.kernel.config.anno.portal.PortalDictField;
-import com.bidr.kernel.config.anno.portal.PortalDisableField;
-import com.bidr.kernel.config.anno.portal.PortalDisplayOnlyField;
-import com.bidr.kernel.config.anno.portal.PortalIdField;
-import com.bidr.kernel.config.anno.portal.PortalNameField;
-import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.bidr.kernel.config.anno.portal.*;
+import com.bidr.kernel.constant.dict.common.BoolDict;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

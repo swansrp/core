@@ -1,26 +1,12 @@
 package com.bidr.admin.manage.group.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcGroup;
-import com.bidr.authorization.service.group.UserGroupService;
-import com.bidr.authorization.vo.group.GroupRes;
-import com.bidr.authorization.vo.group.GroupTypeRes;
-import com.bidr.authorization.vo.group.UserGroupTreeRes;
-import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminTreeController;
-import com.bidr.kernel.vo.common.IdReqVO;
-import com.bidr.platform.config.portal.AdminPortal;
 import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * Title: GroupAdminController
@@ -33,7 +19,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController("AdminGroupController")
 @RequestMapping(value = "/web/admin/group")
-@Auth(AuthAdmin.class)
 public class AdminGroupController extends BaseAdminTreeController<AcGroup, AcGroup> {
 
     @Override

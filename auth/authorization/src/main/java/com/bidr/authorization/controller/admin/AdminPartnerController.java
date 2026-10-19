@@ -1,9 +1,9 @@
 package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthAdmin;
+import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.service.admin.AdminPartnerService;
 import com.bidr.authorization.vo.partner.PartnerReq;
 import com.bidr.authorization.vo.partner.PartnerRes;

@@ -4,11 +4,7 @@ import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.kernel.config.response.BindRepo;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 通过 deptId 绑定 AcDept.name 到当前字段。

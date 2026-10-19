@@ -1,9 +1,8 @@
 package com.bidr.authorization.controller.group;
 
-import com.bidr.authorization.dao.entity.AcGroupBind;
 import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.annotation.auth.AuthLogin;
+import com.bidr.authorization.dao.entity.AcGroupBind;
 import com.bidr.authorization.dao.repository.AcGroupBindService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.config.response.Resp;
@@ -16,7 +15,10 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -39,7 +41,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping(value = "/web/group/bind")
-@Auth(AuthAdmin.class)
 public class GroupBindController {
 
     private final AcGroupBindService acGroupBindService;

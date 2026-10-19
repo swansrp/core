@@ -1,9 +1,9 @@
 package com.bidr.agent.console.dao.repository;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.bidr.agent.console.dao.entity.AgentDefinition;
 import com.bidr.agent.console.dao.mapper.AgentDefinitionMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 

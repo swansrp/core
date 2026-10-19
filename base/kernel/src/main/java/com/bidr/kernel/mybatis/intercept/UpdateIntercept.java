@@ -1,7 +1,6 @@
 package com.bidr.kernel.mybatis.intercept;
 
 import com.bidr.kernel.mybatis.handler.MetaObjectHandlerManager;
-import com.bidr.kernel.mybatis.intercept.ExecutorUpdateIntercept;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.mapping.MappedStatement;

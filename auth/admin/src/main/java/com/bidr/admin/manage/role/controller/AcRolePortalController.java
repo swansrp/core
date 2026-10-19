@@ -3,8 +3,6 @@ package com.bidr.admin.manage.role.controller;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.manage.role.service.AcRolePortalService;
 import com.bidr.admin.manage.role.vo.AcRoleVO;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
@@ -26,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = "系统管理 - 角色管理")
 @AdminPortal
 @RequestMapping(value = "/web/admin/role")
-@Auth(AuthAdmin.class)
 public class AcRolePortalController extends BaseAdminOrderController<AcRole, AcRoleVO> {
 
     private final AcRolePortalService acRolePortalService;

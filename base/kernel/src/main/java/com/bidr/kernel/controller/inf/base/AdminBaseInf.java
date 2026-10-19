@@ -7,8 +7,6 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
-import com.bidr.kernel.vo.portal.ConditionVO;
-import com.bidr.kernel.vo.portal.Query;
 
 import java.beans.Introspector;
 import java.util.Collection;

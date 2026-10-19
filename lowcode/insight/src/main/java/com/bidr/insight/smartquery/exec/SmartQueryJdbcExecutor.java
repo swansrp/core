@@ -1,12 +1,12 @@
 package com.bidr.insight.smartquery.exec;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.bidr.forge.datasource.dao.entity.SysDataSource;
 import com.bidr.forge.datasource.service.DataSourceCacheService;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.bidr.insight.smartquery.dao.entity.InsightAgent;
 import com.bidr.insight.smartquery.dao.repository.InsightAgentService;
-import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
 import com.bidr.insight.smartquery.model.QueryRows;
+import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

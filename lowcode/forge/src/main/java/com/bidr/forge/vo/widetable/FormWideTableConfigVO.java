@@ -1,8 +1,8 @@
 package com.bidr.forge.vo.widetable;
 
+import com.bidr.admin.vo.BaseVO;
 import com.bidr.kernel.config.anno.portal.PortalIdField;
 import com.bidr.kernel.config.anno.portal.PortalTextAreaField;
-import com.bidr.admin.vo.BaseVO;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

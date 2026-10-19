@@ -1,6 +1,7 @@
 package com.bidr.insight.smartquery.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.bidr.forge.datasource.service.DataSourceCacheService;
 import com.bidr.insight.smartquery.dao.entity.InsightAgent;
 import com.bidr.insight.smartquery.dao.entity.InsightAgentAsset;
 import com.bidr.insight.smartquery.dao.entity.InsightAgentTable;
@@ -10,13 +11,7 @@ import com.bidr.insight.smartquery.dao.repository.InsightAgentTableService;
 import com.bidr.insight.smartquery.layer.DimensionDef;
 import com.bidr.insight.smartquery.layer.EntityDef;
 import com.bidr.insight.smartquery.layer.ValueDomainDef;
-import com.bidr.insight.smartquery.meta.ColumnConventions;
-import com.bidr.insight.smartquery.meta.ConceptsSupport;
-import com.bidr.insight.smartquery.meta.DimensionDeriveSupport;
-import com.bidr.insight.smartquery.meta.SkeletonBuilder;
-import com.bidr.insight.smartquery.meta.SkeletonMergeSupport;
-import com.bidr.insight.smartquery.meta.SupportedDimensionSupport;
-import com.bidr.insight.smartquery.meta.TableTemplateSupport;
+import com.bidr.insight.smartquery.meta.*;
 import com.bidr.insight.smartquery.validate.AssetAutoFixer;
 import com.bidr.insight.smartquery.validate.AssetConsistencyValidator;
 import com.bidr.insight.smartquery.validate.ConfigConflictDetector;
@@ -29,25 +24,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.bidr.forge.datasource.service.DataSourceCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-
-import javax.sql.DataSource;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: SmartAgentMetaService

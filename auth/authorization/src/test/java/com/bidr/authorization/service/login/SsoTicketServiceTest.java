@@ -22,11 +22,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: SsoTicketServiceTest

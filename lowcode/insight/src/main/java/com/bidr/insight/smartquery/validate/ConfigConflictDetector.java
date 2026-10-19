@@ -2,13 +2,7 @@ package com.bidr.insight.smartquery.validate;
 
 import com.bidr.insight.smartquery.layer.EntityDef;
 import com.bidr.insight.smartquery.layer.ValueDomainDef;
-import com.bidr.insight.smartquery.validate.conflict.ConfigCheckContext;
-import com.bidr.insight.smartquery.validate.conflict.ConfigCheckFinding;
-import com.bidr.insight.smartquery.validate.conflict.ConfigCheckResolution;
-import com.bidr.insight.smartquery.validate.conflict.ConfigCheckRule;
-import com.bidr.insight.smartquery.validate.conflict.DomainMissingCheckRule;
-import com.bidr.insight.smartquery.validate.conflict.UnitAbsentCheckRule;
-import com.bidr.insight.smartquery.validate.conflict.UnitConflictCheckRule;
+import com.bidr.insight.smartquery.validate.conflict.*;
 import com.bidr.kernel.utils.FuncUtil;
 
 import java.sql.Connection;

@@ -1,6 +1,8 @@
 package com.bidr.td.sync;
 
-import com.bidr.td.annotation.*;
+import com.bidr.td.annotation.TdColumn;
+import com.bidr.td.annotation.TdTag;
+import com.bidr.td.annotation.TdTimestamp;
 import com.bidr.td.constant.TdDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +10,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class TdSchemaDiffer {
 

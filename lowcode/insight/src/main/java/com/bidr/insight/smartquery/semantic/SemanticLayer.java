@@ -1,12 +1,6 @@
 package com.bidr.insight.smartquery.semantic;
 
-import com.bidr.insight.smartquery.layer.ConceptDef;
-import com.bidr.insight.smartquery.layer.DimensionDef;
-import com.bidr.insight.smartquery.layer.EntityDef;
-import com.bidr.insight.smartquery.layer.MetricDef;
-import com.bidr.insight.smartquery.layer.RelationDef;
-import com.bidr.insight.smartquery.layer.RowPolicyDef;
-import com.bidr.insight.smartquery.layer.ValueDomainDef;
+import com.bidr.insight.smartquery.layer.*;
 import com.bidr.insight.smartquery.sqlgen.SqlGenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,16 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: SemanticLayer

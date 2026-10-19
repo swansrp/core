@@ -1,6 +1,7 @@
 package com.bidr.td.annotation;
 
 import com.bidr.td.constant.TdDataType;
+
 import java.lang.annotation.*;
 
 @Target(ElementType.FIELD)

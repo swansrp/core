@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.service.associate.PortalAssociateService;
 import com.bidr.admin.vo.PortalAssociateRes;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
@@ -26,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/associate"})
-@Auth(AuthAdmin.class)
 public class AdminPortalAssociateController extends BaseAdminOrderController<SysPortalAssociate, PortalAssociateRes> {
 
     private final PortalAssociateService portalAssociateService;

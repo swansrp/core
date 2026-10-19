@@ -1,7 +1,7 @@
 package com.bidr.admin.vo.statistic;
 
-import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.admin.vo.BaseVO;
+import com.bidr.kernel.config.anno.portal.*;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

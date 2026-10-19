@@ -2,7 +2,6 @@ package com.bidr.forge.service.martix;
 
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.forge.bo.MatrixColumns;
-import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.SysMatrix;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
@@ -10,6 +9,7 @@ import com.bidr.forge.dao.repository.SysMatrixColumnService;
 import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

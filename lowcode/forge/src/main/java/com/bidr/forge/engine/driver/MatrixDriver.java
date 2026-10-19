@@ -2,7 +2,6 @@ package com.bidr.forge.engine.driver;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.forge.bo.MatrixColumns;
-import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.engine.DriverCapability;
 import com.bidr.forge.engine.PortalDataMode;
@@ -13,6 +12,7 @@ import com.bidr.forge.service.statistic.DriverStatisticSupportService;
 import com.bidr.forge.service.statistic.MatrixStatisticQueryContext;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.IdPidReqVO;

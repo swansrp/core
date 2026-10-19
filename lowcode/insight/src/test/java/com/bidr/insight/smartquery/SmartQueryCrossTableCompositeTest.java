@@ -1,9 +1,9 @@
 package com.bidr.insight.smartquery;
 
+import com.bidr.insight.smartquery.model.FilterNode;
 import com.bidr.insight.smartquery.model.GenResult;
 import com.bidr.insight.smartquery.model.SemanticQuery;
 import com.bidr.insight.smartquery.model.ValidationResult;
-import com.bidr.insight.smartquery.model.FilterNode;
 import com.bidr.insight.smartquery.semantic.SemanticLayer;
 import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
 import com.bidr.insight.smartquery.service.AgentAssetCacheService;

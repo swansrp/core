@@ -13,10 +13,10 @@ import com.bidr.admin.vo.statistic.IndicatorRes;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
 import com.bidr.insight.chatbi.vo.ChatBiSemanticCatalog;
-import com.bidr.insight.smartquery.vo.SemanticField;
-import com.bidr.insight.smartquery.vo.SemanticField.SemanticValue;
 import com.bidr.insight.chatbi.vo.SemanticIndicator;
 import com.bidr.insight.chatbi.vo.SemanticIndicatorGroup;
+import com.bidr.insight.smartquery.vo.SemanticField;
+import com.bidr.insight.smartquery.vo.SemanticField.SemanticValue;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.DictEnumUtil;
@@ -32,13 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

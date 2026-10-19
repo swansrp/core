@@ -1,11 +1,11 @@
 package com.bidr.admin.manage.account.vo;
 
+import com.bidr.authorization.constants.dict.GenderDict;
+import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.kernel.config.anno.portal.PortalDictField;
 import com.bidr.kernel.config.anno.portal.PortalIdField;
 import com.bidr.kernel.config.anno.portal.PortalImageField;
 import com.bidr.kernel.config.anno.portal.PortalNameField;
-import com.bidr.authorization.constants.dict.GenderDict;
-import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;

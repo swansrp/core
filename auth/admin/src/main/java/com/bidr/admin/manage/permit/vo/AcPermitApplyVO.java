@@ -1,12 +1,12 @@
 package com.bidr.admin.manage.permit.vo;
 
+import com.bidr.admin.vo.BaseVO;
+import com.bidr.authorization.dao.entity.AcMenu;
+import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.kernel.config.anno.portal.PortalDictField;
 import com.bidr.kernel.config.anno.portal.PortalDisplayNoneField;
 import com.bidr.kernel.config.anno.portal.PortalEntityField;
 import com.bidr.kernel.config.anno.portal.PortalIdField;
-import com.bidr.admin.vo.BaseVO;
-import com.bidr.authorization.dao.entity.AcMenu;
-import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.kernel.constant.dict.common.ApprovalDict;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;

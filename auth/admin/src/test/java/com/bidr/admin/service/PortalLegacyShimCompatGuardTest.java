@@ -1,11 +1,7 @@
 package com.bidr.admin.service;
 
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.kernel.constant.dict.common.BoolDict;
-import com.bidr.kernel.config.anno.portal.PortalDictField;
-import com.bidr.kernel.config.anno.portal.PortalDisplayOnlyField;
-import com.bidr.kernel.config.anno.portal.PortalEntityField;
-import com.bidr.kernel.config.anno.portal.PortalFieldAnnos;
-import com.bidr.kernel.config.anno.portal.PortalIdField;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;

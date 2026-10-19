@@ -1,10 +1,10 @@
 package com.bidr.insight.smartquery.controller;
 
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.insight.smartquery.dao.entity.InsightAgentProposal;
 import com.bidr.insight.smartquery.flow.MaintainQueryAgentDefinition;
 import com.bidr.insight.smartquery.service.SmartQueryMaintainService;
 import com.bidr.insight.smartquery.vo.SmartQueryAskRes;
-import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.llm.agent.DetachPolicy;
@@ -17,11 +17,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.LinkedHashMap;

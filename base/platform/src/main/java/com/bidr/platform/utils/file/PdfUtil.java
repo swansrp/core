@@ -1,12 +1,12 @@
 package com.bidr.platform.utils.file;
 
+import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.exception.ServiceException;
 import com.itextpdf.text.pdf.AcroFields;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfStamper;
 import com.lowagie.text.DocumentException;
-import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.exception.ServiceException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.xhtmlrenderer.pdf.ITextFontResolver;

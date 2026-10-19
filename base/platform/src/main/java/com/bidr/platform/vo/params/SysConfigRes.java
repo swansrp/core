@@ -1,10 +1,10 @@
 package com.bidr.platform.vo.params;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.bidr.kernel.config.anno.portal.PortalDisableField;
 import com.bidr.kernel.config.anno.portal.PortalIdField;
 import com.bidr.kernel.config.anno.portal.PortalNameField;
 import com.bidr.kernel.config.anno.portal.PortalTextAreaField;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

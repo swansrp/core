@@ -1,10 +1,6 @@
 package com.bidr.kernel.config.response;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 字典绑定注解 —— 将字典类型的 value 翻译为 label 回填到当前字段。

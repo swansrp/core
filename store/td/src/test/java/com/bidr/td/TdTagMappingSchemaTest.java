@@ -1,8 +1,7 @@
 package com.bidr.td;
 
-import com.bidr.td.dao.entity.TdTagMapping;
-import com.bidr.td.dao.schema.TdTagMappingSchema;
 import com.bidr.td.dao.schema.TdSyncLogSchema;
+import com.bidr.td.dao.schema.TdTagMappingSchema;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

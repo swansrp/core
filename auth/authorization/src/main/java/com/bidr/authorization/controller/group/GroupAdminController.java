@@ -2,8 +2,6 @@ package com.bidr.authorization.controller.group;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.dao.entity.AcGroup;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.authorization.service.group.UserGroupService;
 import com.bidr.authorization.vo.group.GroupRes;
@@ -34,7 +32,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController("GroupAdminController")
 @RequestMapping(value = "/web/group/user")
-@Auth(AuthAdmin.class)
 public class GroupAdminController extends BaseAdminTreeController<AcGroup, GroupRes> {
 
     private final UserGroupService userGroupService;

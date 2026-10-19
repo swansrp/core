@@ -21,11 +21,7 @@ import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import com.bidr.kernel.vo.portal.ConditionVO;
 import com.bidr.kernel.vo.portal.QueryConditionReq;
-import com.bidr.kernel.vo.portal.statistic.AdvancedPivotReq;
-import com.bidr.kernel.vo.portal.statistic.AdvancedStatisticReq;
-import com.bidr.kernel.vo.portal.statistic.AdvancedSummaryReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralStatisticReq;
-import com.bidr.kernel.vo.portal.statistic.GeneralSummaryReq;
+import com.bidr.kernel.vo.portal.statistic.*;
 
 import javax.annotation.Resource;
 import java.util.LinkedHashMap;

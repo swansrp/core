@@ -5,11 +5,7 @@ import com.bidr.insight.smartquery.layer.ValueDomainDef;
 import com.bidr.insight.smartquery.meta.CommentValueParser;
 import com.bidr.kernel.utils.FuncUtil;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: DomainMissingCheckRule

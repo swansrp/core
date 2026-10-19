@@ -1,13 +1,10 @@
 package com.bidr.admin.manage.partner.controller;
 
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.admin.manage.partner.service.AcPartnerHistoryPortalService;
 import com.bidr.admin.manage.partner.vo.AcPartnerHistoryVO;
-import com.bidr.admin.manage.role.vo.AcRoleVO;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcPartnerHistory;
-import com.bidr.authorization.dao.entity.AcRole;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;

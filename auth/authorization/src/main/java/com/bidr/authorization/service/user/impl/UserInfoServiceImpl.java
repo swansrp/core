@@ -14,7 +14,6 @@ import com.bidr.authorization.service.user.UserInfoService;
 import com.bidr.authorization.vo.user.*;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
-import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;

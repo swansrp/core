@@ -2,9 +2,9 @@ package com.bidr.td;
 
 import com.bidr.td.config.TdProperties;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * TaosJdbcTemplate 连接测试（Mock，不依赖真实 TD 实例）

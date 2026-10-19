@@ -2,6 +2,7 @@ package com.bidr.td.vo;
 
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import lombok.Data;
+
 import java.util.List;
 
 @Data

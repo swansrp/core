@@ -13,11 +13,7 @@ import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static com.bidr.kernel.utils.DbUtil.extractSelectAliases;
 

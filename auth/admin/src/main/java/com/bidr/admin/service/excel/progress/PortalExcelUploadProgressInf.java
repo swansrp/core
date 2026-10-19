@@ -1,9 +1,9 @@
 package com.bidr.admin.service.excel.progress;
 
-import com.bidr.platform.constant.upload.UploadProgressStep;
-import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.platform.constant.upload.UploadProgressStep;
+import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 
 import java.util.ArrayList;
 

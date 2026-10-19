@@ -1,9 +1,9 @@
 package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthAdmin;
+import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.admin.AdminMenuService;

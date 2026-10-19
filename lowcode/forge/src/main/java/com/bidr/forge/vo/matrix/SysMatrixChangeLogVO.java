@@ -1,12 +1,12 @@
 package com.bidr.forge.vo.matrix;
 
 
+import com.bidr.admin.vo.BaseVO;
+import com.bidr.forge.constant.dict.MatrixChangeTypeDict;
 import com.bidr.kernel.config.anno.portal.PortalDictField;
 import com.bidr.kernel.config.anno.portal.PortalIdField;
 import com.bidr.kernel.config.anno.portal.PortalNameField;
 import com.bidr.kernel.config.anno.portal.PortalOrderField;
-import com.bidr.admin.vo.BaseVO;
-import com.bidr.forge.constant.dict.MatrixChangeTypeDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

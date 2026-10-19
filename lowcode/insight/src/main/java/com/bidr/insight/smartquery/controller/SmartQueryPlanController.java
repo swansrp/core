@@ -8,7 +8,6 @@ import com.bidr.insight.smartquery.derive.StatisticResConverter;
 import com.bidr.insight.smartquery.layer.DimensionDef;
 import com.bidr.insight.smartquery.layer.EntityDef;
 import com.bidr.insight.smartquery.layer.MetricDef;
-import com.bidr.insight.smartquery.model.GenResult;
 import com.bidr.insight.smartquery.model.SemanticQuery;
 import com.bidr.insight.smartquery.model.SmartQueryResult;
 import com.bidr.insight.smartquery.semantic.SemanticLayer;
@@ -33,11 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: SmartQueryPlanController

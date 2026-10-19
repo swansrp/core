@@ -1,8 +1,8 @@
 package com.bidr.oss.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.bidr.kernel.config.anno.portal.PortalIdField;
 import com.bidr.kernel.config.anno.portal.PortalNameField;
-import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 

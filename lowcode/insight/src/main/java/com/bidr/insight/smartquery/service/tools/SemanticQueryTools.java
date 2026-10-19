@@ -2,8 +2,8 @@ package com.bidr.insight.smartquery.service.tools;
 
 import com.bidr.insight.smartquery.model.GenResult;
 import com.bidr.insight.smartquery.model.SmartQueryResult;
-import com.bidr.insight.smartquery.service.SmartQueryService;
 import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
+import com.bidr.insight.smartquery.service.SmartQueryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;

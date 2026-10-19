@@ -7,8 +7,6 @@ import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.constant.dict.IDynamicDict;
 import com.bidr.platform.dao.entity.SysDict;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

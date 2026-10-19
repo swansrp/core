@@ -3,8 +3,6 @@ package com.bidr.admin.controller.statistic;
 import com.bidr.admin.dao.entity.SysPortalDashboard;
 import com.bidr.admin.service.statistic.AdminPortalDashboardService;
 import com.bidr.admin.vo.statistic.DashboardVO;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.service.PortalCommonService;
@@ -30,7 +28,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/dashboard"})
-@Auth(AuthAdmin.class)
 public class AdminPortalDashboardController extends BaseAdminController<SysPortalDashboard, DashboardVO> {
 
     private final AdminPortalDashboardService adminPortalDashboardService;

@@ -1,6 +1,7 @@
 package com.bidr.kernel.config.anno.portal;
 
 import com.bidr.kernel.utils.FuncUtil;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;

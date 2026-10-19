@@ -1,13 +1,13 @@
 package com.bidr.admin.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.admin.constant.dict.AllPortalDict;
 import com.bidr.admin.constant.dict.BindTypeDict;
 import com.bidr.admin.dao.entity.SysPortal;
 import com.bidr.admin.dao.entity.SysPortalAssociate;
 import com.bidr.admin.dao.entity.SysPortalColumn;
 import com.bidr.authorization.dao.entity.AcRole;
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.constant.dict.portal.PortalSortDict;

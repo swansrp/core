@@ -2,7 +2,6 @@ package com.bidr.forge.service.statistic;
 
 import com.bidr.forge.bo.DatasetColumns;
 import com.bidr.forge.bo.MatrixColumns;
-import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysMatrixService;
 import com.bidr.forge.engine.builder.BaseSqlBuilder;
@@ -10,6 +9,7 @@ import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.forge.utils.SqlIdentifierUtil;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.statistic.AdminStatisticPivotInf;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.StringUtil;
 import com.bidr.kernel.validate.Validator;

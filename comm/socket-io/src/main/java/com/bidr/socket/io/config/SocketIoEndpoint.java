@@ -1,11 +1,7 @@
 package com.bidr.socket.io.config;
 
 
-import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.token.TokenItem;
-import com.bidr.authorization.utils.token.AuthTokenUtil;
-import com.bidr.socket.io.bo.message.ChatMessage;
-import com.bidr.socket.io.constant.ChatMessageConstant;
 import com.bidr.socket.io.dao.entity.ChatRoomMember;
 import com.bidr.socket.io.dao.po.msg.TopicChatMessage;
 import com.bidr.socket.io.dao.repository.mysql.ChatRoomMemberService;
@@ -14,7 +10,6 @@ import com.bidr.socket.io.service.session.ChatSessionService;
 import com.bidr.socket.io.service.socket.SendMessageService;
 import com.bidr.socket.io.utils.ClientUtil;
 import com.corundumstudio.socketio.SocketIOClient;
-import com.corundumstudio.socketio.SocketIONamespace;
 import com.corundumstudio.socketio.SocketIOServer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -22,8 +17,6 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * Title: SocketIoEndpoint

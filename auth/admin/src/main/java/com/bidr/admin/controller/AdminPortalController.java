@@ -3,8 +3,6 @@ package com.bidr.admin.controller;
 import com.bidr.admin.service.PortalConfigService;
 import com.bidr.admin.service.PortalService;
 import com.bidr.admin.vo.*;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.JsonUtil;
@@ -37,7 +35,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = {"/web/portal/admin"})
-@Auth(AuthAdmin.class)
 public class AdminPortalController {
 
     private final PortalService portalService;
@@ -49,7 +46,6 @@ public class AdminPortalController {
         return portalService.getPortalList(req);
     }
 
-    @Auth
     @ApiTrace(response = false)
     @RequestMapping(path = {"/config"}, method = {RequestMethod.GET})
     @ApiOperation(value = "获取运行态视图配置（已按当前用户列权限剥离隐藏列）")

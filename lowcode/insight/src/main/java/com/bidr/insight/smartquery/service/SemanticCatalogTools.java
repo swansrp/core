@@ -1,10 +1,6 @@
 package com.bidr.insight.smartquery.service;
 
-import com.bidr.insight.smartquery.layer.ConceptDef;
-import com.bidr.insight.smartquery.layer.DimensionDef;
-import com.bidr.insight.smartquery.layer.EntityDef;
-import com.bidr.insight.smartquery.layer.MetricDef;
-import com.bidr.insight.smartquery.layer.ValueDomainDef;
+import com.bidr.insight.smartquery.layer.*;
 import com.bidr.insight.smartquery.semantic.SemanticLayer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,11 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**

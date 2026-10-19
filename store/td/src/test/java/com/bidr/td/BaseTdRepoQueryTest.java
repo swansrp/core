@@ -1,14 +1,10 @@
 package com.bidr.td;
 
-import com.bidr.td.annotation.TdColumn;
-import com.bidr.td.annotation.TdStable;
-import com.bidr.td.annotation.TdTag;
-import com.bidr.td.annotation.TdTimestamp;
-import com.bidr.td.constant.TdDataType;
 import com.bidr.td.vo.TdRangeReq;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * BaseTdRepo 查询操作测试

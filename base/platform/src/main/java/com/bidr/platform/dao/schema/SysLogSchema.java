@@ -1,7 +1,7 @@
 package com.bidr.platform.dao.schema;
 
-import com.bidr.platform.dao.entity.SysLog;
 import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
+import com.bidr.platform.dao.entity.SysLog;
 import org.springframework.stereotype.Service;
 
 /**

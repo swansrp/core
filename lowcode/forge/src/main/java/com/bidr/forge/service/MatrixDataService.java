@@ -1,11 +1,11 @@
 package com.bidr.forge.service;
 
 import com.bidr.forge.bo.MatrixColumns;
-import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.SysMatrix;
 import com.bidr.forge.dao.entity.SysMatrixColumn;
 import com.bidr.forge.dao.repository.SysMatrixService;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

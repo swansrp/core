@@ -1,16 +1,15 @@
 package com.bidr.platform.controller;
 
-import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.platform.dao.entity.SysDict;
 import com.bidr.platform.dao.entity.SysDynamicDictConfig;
 import com.bidr.platform.service.cache.dict.DictCacheService;
 import com.bidr.platform.service.dict.DictService;
 import com.bidr.platform.service.dict.DynamicDictService;
 import com.bidr.platform.vo.dict.DeleteDynamicDictConfigReq;
+import com.bidr.platform.vo.dict.DictRes;
 import com.bidr.platform.vo.dict.DynamicDictItemVO;
 import com.bidr.platform.vo.dict.DynamicDictReq;
-import com.bidr.kernel.config.response.Resp;
-import com.bidr.platform.vo.dict.DictRes;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;

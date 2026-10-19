@@ -1,7 +1,6 @@
 package com.bidr.kernel.vo.bind;
 
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
-import com.bidr.kernel.vo.portal.QueryConditionReq;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

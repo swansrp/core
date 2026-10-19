@@ -1,9 +1,9 @@
 package com.bidr.authorization.controller.admin;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthAdmin;
+import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.vo.admin.DepartmentRes;
 import com.bidr.kernel.controller.BaseAdminTreeController;
 import com.bidr.platform.config.portal.AdminPortal;

@@ -2,10 +2,10 @@ package com.bidr.kafka.config;
 
 import com.bidr.kafka.annotation.KafkaTopicListener;
 import com.bidr.kafka.dao.repository.SysKafkaService;
+import com.bidr.kafka.exception.NonRetryableKafkaException;
 import com.bidr.kafka.service.KafkaConsumerManager;
 import com.bidr.kafka.service.KafkaProducerService;
 import com.bidr.kafka.service.KafkaTopicConsumer;
-import com.bidr.kafka.exception.NonRetryableKafkaException;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.event.ExceptionAlertEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;

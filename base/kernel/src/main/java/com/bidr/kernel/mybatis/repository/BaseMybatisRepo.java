@@ -12,7 +12,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.mybatis.anno.EnableTruncate;
-import com.bidr.kernel.mybatis.dao.mapper.CommonMapper;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.service.TableSyncService;
 import com.bidr.kernel.utils.*;

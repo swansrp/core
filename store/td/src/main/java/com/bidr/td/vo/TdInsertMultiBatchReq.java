@@ -1,6 +1,7 @@
 package com.bidr.td.vo;
 
 import lombok.Data;
+
 import java.util.List;
 import java.util.Map;
 

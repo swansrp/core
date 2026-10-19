@@ -1,8 +1,6 @@
 package com.bidr.admin.service;
 
 import com.alibaba.excel.annotation.ExcelProperty;
-import com.bidr.kernel.config.anno.portal.*;
-import com.bidr.kernel.config.anno.portal.PortalAnnotationUtil;
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.constant.token.PortalTokenItem;
 import com.bidr.admin.controller.inf.PortalSqlInf;
@@ -22,6 +20,7 @@ import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.kernel.common.convert.Convert;
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.dict.MetaDict;
@@ -42,7 +41,6 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import com.bidr.kernel.utils.PackageScanUtil;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;

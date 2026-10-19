@@ -1,8 +1,5 @@
 package com.bidr.kernel.mybatis.dao.mapper;
 
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Update;
-
 /**
  * Title: CommonMapper
  * Description: Copyright: Copyright (c) 2023

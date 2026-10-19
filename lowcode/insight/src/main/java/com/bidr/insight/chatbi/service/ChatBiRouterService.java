@@ -5,14 +5,8 @@ import com.bidr.admin.dao.repository.SysPortalService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.insight.chatbi.dao.repository.ChatBiTableDescService;
 import com.bidr.insight.chatbi.flow.ChatBiRouteFlowDefinition;
-import com.bidr.insight.chatbi.vo.ChatBiRouteItem;
-import com.bidr.insight.chatbi.vo.ChatBiRouteReq;
-import com.bidr.insight.chatbi.vo.ChatBiRouteRes;
-import com.bidr.insight.chatbi.vo.ChatBiSemanticCatalog;
-import com.bidr.insight.chatbi.vo.ChatBiTableDescReq;
+import com.bidr.insight.chatbi.vo.*;
 import com.bidr.insight.smartquery.vo.SemanticField;
-import com.bidr.insight.chatbi.vo.SemanticIndicator;
-import com.bidr.insight.chatbi.vo.SemanticIndicatorGroup;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.llm.flow.FlowContext;
@@ -24,12 +18,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Title: ChatBiRouterService

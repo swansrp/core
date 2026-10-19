@@ -2,8 +2,6 @@ package com.bidr.platform.redis.cache;
 
 import com.bidr.kernel.cache.config.DynamicMemoryCacheManager;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;

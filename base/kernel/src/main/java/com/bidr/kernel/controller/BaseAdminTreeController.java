@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.response.Resp;
-import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.exception.NoImplementsException;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.FuncUtil;

@@ -5,11 +5,7 @@ import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcGroupType;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserGroup;
-import com.bidr.authorization.dao.repository.AcGroupMenuService;
-import com.bidr.authorization.dao.repository.AcGroupService;
-import com.bidr.authorization.dao.repository.AcGroupTypeService;
-import com.bidr.authorization.dao.repository.AcUserGroupService;
-import com.bidr.authorization.dao.repository.AcUserService;
+import com.bidr.authorization.dao.repository.*;
 import com.bidr.authorization.dao.repository.join.AcUserGroupJoinService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.vo.group.GroupRes;
@@ -26,13 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.bidr.authorization.constants.err.AccountErrCode.AC_ROLE_HAS_USER;

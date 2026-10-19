@@ -1,35 +1,15 @@
 package com.bidr.insight.smartquery.sqlgen;
 
-import com.bidr.insight.smartquery.layer.DimensionDef;
-import com.bidr.insight.smartquery.layer.EntityDef;
-import com.bidr.insight.smartquery.layer.MetricDef;
-import com.bidr.insight.smartquery.layer.RelationDef;
-import com.bidr.insight.smartquery.layer.RowPolicyDef;
-import com.bidr.insight.smartquery.model.FilterNode;
-import com.bidr.insight.smartquery.model.GenResult;
+import com.bidr.insight.smartquery.layer.*;
+import com.bidr.insight.smartquery.model.*;
 import com.bidr.insight.smartquery.model.GenResult.ColumnInfo;
-import com.bidr.insight.smartquery.model.OrderByItem;
-import com.bidr.insight.smartquery.model.ScopeFilter;
-import com.bidr.insight.smartquery.model.SemanticQuery;
-import com.bidr.insight.smartquery.model.WindowSpec;
 import com.bidr.insight.smartquery.semantic.SemanticLayer;
 import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
 import com.bidr.insight.smartquery.validate.SemanticQueryValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

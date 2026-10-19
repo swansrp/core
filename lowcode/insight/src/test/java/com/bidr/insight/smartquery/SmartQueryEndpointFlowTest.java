@@ -1,16 +1,13 @@
 package com.bidr.insight.smartquery;
 
+import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.insight.smartquery.adapter.StatisticPayloadAdapter;
 import com.bidr.insight.smartquery.derive.IndicatorDeriver;
 import com.bidr.insight.smartquery.derive.InteractionMerger;
 import com.bidr.insight.smartquery.derive.PortalConfigDeriver;
 import com.bidr.insight.smartquery.derive.StatisticResConverter;
 import com.bidr.insight.smartquery.exec.SmartQueryJdbcExecutor;
-import com.bidr.insight.smartquery.model.GenResult;
-import com.bidr.insight.smartquery.model.QueryRows;
-import com.bidr.insight.smartquery.model.SemanticQuery;
-import com.bidr.insight.smartquery.model.SmartQueryResult;
-import com.bidr.insight.smartquery.model.ValidationResult;
+import com.bidr.insight.smartquery.model.*;
 import com.bidr.insight.smartquery.semantic.SemanticLayer;
 import com.bidr.insight.smartquery.semantic.SemanticLayerRegistry;
 import com.bidr.insight.smartquery.semantic.SmartQueryParser;
@@ -18,7 +15,6 @@ import com.bidr.insight.smartquery.service.AgentAssetCacheService;
 import com.bidr.insight.smartquery.service.SmartQueryService;
 import com.bidr.insight.smartquery.sqlgen.SqlGenerator;
 import com.bidr.insight.smartquery.validate.SemanticQueryValidator;
-import com.bidr.admin.vo.PortalWithColumnsRes;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
@@ -30,11 +26,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Title: SmartQueryEndpointFlowTest

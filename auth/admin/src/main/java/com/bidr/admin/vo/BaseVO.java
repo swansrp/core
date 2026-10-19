@@ -1,10 +1,10 @@
 package com.bidr.admin.vo;
 
+import com.bidr.authorization.bind.annotation.BindUser;
 import com.bidr.kernel.config.anno.portal.PortalDisplayNoneField;
 import com.bidr.kernel.config.anno.portal.PortalDisplayOnlyField;
 import com.bidr.kernel.config.anno.portal.PortalNoFilterField;
 import com.bidr.kernel.config.anno.portal.PortalSortField;
-import com.bidr.authorization.bind.annotation.BindUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModelProperty;

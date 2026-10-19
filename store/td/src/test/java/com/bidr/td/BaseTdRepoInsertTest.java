@@ -5,9 +5,7 @@ import com.bidr.td.annotation.TdStable;
 import com.bidr.td.annotation.TdTag;
 import com.bidr.td.annotation.TdTimestamp;
 import com.bidr.td.constant.TdDataType;
-import com.bidr.td.repository.BaseTdRepo;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
 

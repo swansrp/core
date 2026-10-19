@@ -5,8 +5,6 @@ import com.bidr.admin.controller.common.BaseExcelParseController;
 import com.bidr.admin.manage.dept.service.AdminDeptExcelService;
 import com.bidr.admin.manage.dept.vo.DeptUserVO;
 import com.bidr.admin.service.common.BaseExcelParseService;
-import com.bidr.authorization.annotation.auth.Auth;
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcUserDept;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping(value = "/web/dept/user/excel")
-@Auth(AuthAdmin.class)
 public class AdminDeptExcelController extends BaseExcelParseController<AcUserDept, DeptUserVO> {
 
     private final AdminDeptExcelService adminDeptExcelService;

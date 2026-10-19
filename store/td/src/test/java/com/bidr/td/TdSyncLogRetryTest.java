@@ -4,7 +4,7 @@ import com.bidr.td.dao.entity.TdSyncLog;
 import com.bidr.td.dao.entity.TdTagMapping;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * TdSyncLog 重试机制测试

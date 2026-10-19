@@ -1,12 +1,6 @@
 package com.bidr.llm.parse.converter;
 
-import org.apache.poi.xslf.usermodel.XMLSlideShow;
-import org.apache.poi.xslf.usermodel.XSLFShape;
-import org.apache.poi.xslf.usermodel.XSLFSlide;
-import org.apache.poi.xslf.usermodel.XSLFTable;
-import org.apache.poi.xslf.usermodel.XSLFTableCell;
-import org.apache.poi.xslf.usermodel.XSLFTableRow;
-import org.apache.poi.xslf.usermodel.XSLFTextShape;
+import org.apache.poi.xslf.usermodel.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

@@ -2,8 +2,8 @@ package com.bidr.authorization.config;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.bidr.authorization.holder.TenantContext;
-import net.sf.jsqlparser.JSQLParserException;
 import com.bidr.kernel.config.db.TenantGateSuppressor;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;

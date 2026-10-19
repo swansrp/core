@@ -1,6 +1,5 @@
 package com.bidr.es;
 
-import com.bidr.es.dao.repository.BaseElasticsearchRepo;
 import com.bidr.es.service.BaseElasticsearchService;
 
 /**

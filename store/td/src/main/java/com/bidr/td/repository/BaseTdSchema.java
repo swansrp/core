@@ -1,7 +1,10 @@
 package com.bidr.td.repository;
 
 import com.bidr.kernel.utils.ReflectionUtil;
-import com.bidr.td.annotation.*;
+import com.bidr.td.annotation.TdColumn;
+import com.bidr.td.annotation.TdStable;
+import com.bidr.td.annotation.TdTag;
+import com.bidr.td.annotation.TdTimestamp;
 import com.bidr.td.constant.TdDataType;
 import com.bidr.td.constant.TdReservedWords;
 import com.bidr.td.inf.TdSchemaInf;

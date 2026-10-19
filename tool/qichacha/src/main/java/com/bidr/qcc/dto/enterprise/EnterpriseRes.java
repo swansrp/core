@@ -1,11 +1,9 @@
 package com.bidr.qcc.dto.enterprise;
 
 import com.bidr.kernel.config.json.JsonDateAuto;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 

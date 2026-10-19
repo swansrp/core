@@ -1,7 +1,6 @@
 package com.bidr.authorization.vo.permit;
 
 
-import io.swagger.annotations.ApiModelProperty;
 import lombok.*;
 
 /**

@@ -2,7 +2,6 @@ package com.bidr.authorization.service.department;
 
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.repository.AcDeptService;
-import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.vo.admin.UserRes;
 import com.bidr.authorization.vo.department.DepartmentItem;

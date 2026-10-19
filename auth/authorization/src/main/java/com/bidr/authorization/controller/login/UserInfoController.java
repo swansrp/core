@@ -10,7 +10,6 @@ import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.authorization.vo.user.UserInfoReq;
 import com.bidr.authorization.vo.user.UserInfoRes;
-import com.bidr.authorization.vo.user.UserRes;
 import com.bidr.kernel.config.response.Resp;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;

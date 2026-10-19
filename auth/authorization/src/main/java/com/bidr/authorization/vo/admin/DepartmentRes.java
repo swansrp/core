@@ -1,12 +1,7 @@
 package com.bidr.authorization.vo.admin;
 
+import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
-import com.bidr.kernel.config.anno.portal.PortalDictField;
-import com.bidr.kernel.config.anno.portal.PortalDisableField;
-import com.bidr.kernel.config.anno.portal.PortalIdField;
-import com.bidr.kernel.config.anno.portal.PortalNameField;
-import com.bidr.kernel.config.anno.portal.PortalOrderField;
-import com.bidr.kernel.config.anno.portal.PortalPidField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 

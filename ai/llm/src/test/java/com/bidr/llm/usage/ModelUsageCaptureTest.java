@@ -1,11 +1,11 @@
 package com.bidr.llm.usage;
 
+import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.model.RawSseStreamingChatModel;
 import com.bidr.llm.model.RawSyncChatModel;
 import com.bidr.llm.model.RawVisionChatModel;
 import com.bidr.llm.model.VisionImage;
 import com.bidr.llm.provider.ModelConfigProvider;
-import com.bidr.kernel.utils.BeanUtil;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;

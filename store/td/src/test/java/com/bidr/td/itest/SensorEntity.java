@@ -1,6 +1,9 @@
 package com.bidr.td.itest;
 
-import com.bidr.td.annotation.*;
+import com.bidr.td.annotation.TdColumn;
+import com.bidr.td.annotation.TdStable;
+import com.bidr.td.annotation.TdTag;
+import com.bidr.td.annotation.TdTimestamp;
 import com.bidr.td.constant.TdDataType;
 
 @TdStable("itest_sensor")

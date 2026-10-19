@@ -1,7 +1,7 @@
 package com.bidr.admin.holder;
 
-import com.bidr.admin.service.PortalConfigService;
 import com.bidr.admin.constant.token.PortalTokenItem;
+import com.bidr.admin.service.PortalConfigService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.kernel.utils.JsonUtil;
 

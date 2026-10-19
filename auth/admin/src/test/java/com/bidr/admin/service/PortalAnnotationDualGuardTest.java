@@ -3,16 +3,11 @@ package com.bidr.admin.service;
 import com.bidr.kernel.config.anno.portal.*;
 import com.bidr.kernel.constant.dict.MetaDict;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
-import com.bidr.kernel.config.anno.portal.PortalAnnotationUtil;
-import com.bidr.kernel.config.anno.portal.PortalEntityField;
-import com.bidr.kernel.config.anno.portal.PortalMoneyField;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Field;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.*;
 
 /**
  * Title: PortalAnnotationDualGuardTest

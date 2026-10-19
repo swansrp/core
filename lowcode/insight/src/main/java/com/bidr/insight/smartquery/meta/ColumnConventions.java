@@ -4,12 +4,7 @@ import com.bidr.insight.smartquery.layer.EntityDef;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**

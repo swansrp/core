@@ -2,7 +2,6 @@ package com.bidr.kernel.vo.portal.statistic;
 
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

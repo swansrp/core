@@ -1,13 +1,13 @@
 package com.bidr.forge.controller.widetable;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bidr.forge.dao.entity.FormSchemaAttribute;
 import com.bidr.forge.dao.entity.FormWideTableConfig;
 import com.bidr.forge.dao.entity.FormWideTableConfigAttr;
-import com.bidr.forge.dao.entity.FormSchemaAttribute;
 import com.bidr.forge.dao.repository.FormSchemaAttributeService;
 import com.bidr.forge.service.widetable.FormWideTableCollector;
 import com.bidr.forge.service.widetable.FormWideTableManager;
 import com.bidr.forge.service.widetable.WideTableCollectAsyncService;
-import com.bidr.forge.vo.widetable.FormWideTableConfigAttrVO;
 import com.bidr.forge.vo.widetable.FormWideTableConfigReq;
 import com.bidr.forge.vo.widetable.FormWideTableConfigVO;
 import com.bidr.kernel.config.response.Resp;
@@ -16,10 +16,8 @@ import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.vo.upload.PortalUploadProgressRes;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 宽表收集配置管理控制器

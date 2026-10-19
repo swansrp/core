@@ -2,7 +2,6 @@ package com.bidr.forge.service.form;
 
 import com.bidr.admin.constant.dict.PortalFieldDict;
 import com.bidr.admin.service.common.BasePortalService;
-import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.forge.constant.dict.MatrixStatusDict;
 import com.bidr.forge.dao.entity.FormSchemaSection;
 import com.bidr.forge.dao.entity.SysMatrix;
@@ -12,6 +11,7 @@ import com.bidr.forge.service.martix.SysMatrixDDLSerivce;
 import com.bidr.forge.vo.form.FormSchemaSectionVO;
 import com.bidr.forge.vo.matrix.SysMatrixVO;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.jdbc.JdbcConnectService;
 import com.bidr.kernel.utils.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

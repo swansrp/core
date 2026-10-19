@@ -1,7 +1,7 @@
 package com.bidr.platform.dao.schema;
 
-import com.bidr.platform.dao.entity.SysDictType;
 import com.bidr.kernel.mybatis.repository.BaseMybatisSchema;
+import com.bidr.platform.dao.entity.SysDictType;
 import org.springframework.stereotype.Service;
 
 /**

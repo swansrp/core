@@ -7,7 +7,6 @@ import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.vo.department.*;
-import com.bidr.authorization.vo.user.UserRes;
 import com.bidr.kernel.mybatis.repository.BaseBindRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.ReflectionUtil;

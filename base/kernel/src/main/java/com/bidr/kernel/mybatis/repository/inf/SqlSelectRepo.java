@@ -2,7 +2,6 @@ package com.bidr.kernel.mybatis.repository.inf;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bidr.kernel.mybatis.bo.DynamicColumn;
 import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.query.QueryReqVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;

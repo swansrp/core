@@ -7,11 +7,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Proxy;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;

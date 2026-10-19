@@ -3,7 +3,8 @@ package com.bidr.td;
 import com.bidr.td.sync.TdSchemaDiffer;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * TdSchemaDiffer 测试
