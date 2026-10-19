@@ -49,6 +49,7 @@ public class AdminPortalController {
         return portalService.getPortalList(req);
     }
 
+    @Auth
     @ApiTrace(response = false)
     @RequestMapping(path = {"/config"}, method = {RequestMethod.GET})
     @ApiOperation(value = "获取运行态视图配置（已按当前用户列权限剥离隐藏列）")
