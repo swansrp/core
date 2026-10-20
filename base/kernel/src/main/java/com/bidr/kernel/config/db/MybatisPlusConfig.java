@@ -7,6 +7,7 @@ import com.bidr.kernel.mybatis.inf.MybatisPlusTableInitializerInf;
 import com.bidr.kernel.mybatis.log.MybatisLog;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.logging.LogFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import javax.annotation.Resource;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Mybatis Plus 配置
@@ -42,10 +44,20 @@ public class MybatisPlusConfig {
 
     /**
      * mybatis-plus分页插件
+     * <p>扩展点（2026-10-19）：容器中的 {@link MybatisPlusInterceptorCustomizer} bean
+     * 先于内置拦截器应用——其 addInnerInterceptor 的拦截器物理位于链头部，供
+     * "必须先于分页执行"的行级改写类拦截器（多租户 TenantLine）使用；
+     * 无 customizer bean 时链与旧版逐字节相同（向后兼容）。</p>
      */
     @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+    public MybatisPlusInterceptor mybatisPlusInterceptor(
+            ObjectProvider<MybatisPlusInterceptorCustomizer> customizerProvider) {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 前置自定义拦截器（按 @Order 升序），先于框架内置——多租户行级隔离等须在分页之前改写
+        for (MybatisPlusInterceptorCustomizer customizer : customizerProvider.orderedStream()
+                .collect(Collectors.toList())) {
+            customizer.customize(interceptor);
+        }
         PaginationInnerInterceptor innerInterceptor = new PaginationInnerInterceptor();
         //限制页大小
         innerInterceptor.setMaxLimit(appProperties.getMaxPageSize());

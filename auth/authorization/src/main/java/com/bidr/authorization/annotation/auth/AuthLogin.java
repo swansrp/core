@@ -83,6 +83,9 @@ public class AuthLogin implements AuthRole {
         // 租户档接线（棒2）：token 缺 TENANT_IDS（老项目/老 token）⇒ null＝旁路形态，数据闸放行；
         // 空集合＝无归属，按主线程裁定同样旁路。平台档由 AuthAdmin 通过路径另行置位。
         TenantContext.set(accountInfo.getTenantIds());
+        // 当前租户（2026-10-19）：token TENANT_ID 键（登录烤入首个/切换端点改写）；
+        // 缺键＝系统管理级用户或未启用租户项目，保持 null＝行级隔离旁路；脏值按缺键处理（兼容口径同 parseTenantIds）。
+        TenantContext.setCurrentTenantId(parseCurrentTenantId(map));
     }
 
     private UserInfo buildUserInfo(Map<String, Object> map) {
@@ -150,6 +153,29 @@ public class AuthLogin implements AuthRole {
             }
         }
         return tenantIds;
+    }
+
+    /**
+     * TENANT_ID（当前租户）解析（登录解析唯一入口 buildContext 调用；public 静态供离线单测直断，
+     * 形态同 {@link #parseTenantIds}——token 回查面（SsoTokenIntrospectService）将来透出当前租户复用）。
+     * <p>口径：缺键/null/脏值 ⇒ {@code null}（＝未选当前租户；系统管理级用户与老 token 落此态，
+     * 行级隔离按其租户集判定旁路，绝不抛错）；有值 ⇒ 转 Long——token 经 redis 回读，
+     * 数字形与字符串形都要兼容（切换端点写 Long、redis 带回 String）。</p>
+     */
+    public static Long parseCurrentTenantId(Map<String, Object> map) {
+        Object raw = map == null ? null : map.get(TokenItem.TENANT_ID.name());
+        if (raw instanceof Number) {
+            return ((Number) raw).longValue();
+        }
+        if (raw instanceof String) {
+            try {
+                return Long.valueOf(((String) raw).trim());
+            } catch (NumberFormatException ignored) {
+                // 脏值按缺键处理：解析宽度问题不应打断登录态构建（fail-closed 由隔离面语句兜底）
+                return null;
+            }
+        }
+        return null;
     }
 
     /**

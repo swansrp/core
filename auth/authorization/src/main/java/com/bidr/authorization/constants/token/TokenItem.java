@@ -58,6 +58,9 @@ public enum TokenItem {
     ROLE_MAP,
     // 用户归属租户id集合（登录签发时烤入；缺键＝老项目/老 token 旁路形态）
     TENANT_IDS,
+    // 当前租户id（登录签发时从 TENANT_IDS 烤入首个；多租户用户可经切换端点改写；
+    // 缺键＝系统管理级用户/未启用租户项目，行级隔离按旁路处理）
+    TENANT_ID,
 
     TIMESTAMP,
     EXPIRED

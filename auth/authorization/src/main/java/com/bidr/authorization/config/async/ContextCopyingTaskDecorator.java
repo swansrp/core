@@ -41,6 +41,9 @@ public class ContextCopyingTaskDecorator implements TaskDecorator {
         // 租户档快照（棒2）：与 AccountContext 同抓取/恢复/清理，异步任务的数据闸视图与发起线程一致
         List<Long> tenantIds = TenantContext.getTenantIds();
         boolean platform = TenantContext.isPlatform();
+        // 当前租户快照（2026-10-19 行级隔离）：不复制则异步隔离查询要么误抛"请先选择租户"、
+        // 要么按系统管理级旁路——与发起线程视图一致是唯一正确口径
+        Long currentTenantId = TenantContext.currentTenantId();
         return () -> {
             try {
                 // 在工作线程恢复上下文
@@ -50,6 +53,7 @@ public class ContextCopyingTaskDecorator implements TaskDecorator {
                 TokenHolder.set(tokenInfo);
                 DynamicTableNameHolder.set(dynamicTableNameInfo);
                 TenantContext.set(tenantIds, platform);
+                TenantContext.setCurrentTenantId(currentTenantId);
                 runnable.run();
             } finally {
                 // 工作线程是池化复用的，必须清理，避免污染下一个任务

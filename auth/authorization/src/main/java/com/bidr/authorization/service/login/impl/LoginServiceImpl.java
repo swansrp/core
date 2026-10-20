@@ -398,11 +398,15 @@ public class LoginServiceImpl implements LoginService {
      * 登录签发时把用户租户集烤进 access token（承诺面：经 AcUserTenantService 现查，非缓存）。
      * <p>空集合＝不写入——AuthLogin.parseTenantIds 按缺键解析为 null＝旁路形态，
      * 老项目零感知口径与此一致。</p>
+     * <p>2026-10-19 增：同步烤入「当前租户」{@code TENANT_ID}（单租户直取；多租户取首个，
+     * 多租户用户可经切换端点改写该键后凭旧 token 继续用，不必重登录）。行级隔离
+     * （my.tenant.line-enabled）据此判定当前租户；缺键＝系统管理级用户旁路。</p>
      */
     private void buildTenantIds(Long userId, TokenInfo accessToken) {
         List<Long> tenantIds = acUserTenantService.listTenantIdsByUserId(userId);
         if (FuncUtil.isNotEmpty(tenantIds)) {
             tokenService.putItem(accessToken, TokenItem.TENANT_IDS.name(), tenantIds);
+            tokenService.putItem(accessToken, TokenItem.TENANT_ID.name(), tenantIds.get(0));
         }
     }
 
