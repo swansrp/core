@@ -232,6 +232,24 @@ public class AuthAdminGateConventionTest {
             }
         }
         Assert.assertTrue("admin 摘除清单出现平台闸回填：\n" + String.join("\n", regressed), regressed.isEmpty());
+
+        // 完整性（review M1，2026-10-21）：每个扫到的具体 controller 必须恰入两清单之一——
+        // 双清单钉状态只对清单内条目有牙，新文件两清单都不进＝双向漏检（挂闸忘挂/该挂未挂都抓不住）
+        List<String> orphans = new ArrayList<String>();
+        for (Path file : scanned) {
+            String relative = adminSrc.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            if (!isConcreteController(read(file))) {
+                continue;
+            }
+            boolean gated = ADMIN_GATED_CONTROLLERS.contains(relative);
+            boolean ungated = ADMIN_UNGATED_CONTROLLERS.contains(relative);
+            if (gated == ungated) {
+                orphans.add(relative + (gated
+                        ? " 同时出现在挂闸与摘除两清单（清单自相矛盾）"
+                        : " 未入任一清单（新 controller 必须显式选边，防双向漏检）"));
+            }
+        }
+        Assert.assertTrue("admin controller 清单完整性缺口：\n" + String.join("\n", orphans), orphans.isEmpty());
     }
 
     /**
