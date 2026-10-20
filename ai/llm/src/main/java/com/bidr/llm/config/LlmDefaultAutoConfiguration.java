@@ -1,10 +1,13 @@
 package com.bidr.llm.config;
 
+import com.bidr.document.DocumentProcessor;
+import com.bidr.document.VisionConfigProvider;
 import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
 import com.bidr.llm.parse.DocumentTranscriber;
 import com.bidr.llm.parse.FileMarkdownService;
+import com.bidr.llm.parse.LlmVisionConfigProvider;
 import com.bidr.llm.provider.DbAwareModelConfigProvider;
 import com.bidr.llm.provider.ModelConfigProvider;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -22,6 +25,8 @@ import org.springframework.util.StringUtils;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 大模型默认装配（开箱即用，业务可覆盖）。
@@ -129,14 +134,40 @@ public class LlmDefaultAutoConfiguration {
      * {@link ModelConfigProvider}（purpose = VISION，数据库系统参数优先）；
      * 多模态调用的 HTTP 代理复用 {@link #buildProxy()}（与文本模型同源 {@code llm.proxy.*}），
      * 无 Provider 的应用也可自行 new FileMarkdownService(null) 后纯靠调用传参使用。
-     * 外部转录腿（{@link com.bidr.llm.parse.DocumentTranscriber}，如 core/ai/mineru 实现）
-     * 经 ObjectProvider 可选注入：classpath 上有实现包才亮，转写失败由门面回落既有本地路径
+     * <p>
+     * 🔴 老口转录腿收集改 <b>List 收口</b>（M16 棒 3，M-8 修法）：classpath 上多条
+     * {@link DocumentTranscriber} 不再 {@code getIfAvailable()} 单 bean 任取炸
+     * NoUniqueBeanDefinitionException——按装配序取第一条进构造（行为兼容），装配期选型正源＝
+     * {@code tool.document.transcriber}（各腿 {@code @ConditionalOnProperty} 自 gate，R-3）。
+     * 加工本体委托 tool/document 的 {@link DocumentProcessor}（自动装配缺席时由
+     * FileMarkdownService 自建纯内置档门面，零依赖可用）。
      */
     @Bean
     @ConditionalOnMissingBean
     public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider,
-            ObjectProvider<DocumentTranscriber> transcriber) {
-        return new FileMarkdownService(configProvider.getIfAvailable(), buildProxy(), transcriber.getIfAvailable());
+            ObjectProvider<DocumentTranscriber> transcribers,
+            ObjectProvider<DocumentProcessor> processor) {
+        List<DocumentTranscriber> legs = transcribers.orderedStream().collect(Collectors.toList());
+        if (legs.size() > 1) {
+            log.warn("检出 {} 条 DocumentTranscriber 老口腿（{}），按装配序取第一条；选型正源＝tool.document.transcriber",
+                    legs.size(), legs.stream().map(leg -> leg.getClass().getSimpleName())
+                            .collect(Collectors.joining(",")));
+        }
+        return new FileMarkdownService(configProvider.getIfAvailable(), buildProxy(),
+                legs.isEmpty() ? null : legs.get(0), processor.getIfAvailable());
+    }
+
+    /**
+     * 视觉配置口适配器（M16 棒 3）：把 llm 的 {@link ModelConfigProvider}
+     * （purpose=VISION，数据库系统参数优先、{@code llm.vision.*} 回落）适配给 tool/document
+     * 内置视觉腿的 {@link VisionConfigProvider}；多模态代理随 {@code llm.proxy.*}
+     * （{@link #buildProxy()} 同源）。业务自定义视觉配置来源时注册自己的
+     * {@link VisionConfigProvider} 覆盖
+     */
+    @Bean
+    @ConditionalOnMissingBean(VisionConfigProvider.class)
+    public VisionConfigProvider llmVisionConfigProvider(ObjectProvider<ModelConfigProvider> configProvider) {
+        return new LlmVisionConfigProvider(configProvider.getIfAvailable(), buildProxy());
     }
 
     /**

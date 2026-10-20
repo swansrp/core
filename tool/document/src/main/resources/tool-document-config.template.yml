@@ -1,0 +1,17 @@
+# tool/document 配置模板（M16 棒 3）。全部键带缺省＝不配即可跑；缺省值与历史
+# FileMarkdownService 写死值逐字相同（行为基线不变）。纯 yml＋Spring Environment，
+# 零 sys_config（R-9）；改值要重启（装配期定，无热切）。
+tool:
+  document:
+    # transcribe 增强腿选型键：值＝实现模块的腿名（tool/mineru 出 "mineru"）。
+    # 空＝不选增强腿走内置（不抛）；配了但实现包不在 classpath＝WARN「选型指向不存在的腿，
+    # 已走内置」继续跑；配了且在＝增强腿，失败回落内置（三态语义）。
+    transcriber: ""
+    # 单文件大小上限字节（缺省 100MB）
+    max-file-size-bytes: 104857600
+    # 单次解析送多模态模型的扫描页上限（缺省 50）
+    max-vision-pages: 50
+    # 扫描页渲染 DPI（缺省 150）
+    render-dpi: 150.0
+    # 单页可提取文本低于该字数即判定为扫描页（缺省 20）
+    min-text-per-page: 20

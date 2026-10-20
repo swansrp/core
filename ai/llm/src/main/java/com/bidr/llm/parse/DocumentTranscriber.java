@@ -4,7 +4,7 @@ import java.io.IOException;
 
 /**
  * Title: DocumentTranscriber
- * Description: 可选的外部文档转录腿（SPI）。实现模块（如 core/ai/mineru）引在 classpath 上、
+ * Description: 可选的外部文档转录腿（SPI）。实现模块（如 core/tool/mineru）引在 classpath 上、
  * 注册了本口 Bean，{@link FileMarkdownService} 才会在格式分发前<b>优先</b>咨询它：
  * {@link #isAvailable(String)} 认领的文件先走外部转写，转写抛异常或返回空时回落既有本地路径
  * （文本直读/POI/PDFBox/多模态转录）——门面负责回落，实现方<b>别吞错</b>，失败如实抛。

@@ -12,7 +12,7 @@ import java.lang.ref.SoftReference;
  * Title: FileMarkdownTool
  * Description: 通用「读文件」agent 工具（框架级，业务零绑定）：LLM 拿到文件地址（http(s) URL
  * 或服务器本地路径）就能调 read_file 拿 Markdown 正文，能力即 {@link FileMarkdownService}
- * 门面的全部格式面（文本直读/POI/PDFBox；classpath 引了转录腿实现如 core/ai/mineru 时
+ * 门面的全部格式面（文本直读/POI/PDFBox；classpath 引了转录腿实现如 core/tool/mineru 时
  * pdf/图片先走外部转录，失败回落门面本地路径——挂不挂腿对模型不可见）。
  * <p>
  * 长文件<b>分页续读</b>（2026-10-18 用户拍板"必须做，不然后边读不进来"）：入参带 {@code offset}

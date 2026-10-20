@@ -452,12 +452,18 @@ String md = fileMarkdownService.toMarkdown(file, vision);
 2. **sys_config 数据库参数**（经 `ModelConfigProvider`）：`VISION_BASE_URL` / `VISION_API_KEY` / `VISION_MODEL_NAME` / `VISION_TIMEOUT_SECONDS`，已注册为 `LlmParam`，系统参数页可直接维护；任一项留空则该项继续回落下一级。
 3. **yaml 默认**：`llm.vision.*`（见下表），其中 base-url/api-key/model-name 留空时回落默认模型配置（`llm.*`）。
 
-**外部转录腿前置（可选，2026-10-17）**：classpath 上引了 `core/ai/mineru`（`com.bidr:mineru`）并注册
+**外部转录腿前置（可选，2026-10-17）**：classpath 上引了 `core/tool/mineru`（`com.bidr:mineru`）并注册
 `DocumentTranscriber` Bean 后，**pdf/图片在进入上表流程之前先走 MinerU 转写**——云腿令牌配了→云优先
 （mineru.net v4）、失败或没配→本地腿（mineru-api 3.x）、再失败→回落本节既有路径（外部服务挂掉
 不拖垮解析）。不引包＝零配置零变化。业务要接别的转录引擎＝自己实现 `com.bidr.llm.parse.DocumentTranscriber`
 注册 Bean（自动装配让位）。配置面＝`mineru.*`（见该模块的 `mineru-config.template.yml`，
 18 把键有机器对账守卫），接入键不进 sys_config、真值走 `.env`。
+**装配键**＝`tool.document.transcriber: mineru`（新口 `TranscribeStep` 与老口 `DocumentTranscriber`
+同一把键、同一个值；键空或包没引＝不装配增强腿，走内置）。
+**两档等待预算别混**：`mineru.max-wait-seconds` 只服务同步门面/阻塞调用（默认 300，超时回落）；
+InkHub 的 `parse`/`material` 后台流水线走低层客户端自管预算，看平台层键
+`inkhub.parse.mineru-max-wait-ms`，**不要为后台链去抬 `max-wait-seconds`**
+（抬了会把同步调用一起吊住）。
 
 内置约束：单文件上限 100MB；PDF 走多模态的页数上限 50 页（超出部分跳过并注明）；渲染 DPI 150。
 
