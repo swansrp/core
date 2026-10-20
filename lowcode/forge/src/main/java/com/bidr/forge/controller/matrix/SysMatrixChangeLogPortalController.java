@@ -5,6 +5,7 @@ import com.bidr.forge.dao.entity.SysMatrixChangeLog;
 import com.bidr.forge.service.martix.SysMatrixChangeLogPortalService;
 import com.bidr.forge.vo.matrix.ImportChangeLogReqVO;
 import com.bidr.forge.vo.matrix.SysMatrixChangeLogVO;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import io.swagger.annotations.Api;
@@ -62,5 +63,6 @@ public class SysMatrixChangeLogPortalController extends BaseAdminOrderController
     @PostMapping("/import/log")
     public void importChangeLog(@RequestBody ImportChangeLogReqVO request) {
         sysMatrixChangeLogPortalService.importChangeLog(request.getChangeLogData());
+        Resp.notice("变更日志导入成功");
     }
 }

@@ -7,6 +7,7 @@ import com.bidr.forge.service.martix.SysMatrixPortalService;
 import com.bidr.forge.vo.matrix.ImportChangeLogReqVO;
 import com.bidr.forge.vo.matrix.ImportMatrixReq;
 import com.bidr.forge.vo.matrix.SysMatrixVO;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminOrderController;
 import com.bidr.kernel.service.PortalCommonService;
 import io.swagger.annotations.Api;
@@ -53,6 +54,7 @@ public class SysMatrixPortalController extends BaseAdminOrderController<SysMatri
     @PostMapping("/create-table")
     public void createPhysicalTable(@RequestParam Long id) {
         sysMatrixPortalService.createPhysicalTable(id);
+        Resp.notice("物理表创建成功");
     }
 
     /**
@@ -64,6 +66,7 @@ public class SysMatrixPortalController extends BaseAdminOrderController<SysMatri
     @PostMapping("/sync-table")
     public void syncTableStructure(@RequestParam Long id) {
         sysMatrixPortalService.syncTableStructure(id);
+        Resp.notice("表结构同步成功");
     }
 
     /**
@@ -75,6 +78,7 @@ public class SysMatrixPortalController extends BaseAdminOrderController<SysMatri
     @PostMapping("/truncate-table")
     public void truncateTable(@RequestParam Long id) {
         sysMatrixPortalService.truncateTable(id);
+        Resp.notice("表数据清空成功");
     }
 
     /**
@@ -122,5 +126,6 @@ public class SysMatrixPortalController extends BaseAdminOrderController<SysMatri
     @PostMapping("/import-changelog")
     public void importChangeLog(@RequestBody ImportChangeLogReqVO request) {
         sysMatrixChangeLogPortalService.importChangeLog(request.getChangeLogData());
+        Resp.notice("变更日志导入成功");
     }
 }

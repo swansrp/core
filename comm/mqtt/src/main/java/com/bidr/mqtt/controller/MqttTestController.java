@@ -44,6 +44,7 @@ public class MqttTestController {
     @RequestMapping(path = {"/publish"}, method = {RequestMethod.POST})
     public void publish(int qos, boolean retained, String topic, String message) {
         mqttService.publish(qos, retained, topic, message);
+        Resp.notice("已成功发布到: " + topic);
     }
 
     @IgnoreAuth

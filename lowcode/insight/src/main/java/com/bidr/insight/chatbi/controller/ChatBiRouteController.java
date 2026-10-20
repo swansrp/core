@@ -5,6 +5,7 @@ import com.bidr.insight.chatbi.vo.ChatBiRouteItem;
 import com.bidr.insight.chatbi.vo.ChatBiRouteReq;
 import com.bidr.insight.chatbi.vo.ChatBiRouteRes;
 import com.bidr.insight.chatbi.vo.ChatBiTableDescReq;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import io.swagger.annotations.Api;
@@ -50,6 +51,7 @@ public class ChatBiRouteController {
     @RequestMapping(value = "/route/desc", method = RequestMethod.POST)
     public void saveTableDesc(@Validated @RequestBody ChatBiTableDescReq req) {
         chatBiRouterService.saveTableDesc(req);
+        Resp.notice("看板业务描述已保存");
     }
 
     @ApiOperation(value = "全量看板与业务描述（候选注册管理页数据源）")

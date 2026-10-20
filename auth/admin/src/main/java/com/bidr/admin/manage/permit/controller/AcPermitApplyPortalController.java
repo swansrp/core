@@ -10,6 +10,7 @@ import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.permit.PermitApplyService;
 import com.bidr.authorization.vo.permit.PermitApplyMenuTreeRes;
 import com.bidr.authorization.vo.permit.PermitApplyVO;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.controller.BaseAdminController;
 import com.bidr.kernel.service.PortalCommonService;
 import com.bidr.platform.config.portal.AdminPortal;
@@ -53,6 +54,7 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
     @RequestMapping(value = "", method = RequestMethod.POST)
     public void applyUserPermit(String url, String reason) {
         permitApplyService.applyUserPermit(AccountContext.getOperator(), url, reason);
+        Resp.notice("权限申请已提交");
     }
 
     @Auth(AuthAdmin.class)
@@ -80,6 +82,7 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
     @RequestMapping(value = "/approve", method = RequestMethod.POST)
     public void approvePermit(Long id) {
         permitApplyService.approvePermit(id);
+        Resp.notice("已同意权限申请");
     }
 
     @Auth(AuthAdmin.class)
@@ -87,5 +90,6 @@ public class AcPermitApplyPortalController extends BaseAdminController<AcPermitA
     @RequestMapping(value = "/reject", method = RequestMethod.POST)
     public void rejectPermit(Long id, String remark) {
         permitApplyService.rejectPermit(id, remark);
+        Resp.notice("已拒绝权限申请");
     }
 }

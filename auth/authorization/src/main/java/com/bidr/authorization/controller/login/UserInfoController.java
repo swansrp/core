@@ -10,6 +10,7 @@ import com.bidr.authorization.vo.login.MsgLoginReq;
 import com.bidr.authorization.vo.user.UserExistedReq;
 import com.bidr.authorization.vo.user.UserInfoReq;
 import com.bidr.authorization.vo.user.UserInfoRes;
+import com.bidr.authorization.vo.user.UserRes;
 import com.bidr.kernel.config.response.Resp;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
@@ -57,14 +58,15 @@ public class UserInfoController {
 
     @Auth(AuthToken.class)
     @RequestMapping(value = "/existed", method = RequestMethod.GET)
-    public void userExisted(UserExistedReq req) {
-        userInfoService.userExisted(req);
+    public UserRes userExisted(UserExistedReq req) {
+        return userInfoService.userExisted(req);
     }
 
     @Auth(AuthToken.class)
     @RequestMapping(value = "/already/existed", method = RequestMethod.GET)
-    public void userNotExisted(UserExistedReq req) {
+    public boolean userNotExisted(UserExistedReq req) {
         userInfoService.userAlreadyExisted(req);
+        return true;
     }
 
     @RequestMapping(value = "/group/tree", method = RequestMethod.GET)

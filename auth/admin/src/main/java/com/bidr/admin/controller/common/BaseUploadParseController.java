@@ -1,6 +1,7 @@
 package com.bidr.admin.controller.common;
 
 import com.bidr.admin.service.common.BaseUploadParseService;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.platform.vo.upload.PortalUploadProgressRes;
 import io.swagger.annotations.ApiOperation;
@@ -32,6 +33,7 @@ public abstract class BaseUploadParseController {
         getUploadParseService().startUploadProgress(getUploadParseService().getTotal());
         getUploadParseService().parseFile(tempFile, HttpUtil.getParamMap(request));
         tempFile.deleteOnExit();
+        Resp.notice("上传解析任务已提交");
     }
 
     @ApiOperation("获取导入新增进度")

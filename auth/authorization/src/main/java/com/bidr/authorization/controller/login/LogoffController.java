@@ -1,6 +1,7 @@
 package com.bidr.authorization.controller.login;
 
 import com.bidr.authorization.service.login.LoginService;
+import com.bidr.kernel.config.response.Resp;
 import io.swagger.annotations.Api;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,5 +26,6 @@ public class LogoffController {
     @RequestMapping(value = "", method = RequestMethod.POST)
     public void logoff() {
         loginService.logoff();
+        Resp.notice("已退出登录");
     }
 }

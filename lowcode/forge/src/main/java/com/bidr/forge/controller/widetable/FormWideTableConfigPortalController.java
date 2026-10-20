@@ -140,6 +140,7 @@ public class FormWideTableConfigPortalController extends BaseAdminController<For
     @PostMapping("/reCollectAsync/{configId}")
     public void reCollectAsync(@PathVariable Long configId) {
         wideTableCollectAsyncService.reCollectAsync(configId);
+        Resp.notice("重新收集任务已提交");
     }
 
     /**

@@ -3,6 +3,7 @@ package com.bidr.insight.chatbi.controller;
 import com.bidr.insight.chatbi.service.ChatBiSensitiveService;
 import com.bidr.insight.chatbi.vo.ChatBiSensitiveColumnRes;
 import com.bidr.insight.chatbi.vo.ChatBiSensitiveSaveReq;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import io.swagger.annotations.Api;
@@ -43,5 +44,6 @@ public class ChatBiSensitiveController {
     @RequestMapping(value = "/sensitive/save", method = RequestMethod.POST)
     public void saveSensitiveColumns(@Validated @RequestBody ChatBiSensitiveSaveReq req) {
         chatBiSensitiveService.saveSensitiveColumns(req);
+        Resp.notice("敏感列配置已保存");
     }
 }

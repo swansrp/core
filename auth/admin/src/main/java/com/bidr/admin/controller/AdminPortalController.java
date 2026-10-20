@@ -97,8 +97,9 @@ public class AdminPortalController {
 
     @RequestMapping(path = {"/config/existed"}, method = {RequestMethod.GET})
     @ApiOperation(value = "检查后台管理配置是否存在")
-    public void validatePortalExisted(PortalReq req) {
+    public boolean validatePortalExisted(PortalReq req) {
         portalService.validatePortalExisted(req);
+        return true;
     }
 
     @RequestMapping(path = {"/config/copy"}, method = {RequestMethod.POST})

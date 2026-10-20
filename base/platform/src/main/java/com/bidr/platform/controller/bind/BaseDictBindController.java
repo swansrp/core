@@ -286,6 +286,7 @@ public abstract class BaseDictBindController<ENTITY, BIND, ENTITY_VO> extends Ba
         Validator.assertNotNull(dictItem, ErrCodeSys.PA_DATA_NOT_EXIST, "字典项");
         
         super.bind(attachId, entityId);
+        Resp.notice("绑定成功");
     }
 
     /**

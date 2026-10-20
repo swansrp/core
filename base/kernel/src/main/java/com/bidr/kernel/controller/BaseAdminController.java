@@ -7,6 +7,7 @@ import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.controller.inf.AdminControllerInf;
 import com.bidr.kernel.exception.NoticeException;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.CsvUtil;
@@ -281,7 +282,9 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             getPortalService().readExcelForInsert(file.getInputStream(), name);
         } catch (IOException e) {
             log.error("", e);
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "导入文件读取失败");
         }
+        Resp.notice("导入任务已提交");
     }
 
     @Override
@@ -304,7 +307,9 @@ public class BaseAdminController<ENTITY, VO> implements AdminControllerInf<ENTIT
             getPortalService().readExcelForUpdate(file.getInputStream(), name);
         } catch (IOException e) {
             log.error("", e);
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "导入文件读取失败");
         }
+        Resp.notice("导入任务已提交");
     }
 
     @Override

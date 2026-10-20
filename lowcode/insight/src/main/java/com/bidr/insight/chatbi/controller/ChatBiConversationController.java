@@ -3,6 +3,7 @@ package com.bidr.insight.chatbi.controller;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.insight.chatbi.service.ChatBiConversationService;
 import com.bidr.insight.chatbi.vo.ChatBiConversation;
+import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import io.swagger.annotations.Api;
@@ -49,5 +50,6 @@ public class ChatBiConversationController {
     public void deleteConversation(String conversationId) {
         Validator.assertNotNull(conversationId, ErrCodeSys.PA_PARAM_NULL, "对话标识");
         chatBiConversationService.deleteConversation(conversationId, AccountContext.getDisplayName());
+        Resp.notice("对话已删除");
     }
 }
