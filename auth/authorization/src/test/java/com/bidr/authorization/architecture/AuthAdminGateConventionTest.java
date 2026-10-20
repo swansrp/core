@@ -40,6 +40,13 @@ import java.util.stream.Stream;
  * 断言判红；腿 4 用既有真闸 {@code AcSsoRedirectPortalController} 与合成合规样本判绿——空扫描
  * 与恒真判定都不算通过。文件数下限（admin 总数 ≥ 20、具体 ≥ 18，当前实况 21／19）防空扫描假绿。
  * </p>
+ * <p>
+ * 🔴 2026-10-20 状态同步（commit 056b471c「修正不必要的authAdmin」368 文件有意摘除后守卫随之改写）：
+ * 原先"admin 全部具体 controller／auth 点名 17 条必须挂 AuthAdmin"的全称不变式已随摘除作废，
+ * 改为<b>双清单钉状态</b>——仍挂闸清单（防误摘：挂闸的再摘＝平台闸丢失，宁红勿静默）＋
+ * 摘除清单（防回填：回填 AuthAdmin 会把租户管理员锁在平台闸外，宁红勿静默）。两个清单都是
+ * 磁盘现状的忠实快照，改姿势必须连清单一起改＝守卫逼着显式决策，而不是默默漂移。
+ * </p>
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -53,36 +60,70 @@ public class AuthAdminGateConventionTest {
     private static final String LOGIN_EXEMPT_NEEDLE = "@Auth(" + "AuthLogin.class)";
 
     /**
-     * auth 模块写面 controller 点名清单（相对 authorization 模块根）。
-     * 批甲棒 1 共改 18 个 auth 文件，其中 {@code PasswordServiceImpl}／{@code UserInfoController}
-     * 非 controller 不入此单；批甲收口时此处 16 条即全部涉闸 controller；
-     * 批乙棒 4 增补 {@code AcTenantPortalController}（租户管理面，类级 AuthAdmin）成 17 条。
-     * {@code PasswordController} 是方法级（/reset 挂闸、/change 走本人校验），判定同样只看字面量，无需区分层级。
+     * 仍挂 AuthAdmin 的 auth 写面 controller（相对 authorization 模块根；防误摘清单）。
+     * 2026-10-20 现状快照（056b471c 摘除后仍保留平台闸的 8 条）：菜单/部门/资源/合作伙伴/
+     * 租户管理面/改密是平台级动作；{@code PasswordController} 是方法级（/reset 挂闸、/change
+     * 走本人校验），判定只看字面量不区分层级。
      */
-    private static final List<String> AUTH_NAMED_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
-            "src/main/java/com/bidr/authorization/controller/admin/AdminUserRoleBindController.java",
-            "src/main/java/com/bidr/authorization/controller/admin/AdminRoleUserBindController.java",
-            "src/main/java/com/bidr/authorization/controller/admin/AdminUserMenuBindController.java",
+    private static final List<String> AUTH_GATED_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
             "src/main/java/com/bidr/authorization/controller/admin/AdminDeptMenuBindController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AdminGroupMenuBindController.java",
-            "src/main/java/com/bidr/authorization/controller/admin/AdminUserDeptBindController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AdminDeptController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AcResourcePermController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AdminMenuController.java",
-            "src/main/java/com/bidr/authorization/controller/admin/AdminRoleController.java",
-            "src/main/java/com/bidr/authorization/controller/admin/AdminRoleMenuBindController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AdminPartnerController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AcTenantPortalController.java",
+            "src/main/java/com/bidr/authorization/controller/login/PasswordController.java"));
+
+    /**
+     * 056b471c 有意摘除 AuthAdmin 的 controller（防回填清单）：用户/角色/分组/绑定面已开放给
+     * 租户管理员使用（10-17 身份统一后 ac_user_tenant 成员即租户管理员），回填平台闸＝把
+     * 租户管理员锁在外面——这两件事都该红着改清单，而不是默默漂移。
+     */
+    private static final List<String> AUTH_UNGATED_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
+            "src/main/java/com/bidr/authorization/controller/admin/AdminUserRoleBindController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AdminRoleUserBindController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AdminUserMenuBindController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AdminUserDeptBindController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AdminRoleController.java",
+            "src/main/java/com/bidr/authorization/controller/admin/AdminRoleMenuBindController.java",
             "src/main/java/com/bidr/authorization/controller/group/GroupAdminController.java",
             "src/main/java/com/bidr/authorization/controller/group/GroupBindController.java",
-            "src/main/java/com/bidr/authorization/controller/group/GroupUserBindController.java",
-            "src/main/java/com/bidr/authorization/controller/login/PasswordController.java"));
+            "src/main/java/com/bidr/authorization/controller/group/GroupUserBindController.java"));
 
     /** 反向豁免腿：这三个类必须在类级 AuthAdmin 之外保有 AuthLogin 方法级豁免针 */
     private static final List<String> LOGIN_EXEMPT_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
             "src/main/java/com/bidr/authorization/controller/group/GroupBindController.java",
             "src/main/java/com/bidr/authorization/controller/group/GroupUserBindController.java",
             "src/main/java/com/bidr/authorization/controller/admin/AcTenantPortalController.java"));
+
+    /** 仍挂 AuthAdmin 的 admin 具体 controller（相对 admin 模块 src/main/java；防误摘清单，正对照含在内） */
+    private static final List<String> ADMIN_GATED_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
+            "com/bidr/admin/manage/account/controller/AdminAccountController.java",
+            "com/bidr/admin/manage/partner/controller/AcPartnerHistoryPortalController.java",
+            "com/bidr/admin/manage/permit/controller/AcPermitApplyPortalController.java",
+            "com/bidr/admin/manage/sso/controller/AcSsoRedirectPortalController.java"));
+
+    /**
+     * 056b471c 有意摘除/从未挂闸的 admin 具体 controller（防回填清单）：门户（Portal）与
+     * 统计/表格/部门 Excel/用户组/角色视图等读面与租户可用面，默认登录态（AuthLogin 兜底）。
+     */
+    private static final List<String> ADMIN_UNGATED_CONTROLLERS = Collections.unmodifiableList(Arrays.asList(
+            "com/bidr/admin/controller/AdminPortalController.java",
+            "com/bidr/admin/controller/AdminPortalAssociateController.java",
+            "com/bidr/admin/controller/statistic/AdminPortalDashboardController.java",
+            "com/bidr/admin/controller/statistic/AdminPortalDashboardStatisticController.java",
+            "com/bidr/admin/controller/statistic/AdminPortalIndicatorController.java",
+            "com/bidr/admin/controller/statistic/AdminPortalIndicatorGroupController.java",
+            "com/bidr/admin/controller/table/PortalPivotColumnPortalController.java",
+            "com/bidr/admin/controller/table/PortalTableFilterPortalController.java",
+            "com/bidr/admin/controller/table/PortalTablePortalController.java",
+            "com/bidr/admin/manage/dept/controller/AdminDeptExcelController.java",
+            "com/bidr/admin/manage/group/controller/AdminGroupController.java",
+            "com/bidr/admin/manage/group/controller/AdminGroupExcelController.java",
+            "com/bidr/admin/manage/role/controller/AcRolePortalController.java",
+            "com/bidr/admin/manage/user/controller/AdminUserController.java",
+            "com/bidr/admin/manage/user/controller/AdminUserGroupBindController.java"));
 
     /** 正对照：admin 模块里批甲之前就挂了 AuthAdmin 的既有真闸（相对 admin 模块根） */
     private static final String PREEXISTING_GATE_CONTROL =
@@ -156,11 +197,11 @@ public class AuthAdminGateConventionTest {
     }
 
     /**
-     * 腿 1（admin 全覆盖）：admin 模块全部具体 controller 逐个断言至少一处
-     * {@code @Auth(AuthAdmin.class)}；文件数下限防空扫描假绿。
+     * 腿 1（admin 双清单钉状态，2026-10-20 随 056b471c 改写）：仍挂闸 4 条防误摘、
+     * 摘除 15 条防回填；扫描文件数下限防空扫描假绿。
      */
     @Test
-    public void adminConcreteControllersAllCarryAuthAdminGate() throws IOException {
+    public void adminGateInventoryMatchesIntentionalState() throws IOException {
         Path adminSrc = locateAdminModule().resolve("src").resolve("main").resolve("java");
         List<Path> scanned = collectControllerFiles(adminSrc);
 
@@ -168,45 +209,64 @@ public class AuthAdminGateConventionTest {
         Assert.assertTrue("admin controller 扫描数异常（路径解析疑似失效）: " + scanned.size(),
                 scanned.size() >= 20);
 
-        List<Path> concrete = new ArrayList<>();
-        List<String> violations = new ArrayList<>();
-        for (Path file : scanned) {
-            String content = read(file);
-            if (!isConcreteController(content)) {
-                continue;
+        // 防误摘：仍挂闸清单逐条必须在场且含闸针
+        List<String> stripped = new ArrayList<String>();
+        for (String relative : ADMIN_GATED_CONTROLLERS) {
+            Path file = adminSrc.resolve(relative);
+            if (!Files.isRegularFile(file)) {
+                stripped.add(relative + " 不存在（挂闸清单与磁盘漂移）");
+            } else if (!missingAdminGate(relative, read(file)).isEmpty()) {
+                stripped.add(relative + " 丢失闸针（防误摘）");
             }
-            concrete.add(file);
-            violations.addAll(missingAdminGate(adminSrc.relativize(file).toString(), content));
         }
-        // 具体 controller 下限（当前实况 19）：abstract 基类若吞掉全部具体类也照样红
-        Assert.assertTrue("admin 具体 controller 数异常: " + concrete.size(), concrete.size() >= 18);
-        Assert.assertTrue("admin 具体 controller 存在裸奔：\n" + String.join("\n", violations),
-                violations.isEmpty());
+        Assert.assertTrue("admin 仍挂闸清单被误摘：\n" + String.join("\n", stripped), stripped.isEmpty());
+
+        // 防回填：摘除清单逐条必须不含闸针
+        List<String> regressed = new ArrayList<String>();
+        for (String relative : ADMIN_UNGATED_CONTROLLERS) {
+            Path file = adminSrc.resolve(relative);
+            if (!Files.isRegularFile(file)) {
+                regressed.add(relative + " 不存在（摘除清单与磁盘漂移）");
+            } else if (missingAdminGate(relative, read(file)).isEmpty()) {
+                regressed.add(relative + " 出现 " + ADMIN_GATE_NEEDLE + "（平台闸回填会把租户管理员锁在外面）");
+            }
+        }
+        Assert.assertTrue("admin 摘除清单出现平台闸回填：\n" + String.join("\n", regressed), regressed.isEmpty());
     }
 
     /**
-     * 腿 2（auth 点名）：16 条写面 controller 逐个断言存在且挂闸；GroupBind/GroupUserBind
-     * 另断言 AuthLogin 反向豁免针仍在（豁免被误删＝本人端点 403，同样是契约破坏）。
+     * 腿 2（auth 点名双清单，2026-10-20 随 056b471c 改写）：仍挂闸 8 条防误摘、摘除 9 条防回填；
+     * GroupBind/GroupUserBind/AcTenantPortal 另断言 AuthLogin 反向豁免针仍在
+     * （豁免被误删＝本人端点 403，同样是契约破坏）。
      */
     @Test
     public void authNamedControllersCarryAuthAdminGate() throws IOException {
         Path authRoot = locateAuthorizationModule();
-        List<String> missing = new ArrayList<>();
-        for (String relative : AUTH_NAMED_CONTROLLERS) {
+        List<String> stripped = new ArrayList<String>();
+        for (String relative : AUTH_GATED_CONTROLLERS) {
             Path file = authRoot.resolve(relative);
             if (!Files.isRegularFile(file)) {
-                missing.add(relative + " 不存在（点名清单与磁盘漂移）");
+                stripped.add(relative + " 不存在（挂闸清单与磁盘漂移）");
                 continue;
             }
-            String content = read(file);
-            if (!content.contains(ADMIN_GATE_NEEDLE)) {
-                missing.add(relative + " 未含 " + ADMIN_GATE_NEEDLE);
+            if (!read(file).contains(ADMIN_GATE_NEEDLE)) {
+                stripped.add(relative + " 丢失 " + ADMIN_GATE_NEEDLE + "（防误摘）");
             }
         }
-        Assert.assertTrue("auth 点名 controller 挂闸断言失败（"
-                        + (AUTH_NAMED_CONTROLLERS.size() - missing.size()) + "/"
-                        + AUTH_NAMED_CONTROLLERS.size() + " 命中）：\n" + String.join("\n", missing),
-                missing.isEmpty());
+        Assert.assertTrue("auth 仍挂闸清单被误摘：\n" + String.join("\n", stripped), stripped.isEmpty());
+
+        List<String> regressed = new ArrayList<String>();
+        for (String relative : AUTH_UNGATED_CONTROLLERS) {
+            Path file = authRoot.resolve(relative);
+            if (!Files.isRegularFile(file)) {
+                regressed.add(relative + " 不存在（摘除清单与磁盘漂移）");
+                continue;
+            }
+            if (read(file).contains(ADMIN_GATE_NEEDLE)) {
+                regressed.add(relative + " 出现 " + ADMIN_GATE_NEEDLE + "（平台闸回填会把租户管理员锁在外面）");
+            }
+        }
+        Assert.assertTrue("auth 摘除清单出现平台闸回填：\n" + String.join("\n", regressed), regressed.isEmpty());
 
         List<String> exemptBroken = new ArrayList<>();
         for (String relative : LOGIN_EXEMPT_CONTROLLERS) {

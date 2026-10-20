@@ -41,6 +41,13 @@ import java.util.stream.Stream;
  * forbidden 前缀——负向腿变成自证假红。
  * </p>
  * <p>
+ * 🔴 2026-10-20 布局适配（erp 嵌套检出 server/core 下无 bidr-framework 兄弟仓）：两条
+ * <b>正对照腿</b>（真仓死针自证）在仓不在场时<b>显式软跳过</b>（控制台留痕）——core 不依赖
+ * bidr-framework 的承诺由负向腿（源码零引用＋pom 零声明＋合成死针）无条件保证，正对照只在
+ * 仓在场的检出布局（core 独立开发区）补"判据活着"的证据。仓不在场不再是红，也不再需要
+ * 任何人为了跑绿测试去凑一个外部仓。
+ * </p>
+ * <p>
  * 🔴 依赖面（pom）判据必须是 {@code <artifactId>} 整串而非包名前缀（M15 棒0 review#3 F-1）：
  * 本仓声明 framework/idm 构件的真实形态是 {@code <groupId>com.bidr</groupId>} 与下一行的
  * {@code <artifactId>bidr-framework</artifactId>}，前缀针在全部 pom 里只命中一条注释行＝<b>死针</b>，
@@ -96,14 +103,18 @@ public class AuthCoreBoundaryConventionTest {
      * 特征探测＝向上找第一个含 bidr-framework/pom.xml 的祖先——不假设模块目录层级
      * （2026-10-17 core 模块分组后 authorization 在 auth/ 组下两级深，getParent 次数写死即断）。
      */
-    private static Path locateFrameworkRepoRoot() {
+    /**
+     * framework 仓根，<b>不在场返回 null</b>（2026-10-20 布局适配）：erp 嵌套检出（server/core）
+     * 没有兄弟仓 bidr-framework，这是合法布局而非故障——core 本就不依赖它（本守卫负向腿钉的
+     * 正是这件事），正对照腿拿它当死针自证只在仓在场的布局有意义。
+     */
+    private static Path locateFrameworkRepoRootOrNull() {
         for (Path dir = locateAuthModule().getParent(); dir != null; dir = dir.getParent()) {
             if (Files.isRegularFile(dir.resolve("bidr-framework").resolve("pom.xml"))) {
                 return dir;
             }
         }
-        throw new IllegalStateException("无法从 authorization 模块向上定位 framework 仓根"
-                + "（任何祖先下都不存在 bidr-framework/pom.xml，路径假设已坏，拒绝空扫描）");
+        return null;
     }
 
     private static List<Path> collectJavaFiles(Path root) throws IOException {
@@ -195,14 +206,24 @@ public class AuthCoreBoundaryConventionTest {
         Assert.assertEquals(Arrays.asList("bidr-framework"),
                 coordinateViolations("        <groupId>com.bidr</groupId>\n"
                         + "        <artifactId>bidr-framework</artifactId>\n"));
-        String bridgePom = read(locateFrameworkRepoRoot().resolve("bidr-framework").resolve("pom.xml"));
+        Path frameworkRoot = locateFrameworkRepoRootOrNull();
+        if (frameworkRoot == null) {
+            System.out.println("[boundary] bidr-framework 仓不在场（嵌套检出布局），依赖面正对照软跳过"
+                    + "（合成死针腿已无条件跑过）");
+            return;
+        }
+        String bridgePom = read(frameworkRoot.resolve("bidr-framework").resolve("pom.xml"));
         Assert.assertTrue("依赖面正对照失效：bidr-framework/pom.xml 未以 <artifactId> 整串声明 idm starter",
                 coordinateViolations(bridgePom).contains("idm-spring-boot-starter"));
     }
 
     @Test
     public void bidrFrameworkStillReferencesIdmHolderAsPositiveControl() throws IOException {
-        Path frameworkDir = locateFrameworkRepoRoot();
+        Path frameworkDir = locateFrameworkRepoRootOrNull();
+        if (frameworkDir == null) {
+            System.out.println("[boundary] bidr-framework 仓不在场（嵌套检出布局），IdmHolder 正对照软跳过");
+            return;
+        }
         Path bridgeSrc = frameworkDir.resolve("bidr-framework").resolve("src").resolve("main").resolve("java");
         Assert.assertTrue("bidr-framework 源码目录不存在（路径解析疑似失效）: " + bridgeSrc,
                 Files.isDirectory(bridgeSrc));
