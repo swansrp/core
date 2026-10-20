@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <groupId>com.bidr</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <artifactId>store-blob</artifactId>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
+                <platform.version>${jarVersion}</platform.version>
+                <authorization.version>${jarVersion}</authorization.version>
+                <oss.version>${jarVersion}</oss.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>20261019011254-82</kernel.version>
+                <platform.version>20261019011254-82</platform.version>
+                <authorization.version>20261019011254-82</authorization.version>
+                <oss.version>20261019011254-82</oss.version>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <!-- entity 的 @AccountContextFill（create_by/update_by 审计填充） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization</artifactId>
+            <version>${authorization.version}</version>
+        </dependency>
+        <!-- 对象存储门面只经 OssServiceSelector 取实现（与业务侧同一条选型正源） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>oss</artifactId>
+            <version>${oss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 传递依赖含 JUnit4 时 surefire 会选错 provider，表现为 Tests run: 0（必须显式指定） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>2.22.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

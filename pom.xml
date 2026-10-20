@@ -9,6 +9,7 @@
     <modules>
         <module>base/kernel</module>
         <module>base/platform</module>
+        <module>base/task</module>
         <module>tool/xxl-job</module>
         <module>comm/email</module>
         <module>store/redis</module>
@@ -18,6 +19,7 @@
         <module>store/neo4j</module>
         <module>auth/admin</module>
         <module>store/oss</module>
+        <module>store/blob</module>
         <module>comm/wechat</module>
         <module>tool/ocr</module>
         <module>tool/qichacha</module>
@@ -29,7 +31,9 @@
         <module>comm/kafka</module>
         <module>store/td</module>
         <module>ai/llm</module>
-        <module>ai/mineru</module>
+        <module>tool/document</module>
+        <module>tool/gotenberg</module>
+        <module>tool/mineru</module>
         <module>lowcode/insight</module>
         <module>ai/agent-runtime</module>
         <module>ai/agent-console</module>

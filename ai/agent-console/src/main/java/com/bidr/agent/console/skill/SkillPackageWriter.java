@@ -76,7 +76,8 @@ public final class SkillPackageWriter {
      * 而指纹正是这句话的读数器——启动对账拿它判断要不要覆盖，两处实现各写一遍就等于
      * 允许两侧对同一内容报出不同的 sha。</p>
      *
-     * <p>与业务文件域 {@code com.bidr.ai.inkhub.util.Digests.sha256Hex} 同算法、同编码、同输出格式，
+     * <p>与文件域内容寻址正源 {@code com.bidr.blob.Digests.sha256Hex}（core/store-blob，M16 棒 1 下沉，
+     * 原 {@code com.bidr.ai.inkhub.util.Digests}）同算法、同编码、同输出格式，
      * 这个等价性是<b>存量迁移与两侧对账的前提</b>：出厂包从业务侧搬到框架侧后，
      * 库里已有的 {@code package_sha256} 必须还能对上重算出的值，否则每个存量包都会被认成"内容变了"
      * 而就地重写一遍。等价性由测试钉住，不靠约定。</p>

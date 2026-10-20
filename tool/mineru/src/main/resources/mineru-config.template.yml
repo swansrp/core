@@ -1,5 +1,5 @@
 # =============================================================================
-# core/ai/mineru 模块读取的全部 yml 键（18 把，正源＝MineruProperties 字段）
+# core/tool/mineru 模块读取的全部 yml 键（18 把，正源＝MineruProperties 字段）
 #   机器对账腿＝MineruConfigTemplateCoverageTest（模板叶子键集合与 MineruProperties
 #   反射展开的键集合必须**完全相等**：漏写一把＝现场照模板填完仍缺配置，
 #   多写一把＝模板承诺了代码不读的键，两种都判红）
@@ -8,7 +8,10 @@
 #   不填＝用标注的默认值；接入键（地址/令牌）🔴 不进 sys_config，真值走 .env：
 #     mineru.local.base-url: ${MINERU_BASE_URL:}     # 与既有 .env 键名对齐
 #     mineru.cloud.token: ${MINERU_CLOUD_TOKEN:}     # 同上
-#   门面：引本包（core/ai/mineru）后 FileMarkdownService 的 pdf/图片先走 MinerU
+#   装配键（不在本段、不在对账范围）：tool.document.transcriber: mineru
+#     新口＝core/tool/document 的 TranscribeStep 选型键，老口＝DocumentTranscriber，
+#     两代同一把键，值都是腿名 mineru；键空/包没引＝走内置腿（不装配增强腿）。
+#   门面：引本包（core/tool/mineru）后同步门面（FileMarkdownTool）的 pdf/图片先走 MinerU
 #   （云优先本地兜底、失败回落既有本地路径）；不引包＝零变化。业务自定义腿＝
 #   自己注册 DocumentTranscriber Bean（本装配让位）。
 # =============================================================================
@@ -20,8 +23,9 @@ mineru:
   # 轮询间隔毫秒（两腿共用）。[3000]
   poll-interval-ms:
 
-  # 同步门面单文档最长等待秒数：超时抛异常由门面回落，不把任务吊在轮询里。
-  # 后台任务链场景调大（InkHub 引擎侧原口径 3600）。[300]
+  # 同步门面（阻塞调用）单文档最长等待秒数：超时抛异常由门面回落，不把任务吊在轮询里。
+  # 🔴 本键只服务同步门面；后台任务链用的是低层客户端、预算自管（InkHub 平台层键
+  #    inkhub.parse.mineru-max-wait-ms），不要为了后台链去抬本键。[300]
   max-wait-seconds:
 
   # 连接超时毫秒。[15000]

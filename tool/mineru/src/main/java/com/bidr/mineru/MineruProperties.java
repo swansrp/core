@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Title: MineruProperties
- * Description: MinerU 文档转写通用客户端配置（core/ai/mineru，两份参照实现——InkHub 引擎侧与
+ * Description: MinerU 文档转写通用客户端配置（core/tool/mineru，两份参照实现——InkHub 引擎侧与
  * pm-hse 业务侧——的合并下沉，2026-10-17）。
  * <p>
  * 🔴 接入键（地址/令牌）正源＝yml 占位符＋环境变量/.env，<b>不进 sys_config</b>（与框架
@@ -14,6 +14,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 两条腿是<b>两套协议</b>不是同一服务的两个地址：自建走 mineru-api 3.x（multipart 提交
  * {@code POST /tasks}），公网 mineru.net 走 v4（预签名直传＋batch 轮询），故分两个配置段。
  * 同步门面 {@link MineruTranscriber} 的腿选择：云腿令牌配了→云优先、失败回落本地；没配→只走本地。
+ * <p>
+ * 装配键不在本段：{@code tool.document.transcriber: mineru}（新口 {@code TranscribeStep} 与
+ * 老口 {@code DocumentTranscriber} 同一把键、同一个值），键空＝不装配增强腿。
  *
  * @author Sharp
  * @since 2026/10/17
@@ -33,7 +36,11 @@ public class MineruProperties {
 
     /**
      * 同步门面单文档最长等待秒数：超时抛异常由调用方回落，不是把任务吊在轮询里。
-     * 默认 300（对齐 pm-hse 判分实测）；后台任务链场景请自行调大（InkHub 引擎侧原口径 3600）
+     * 默认 300（对齐 pm-hse 判分实测）。
+     * <p>
+     * 🔴 <b>本键只服务同步门面／阻塞调用</b>（M16 修复轮 A11）：后台任务链走的是低层客户端、
+     * 预算自管（InkHub 平台层键 {@code inkhub.parse.mineru-max-wait-ms}），
+     * <b>不要为了后台链去抬本键</b>——抬了会把同步调用也一起吊住。
      */
     private long maxWaitSeconds = 300;
 
