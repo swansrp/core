@@ -198,7 +198,7 @@ public class ParseEngineFlow {
             throw new ParseContractException("任务快照缺 sourceSha（INTAKE 未跑或快照被清）: " + task.getBizRef());
         }
         String convertedKey = BlobStore.convertedPdfKey(sourceSha);
-        byte[] cached = storage.get(convertedKey);
+        byte[] cached = peek(convertedKey);
         if (cached != null && cached.length > 0) {
             return converted(task, scope, request, sourceSha, convertedKey, Digests.sha256Hex(cached));
         }
@@ -269,7 +269,7 @@ public class ParseEngineFlow {
         // 断点（D-2）：锚已归一，键齐即复用（office 件在这里判；直通/内置件 md 即判，
         // 页图目标只在锚可渲染时成立——见 productsComplete）
         if (productsComplete(anchorSha, request.variant, requested,
-                PageImageRenderer.looksLikePdf(storage.get(anchorKey))) && enrichSatisfied(task)) {
+                PageImageRenderer.looksLikePdf(peek(anchorKey))) && enrichSatisfied(task)) {
             mergeSnapshot(task, scope, "REUSED", Collections.<String, Object>singletonMap("route", routeOf(state)));
             log.info("解析断点命中（转录秒级复用）: task={} bizRef={} anchor={} v={}",
                     task.getId(), task.getBizRef(), anchorSha, request.variant);
@@ -279,7 +279,7 @@ public class ParseEngineFlow {
             // 直通判定要在"要引擎"之前：引擎按内容嗅探不收纯文本（实测提交那一刻就 HTTP 400），
             // 把没配解析引擎这种无关状态套到它们头上只会白烧重试预算
             TextPassthroughService.Result result = passthrough.passthrough(
-                    anchorSha, request.variant, ext, storage.get(anchorKey));
+                    anchorSha, request.variant, ext, readBytes(anchorKey));
             Map<String, Object> patch = new LinkedHashMap<>();
             patch.put("route", ROUTE_PASSTHROUGH);
             patch.put("markdownKey", result.getMarkdownKey());
@@ -312,7 +312,7 @@ public class ParseEngineFlow {
         DocumentArtifact artifact;
         try {
             documentProcessor.getClass();
-            artifact = documentProcessor.process(storage.get(anchorKey),
+            artifact = documentProcessor.process(readBytes(anchorKey),
                     anchorFileName(request, state), null, true);
         } catch (java.io.IOException e) {
             throw new IllegalStateException("内置解析失败: " + anchorFileName(request, state)
@@ -341,7 +341,7 @@ public class ParseEngineFlow {
             Map<String, Object> state, String anchorSha, String anchorKey, AsyncTranscribeLeg leg) {
         String externalId = task.getExternalId();
         if (!StringUtils.hasText(externalId)) {
-            AsyncTranscribeLeg.Submission submission = leg.submit(storage.get(anchorKey),
+            AsyncTranscribeLeg.Submission submission = leg.submit(readBytes(anchorKey),
                     anchorFileName(request, state), true);
             scope.externalId(submission.getExternalId());
             Map<String, Object> patch = new LinkedHashMap<>();
@@ -408,7 +408,7 @@ public class ParseEngineFlow {
         Map<String, Object> patch = new LinkedHashMap<>();
         int pageImages = 0;
         if (requested.contains(ARTIFACT_PAGE_IMAGE) && StringUtils.hasText(text(state, "anchorKey"))) {
-            pageImages = pageImageRenderer.render(text(state, "anchorSha"), storage.get(text(state, "anchorKey")));
+            pageImages = pageImageRenderer.render(text(state, "anchorSha"), readBytes(text(state, "anchorKey")));
         }
         patch.put("pageImageCount", pageImages);
         mergeSnapshot(task, scope, "ARTIFACTS", patch);
@@ -462,7 +462,7 @@ public class ParseEngineFlow {
      * 其落库顺序先于 md（写完映射才写正文），md 在场即映射已在。
      */
     private boolean productsComplete(String anchorSha, int variant, Set<String> requested, boolean pdfAnchor) {
-        if (storage.get(BlobStore.parsedMarkdownKey(anchorSha, variant)) == null) {
+        if (peek(BlobStore.parsedMarkdownKey(anchorSha, variant)) == null) {
             return false;
         }
         if (pdfAnchor && requested.contains(ARTIFACT_PAGE_IMAGE) && !thumbsExist(anchorSha)) {
@@ -473,7 +473,7 @@ public class ParseEngineFlow {
 
     /** thumb 目录有没有产出（页图第一页在＝渲染过；仅「请求了 pageImage 且锚可渲染」时查） */
     private boolean thumbsExist(String anchorSha) {
-        return storage.get(BlobStore.thumbKey(anchorSha, 1)) != null;
+        return peek(BlobStore.thumbKey(anchorSha, 1)) != null;
     }
 
     /** 增强是否已随上一轮完成：注册了增强腿而快照缺 {@code enriched} 标记＝要重跑增强 */
@@ -669,11 +669,39 @@ public class ParseEngineFlow {
     }
 
     private byte[] requireBytes(String key, String bizRef) {
-        byte[] bytes = storage.get(key);
+        byte[] bytes = readBytes(key);
         if (bytes == null || bytes.length == 0) {
             throw new ParseContractException("源文件不存在或为空: bizRef=" + bizRef + " key=" + key);
         }
         return bytes;
+    }
+
+    /**
+     * 对象存储读口的受检异常卫生（M17 真机实测：MinIO SDK 的受检 ErrorResponseException
+     * 穿 CGLIB 代理成 {@code UndeclaredThrowableException}，message=null 不可归因）——
+     * 统一收编为可读运行时异常（缺省可重试：临时故障走退避，NoSuchKey 重试耗尽自然 DEAD）。
+     */
+    private byte[] readBytes(String key) {
+        try {
+            return storage.get(key);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("读取对象失败: key=" + key + " " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 存在性探测（断点判据专用）：对象存储对缺失 key 是<b>抛异常</b>不是回 null
+     * （M17 真机实测：首轮解析的断点检查读产物键必吃 NoSuchKey）——任何读取失败按
+     * 「缺席」处理。误判缺席的代价＝多跑一遍幂等产线（内容寻址、键形不动，安全侧）。
+     */
+    private byte[] peek(String key) {
+        try {
+            return storage.get(key);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** 喂给解析引擎的文件名：锚是转换 PDF 时必须带 .pdf 扩展名（引擎按扩展名分派解析器） */

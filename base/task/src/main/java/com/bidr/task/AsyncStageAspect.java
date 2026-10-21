@@ -120,18 +120,22 @@ public class AsyncStageAspect {
     private void diagnose(SaAsyncTask task, TaskFlowRegistry.FlowDef flow,
                           TaskFlowRegistry.StageDef stageDef, Throwable e) {
         if (!retryable(stageDef, e)) {
+            // 异常栈随行（M17 真机实测：UndeclaredThrowable 这类包装异常 message=null，
+            // 只打 message 无法归因 cause——诊断日志必须带栈）
             log.warn("任务不可重试失败，直接 DEAD: type={} task={} stage={} 错误={}",
-                    task.getTaskType(), task.getId(), task.getStage(), e.getMessage());
+                    task.getTaskType(), task.getId(), task.getStage(), e.getMessage(), e);
             taskService.dead(task, e);
             return;
         }
         if (AsyncTaskService.retryExhausted(flow, task)) {
+            log.warn("任务重试预算耗尽，置 DEAD: type={} task={} stage={} 错误={}",
+                    task.getTaskType(), task.getId(), task.getStage(), e.getMessage(), e);
             taskService.dead(task, e);
             return;
         }
         taskService.fail(task, flow, e);
         log.warn("任务失败待重试: type={} task={} stage={} attempt={} 错误={}",
-                task.getTaskType(), task.getId(), task.getStage(), task.getAttempt(), e.getMessage());
+                task.getTaskType(), task.getId(), task.getStage(), task.getAttempt(), e.getMessage(), e);
     }
 
     /** RetryAware 布尔形状照抄：未实现口＝默认可重试（静默兜底被禁）；noRetryOn 命中＝不可重试 */
