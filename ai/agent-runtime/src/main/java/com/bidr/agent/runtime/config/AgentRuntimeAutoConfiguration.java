@@ -55,12 +55,12 @@ import org.springframework.context.annotation.Bean;
 public class AgentRuntimeAutoConfiguration {
 
     /**
-     * agent-system 条件：provider 未配或配成 agent-system 时生效（缺省实现）
+     * agent-system 条件（legacy 腿）：显式配置 {@code my.agent.runtime.provider=agent-system} 才生效
      */
     private static final String PROVIDER_AGENT_SYSTEM = "agent-system";
 
     /**
-     * openhands 条件：显式配置 {@code my.agent.runtime.provider=openhands} 才生效
+     * openhands 条件：缺省实现（provider 未配即生效）
      */
     private static final String PROVIDER_OPENHANDS = "openhands";
 
@@ -93,12 +93,12 @@ public class AgentRuntimeAutoConfiguration {
         return new AgentChatSessionService(repository, provider, context, config);
     }
 
-    // ==================== provider: agent-system ====================
+    // ==================== provider: agent-system（legacy 腿，须显式配置） ====================
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",
-            havingValue = PROVIDER_AGENT_SYSTEM, matchIfMissing = true)
+            havingValue = PROVIDER_AGENT_SYSTEM)
     public AgentRuntimeRestClient agentRuntimeRestClient(AgentRuntimeConfigProvider config) {
         return new AgentRuntimeRestClient(config);
     }
@@ -106,7 +106,7 @@ public class AgentRuntimeAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",
-            havingValue = PROVIDER_AGENT_SYSTEM, matchIfMissing = true)
+            havingValue = PROVIDER_AGENT_SYSTEM)
     public AgentRuntimeSseClient agentRuntimeSseClient(AgentRuntimeConfigProvider config) {
         return new AgentRuntimeSseClient(config);
     }
@@ -114,7 +114,7 @@ public class AgentRuntimeAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(AgentRuntimeProvider.class)
     @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",
-            havingValue = PROVIDER_AGENT_SYSTEM, matchIfMissing = true)
+            havingValue = PROVIDER_AGENT_SYSTEM)
     public AgentRuntimeProvider agentSystemRuntimeProvider(AgentRuntimeRestClient rest,
                                                            AgentRuntimeSseClient sseClient,
                                                            AgentRuntimeConfigProvider config) {
@@ -122,18 +122,20 @@ public class AgentRuntimeAutoConfiguration {
         return new AgentSystemProvider(rest, sseClient);
     }
 
-    // ==================== provider: openhands ====================
+    // ==================== provider: openhands（缺省） ====================
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider", havingValue = PROVIDER_OPENHANDS)
+    @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",
+            havingValue = PROVIDER_OPENHANDS, matchIfMissing = true)
     public OpenHandsClient openHandsClient(AgentRuntimeConfigProvider config) {
         return new OpenHandsClient(config);
     }
 
     @Bean
     @ConditionalOnMissingBean(AgentRuntimeProvider.class)
-    @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider", havingValue = PROVIDER_OPENHANDS)
+    @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",
+            havingValue = PROVIDER_OPENHANDS, matchIfMissing = true)
     public AgentRuntimeProvider openHandsRuntimeProvider(AgentRuntimeConfigProvider config,
                                                         AgentRuntimeProperties properties,
                                                         OpenHandsClient client) {

@@ -3,6 +3,9 @@
 外部 Agent Runtime 接入层：把 OpenHands / agent-system 等外部 runtime 接入框架，
 让浏览器获得统一的过程树渲染与会话管理，**不需要知道背后是哪家 runtime**。
 
+🔴 **缺省上游＝`openhands`**（provider 键不写也装配它）；`agent-system` 是 legacy 腿，
+项目须显式配 `provider: agent-system` 才走——正源形态已收敛到自部署 OpenHands。
+
 ## 快速接入（其他项目）
 
 ### 1. 加依赖

@@ -31,21 +31,22 @@ public class AgentRuntimeProperties {
     private boolean enabled = true;
 
     /**
-     * 上游运行时实现：{@code agent-system}（开放协议 + SSE 单轮流）或 {@code openhands}
-     * （agent-server REST + 会话级 WS，事件在 provider 内映射成 §5.7 帧）。
+     * 上游运行时实现：{@code openhands}（缺省正源：agent-server REST + 会话级 WS，事件在
+     * provider 内映射成 §5.7 帧）或 {@code agent-system}（legacy 腿：开放协议 + SSE 单轮流）。
      * <p>
      * ⚠️ **切换需重启**，不做热切：两家的会话/轮次 id 语义与历史形状不同，运行中混切会让
      * 已登记会话的历史读错路。故本项**只在应用配置**，不进系统参数管理页（避免被误当可热改参数）。
      */
-    private String provider = "agent-system";
+    private String provider = "openhands";
 
     /**
-     * 平台开放面地址（如 http://127.0.0.1:8100）；留空=未接线
+     * 平台开放面地址（如 http://127.0.0.1:13100）；留空=未接线
      */
     private String baseUrl = "";
 
     /**
-     * 平台开放面密钥（sk-rt- 开头）；占位符或留空=未填写，生产经系统参数管理页下发
+     * 平台开放面密钥：缺省 openhands＝会话密钥（X-Session-API-Key，只准入不认身份）；
+     * agent-system 为 sk-rt- 开头。占位符或留空=未填写，生产经系统参数管理页下发
      */
     private String apiKey = "";
 

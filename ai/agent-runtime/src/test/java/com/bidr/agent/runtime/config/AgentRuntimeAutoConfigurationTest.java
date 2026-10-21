@@ -94,31 +94,30 @@ class AgentRuntimeAutoConfigurationTest {
     }
 
     @Test
-    @DisplayName("缺省上游 = agent-system（含其 REST/SSE 客户端）")
-    void defaultsToAgentSystemProvider() {
+    @DisplayName("缺省上游 = openhands（含其客户端，不装配 legacy 腿）")
+    void defaultsToOpenHandsProvider() {
         runner.run(context -> {
             assertThat(context).hasSingleBean(AgentRuntimeProvider.class);
-            assertThat(context.getBean(AgentRuntimeProvider.class))
-                    .isInstanceOf(AgentSystemProvider.class);
-            assertThat(context).hasSingleBean(AgentRuntimeRestClient.class);
-            assertThat(context).hasSingleBean(AgentRuntimeSseClient.class);
-            assertThat(context).doesNotHaveBean(OpenHandsClient.class);
+            AgentRuntimeProvider provider = context.getBean(AgentRuntimeProvider.class);
+            assertThat(provider).isInstanceOf(OpenHandsProvider.class);
+            assertThat(provider.name()).isEqualTo("openhands");
+            assertThat(context).hasSingleBean(OpenHandsClient.class);
+            assertThat(context).doesNotHaveBean(AgentRuntimeRestClient.class);
+            assertThat(context).doesNotHaveBean(AgentRuntimeSseClient.class);
         });
     }
 
     @Test
-    @DisplayName("provider=openhands：换实现且不再装配 agent-system 的客户端")
-    void switchesToOpenHandsProvider() {
-        runner.withPropertyValues("my.agent.runtime.provider=openhands")
+    @DisplayName("显式 provider=agent-system：换回 legacy 腿且不再装配 openhands 客户端")
+    void switchesToAgentSystemProvider() {
+        runner.withPropertyValues("my.agent.runtime.provider=agent-system")
                 .run(context -> {
                     assertThat(context).hasSingleBean(AgentRuntimeProvider.class);
-                    AgentRuntimeProvider provider = context.getBean(AgentRuntimeProvider.class);
-                    assertThat(provider).isInstanceOf(OpenHandsProvider.class);
-                    assertThat(provider.name()).isEqualTo("openhands");
-                    assertThat(provider.supportsPresignedUpload()).isFalse();
-                    assertThat(context).hasSingleBean(OpenHandsClient.class);
-                    assertThat(context).doesNotHaveBean(AgentRuntimeRestClient.class);
-                    assertThat(context).doesNotHaveBean(AgentRuntimeSseClient.class);
+                    assertThat(context.getBean(AgentRuntimeProvider.class))
+                            .isInstanceOf(AgentSystemProvider.class);
+                    assertThat(context).hasSingleBean(AgentRuntimeRestClient.class);
+                    assertThat(context).hasSingleBean(AgentRuntimeSseClient.class);
+                    assertThat(context).doesNotHaveBean(OpenHandsClient.class);
                 });
     }
 }

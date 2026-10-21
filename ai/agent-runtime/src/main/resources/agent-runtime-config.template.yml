@@ -22,13 +22,18 @@ my:
     runtime:
       # 总开关：必须显式 true 才装配本模块（缺键＝不装配，/web/agent/rt/** 端点不出）。[不装配]
       enabled: true
-      # 上游实现选型：agent-system | openhands（切换需重启，只在应用配置、不进系统参数页）。[agent-system]
-      provider: agent-system
-      # 平台开放面地址，如 http://10.3.5.103:8100（留空＝未接线，调用报"地址或密钥"指引）。[空]
+      # 上游实现选型：openhands（缺省正源，键不写也走它）| agent-system（legacy 腿＝自研 py 平台，须显式配置才生效）。
+      # 切换需重启（两家会话/轮次 id 与历史形状不同），且刻意不进系统参数页。缺省值即下面这行，可整行省略。[openhands]
+      provider: openhands
+      # 平台开放面地址：openhands＝agent-server 地址（如 http://127.0.0.1:13100）；
+      # provider=agent-system 时换成其网关（如 http://10.3.5.103:8100）。
+      # 留空＝未接线，调用报"地址或密钥"指引。[空]
       base-url: ""
-      # 平台开放面密钥（agent-system 为 sk-rt- 开头；openhands 为会话密钥）。🔴 真值走 .env/yml，不入库不入日志。[空]
+      # 平台开放面密钥：openhands＝会话密钥（上游容器 OH_SESSION_API_KEYS_0，只准入、不认业务身份）；
+      # provider=agent-system 时为 sk-rt- 开头的平台密钥。
+      # 🔴 真值走 sys_config 库值 AGENT_RUNTIME_API_KEY（库值优先），yml 只写 ${KEY:} 占位，不入库不入日志。[空]
       api-key: ""
-      # 开放面接口前缀。[/open/v1]
+      # 开放面接口前缀：仅 provider=agent-system 用到；openhands 走自己的 agent-server REST 面、忽略本键。[/open/v1]
       api-prefix: /open/v1
       # 建连超时毫秒。[5000]
       connect-timeout-ms: 5000
