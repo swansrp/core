@@ -35,5 +35,12 @@ public class SysConfigSchema extends BaseMybatisSchema<SysConfig> {
         // 手工插入/无枚举来源的参数保持空串，前端归入"其他"
         setUpgradeDDL(2, "ALTER TABLE `sys_config` "
                 + "ADD COLUMN `config_group` varchar(100) DEFAULT '' COMMENT '参数分组' AFTER `config_value`;");
+
+        // v3：remark 放宽为 text——管理页写长备注撞 varchar(500) 截断
+        // （SysConfigDao.update-Inline：UPDATE sys_config SET remark=? WHERE config_key=? ⇒
+        // MysqlDataTruncation）。与 v1 同款：MODIFY 幂等可重跑；TEXT 不能带 DEFAULT，
+        // 原 DEFAULT NULL 本就是可空语义，一并去掉
+        setUpgradeDDL(3, "ALTER TABLE `sys_config` "
+                + "MODIFY COLUMN `remark` text COMMENT '备注';");
     }
 }
