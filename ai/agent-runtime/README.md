@@ -17,17 +17,26 @@
 
 ### 2. 配置（application.yml）
 
+全部键面与缺省值见 **`src/main/resources/agent-runtime-config.template.yml`**（整块复制进项目 yml 按需填空；
+`AgentRuntimeConfigTemplateCoverageTest` 机器对账：模板叶子键 ⇔ `AgentRuntimeProperties` 反射展开键必须完全相等）。
+
 ```yaml
 my:
   agent:
     runtime:
-      enabled: true                # 🔴 框架模块默认不装配，必须显式开启
-      provider: openhands          # openhands | agent-system
+      enabled: true                # 🔴 框架模块默认不装配，必须显式开启（键缺席＝整模块不装配、/web/agent/rt/** 不出）
+      provider: openhands          # openhands | agent-system（🔴 切换需重启，故不进系统参数页）
       base-url: http://127.0.0.1:13100
       api-key: <OH_SESSION_API_KEY>
 ```
 
-阈值以系统参数管理页（`AGENT_RUNTIME_*`）为准，此处仅为未配置时的回落默认。
+七把阈值（地址/密钥/前缀/两超时/心跳/线程数）以系统参数管理页（`AGENT_RUNTIME_*`）为准，
+此处仅为未配置时的回落默认——库值优先、留空回落 yml、每 getter 实时算（改完不重启）。
+`proxy.*` 三把刻意只在 yml（出网形态属部署档）。
+
+🔴 **模型不在这张表里**：runtime 是外部服务，跑哪个模型由**它自己那侧**的 env 决定
+（`LLM_MODEL` / `LLM_BASE_URL` / `LLM_API_KEY`，见 [doc/openhands-部署与对接.md](doc/openhands-部署与对接.md) §一），
+与 core 的 `llm.*` / `VISION_*` 无关；本模块的 `api-key` 是**会话密钥**，不是模型密钥。
 
 ### 3. 前端
 

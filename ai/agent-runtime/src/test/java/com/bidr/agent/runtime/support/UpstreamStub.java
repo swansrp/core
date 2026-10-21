@@ -33,6 +33,7 @@ public final class UpstreamStub implements Closeable {
     private final Map<String, JsonRoute> jsonRoutes = new ConcurrentHashMap<>();
     private final Map<String, List<String>> sseRoutes = new ConcurrentHashMap<>();
     private final AtomicInteger activeStreams = new AtomicInteger();
+    private final AtomicInteger servedStreams = new AtomicInteger();
 
     private static final class JsonRoute {
         private final String body;
@@ -91,6 +92,14 @@ public final class UpstreamStub implements Closeable {
     }
 
     /**
+     * 累计服务过的 SSE 流数（只增不减）：一帧一帧写完就收流的短响应，在途数可能在
+     * {@link #await} 的 20ms 轮询间隙里已经归零，"开流没有"要问这个计数器
+     */
+    public int servedStreams() {
+        return servedStreams.get();
+    }
+
+    /**
      * 等待条件成立（上限 timeoutMs），用于断言异步行为
      */
     public boolean await(java.util.function.BooleanSupplier condition, long timeoutMs) {
@@ -141,6 +150,7 @@ public final class UpstreamStub implements Closeable {
         exchange.getResponseHeaders().add("Content-Type", "text/event-stream; charset=utf-8");
         exchange.sendResponseHeaders(200, 0);
         activeStreams.incrementAndGet();
+        servedStreams.incrementAndGet();
         try (OutputStream out = exchange.getResponseBody()) {
             for (String frame : frames) {
                 out.write((": ping\n\n").getBytes(StandardCharsets.UTF_8));

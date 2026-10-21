@@ -1,0 +1,56 @@
+# core/ai/agent-runtime 配置模板（外部 Agent Runtime 接入层）。
+#   键面正源＝AgentRuntimeProperties（前缀 my.agent.runtime）；机器对账腿＝
+#   AgentRuntimeConfigTemplateCoverageTest（模板叶子键集合与配置类反射展开集合必须**完全相等**：
+#   漏写一把＝现场照模板填完仍缺配置，多写一把＝模板承诺了代码不读的键）。
+#
+# 🔴 取值顺序＝「系统参数（sys_config）优先 → 本配置回落」，统一经 AgentRuntimeConfigProvider 读，
+#   每 getter 实时计算 ⇒ 下面七把有库内对应键的项，改系统参数页**不用重启**：
+#     AGENT_RUNTIME_BASE_URL / _API_KEY / _API_PREFIX / _CONNECT_TIMEOUT_MS
+#     / _IDLE_TIMEOUT_MS / _HEARTBEAT_SECONDS / _RELAY_THREADS
+#   只有两把键**不进** sys_config（刻意）：provider（切换会让已登记会话的历史读错路，须重启）、
+#   proxy.*（出网形态属部署档，且避免代理主机在管理页露面）。
+#
+# 🔴 装配闸：enabled 必须显式写 true——外层 @ConditionalOnProperty 不带 matchIfMissing，
+#   键缺席＝整模块不装配（Bean 条件挂在方法上，防 relay/controller 绕过总开关）。
+#
+# 🔴 模型与它的代理不在本段：runtime 是外部服务（OpenHands / agent-system），
+#   模型由**它自己那侧**的 env 决定（LLM_MODEL / LLM_BASE_URL / LLM_API_KEY，
+#   正源见 doc/openhands-部署与对接.md），与 core 的 llm.*、VISION_* 无关；
+#   本模块的 api-key 是**会话密钥**（OpenHands 的 OH_SESSION_API_KEYS_0），不是模型密钥。
+my:
+  agent:
+    runtime:
+      # 总开关：必须显式 true 才装配本模块（缺键＝不装配，/web/agent/rt/** 端点不出）。[不装配]
+      enabled: true
+      # 上游实现选型：agent-system | openhands（切换需重启，只在应用配置、不进系统参数页）。[agent-system]
+      provider: agent-system
+      # 平台开放面地址，如 http://10.3.5.103:8100（留空＝未接线，调用报"地址或密钥"指引）。[空]
+      base-url: ""
+      # 平台开放面密钥（agent-system 为 sk-rt- 开头；openhands 为会话密钥）。🔴 真值走 .env/yml，不入库不入日志。[空]
+      api-key: ""
+      # 开放面接口前缀。[/open/v1]
+      api-prefix: /open/v1
+      # 建连超时毫秒。[5000]
+      connect-timeout-ms: 5000
+      # 上游单轮流多久无数据视为断流（平台侧 15 秒心跳，勿低于 60000）。[120000]
+      idle-timeout-ms: 120000
+      # 浏览器侧注释心跳周期秒（防反代空闲断连）。[15]
+      heartbeat-seconds: 15
+      # SSE 中转泵线程池上限：每活跃轮次占 1 线程＋1 条上游连接，并发轮次多时调大。[32]
+      relay-threads: 32
+      # ---- 以下三把仅 provider=openhands 时生效 ----
+      # 会话工作区根（上游容器内绝对路径，一会话一子目录；附件代收与产物回读都落这里）。[/workspace]
+      workspace-root: /workspace
+      # 建会话引用的 agent profile 名（其 llm_profile_ref 须在上游存在，否则用上游激活档案）。[default]
+      agent-profile: default
+      # 单轮最多多少步工具调用（防跑飞，也直接决定单轮成本上限）。[30]
+      max-iterations: 30
+      # core→runtime 出网代理（与 llm.proxy.*、spring.elasticsearch.proxy.* 同口径）；
+      # 只影响 REST 与 SSE 两条出网腿，false＝直连零行为变化。
+      proxy:
+        # 是否启用代理。[false]
+        enable: false
+        # 代理主机（enable=true 时必填）。[空]
+        host: ""
+        # 代理端口。[0]
+        port: 0

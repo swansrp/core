@@ -129,7 +129,7 @@ class AgentStreamRelayTest {
         stub.onSse("/open/v1/sessions/" + SID + "/messages:stream", frames);
 
         SseEmitter emitter = relay.attach(provider.openTurn(turnCmd(null)));
-        assertTrue(stub.await(() -> stub.activeStreams() > 0, 3000), "上游流未建立");
+        assertTrue(stub.await(() -> stub.servedStreams() > 0, 3000), "上游流未建立");
 
         // 模拟浏览器断开：SseEmitter 完成 → relay 的 onCompletion 收上游
         emitter.complete();
