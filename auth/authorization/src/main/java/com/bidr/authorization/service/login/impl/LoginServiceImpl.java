@@ -32,6 +32,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -287,22 +288,41 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * 自助注册三态闸，取值三级链（2026-10-21 起）：① sys_config 库值（{@link AccountParam#ACCOUNT_REGISTER_MODE}，
+     * 生效的注册模式（open/tenant/closed）：注册闸与前端登录页共用这一个读取点。
+     */
+    @Override
+    public String getRegisterMode() {
+        return resolveRegisterMode();
+    }
+
+    /**
+     * 注册模式三级链（2026-10-21 起）：① sys_config 库值（{@link AccountParam#ACCOUNT_REGISTER_MODE}，
      * 种子已改留空＝未表态，存量项目在参数页改过的仍生效）→ ② yml {@code my.auth.register-mode}
      * （部署定型键：新项目 setup 向导在此写定，上线后要切伴随发布/公告走 yml+重启，不是日常热调参）
      * → ③ 仍空＝open（共享兼容：参数写错不得把存量开放注册项目突然锁死）。
+     * 🔴 库值必须走不抛断言的 getCache 读取：getParamValueAvail 在库值为空时抛 ServiceException，
+     * 会让 yml 兜底腿永远到不了、新项目首次启动就拒绝注册。
+     * 🔴 读取点只允许本方法一处——注册闸与前端形态按两种模式走＝同一注册请求两种命运。
+     */
+    String resolveRegisterMode() {
+        SysConfig row = frameCacheService.getCache(AccountParam.ACCOUNT_REGISTER_MODE.name());
+        String configured = row == null ? null : row.getConfigValue();
+        // 空白也按"未表态"处理：FuncUtil.isEmpty 只判 null/长度 0，空白串会跳过 yml 腿
+        if (configured == null || configured.trim().isEmpty()) {
+            configured = registerModeYml;
+        }
+        return normalizeRegisterMode(configured);
+    }
+
+    /**
+     * 自助注册三态闸：模式取自 {@link #resolveRegisterMode()}。
      * closed 拒绝一切自助注册；tenant 模式码必填且须命中有效租户（getByCode 只回 valid='1' 行）；
      * open 模式码选填、给了同样校验并挂（/register/CODE 链接在 open 态同样可用）。返回 null＝注册为全局账号不挂租户。
      * 🔴 闸在服务端：前端隐藏入口只是形态，直打 API 缺码/错码同样在此被拒。
-     * 🔴 读取点只允许本方法一处——同一进程两条腿按两种模式走＝同一注册请求两种命运。
      * 包可见＝离线单测直断（LoginRegisterModeTest 的 mock 腿），不构成对外入口。
      */
     AcTenant assertRegisterAllowed(String tenantCode) {
-        String configured = frameCacheService.getParamValueAvail(AccountParam.ACCOUNT_REGISTER_MODE.name());
-        if (FuncUtil.isEmpty(configured)) {
-            configured = registerModeYml;
-        }
-        String normalized = normalizeRegisterMode(configured);
+        String normalized = resolveRegisterMode();
         if (REGISTER_MODE_CLOSED.equals(normalized)) {
             throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "自助注册已关闭，账号请联系管理员创建");
         }

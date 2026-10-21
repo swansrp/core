@@ -78,6 +78,14 @@ public interface LoginService {
     LoginRes refreshLogin(String refreshToken);
 
     /**
+     * 当前生效的自助注册模式（open/tenant/closed）：库值 → yml my.auth.register-mode → open，
+     * 与注册闸共用同一读取点；登录页据此决定注册入口形态。
+     *
+     * @return 归一后的注册模式
+     */
+    String getRegisterMode();
+
+    /**
      * 用户名密码注册.
      *
      * @param loginId  用户名
