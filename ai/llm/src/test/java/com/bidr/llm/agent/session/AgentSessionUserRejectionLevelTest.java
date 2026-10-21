@@ -116,8 +116,10 @@ public class AgentSessionUserRejectionLevelTest {
         save(AgentSessionState.RUNNING, Collections.singletonList(question(1, AgentQuestion.SKIPPED)),
                 Collections.singletonList(confirmation(7, AgentConfirmation.PENDING)));
         assertWarnLeg("问题不存在", () -> service().answer(LIVE, 999, "答", false));
-        // 同一张提问卡双击/两个页签各答一次：第二次落到这条
-        assertWarnLeg("已处理（skipped），无需作答", () -> service().answer(LIVE, 1, "答", false));
+        // B-04（2026-10-22）：同一张提问卡双击/两个页签各答一次/超时后再点跳过——迟到作答＝无效操作
+        // 不是服务异常，降为幂等 WARN 直接返回（问题状态不变、不重复提交）；
+        // 无效性由前端问题卡置灰兜住入口（answerQuestion catch＋事件置灰）
+        service().answer(LIVE, 1, "答", false);
         assertWarnLeg("待确认条目不存在", () -> service().resolveConfirmation(LIVE, 404, false, null));
         assertWarnLeg("改口径须给出新口径说明", () -> service().resolveConfirmation(LIVE, 7, true, "  "));
     }

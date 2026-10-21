@@ -175,7 +175,12 @@ public class AgentSessionService {
             throw new ServiceException("问题不存在: #" + questionId);
         }
         if (!AgentQuestion.WAITING.equals(question.getStatus())) {
-            throw new ServiceException("问题 #" + questionId + " 已处理（" + question.getStatus() + "），无需作答");
+            // B-04（2026-10-22）：迟到作答/跳过＝无效操作不是服务异常——ask_user 5 分钟超时后
+            // 问题已 EXPIRED，用户此刻点「跳过」很正常；抛错会让前端全局红条。降为幂等 WARN
+            // 直接返回（问题状态不变、不重复提交），前端问题卡按事件置灰兜住入口
+            log.warn("问题 #{} 已处理（{}），迟到作答按幂等无效忽略: session={}",
+                    questionId, question.getStatus(), sessionId);
+            return;
         }
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("questionId", questionId);
