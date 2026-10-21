@@ -1,5 +1,6 @@
 package com.bidr.document;
 
+import com.bidr.document.builtin.MineruAsyncTranscribeLeg;
 import com.bidr.document.builtin.MineruTranscribeLeg;
 import com.bidr.document.spi.ArtifactStep;
 import com.bidr.document.spi.ConvertStep;
@@ -128,6 +129,22 @@ public class DocumentAutoConfiguration {
             MineruCloudClient cloud = StringUtils.hasText(properties.getCloud().getToken())
                     ? new MineruCloudClient(properties) : null;
             return new MineruTranscribeLeg(properties, local, cloud);
+        }
+
+        /**
+         * MinerU 异步转录腿（M17 棒 1，供 {@code engine/file-parse} 编排层消费）：
+         * 同一道 {@code mineru.enabled} 闸（关掉＝两客户端腿与异步腿都不装）；不参与
+         * {@code tool.document.transcriber} 同步选型——编排层按 {@code engine.parse.transcriber}
+         * 自行选型，腿在不在由 classpath 决定，配置就绪度留给 {@code hasLeg()} 运行期判定
+         */
+        @Bean
+        @ConditionalOnMissingBean(com.bidr.document.spi.AsyncTranscribeLeg.class)
+        public com.bidr.document.spi.AsyncTranscribeLeg mineruAsyncTranscribeLeg(MineruProperties properties) {
+            MineruLocalClient local = StringUtils.hasText(properties.getLocal().getBaseUrl())
+                    ? new MineruLocalClient(properties) : null;
+            MineruCloudClient cloud = StringUtils.hasText(properties.getCloud().getToken())
+                    ? new MineruCloudClient(properties) : null;
+            return new MineruAsyncTranscribeLeg(local, cloud);
         }
     }
 }

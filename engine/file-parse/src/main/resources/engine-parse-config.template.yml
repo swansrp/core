@@ -1,0 +1,12 @@
+# engine/file-parse 配置模板（M17）。全部键带缺省＝不配即可跑；纯 yml＋Spring Environment，
+# 零 sys_config（R-9）；改值要重启（装配期定，无热切）。
+engine:
+  parse:
+    # 异步转录腿选型键：值＝腿名（tool/document 的 mineru 异步腿出 "mineru"）。
+    # 空＝取 classpath 上第一条在装异步腿（无腿＝内置直读，不抛）；配 builtin/none＝强制内置；
+    # 配了但腿不在 classpath＝WARN「选型指向不存在的腿」后走内置（三态语义）。
+    transcriber: ""
+    # 外部解析引擎等待预算毫秒（缺省 3600 档；与同步门面 tool.document 的 300 档两档分立）
+    mineru-max-wait-ms: 3600000
+    # 直通腿外链图片主机白名单（逗号分隔精确主机名；缺省空＝不拉任何外链，引用原样保留）
+    passthrough-remote-image-hosts: ""

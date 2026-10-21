@@ -34,6 +34,7 @@
         <module>tool/document</module>
         <module>tool/gotenberg</module>
         <module>tool/mineru</module>
+        <module>engine/file-parse</module>
         <module>lowcode/insight</module>
         <module>ai/agent-runtime</module>
         <module>ai/agent-console</module>

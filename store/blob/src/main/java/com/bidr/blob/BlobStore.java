@@ -45,6 +45,9 @@ public class BlobStore {
     /** 预签名有效期：1 小时（框架各实现 READ_EXPIRE_SECONDS 的固定口径） */
     public static final int DEFAULT_EXPIRE_SECONDS = 3600;
 
+    /** 正文里图片引用的稳定占位 scheme（M17 正源化：直通腿等消费方引用本常量，不再各处写字面量） */
+    public static final String IMAGE_PLACEHOLDER_SCHEME = "inkhub-image://";
+
     private static final Map<String, String> CONTENT_TYPES = new HashMap<>();
 
     static {
@@ -155,7 +158,7 @@ public class BlobStore {
      * 真正的可访问 URL 由展示/使用方在读取边缘调用 {@link #presign(String)} 现签。</p>
      */
     public static String imagePlaceholder(String sha256, String imageName) {
-        return "inkhub-image://" + sha256 + "/" + sanitizeName(imageName);
+        return IMAGE_PLACEHOLDER_SCHEME + sha256 + "/" + sanitizeName(imageName);
     }
 
     /**
