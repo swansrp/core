@@ -28,6 +28,9 @@ import java.io.ByteArrayOutputStream;
 @Slf4j
 public class PageImageRenderer {
 
+    /** 单次渲染的看门狗预算（毫秒）：超时放弃页图（返回已渲染数），不让任务线程僵尸化 */
+    private static final long RENDER_WATCHDOG_MS = 120_000L;
+
     /** 渲染分辨率：120 DPI 兼顾可读性与体积（A4 ≈ 992×1403） */
     private static final float DPI = 120f;
 
@@ -41,16 +44,44 @@ public class PageImageRenderer {
     }
 
     /**
-     * 渲染 PDF 逐页页图。
+     * 渲染 PDF 逐页页图（带看门狗）。
+     *
+     * <p>🔴 看门狗（M17 真机 2026-10-22，6.60）：eclipse-temurin:8-jdk 容器不带 fontconfig／
+     * 任何字体，PDFBox 首次 {@code renderImageWithDPI} 触发 AWT 字体环境初始化会<b>无限挂起</b>
+     * （不抛异常＝切面无法计数，任务行 RUNNING 僵尸化）。渲染体放独立守护线程，主线程
+     * {@code RENDER_WATCHDOG_MS} 预算内未完成即放弃（返回已渲染页数），挂起线程自然消亡于
+     * 守护组——页图缺席＝可读 WARN，任务链继续。容器侧根治＝镜像装 fontconfig＋字体。</p>
      *
      * @param sha256 内容哈希（页图 key 的寻址依据，与原件同源）
      * @param pdf    原件字节
-     * @return 实际渲染成功的页数；非 PDF 或解析失败返回 0
+     * @return 实际渲染成功的页数；非 PDF 或解析失败/超时返回 0
      */
     public int render(String sha256, byte[] pdf) {
         if (pdf == null || pdf.length == 0 || !looksLikePdf(pdf)) {
             return 0;
         }
+        java.util.concurrent.Future<Integer> future = java.util.concurrent.Executors
+                .newSingleThreadExecutor(r -> {
+                    Thread t = new Thread(r, "page-image-render-" + sha256.substring(0, 8));
+                    t.setDaemon(true);
+                    return t;
+                }).submit(() -> renderInner(sha256, pdf));
+        try {
+            return future.get(RENDER_WATCHDOG_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            log.warn("页图渲染超看门狗预算（{}s），放弃页图（任务链继续）: sha={} "
+                            + "——容器缺 fontconfig/字体的典型症状，根治＝镜像安装 fontconfig",
+                    RENDER_WATCHDOG_MS / 1000, sha256);
+            future.cancel(true);
+            return 0;
+        } catch (Exception e) {
+            log.warn("页图渲染异常（跳过）: sha={} {}", sha256, e.getMessage());
+            return 0;
+        }
+    }
+
+    /** 渲染体（看门狗线程内执行） */
+    private int renderInner(String sha256, byte[] pdf) throws Exception {
         int rendered = 0;
         try (PDDocument document = PDDocument.load(pdf)) {
             PDFRenderer renderer = new PDFRenderer(document);
@@ -70,11 +101,11 @@ public class PageImageRenderer {
                 }
             }
             log.info("页图渲染完成: sha={} 成功={}/{}", sha256, rendered, pages);
+            return rendered;
         } catch (Exception e) {
             log.warn("PDF 打开失败，跳过页图渲染: sha={} {}", sha256, e.getMessage());
             return 0;
         }
-        return rendered;
     }
 
     private static byte[] toPng(BufferedImage image) throws Exception {
