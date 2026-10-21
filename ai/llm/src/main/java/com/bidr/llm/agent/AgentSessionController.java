@@ -1,5 +1,6 @@
 package com.bidr.llm.agent;
 
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionService;
 import com.bidr.llm.agent.session.AgentSessionState;
@@ -37,6 +38,9 @@ import java.util.Map;
  * 访问人经 {@link OperatorResolver} SPI 注入（llm 不依赖 authorization），无实现回落 anonymous。
  * 装配条件：类路径有 spring-webmvc 且未配置 {@code llm.agent-api.enabled=false}。
  * 鉴权沿用平台 /web/api 拦截链，不加 @IgnoreAuth。
+ * 入参/时序类拒绝一律抛 {@link ServiceException}（框架现成构造＝SYS_ERR_MSG，WARN 级）：走错误信封给前端
+ * 人话文案，同时够不上告警邮件的级别门槛（缺省 ERROR）、也不进全局兜底口刷 ERROR 全文栈——
+ * 客户端点错、双击、页签过期不是服务端故障；真装配故障仍按 IllegalState/IllegalArgument 保留告警。
  *
  * @author Sharp
  * @since 2026/8/20
@@ -110,14 +114,14 @@ public class AgentSessionController {
     @PostMapping("/session/start")
     public AgentSessionState start(@RequestBody SessionStartReq req) {
         if (req == null || !StringUtils.hasText(req.getAgentKey())) {
-            throw new IllegalArgumentException("agentKey 不能为空");
+            throw new ServiceException("agentKey 不能为空");
         }
         DetachPolicy detachPolicy = null;
         if (StringUtils.hasText(req.getDetachPolicy())) {
             try {
                 detachPolicy = DetachPolicy.valueOf(req.getDetachPolicy().trim());
             } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("detachPolicy 取值非法：" + req.getDetachPolicy());
+                throw new ServiceException("detachPolicy 取值非法：" + req.getDetachPolicy());
             }
         }
         return agentSessionService.start(req.getAgentKey().trim(), req.getPayload(), operator(), detachPolicy);
@@ -148,12 +152,12 @@ public class AgentSessionController {
     @PostMapping("/session/{sessionId}/answer")
     public void answer(@PathVariable("sessionId") String sessionId, @RequestBody AnswerReq req) {
         if (req == null || req.getQuestionId() == null) {
-            throw new IllegalArgumentException("questionId 不能为空");
+            throw new ServiceException("questionId 不能为空");
         }
         boolean skipped = Boolean.TRUE.equals(req.getSkipped());
         String answer = req.getAnswer() == null ? "" : req.getAnswer().trim();
         if (!skipped && answer.isEmpty()) {
-            throw new IllegalArgumentException("作答内容与跳过至少其一");
+            throw new ServiceException("作答内容与跳过至少其一");
         }
         agentSessionService.answer(sessionId, req.getQuestionId(), answer, skipped);
     }
@@ -258,10 +262,10 @@ public class AgentSessionController {
     @PostMapping("/rating/save")
     public void saveRating(@RequestBody RatingSaveReq req) {
         if (req == null || !StringUtils.hasText(req.getSkillCode())) {
-            throw new IllegalArgumentException("skillCode 不能为空");
+            throw new ServiceException("skillCode 不能为空");
         }
         if (!StringUtils.hasText(req.getRatingId())) {
-            throw new IllegalArgumentException("ratingId 不能为空");
+            throw new ServiceException("ratingId 不能为空");
         }
         String skillCode = req.getSkillCode().trim();
         String ratingId = req.getRatingId().trim();
@@ -276,7 +280,7 @@ public class AgentSessionController {
             return;
         }
         if (!"like".equals(rating) && !"dislike".equals(rating)) {
-            throw new IllegalArgumentException("评价取值非法：" + rating);
+            throw new ServiceException("评价取值非法：" + rating);
         }
         SkillRatingRecord record = listener == null ? null : listener.beforeRate(skillCode, ratingId, rating, operator);
         if (record == null) {
@@ -331,7 +335,7 @@ public class AgentSessionController {
                         extEquals.trim(), new TypeReference<Map<String, String>>() {
                         }));
             } catch (Exception e) {
-                throw new IllegalArgumentException("extEquals 非法 JSON：" + extEquals);
+                throw new ServiceException("extEquals 非法 JSON：" + extEquals);
             }
         }
         return skillRatingService.list(skillCode.trim(), filter);
@@ -431,7 +435,7 @@ public class AgentSessionController {
         requireText(traceId, "轨迹标识");
         FlowTrace.TraceRecord record = flowTraceRecorder.getTrace(traceId.trim());
         if (record == null) {
-            throw new IllegalArgumentException("轨迹不存在或已过期: " + traceId);
+            throw new ServiceException("轨迹不存在或已过期: " + traceId);
         }
         return record;
     }
@@ -463,7 +467,7 @@ public class AgentSessionController {
 
     private static void requireText(String text, String name) {
         if (!StringUtils.hasText(text)) {
-            throw new IllegalArgumentException(name + "不能为空");
+            throw new ServiceException(name + "不能为空");
         }
     }
 

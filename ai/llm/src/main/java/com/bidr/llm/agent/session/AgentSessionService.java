@@ -1,5 +1,6 @@
 package com.bidr.llm.agent.session;
 
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.AutonomousAgentDefinition;
 import com.bidr.llm.agent.DetachPolicy;
 import com.bidr.llm.agent.ToolAgentRunner;
@@ -130,7 +131,7 @@ public class AgentSessionService {
     public void pause(String sessionId, String note) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
-            throw new IllegalStateException("会话已结束（" + state.getStatus() + "），无法暂停");
+            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法暂停");
         }
         store.pause(sessionId, note);
         store.appendEvent(sessionId, AgentEvent.PAUSED,
@@ -143,7 +144,7 @@ public class AgentSessionService {
     public void resume(String sessionId, String guidance) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
-            throw new IllegalStateException("会话已结束（" + state.getStatus() + "），无法恢复");
+            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法恢复");
         }
         if (guidance == null || guidance.trim().isEmpty()) {
             guidance = "用户未补充新指导，按暂停前的既有计划与进度继续";
@@ -159,7 +160,7 @@ public class AgentSessionService {
     public void answer(String sessionId, int questionId, String answer, boolean skipped) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
-            throw new IllegalStateException("会话已结束（" + state.getStatus() + "），无法作答");
+            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法作答");
         }
         AgentQuestion question = null;
         if (state.getQuestions() != null) {
@@ -171,10 +172,10 @@ public class AgentSessionService {
             }
         }
         if (question == null) {
-            throw new IllegalArgumentException("问题不存在: #" + questionId);
+            throw new ServiceException("问题不存在: #" + questionId);
         }
         if (!AgentQuestion.WAITING.equals(question.getStatus())) {
-            throw new IllegalStateException("问题 #" + questionId + " 已处理（" + question.getStatus() + "），无需作答");
+            throw new ServiceException("问题 #" + questionId + " 已处理（" + question.getStatus() + "），无需作答");
         }
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("questionId", questionId);
@@ -202,11 +203,11 @@ public class AgentSessionService {
             }
         }
         if (item == null) {
-            throw new IllegalArgumentException("待确认条目不存在: #" + confirmationId);
+            throw new ServiceException("待确认条目不存在: #" + confirmationId);
         }
         String trimmed = note == null ? "" : note.trim();
         if (revised && trimmed.isEmpty()) {
-            throw new IllegalArgumentException("改口径须给出新口径说明");
+            throw new ServiceException("改口径须给出新口径说明");
         }
         item.setStatus(revised ? AgentConfirmation.REVISED : AgentConfirmation.CONFIRMED);
         item.setResolvedAt(System.currentTimeMillis());
@@ -514,7 +515,10 @@ public class AgentSessionService {
     private AgentSessionState requireState(String sessionId) {
         AgentSessionState state = store.getState(sessionId);
         if (state == null) {
-            throw new IllegalArgumentException("会话不存在或已过期: " + sessionId);
+            // ServiceException(SYS_ERR_MSG, WARN 级)＝只出人话错误信封，不触发全局异常邮件告警、
+            // 不刷 ERROR 全文栈——会话快照过期后前端的 status/events 轮询与评价动作是正常现象，不是服务端故障。
+            // 本类其余"用户动作时序/入参"类拒绝同理（真故障仍留 IllegalState/IllegalArgument 进告警射程）
+            throw new ServiceException("会话不存在或已过期: " + sessionId);
         }
         return state;
     }

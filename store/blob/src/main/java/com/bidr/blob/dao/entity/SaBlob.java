@@ -20,8 +20,8 @@ import java.util.Date;
 @ApiModel(description = "内容块（跨空间去重，不带空间维度）")
 @Data
 @AccountContextFill
-@TableName(value = "inkhub.kb_blob")
-public class KbBlob {
+@TableName(value = "sa_blob")
+public class SaBlob {
 
     @TableId(value = "id", type = IdType.AUTO)
     @ApiModelProperty(value = "id")

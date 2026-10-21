@@ -56,6 +56,14 @@ public class OssServiceSelector {
     }
 
     /**
+     * 当前生效的选型原始值（0=Local/1=Minio/2=Ali/3=Volc），与 {@link #select()} 同一条取值链、每次现读。
+     * 消费方＝core/store/blob 的 {@code BlobStore#currentStorageType}（sa_blob.storage_type 快照列）。
+     */
+    public String currentType() {
+        return resolveType();
+    }
+
+    /**
      * 解析出生效的选型值：库值优先（运维在参数页表过态就以库为准），配置文件兜底。
      * 包内可见，便于单测直接判这条链而不必先装配四家实现。
      */

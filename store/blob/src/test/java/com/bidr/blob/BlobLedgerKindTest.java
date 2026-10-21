@@ -1,7 +1,7 @@
 package com.bidr.blob;
 
-import com.bidr.blob.dao.entity.KbBlob;
-import com.bidr.blob.dao.repository.KbBlobService;
+import com.bidr.blob.dao.entity.SaBlob;
+import com.bidr.blob.dao.repository.SaBlobService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 
@@ -30,7 +30,7 @@ class BlobLedgerKindTest {
 
     private static final Long BLOB_ID = 100L;
 
-    private final KbBlobService blobService = mock(KbBlobService.class);
+    private final SaBlobService blobService = mock(SaBlobService.class);
 
     private final BlobStore storage = mock(BlobStore.class);
 
@@ -47,8 +47,8 @@ class BlobLedgerKindTest {
         return new BlobLedger(blobService, storage, sourceProvider);
     }
 
-    private KbBlob blobOfKind(String kind) {
-        KbBlob blob = new KbBlob();
+    private SaBlob blobOfKind(String kind) {
+        SaBlob blob = new SaBlob();
         blob.setId(BLOB_ID);
         blob.setSha256("abc123");
         blob.setStorageKey("raw/abc123.pdf");
@@ -102,7 +102,7 @@ class BlobLedgerKindTest {
         ledgerWithSource().releaseBlob(BLOB_ID);
         verify(storage, never()).remove(anyString());
         verify(blobService, never()).removeById(anyLong());
-        verify(blobService).updateById(any(KbBlob.class));
+        verify(blobService).updateById(any(SaBlob.class));
     }
 
     @Test

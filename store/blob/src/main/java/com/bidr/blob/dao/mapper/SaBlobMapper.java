@@ -1,6 +1,6 @@
 package com.bidr.blob.dao.mapper;
 
-import com.bidr.blob.dao.entity.KbBlob;
+import com.bidr.blob.dao.entity.SaBlob;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 
 /**
@@ -8,5 +8,5 @@ import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
  *
  * @author sharp
  */
-public interface KbBlobMapper extends MyBaseMapper<KbBlob> {
+public interface SaBlobMapper extends MyBaseMapper<SaBlob> {
 }

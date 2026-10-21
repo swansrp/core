@@ -201,7 +201,7 @@ public class BlobStore {
     }
 
     /**
-     * 当前存储后端快照（选型时点值，落 {@code kb_blob.storage_type} 用）：
+     * 当前存储后端快照（选型时点值，落 {@code sa_blob.storage_type} 用）：
      * 枚举名 LOCAL/MINIO/ALI/VOLCANO，与 {@link OssServiceSelector} 同一条取值链（每次现读）。
      */
     public String currentStorageType() {

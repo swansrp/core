@@ -1,7 +1,7 @@
 package com.bidr.blob;
 
-import com.bidr.blob.dao.entity.KbBlob;
-import com.bidr.blob.dao.repository.KbBlobService;
+import com.bidr.blob.dao.entity.SaBlob;
+import com.bidr.blob.dao.repository.SaBlobService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -9,7 +9,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 /**
- * 内容块台账（kb_blob）写入的公共件——M4 Step3 从上传链路抽出，上传/人写页/渲染共用；
+ * 内容块台账（sa_blob）写入的公共件——M4 Step3 从上传链路抽出，上传/人写页/渲染共用；
  * M16 棒 1 自 inkhub-file 的 BlobLedgerService 下沉 core/store/blob。
  *
  * <p><b>口径</b>：对象按 sha256 内容寻址（先写对象再落行，对象失败整笔失败，不留
@@ -46,23 +46,23 @@ public class BlobLedger {
     /** 内容种类（D7 甲口径）：人贴裸图——不上账的保留值（现网裸图本就无台账行），防误删护栏 */
     public static final String KIND_IMAGE = "image";
 
-    private final KbBlobService blobService;
+    private final SaBlobService blobService;
 
     private final BlobStore storage;
 
     private final ObjectProvider<BlobReferenceSource> referenceSource;
 
     /** 按 sha 查既有内容块（NULL=未登过账） */
-    public KbBlob findBySha(String sha256) {
+    public SaBlob findBySha(String sha256) {
         return blobService.lambdaQuery()
-                .eq(KbBlob::getSha256, sha256)
-                .eq(KbBlob::getValid, "1")
+                .eq(SaBlob::getSha256, sha256)
+                .eq(SaBlob::getValid, "1")
                 .last("limit 1")
                 .one();
     }
 
     /** 按台账主键读行（回读产物用；可空=行不存在） */
-    public KbBlob findByBlobId(Long blobId) {
+    public SaBlob findByBlobId(Long blobId) {
         return blobId == null ? null : blobService.getById(blobId);
     }
 
@@ -73,7 +73,7 @@ public class BlobLedger {
      * @param ext         扩展名（对象 key 与 content-type 判定用）
      * @param contentType 上传声明的类型（可空，空则按 key 推断）
      */
-    public KbBlob ensureBlob(byte[] bytes, String ext, String contentType) {
+    public SaBlob ensureBlob(byte[] bytes, String ext, String contentType) {
         return ensureBlob(bytes, ext, contentType, KIND_ORIGINAL);
     }
 
@@ -81,9 +81,9 @@ public class BlobLedger {
      * 落内容块（带 kind）：与 {@link #ensureBlob(byte[], String, String)} 同一流程，
      * 新建行多落 kind 与 storage_type 快照两列；既有行命中复用时不动它的 kind（存量行不回填）。
      */
-    public KbBlob ensureBlob(byte[] bytes, String ext, String contentType, String kind) {
+    public SaBlob ensureBlob(byte[] bytes, String ext, String contentType, String kind) {
         String sha256 = Digests.sha256Hex(bytes);
-        KbBlob existing = findBySha(sha256);
+        SaBlob existing = findBySha(sha256);
         if (existing != null) {
             incrementRef(existing);
             return existing;
@@ -96,7 +96,7 @@ public class BlobLedger {
         String storageType = storage.currentStorageType();
         storage.put(key, bytes, mime);
 
-        KbBlob blob = new KbBlob();
+        SaBlob blob = new SaBlob();
         blob.setSha256(sha256);
         blob.setStorageKey(key);
         blob.setFileSize((long) bytes.length);
@@ -108,7 +108,7 @@ public class BlobLedger {
             blobService.save(blob);
             return blob;
         } catch (DuplicateKeyException e) {
-            KbBlob raced = findBySha(sha256);
+            SaBlob raced = findBySha(sha256);
             if (raced == null) {
                 throw e;
             }
@@ -127,9 +127,9 @@ public class BlobLedger {
      * @param content 产物字节
      * @param mime    产物声明的 Content-Type
      */
-    public KbBlob ensureRenderBlob(String format, byte[] content, String mime) {
+    public SaBlob ensureRenderBlob(String format, byte[] content, String mime) {
         String sha256 = Digests.sha256Hex(content);
-        KbBlob existing = findAnyBySha(sha256);
+        SaBlob existing = findAnyBySha(sha256);
         if (existing != null) {
             log.info("渲染产物命中既有 blob（内容幂等）: sha={}", sha256);
             return existing;
@@ -139,7 +139,7 @@ public class BlobLedger {
         String storageType = storage.currentStorageType();
         storage.put(key, content, mime);
 
-        KbBlob blob = new KbBlob();
+        SaBlob blob = new SaBlob();
         blob.setSha256(sha256);
         blob.setStorageKey(key);
         blob.setFileSize((long) content.length);
@@ -153,7 +153,7 @@ public class BlobLedger {
             log.info("渲染产物已落库: format={} sha={} bytes={}", format, sha256, content.length);
             return blob;
         } catch (DuplicateKeyException e) {
-            KbBlob raced = findAnyBySha(sha256);
+            SaBlob raced = findAnyBySha(sha256);
             if (raced != null) {
                 return raced;
             }
@@ -161,7 +161,7 @@ public class BlobLedger {
         }
     }
 
-    private void incrementRef(KbBlob blob) {
+    private void incrementRef(SaBlob blob) {
         blob.setRefCount((blob.getRefCount() == null ? 0 : blob.getRefCount()) + 1);
         blobService.updateById(blob);
         log.info("内容块复用，引用计数 +1: blob={} refCount={}", blob.getId(), blob.getRefCount());
@@ -183,7 +183,7 @@ public class BlobLedger {
         if (blobId == null) {
             return;
         }
-        KbBlob blob = blobService.getById(blobId);
+        SaBlob blob = blobService.getById(blobId);
         if (blob == null) {
             return;
         }
@@ -208,7 +208,7 @@ public class BlobLedger {
             return;
         }
         if (blob.getRefCount() == null || blob.getRefCount() != remaining) {
-            KbBlob patch = new KbBlob();
+            SaBlob patch = new SaBlob();
             patch.setId(blobId);
             patch.setRefCount((int) remaining);
             blobService.updateById(patch);
@@ -229,9 +229,9 @@ public class BlobLedger {
     }
 
     /** 渲染侧幂等查找：只按 sha 取行、不滤 valid（复刻旧 DocumentRenderService.findBlob 的形状） */
-    private KbBlob findAnyBySha(String sha256) {
+    private SaBlob findAnyBySha(String sha256) {
         return blobService.lambdaQuery()
-                .eq(KbBlob::getSha256, sha256)
+                .eq(SaBlob::getSha256, sha256)
                 .last("LIMIT 1")
                 .one();
     }

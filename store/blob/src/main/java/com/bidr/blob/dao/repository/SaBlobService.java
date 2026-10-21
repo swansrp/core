@@ -1,7 +1,7 @@
 package com.bidr.blob.dao.repository;
 
-import com.bidr.blob.dao.entity.KbBlob;
-import com.bidr.blob.dao.mapper.KbBlobMapper;
+import com.bidr.blob.dao.entity.SaBlob;
+import com.bidr.blob.dao.mapper.SaBlobMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import org.springframework.stereotype.Service;
 
@@ -11,5 +11,5 @@ import org.springframework.stereotype.Service;
  * @author sharp
  */
 @Service
-public class KbBlobService extends BaseSqlRepo<KbBlobMapper, KbBlob> {
+public class SaBlobService extends BaseSqlRepo<SaBlobMapper, SaBlob> {
 }
