@@ -9,11 +9,14 @@
 #     mineru.local.base-url: ${MINERU_BASE_URL:}     # 与既有 .env 键名对齐
 #     mineru.cloud.token: ${MINERU_CLOUD_TOKEN:}     # 同上
 #   装配键（不在本段、不在对账范围）：tool.document.transcriber: mineru
-#     新口＝core/tool/document 的 TranscribeStep 选型键，老口＝DocumentTranscriber，
-#     两代同一把键，值都是腿名 mineru；键空/包没引＝走内置腿（不装配增强腿）。
-#   门面：引本包（core/tool/mineru）后同步门面（FileMarkdownTool）的 pdf/图片先走 MinerU
-#   （云优先本地兜底、失败回落既有本地路径）；不引包＝零变化。业务自定义腿＝
-#   自己注册 DocumentTranscriber Bean（本装配让位）。
+#     这把键是 core/tool/document 的 TranscribeStep 选型键，值＝腿名 mineru；
+#     键空/点名不存在的腿＝走内置解析（不装配增强腿、不抛）。
+#   🔴 本模块只提供 MinerU 客户端与配置件，自身**不注册任何转录腿**（M16 修复轮 2026-10-21）：
+#     MinerU 腿＝com.bidr.document.builtin.MineruTranscribeLeg，住在 document，依赖方向 document → mineru。
+#   门面：引本包＋把上面装配键点名 mineru 后，document 门面（FileMarkdownService / read_file 工具）
+#   的 pdf/图片先走 MinerU（云优先本地兜底、失败回落内置路径）；不引包＝零变化。
+#   业务自定义腿＝实现 com.bidr.document.spi.TranscribeStep 并注册 Bean（document 侧自动装配让位；
+#   老口 DocumentTranscriber 已撤）。
 # =============================================================================
 mineru:
 

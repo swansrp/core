@@ -1,4 +1,4 @@
-package com.bidr.llm.parse;
+package com.bidr.document;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
  * <p>
  * 形状与现有聊天模型配置一致（baseUrl / apiKey / modelName / timeoutSeconds），
  * 兼容一切 OpenAI 协议的视觉模型（qwen-vl 系列等）。未显式传入时由
- * {@link FileMarkdownService} 按 ModelConfigProvider（数据库 sys_config 优先）解析。
+ * {@link VisionConfigProvider}（默认适配器＝llm 的模型配置机制）解析。
  * </p>
  *
  * @author Sharp

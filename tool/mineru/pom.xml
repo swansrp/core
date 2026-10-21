@@ -27,7 +27,6 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <llm.version>${jarVersion}</llm.version>
             </properties>
         </profile>
         <profile>
@@ -39,19 +38,13 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <llm.version>20261019092008-85</llm.version>
             </properties>
         </profile>
     </profiles>
 
     <dependencies>
-        <!-- 门面 SPI（com.bidr.llm.parse.DocumentTranscriber）契约所在；本模块实现它，
-             llm 不反向依赖 mineru ⇒ 消费方不引本包＝FileMarkdownService 行为零变化 -->
-        <dependency>
-            <groupId>com.bidr</groupId>
-            <artifactId>llm</artifactId>
-            <version>${llm.version}</version>
-        </dependency>
+        <!-- 纯客户端库：不依赖 llm / document（依赖方向是 document → mineru，本模块不回依，无环）。
+             MinerU 作为文档加工增强腿的实现与装配都在 tool/document 侧。 -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
@@ -68,6 +61,14 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <!-- 协议离线单测用 JUnit4（原先经 llm→kernel 传递取得；本模块摘掉 llm 后必须自 declare，
+             否则 test 编译直接找不到 org.junit） -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

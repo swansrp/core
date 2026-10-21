@@ -118,8 +118,9 @@ public class DocumentProcessor {
     }
 
     /**
-     * @param skipEnhancedTranscribe true＝跳过增强转写腿直走内置分派（老口腿在外层已咨询失败后的
-     *                               回落路径——同一条腿别打两遍；convert 槽不受影响）
+     * @param skipEnhancedTranscribe true＝跳过增强转写腿直走内置分派（外层流水线已先咨询过
+     *                               同一引擎的异步腿时的回落档——同一条腿别打两遍；convert 槽不受影响。
+     *                               InkHub 解析流水线 parseBuiltin 腿即此用法）
      */
     public DocumentArtifact process(byte[] content, String filename, VisionEndpoint vision,
             boolean skipEnhancedTranscribe) throws IOException {

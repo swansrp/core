@@ -23,7 +23,8 @@ import java.net.Proxy;
  *   <li>轮询 status 词表＝pending/completed/failed，failed 的原因在 error 字段，
  *       backend 字段作 phase、queued_ahead 供并发闸门。</li>
  * </ul>
- * 供同步门面 {@link MineruTranscriber} 与后台任务链式消费方共用（后者自己管轮询节奏）。
+ * 供后台任务链式消费方（自管轮询节奏）与 {@code tool/document} 的内置增强腿
+ * {@code com.bidr.document.builtin.MineruTranscribeLeg} 共用。
  *
  * @author Sharp
  * @since 2026/10/17

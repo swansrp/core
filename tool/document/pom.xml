@@ -29,6 +29,8 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <llm.version>${jarVersion}</llm.version>
+                <mineru.version>${jarVersion}</mineru.version>
             </properties>
         </profile>
         <profile>
@@ -43,11 +45,28 @@
                 <!-- 新模块首版未发布过 nexus 时间戳件：先按本地/仓内 0.0.1-SNAPSHOT 解析，
                      随批发布后改钉时间戳版（照 mineru 的 llm.version 钉版形状） -->
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <llm.version>0.0.1-SNAPSHOT</llm.version>
+                <mineru.version>0.0.1-SNAPSHOT</mineru.version>
             </properties>
         </profile>
     </profiles>
 
     <dependencies>
+        <!-- 模型配置机制（视觉腿默认适配器接 ModelConfigProvider，见 LlmVisionConfigProvider）：
+             依赖方向＝document → llm，llm 不反向依赖本模块（M16 定案：llm 只当模型层，
+             文件 → Markdown 入口在 document） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>llm</artifactId>
+            <version>${llm.version}</version>
+        </dependency>
+        <!-- MinerU 客户端：本模块内置增强转写腿 MineruTranscribeLeg 的实现件，
+             处理路径自带（依赖方向＝document → mineru，mineru 不反向依赖本模块） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>mineru</artifactId>
+            <version>${mineru.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>

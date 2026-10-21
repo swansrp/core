@@ -23,10 +23,6 @@ com.bidr.llm
 ├── sse
 │   ├── SseStreamingResponseHandler  langchain4j 流式回调 → SseEmitter 桥接器（真 SSE 推流）
 │   └── LlmChatDemoController        三种拿数据方式的内置示例接口（可用 llm.chat-sse.enabled=false 关闭）
-├── parse
-│   ├── FileMarkdownService          文件 → Markdown 统一入口（url/file/路径/InputStream，自动装配）
-│   ├── VisionModelConfig            多模态模型配置 DTO（外部显式传入时使用）
-│   └── converter                    docx/xlsx/pptx/html → Markdown 转换器（POI/Jsoup）
 ├── provider
 │   └── DbAwareModelConfigProvider   sys_config 数据库配置 → yaml → 默认模型的三级回落实现（支持 VISION purpose）
 └── store
@@ -402,80 +398,34 @@ governed.setToolResultOffloadChars(4000);   // 超过 4000 字的工具结果入
 
 **配置热刷新**：与 `RawSseStreamingChatModel` 同口径——每次调用从 `ModelConfigProvider` 取配置，连接参数（baseUrl/model/timeout/apiKey）签名变化时自动重建 HTTP 客户端，无需重启。
 
-### 8. 文件解析为 Markdown（parse）
+### 8. 文件解析为 Markdown（已整体迁出本模块）
 
-把用户上传的各种文件拆成文字喂给 LLM 的统一入口：传入 **url / File / 文件路径 / InputStream** 任意一种，返回 **Markdown** 文本。
+🔴 **M16 修复轮（2026-10-21）定案：本模块＝纯模型层。** 文件 → Markdown 的全部件
+（入口 `FileMarkdownService`、DTO `VisionModelConfig`、内置解析腿 POI/PDFBox/Jsoup/多模态、
+五槽 SPI 门面 `DocumentProcessor`、MinerU 增强腿、`read_file` agent 工具）住在
+**core `tool/document`**（artifactId `document`），正源见 `tool/document/doc/接入说明.md`。
 
-```java
-@Autowired
-private FileMarkdownService fileMarkdownService;
+搬家前后**行为与出参逐字不变**（golden 对照测试随件搬到 document，`FileMarkdownServiceGoldenTest`），
+调用方要改的只有 import：
 
-// 本地路径或 http(s) 地址（自动识别）
-String md = fileMarkdownService.toMarkdown("D:/upload/合同.docx");
-String md2 = fileMarkdownService.toMarkdown("https://oss.example.com/report.pdf");
-
-// File / Path
-String md3 = fileMarkdownService.toMarkdown(file);
-
-// InputStream（必须带文件名，用于识别格式）
-String md4 = fileMarkdownService.toMarkdown(inputStream, "清单.xlsx");
-```
-
-支持的格式与处理方式：
-
-| 类型 | 处理 |
+| 旧（已删） | 新 |
 |---|---|
-| md/txt/csv/json/xml/sql/yml/properties/log 等纯文本 | 直接读取（UTF-8 严格解码，失败回落 GBK） |
-| html/htm | Jsoup 按语义转 Markdown（标题/列表/表格/代码块，剔除 script） |
-| docx | POI XWPF：标题样式 → `#` 级标题，列表 → `-` 项，表格 → Markdown 表格 |
-| xlsx/xls | POI：每 Sheet 一个 Markdown 表格，首行视为表头，单 Sheet 上限 1000 行 |
-| pptx/ppt | POI：每页一个二级标题，文本框与表格按顺序输出 |
-| doc | POI WordExtractor 纯文本提取 |
-| pdf | PDFBox 逐页提取；某页文本过少判定为扫描页 → 渲染 PNG → **多模态模型转录** |
-| png/jpg/jpeg/gif/webp/bmp | 直接走**多模态模型**转录 |
-| 未知扩展名 | 二进制检测（NUL 字节）：文本则按文本读，否则拒绝 |
+| `com.bidr.llm.parse.FileMarkdownService` | `com.bidr.document.FileMarkdownService` |
+| `com.bidr.llm.parse.VisionModelConfig` | `com.bidr.document.VisionModelConfig` |
+| `com.bidr.llm.parse.DocumentTranscriber`（老口） | **已撤**——转录腿一律实现 `com.bidr.document.spi.TranscribeStep`，选型键 `tool.document.transcriber` |
+| `com.bidr.llm.agent.FileMarkdownTool` | `com.bidr.document.agent.FileMarkdownTool` |
 
-**多模态模型配置**（扫描件/图片解析用）三级回落，与现有 LLM 调用机制一致：
+依赖方向是**单向的 document → llm**：document 取本模块的 `ModelConfigProvider`
+（purpose=`VISION`）当多模态端点来源，本模块不引 document、也不引 mineru
+（有 `LlmLayeringGuardTest` 钉着，import 与 pom 两个面都扫）。所以：
 
-1. **调用时显式传入**（最高优先级）：
+- **只要模型层** → 引 `com.bidr:llm` 即可，不会被拖进 POI/PDFBox/MinerU；
+- **要文件解析** → 另引 `com.bidr:document`（自动装配把入口 Bean、视觉适配器、read_file 工具一次装齐）；
+- **多模态配置口径不变**（仍归本模块）：调用时显式传入 `VisionModelConfig` → sys_config 数据库参数
+  （`VISION_BASE_URL` / `VISION_API_KEY` / `VISION_MODEL_NAME` / `VISION_TIMEOUT_SECONDS`，已注册为 `LlmParam`）
+  → `llm.vision.*` yaml（见配置表）；多模态调用的代理同样复用 `llm.proxy.*`。
 
-```java
-VisionModelConfig vision = VisionModelConfig.builder()
-        .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
-        .apiKey("sk-xxx")
-        .modelName("qwen-vl-max")
-        .timeoutSeconds(180)
-        .build();
-String md = fileMarkdownService.toMarkdown(file, vision);
-```
-
-2. **sys_config 数据库参数**（经 `ModelConfigProvider`）：`VISION_BASE_URL` / `VISION_API_KEY` / `VISION_MODEL_NAME` / `VISION_TIMEOUT_SECONDS`，已注册为 `LlmParam`，系统参数页可直接维护；任一项留空则该项继续回落下一级。
-3. **yaml 默认**：`llm.vision.*`（见下表），其中 base-url/api-key/model-name 留空时回落默认模型配置（`llm.*`）。
-
-**外部转录腿前置（可选，2026-10-17）**：classpath 上引了 `core/tool/mineru`（`com.bidr:mineru`）并注册
-`DocumentTranscriber` Bean 后，**pdf/图片在进入上表流程之前先走 MinerU 转写**——云腿令牌配了→云优先
-（mineru.net v4）、失败或没配→本地腿（mineru-api 3.x）、再失败→回落本节既有路径（外部服务挂掉
-不拖垮解析）。不引包＝零配置零变化。业务要接别的转录引擎＝自己实现 `com.bidr.llm.parse.DocumentTranscriber`
-注册 Bean（自动装配让位）。配置面＝`mineru.*`（见该模块的 `mineru-config.template.yml`，
-18 把键有机器对账守卫），接入键不进 sys_config、真值走 `.env`。
-**装配键**＝`tool.document.transcriber: mineru`（新口 `TranscribeStep` 与老口 `DocumentTranscriber`
-同一把键、同一个值；键空或包没引＝不装配增强腿，走内置）。
-**两档等待预算别混**：`mineru.max-wait-seconds` 只服务同步门面/阻塞调用（默认 300，超时回落）；
-InkHub 的 `parse`/`material` 后台流水线走低层客户端自管预算，看平台层键
-`inkhub.parse.mineru-max-wait-ms`，**不要为后台链去抬 `max-wait-seconds`**
-（抬了会把同步调用一起吊住）。
-
-内置约束：单文件上限 100MB；PDF 走多模态的页数上限 50 页（超出部分跳过并注明）；渲染 DPI 150。
-
-**agent 工具形态**：`FileMarkdownTool`（自动装配 Bean，`read_file`）＝本服务的 agent 包装——LLM 持有
-http(s) 地址或服务器本地路径即可调 `read_file` 拿正文，挂进 agent 工具清单即用。长文件**分页续读**：
-入参 `offset`（0 起）＋`maxChars`，未到末尾时末尾注记下一页 offset，续读传那个数——已读段落不重灌
-上下文；续读取同一份解析快照（单条 SoftReference 缓存），分页大件不逐页重解析。默认每段 2 万字
-（对齐 `AGENT_TOOL_RECALL_MAX_CHARS` 口径）；失败回文本不抛（模型可自纠）。业务只认自己句柄
-（fileId 等）的场景＝业务侧写薄壳把句柄解成地址再交给它。能力目录登记＝agent-console 的
-`file-read` 包（`LlmCapabilityPackageConfig`）。
-
-## 框架自带 agent 工具（7 类 12 只，挂进工具清单即用）
+## 框架自带 agent 工具（本模块 6 类 11 只，挂进工具清单即用）
 
 core/llm 的 agent 包自带一组**纯通用工具**（业务零绑定），业务 agent 把实例加进工具清单即可；
 能力目录登记在 agent-console 的 `LlmCapabilityPackageConfig`（`file-read` 等 6 包），
@@ -490,12 +440,17 @@ core/llm 的 agent 包自带一组**纯通用工具**（业务零绑定），业
 | 工具类 | @Tool | 用途 | 会话态 |
 |---|---|---|---|
 | `AgentAskUserTool` | `askUser` | 真歧义交用户决策（阻塞等答/超时自决/停止打断） | 是（传 `AgentSessionContext` 或 `Awaiter`） |
-| `FileMarkdownTool` | `readFile` | 文件地址（http(s)/本地路径）→Markdown 正文，长文件 offset 分页续读；能力面即 `FileMarkdownService`（转录腿挂不挂对模型不可见） | 否（自动装配 Bean） |
 | `NextStepTools` | `suggest_next_steps` | 收口前给 1-3 条可点下一步候选（emit 事件，前端渲染，点哪条发回那句原文） | 是 |
 | `AgentPlanTools` | `submitPlan` / `startPlanItem` / `donePlanItem` | 计划台账：拆待办→开工→勾完（只动会话运行态） | 是 |
 | `AgentToolRecall` | `recallToolResult` | 按 `tool_call_id` 回捞被上下文治理卸载/驱逐的工具结果原文 | 否 |
 | `ExternalRuntimeTools` | `submitExternalTask` / `waitExternalTask` / `queryExternalTask` / `readExternalTaskResult` / `cancelExternalTask` | 沙箱/外部 agent runtime 的派发与终态（有界等待，不在 @Tool 里同步挂分钟级） | 混合 |
 | `RunFlowTools` | `runFlow` | 调一条已编排流程（仅同步链；深度 1 防递归、30s 超时） | 否 |
+
+🔴 `readFile`（read_file）那只**不在本模块**：它包的是文件解析能力，随 M16 修复轮一起搬到
+core `tool/document`（`com.bidr.document.agent.FileMarkdownTool`，分页语义仍复用本模块的 `PagedText`——
+document → llm 单向）。能力目录登记仍在 agent-console 的 `file-read` 包（字面量 `readFile`），
+真名对账腿因族界（ai 不依 tool）拆在两处：llm 侧反射对账 11 只，document 侧
+`FileMarkdownToolTest#工具注册名与登记件对账`钉住那只。
 
 不算数的两档：`FunctionalTool`（lambda→工具的机制件）；insight 的 smartquery 工具是智能问数**域级**
 （在 core 仓但不是通用面）。业务只认自己句柄（fileId 等）的场景＝业务写薄壳解句柄再交给这些工具。

@@ -1,13 +1,8 @@
 package com.bidr.llm.config;
 
-import com.bidr.document.DocumentProcessor;
-import com.bidr.document.VisionConfigProvider;
 import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
-import com.bidr.llm.parse.DocumentTranscriber;
-import com.bidr.llm.parse.FileMarkdownService;
-import com.bidr.llm.parse.LlmVisionConfigProvider;
 import com.bidr.llm.provider.DbAwareModelConfigProvider;
 import com.bidr.llm.provider.ModelConfigProvider;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -25,8 +20,6 @@ import org.springframework.util.StringUtils;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 大模型默认装配（开箱即用，业务可覆盖）。
@@ -46,10 +39,13 @@ import java.util.stream.Collectors;
  * </ul>
  * 默认不做用户隔离（{@code userIdSupplier = () -> null}），因为 core 层不依赖 authorization；
  * 业务如需按用户区分 Key，自行注册 {@link ModelConfigProvider} 或模型 Bean 覆盖即可。
- * 另装配 {@link FileMarkdownService}：文件 → Markdown 解析入口（扫描件/图片走
- * 多模态模型，配置同现有 LLM 机制：调用传入或数据库 sys_config 优先）。
  * 另装配 {@link LiveModelFactory}：流式进度模型（自建 SSE 客户端+同步回落）装配工厂，
  * 长链路业务（问数/资产生成/AI 补全等）经它统一取流式模型，代理/重试口径随 Bean 固化。
+ * <p>
+ * 🔴 <b>本装配类只管模型层</b>（M16 修复轮）：文件 → Markdown 入口、视觉配置适配器与
+ * read_file 工具都在 core {@code tool/document}（见该包 {@code DocumentAutoConfiguration}），
+ * 依赖方向＝document → llm，llm 不回依 document/mineru。多模态端点配置仍由本包的
+ * {@link ModelConfigProvider}（purpose=VISION）供给，document 侧经适配器取用。
  * </p>
  *
  * @author Sharp
@@ -126,58 +122,6 @@ public class LlmDefaultAutoConfiguration {
     @ConditionalOnMissingBean(StreamingChatLanguageModel.class)
     public StreamingChatLanguageModel defaultStreamingChatLanguageModel(ModelConfigProvider provider) {
         return new RefreshableStreamingChatModel(provider, PURPOSE_DEFAULT, buildProxy(), () -> null);
-    }
-
-    /**
-     * 文件解析服务：任意文件（url/File/路径/InputStream）→ Markdown；
-     * 扫描件与图片需多模态模型，配置解析顺序：调用时传入 VisionModelConfig →
-     * {@link ModelConfigProvider}（purpose = VISION，数据库系统参数优先）；
-     * 多模态调用的 HTTP 代理复用 {@link #buildProxy()}（与文本模型同源 {@code llm.proxy.*}），
-     * 无 Provider 的应用也可自行 new FileMarkdownService(null) 后纯靠调用传参使用。
-     * <p>
-     * 🔴 老口转录腿收集改 <b>List 收口</b>（M16 棒 3，M-8 修法）：classpath 上多条
-     * {@link DocumentTranscriber} 不再 {@code getIfAvailable()} 单 bean 任取炸
-     * NoUniqueBeanDefinitionException——按装配序取第一条进构造（行为兼容），装配期选型正源＝
-     * {@code tool.document.transcriber}（各腿 {@code @ConditionalOnProperty} 自 gate，R-3）。
-     * 加工本体委托 tool/document 的 {@link DocumentProcessor}（自动装配缺席时由
-     * FileMarkdownService 自建纯内置档门面，零依赖可用）。
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider,
-            ObjectProvider<DocumentTranscriber> transcribers,
-            ObjectProvider<DocumentProcessor> processor) {
-        List<DocumentTranscriber> legs = transcribers.orderedStream().collect(Collectors.toList());
-        if (legs.size() > 1) {
-            log.warn("检出 {} 条 DocumentTranscriber 老口腿（{}），按装配序取第一条；选型正源＝tool.document.transcriber",
-                    legs.size(), legs.stream().map(leg -> leg.getClass().getSimpleName())
-                            .collect(Collectors.joining(",")));
-        }
-        return new FileMarkdownService(configProvider.getIfAvailable(), buildProxy(),
-                legs.isEmpty() ? null : legs.get(0), processor.getIfAvailable());
-    }
-
-    /**
-     * 视觉配置口适配器（M16 棒 3）：把 llm 的 {@link ModelConfigProvider}
-     * （purpose=VISION，数据库系统参数优先、{@code llm.vision.*} 回落）适配给 tool/document
-     * 内置视觉腿的 {@link VisionConfigProvider}；多模态代理随 {@code llm.proxy.*}
-     * （{@link #buildProxy()} 同源）。业务自定义视觉配置来源时注册自己的
-     * {@link VisionConfigProvider} 覆盖
-     */
-    @Bean
-    @ConditionalOnMissingBean(VisionConfigProvider.class)
-    public VisionConfigProvider llmVisionConfigProvider(ObjectProvider<ModelConfigProvider> configProvider) {
-        return new LlmVisionConfigProvider(configProvider.getIfAvailable(), buildProxy());
-    }
-
-    /**
-     * 通用「读文件」agent 工具（read_file）：包 {@link FileMarkdownService}，挂进 agent 工具清单即用；
-     * 默认 2 万字截断防大文档灌爆上下文，失败回文本不抛（模型可自纠）
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public com.bidr.llm.agent.FileMarkdownTool fileMarkdownTool(FileMarkdownService fileMarkdownService) {
-        return new com.bidr.llm.agent.FileMarkdownTool(fileMarkdownService);
     }
 
     /**

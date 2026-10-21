@@ -1,6 +1,10 @@
-package com.bidr.mineru;
+package com.bidr.document.builtin;
 
-import com.bidr.llm.parse.DocumentTranscriber;
+import com.bidr.document.spi.TranscribeStep;
+import com.bidr.mineru.MineruCloudClient;
+import com.bidr.mineru.MineruLocalClient;
+import com.bidr.mineru.MineruProperties;
+import com.bidr.mineru.MineruTaskStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
@@ -10,24 +14,30 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Title: MineruTranscriber
- * Description: {@link DocumentTranscriber} 的 MinerU 实现（同步门面）。腿选择口径
- * （用户 2026-10-17 定案）：<b>云腿令牌配了→云优先，失败回落本地；没配→只走本地；
- * 两腿都没配→本腿整体不认领</b>（门面回落既有本地解析路径）。
+ * Title: MineruTranscribeLeg
+ * Description: {@link TranscribeStep} 的 <b>MinerU 内置腿</b>（本门面处理路径自带的一条增强转写腿）：
+ * 认领 pdf＋常见图片（MinerU 的强项、也是内置路径最弱的地方——扫描 PDF 逐页渲染交多模态、图片直转
+ * 多模态），office 仍走 {@link com.bidr.document.builtin.BuiltInDispatcher} 的 POI 本地路径（确定性强、
+ * 零外部依赖）。
  * <p>
- * 同步等待预算＝{@code mineru.max-wait-seconds}（默认 300，对齐 pm-hse 判分实测）：
- * 轮询超 deadline 抛异常由门面回落，任务不吊死。终局失败（如公网令牌过期 A0211）立即抛，
- * 不吃满预算。要异步/自管轮询的后台任务链消费方直接用 {@link MineruLocalClient}/
- * {@link MineruCloudClient}，别走本类。
+ * 腿选择口径（2026-10-17 定案）：<b>云腿令牌配了→云优先，失败回落本地腿；没配→只走本地；
+ * 两腿都没配→本腿整体不认领</b>（门面回落内置解析路径）。装配只按 yml 就绪度构造客户端，
+ * 就绪度判定不入装配条件、留给 {@link #isAvailable(String)} 运行期回答。
  * <p>
- * 认领类型＝pdf＋常见图片（这是 MinerU 的强项、也是既有本地路径最弱的地方——扫描 PDF 逐页
- * 渲染交多模态、图片直转多模态）；office 仍走门面的 POI 本地路径（确定性强、零外部依赖）。
+ * 同步等待预算＝{@code mineru.max-wait-seconds}（默认 300）：轮询超 deadline 抛异常由门面回落，
+ * 任务不吊死；终局失败（如公网令牌过期 A0211）立即抛，不吃满预算。后台任务链要异步/自管轮询的，
+ * 直接用 {@link MineruLocalClient}/{@link MineruCloudClient}，别走本腿。
+ * <p>
+ * 契约半边：门面负责回落，本腿<b>不吞错</b>——失败如实抛。
  *
  * @author Sharp
- * @since 2026/10/17
+ * @since 2026-10-21
  */
 @Slf4j
-public class MineruTranscriber implements DocumentTranscriber {
+public class MineruTranscribeLeg implements TranscribeStep {
+
+    /** 腿名＝yml 选型键 {@code tool.document.transcriber} 的取值 */
+    public static final String LEG_NAME = "mineru";
 
     /** 认领的扩展名：pdf ＋ 图片（MinerU 接受的输入面） */
     private static final List<String> SUPPORTED_EXTS = Arrays.asList(
@@ -43,10 +53,16 @@ public class MineruTranscriber implements DocumentTranscriber {
      * 两腿按配置就绪度构造：local.base-url 空＝无本地腿（null）；cloud.token 空＝无云腿（null）。
      * 调用方（自动装配）据此传 null，本类不重复判配置
      */
-    public MineruTranscriber(MineruProperties properties, MineruLocalClient localClient, MineruCloudClient cloudClient) {
+    public MineruTranscribeLeg(MineruProperties properties, MineruLocalClient localClient,
+            MineruCloudClient cloudClient) {
         this.properties = properties;
         this.localClient = localClient;
         this.cloudClient = cloudClient;
+    }
+
+    @Override
+    public String legName() {
+        return LEG_NAME;
     }
 
     @Override
@@ -84,7 +100,8 @@ public class MineruTranscriber implements DocumentTranscriber {
      * 同步等待预算内的轮询：PENDING/RUNNING 继续等，FAILED/超时抛异常（门面回落）。
      * Thread.sleep 被中断＝恢复中断位后按失败抛（不吞中断信号）
      */
-    private String await(String taskId, String leg, String filename, Poller poller, Fetcher fetcher) throws IOException {
+    private String await(String taskId, String leg, String filename, Poller poller, Fetcher fetcher)
+            throws IOException {
         long deadline = System.currentTimeMillis() + properties.getMaxWaitSeconds() * 1000L;
         while (true) {
             MineruTaskStatus status = poller.poll(taskId);

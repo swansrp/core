@@ -1,6 +1,7 @@
-package com.bidr.llm.agent;
+package com.bidr.document.agent;
 
-import com.bidr.llm.parse.FileMarkdownService;
+import com.bidr.document.FileMarkdownService;
+import com.bidr.llm.agent.PagedText;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
@@ -12,21 +13,21 @@ import java.lang.ref.SoftReference;
  * Title: FileMarkdownTool
  * Description: 通用「读文件」agent 工具（框架级，业务零绑定）：LLM 拿到文件地址（http(s) URL
  * 或服务器本地路径）就能调 read_file 拿 Markdown 正文，能力即 {@link FileMarkdownService}
- * 门面的全部格式面（文本直读/POI/PDFBox；classpath 引了转录腿实现如 core/tool/mineru 时
- * pdf/图片先走外部转录，失败回落门面本地路径——挂不挂腿对模型不可见）。
+ * 门面的全部格式面（文本直读/POI/PDFBox/多模态；选型挂上增强转写腿时 pdf/图片先走外部转录，
+ * 失败回落内置路径——挂不挂腿对模型不可见）。
  * <p>
- * 长文件<b>分页续读</b>（2026-10-18 用户拍板"必须做，不然后边读不进来"）：入参带 {@code offset}
+ * 长文件<b>分页续读</b>（2026-10-18 定案"必须做，不然后边读不进来"）：入参带 {@code offset}
  * （0 起字符位置），每次返回一段 {@code maxChars}，未到末尾时末尾注记下一页起始 offset，
  * 模型续读传那个数——已读段落不再重灌上下文（区别于"调大 maxChars 从头重取"）。
  * <p>
  * 续读取<b>同一份解析快照</b>（单条 SoftReference 缓存，GC 可清）：既省逐页重新解析/重新转录
  * 的成本，也保证分页期间各段来自同一版正文（中途重解析可能在文件变更后让 offset 错位）。
- * 工具语义照 {@link AgentAskUserTool}：失败<b>回文本</b>不抛（模型可自纠重试）。
+ * 工具语义照 llm 的 AgentAskUserTool：失败<b>回文本</b>不抛（模型可自纠重试）。
  * 业务侧只认自己句柄（fileId 等）的场景＝自己写薄壳把句柄解成地址/字节，本工具不管。
- * 装配见 {@code LlmDefaultAutoConfiguration#fileMarkdownTool}，挂进 agent 工具清单即用。
+ * 装配见 {@code DocumentAutoConfiguration#fileMarkdownTool}，挂进 agent 工具清单即用。
  *
  * @author Sharp
- * @since 2026/10/18
+ * @since 2026-10-18
  */
 @Slf4j
 public class FileMarkdownTool {

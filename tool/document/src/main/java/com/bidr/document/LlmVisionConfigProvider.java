@@ -1,22 +1,21 @@
-package com.bidr.llm.parse;
+package com.bidr.document;
 
-import com.bidr.document.VisionConfigProvider;
-import com.bidr.document.VisionEndpoint;
 import com.bidr.llm.provider.ModelConfigProvider;
 
 import java.net.Proxy;
 
 /**
  * Title: LlmVisionConfigProvider
- * Description: <b>视觉配置口适配器</b>（M16 棒 3）：把 llm 的 {@link ModelConfigProvider}
+ * Description: <b>视觉配置口默认适配器</b>：把 core llm 的 {@link ModelConfigProvider}
  * （purpose={@link FileMarkdownService#PURPOSE_VISION}，DbAware 实现数据库系统参数优先、
- * {@code llm.vision.*} yaml 回落）适配给 tool/document 内置视觉腿的
- * {@link VisionConfigProvider}——core 的转录能力与 llm 的模型配置机制由此解耦
- * （tool/document 零 sys_config，R-9）。取不到返回 null（门面据此抛带操作指引的异常）。
+ * {@code llm.vision.*} yaml 回落）适配给内置视觉腿的 {@link VisionConfigProvider}——
+ * 文档加工与模型配置两套机制由此对接。取不到返回 null（门面据此抛带操作指引的异常）。
  * 多模态调用代理随 {@code llm.proxy.*}（与文本模型同源）。
+ * <p>
+ * 业务要换视觉配置来源＝注册自己的 {@link VisionConfigProvider} Bean 覆盖（自动装配让位）。
  *
  * @author Sharp
- * @since 2026/10/20
+ * @since 2026-10-21
  */
 public class LlmVisionConfigProvider implements VisionConfigProvider {
 

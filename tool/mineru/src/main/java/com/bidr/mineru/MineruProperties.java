@@ -13,10 +13,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <p>
  * 两条腿是<b>两套协议</b>不是同一服务的两个地址：自建走 mineru-api 3.x（multipart 提交
  * {@code POST /tasks}），公网 mineru.net 走 v4（预签名直传＋batch 轮询），故分两个配置段。
- * 同步门面 {@link MineruTranscriber} 的腿选择：云腿令牌配了→云优先、失败回落本地；没配→只走本地。
+ * 两腿的调度在 {@code tool/document} 的内置增强腿
+ * {@code com.bidr.document.builtin.MineruTranscribeLeg}：云腿令牌配了→云优先、失败回落本地；
+ * 没配→只走本地。
  * <p>
- * 装配键不在本段：{@code tool.document.transcriber: mineru}（新口 {@code TranscribeStep} 与
- * 老口 {@code DocumentTranscriber} 同一把键、同一个值），键空＝不装配增强腿。
+ * 装配键不在本段：{@code tool.document.transcriber: mineru}（document 侧的
+ * {@code TranscribeStep} 腿以此为 gate），键空＝不装增强腿、门面走内置解析。
  *
  * @author Sharp
  * @since 2026/10/17
