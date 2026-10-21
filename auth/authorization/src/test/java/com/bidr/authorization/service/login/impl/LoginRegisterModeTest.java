@@ -33,9 +33,14 @@ import javax.servlet.http.HttpServletRequest;
 public class LoginRegisterModeTest {
 
     private static LoginServiceImpl service(String mode, AcTenantService tenantRepo) {
+        return service(mode, "", tenantRepo);
+    }
+
+    /** 三级链全形：mode＝sys_config 库值、yml＝my.auth.register-mode 兜底（库值未表态才轮到）。 */
+    private static LoginServiceImpl service(String mode, String yml, AcTenantService tenantRepo) {
         SysConfigCacheService cache = Mockito.mock(SysConfigCacheService.class);
         Mockito.when(cache.getParamValueAvail(AccountParam.ACCOUNT_REGISTER_MODE.name())).thenReturn(mode);
-        return new LoginServiceImpl(
+        LoginServiceImpl impl = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
                 tenantRepo,
                 Mockito.mock(AcUserTenantService.class),
@@ -44,6 +49,8 @@ public class LoginRegisterModeTest {
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class));
+        impl.setRegisterModeYml(yml);
+        return impl;
     }
 
     private static AcTenant tenant(long id) {
@@ -77,6 +84,42 @@ public class LoginRegisterModeTest {
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode("yes"));
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode("1"));
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode("TENANT_ONLY"));
+    }
+
+    // ==================== 三级链（库值 → yml my.auth.register-mode → open；2026-10-21 部署定型键改造） ====================
+
+    @Test
+    public void ymlLegAppliesWhenDbEmpty() {
+        // 库值未表态（种子留空）→ yml tenant 生效：新项目 setup 向导写 yml 即定型
+        AcTenantService repo = Mockito.mock(AcTenantService.class);
+        Mockito.when(repo.getByCode("GOODCODE")).thenReturn(tenant(3L));
+        LoginServiceImpl service = service("", "tenant", repo);
+        try {
+            service.assertRegisterAllowed(null);
+            Assert.fail("yml=tenant 时空码必须拒绝");
+        } catch (ServiceException e) {
+            Assert.assertTrue(String.valueOf(e.getMessage()).contains("租户注册链接"));
+        }
+        Assert.assertNotNull(service.assertRegisterAllowed("GOODCODE"));
+    }
+
+    @Test
+    public void dbValueBeatsYml() {
+        // 存量项目参数页改过的库值仍压过 yml——三级链不许翻转存量表态
+        LoginServiceImpl service = service("closed", "open", Mockito.mock(AcTenantService.class));
+        try {
+            service.assertRegisterAllowed(null);
+            Assert.fail("库值 closed 必须压过 yml open");
+        } catch (ServiceException e) {
+            Assert.assertTrue(String.valueOf(e.getMessage()).contains("已关闭"));
+        }
+    }
+
+    @Test
+    public void bothLegsEmptyFallsBackToOpen() {
+        // 双腿未表态＝open（共享兼容：不锁死存量开放注册项目）
+        LoginServiceImpl service = service("", "", Mockito.mock(AcTenantService.class));
+        Assert.assertNull("open 态无码＝注册全局账号", service.assertRegisterAllowed(null));
     }
 
     // ==================== 闸行为五腿（reviewer C 轴补：闸本体零覆盖的修复） ====================

@@ -35,6 +35,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +66,18 @@ public class LoginServiceImpl implements LoginService {
 
     @Autowired(required = false)
     private CustomerNumberHandler customerNumberHandler;
+
+    /**
+     * 注册模式 yml 兜底（{@code my.auth.register-mode}）：仅当 sys_config 库值未表态（空）时轮到。
+     * 缺省空＝未表态，normalizeRegisterMode 归一为 open（共享兼容）。
+     */
+    @Value("${my.auth.register-mode:}")
+    private String registerModeYml;
+
+    /** 测试注入用（离线单测不起 Spring）；包可见不构成对外入口，风格同 AcTenantPortalService#isPlatformTier 的测试口。 */
+    void setRegisterModeYml(String registerModeYml) {
+        this.registerModeYml = registerModeYml;
+    }
 
     @Override
     public LoginRes login(AcUser user) {
@@ -274,15 +287,22 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * 自助注册三态闸（ACCOUNT_REGISTER_MODE，读 sys_config 运行值）：closed 拒绝一切自助注册；
-     * tenant 模式码必填且须命中有效租户（getByCode 只回 valid='1' 行）；open 模式码选填、给了同样
-     * 校验并挂（/register/CODE 链接在 open 态同样可用）。返回 null＝注册为全局账号不挂租户。
+     * 自助注册三态闸，取值三级链（2026-10-21 起）：① sys_config 库值（{@link AccountParam#ACCOUNT_REGISTER_MODE}，
+     * 种子已改留空＝未表态，存量项目在参数页改过的仍生效）→ ② yml {@code my.auth.register-mode}
+     * （部署定型键：新项目 setup 向导在此写定，上线后要切伴随发布/公告走 yml+重启，不是日常热调参）
+     * → ③ 仍空＝open（共享兼容：参数写错不得把存量开放注册项目突然锁死）。
+     * closed 拒绝一切自助注册；tenant 模式码必填且须命中有效租户（getByCode 只回 valid='1' 行）；
+     * open 模式码选填、给了同样校验并挂（/register/CODE 链接在 open 态同样可用）。返回 null＝注册为全局账号不挂租户。
      * 🔴 闸在服务端：前端隐藏入口只是形态，直打 API 缺码/错码同样在此被拒。
+     * 🔴 读取点只允许本方法一处——同一进程两条腿按两种模式走＝同一注册请求两种命运。
      * 包可见＝离线单测直断（LoginRegisterModeTest 的 mock 腿），不构成对外入口。
      */
     AcTenant assertRegisterAllowed(String tenantCode) {
-        String normalized = normalizeRegisterMode(
-                frameCacheService.getParamValueAvail(AccountParam.ACCOUNT_REGISTER_MODE.name()));
+        String configured = frameCacheService.getParamValueAvail(AccountParam.ACCOUNT_REGISTER_MODE.name());
+        if (FuncUtil.isEmpty(configured)) {
+            configured = registerModeYml;
+        }
+        String normalized = normalizeRegisterMode(configured);
         if (REGISTER_MODE_CLOSED.equals(normalized)) {
             throw new ServiceException(ErrCodeSys.SYS_ERR_MSG, "自助注册已关闭，账号请联系管理员创建");
         }
