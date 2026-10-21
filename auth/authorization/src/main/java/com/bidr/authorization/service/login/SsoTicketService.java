@@ -41,7 +41,12 @@ import java.util.List;
  *       ∧ port 按「缺省口规格化（http→80、https→443）后等值」；任一侧解析失败（无 scheme／无 host／
  *       URISyntaxException／IllegalArgumentException）⇒ 不命中 ⇒ 拒（文案点名"redirect_uri 未登记"）。
  *       🔴 禁止退化成"只按 redirect_uri 全局查"——partner 组合判据是 10-14 用户改拍已定案；
- *       M-11 裁定：解析与比较放 Java 侧，mapper SQL 不动，登记行个位数无性能面；</li>
+ *       M-11 裁定：解析与比较放 Java 侧，mapper SQL 不动，登记行个位数无性能面。
+ *       🔴 2026-10-21 回环豁免腿（用户拍板"127/localhost 别限制"）：回调 origin 是本机回环
+ *       （{@link #isLoopbackCallback}＝localhost／127.0.0.0/8／::1，仅 http(s)、口任意）⇒ 跳过登记比对
+ *       直接放行——开发联调的 vite 端口不固定，逐口登记是纯运维噪音；票落在用户自己机器的回环地址，
+ *       不构成跨站外泄面（RFC 8252 §7.3 loopback redirect 同精神）。豁免的只是比对，登记行查询
+ *       照旧执行；非 http(s)／解析失败不豁免（fail-closed）；</li>
  *   <li>配置：私钥缺席/空白、ttl 缺席/非正 ⇒ 拒绝。🔴 core 不写死 60 秒兜底——缺省值属部署档 yml
  *       （棒 0b-2），静默用默认值出票是被禁止的行为；</li>
  *   <li>签票：{@link SsoJwtUtil#signWithExp}（G-8＝exp 在此只算一次，票内 {@code exp} 与响应
@@ -124,10 +129,12 @@ public class SsoTicketService {
                 SsoConfigKeys.TICKET_PARAM_APP_ID + " 未登记（不在ac_partner），拒绝签发SSO票据");
 
         // 3) 白名单闸：按 partner 取全部 valid='1' 登记行，Java 侧 origin 等值比较（M-11）；
-        //    解析失败⇒不命中，原串不做任何截断/加工参与比较
+        //    解析失败⇒不命中，原串不做任何截断/加工参与比较。
+        //    回环豁免腿（判据与理由见类注 2026-10-21 条）：豁免的是比对、不是取数路径——
+        //    listValid 照旧入查，行为面只放宽判据，交互面与既有用例的 verify 口径兼容
         List<AcSsoRedirect> registered = acSsoRedirectService.listValid(partner.getId());
-        boolean whitelisted = registered != null && registered.stream()
-                .anyMatch(row -> originMatches(row.getRedirectUri(), redirectUri));
+        boolean whitelisted = isLoopbackCallback(redirectUri) || (registered != null && registered.stream()
+                .anyMatch(row -> originMatches(row.getRedirectUri(), redirectUri)));
         Validator.assertTrue(whitelisted, ErrCodeSys.SYS_ERR_MSG,
                 SsoConfigKeys.TICKET_PARAM_REDIRECT_URI + " 未登记（不在该应用的SSO回调白名单），拒绝签发SSO票据");
 
@@ -202,5 +209,69 @@ public class SsoTicketService {
         } catch (URISyntaxException | IllegalArgumentException e) {
             return null;
         }
+    }
+
+    /**
+     * 回环豁免判据（2026-10-21）：传入回调的 origin host 是本机回环 ⇒ true，豁免白名单比对。
+     * <ul>
+     *   <li>host＝{@code localhost}（大小写不敏感）／127.0.0.0/8（点分四段且首段 127）／{@code ::1}
+     *       （IPv6 literal，{@link URI#getHost()} 取出带方括号形态，剥括号比对，另兼容全零展开写法）；</li>
+     *   <li>scheme 必须 http/https——其它 scheme 一律不豁免；port 不参与（开发口 5173/5174/8083… 任意）；</li>
+     *   <li>解析失败（无 scheme／无 host／{@link URISyntaxException}／{@link IllegalArgumentException}）⇒ false
+     *       （fail-closed，与 {@link #originMatches} 同口径）。</li>
+     * </ul>
+     * 纯函数、无副作用。🔴 豁免面刻意收窄在"用户自己机器的回环地址"——非回环 host（含
+     * {@code localhost.evil.com} 前缀套娃、{@code 127.0.0.1:5174.evil.com} 子域延伸、127.0.0.1 的
+     * 十进制整数形态等变体）一律不命中，照走白名单比对。
+     */
+    static boolean isLoopbackCallback(String candidateUri) {
+        if (candidateUri == null || candidateUri.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            URI parsed = new URI(candidateUri.trim());
+            String scheme = parsed.getScheme();
+            String host = parsed.getHost();
+            if (host == null || (!"http".equals(scheme) && !"https".equals(scheme))) {
+                return false;
+            }
+            String lower = host.toLowerCase(java.util.Locale.ROOT);
+            if ("localhost".equals(lower)) {
+                return true;
+            }
+            if (lower.startsWith("[") && lower.endsWith("]")) {
+                String v6 = lower.substring(1, lower.length() - 1);
+                return "::1".equals(v6) || "0:0:0:0:0:0:0:1".equals(v6);
+            }
+            return isLoopbackIPv4(lower);
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** 127.0.0.0/8 形态判定：点分四段、逐段 0-255 纯数字、首段 127（入参已小写）。 */
+    private static boolean isLoopbackIPv4(String lowerHost) {
+        if (!lowerHost.startsWith("127.")) {
+            return false;
+        }
+        String[] parts = lowerHost.split("\\.", -1);
+        if (parts.length != 4) {
+            return false;
+        }
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) {
+                return false;
+            }
+            for (int i = 0; i < part.length(); i++) {
+                char c = part.charAt(i);
+                if (c < '0' || c > '9') {
+                    return false;
+                }
+            }
+            if (Integer.parseInt(part) > 255) {
+                return false;
+            }
+        }
+        return true;
     }
 }

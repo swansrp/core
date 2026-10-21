@@ -31,12 +31,16 @@ import java.util.*;
  * <p>覆盖：白名单 origin 判据（M15 追加棒 1）——partner 名下登记行 origin 与传入串 origin 等值
  * （scheme 精确 ∧ host 不敏感 ∧ port 缺省规格化）命中签出且票可被公钥验回 username／
  * redirect_uri origin 未登记拒／<b>🔴 判别针：origin 登记在另一家名下必拒（防"全局按 origin 查"回潮）</b>／
- * app_id 空白或查不到 ac_partner 拒且不透出白名单查询／origin 负向矩阵（子域延伸、换 port、换 scheme、
- * 缺 port、无 scheme、非法 URL）与正向矩阵（同 origin 异 hash 出票且回显原串）／host 大小写不敏感、
+ * app_id 空白或查不到 ac_partner 拒且不透出白名单查询／origin 负向矩阵（子域延伸、无 scheme、非法 URL、
+ * 非 loopback 未登记地址、localhost 前缀套娃、127.0.0.1 十进制整数形态）与正向矩阵（同 origin 异 hash 出票
+ * 且回显原串）／host 大小写不敏感、
  * scheme 敏感／未登录拒且 verifyNoInteractions 扩到 ac_user／ac_partner／ac_sso_redirect 三侧／
  * 会话无效拒／脏 Authorization 头按框架口径业务拒绝／私钥缺席拒（非 NPE）／ttl 缺席或非正拒且不静默兜底 60。
  * 🔴 取号口径腿：票的 username claim＝ac_user.user_name（登录名）而非工号——工号与登录名取两个不同串；
- * 工号查不到 ac_user 行 ⇒ 拒签。</p>
+ * 工号查不到 ac_user 行 ⇒ 拒签。
+ * 🔴 2026-10-21 回环豁免腿：回调 origin 是本机回环（localhost／127.0.0.0/8／::1，http(s) 任意口）⇒
+ * 未登记也出票（换 port／换 scheme／缺 port 三腿自豁免前的负矩阵迁入）且回显调用方原串；豁免的是比对、
+ * 不是取数路径——listValid 照常入查。</p>
  * <p>0b-6 密码学面修复轮：G-8 把 {@code expiresAt} 的 ±2 秒宽容窗换成**严格等值**断言（等值于票内解出的 exp），
  * 另加一条"压到秒边界再出票"的判别腿；NIT-8 加 ttl 超 900 秒上界的编排侧拒绝腿
  * （证明上界不是只设在 {@code sign} 的相对 ttl 口径上）。</p>
@@ -239,20 +243,23 @@ public class SsoTicketServiceTest {
     }
 
     /**
-     * 🔴 origin 判据负向矩阵（M15 追加棒 1）：登记 {@code http://127.0.0.1:5174}，传入串各变种全拒——
-     * 子域延伸（host 前缀套娃）／换 port／换 scheme（scheme 敏感）／缺 port＝默认口 80≠5174；
-     * 另盖传入无 scheme 与非法 URL（解析失败⇒不命中⇒走既有拒绝文案）。
+     * 🔴 origin 判据负向矩阵（M15 追加棒 1；2026-10-21 回环豁免后收窄）：登记 {@code http://127.0.0.1:5174}，
+     * 传入串各变种全拒——子域延伸（非数字 port ⇒ URI 解析失败，fail-closed）／无 scheme／非法 URL
+     * （解析失败⇒不命中⇒走既有拒绝文案）；非 loopback 的未登记地址（内网 IP／localhost 前缀套娃／
+     * 127.0.0.1 的十进制整数形态）同样照走白名单比对后拒。
+     * 🔴 原矩阵里的换 port／换 scheme／缺 port 三腿已迁 {@link #loopbackCallbackIssuesWithoutRegistration()}
+     * ——回环豁免后它们是正向腿。
      */
     @Test
     public void originMismatchVariantsRejected() {
         SsoTicketService service = newService(privCfg, 60L);
         String[] negatives = {
-                "http://127.0.0.1:5174.evil.com/#/x",   // 子域延伸
-                "http://127.0.0.1:5175/#/x",            // 换 port
-                "https://127.0.0.1:5174/#/x",           // 换 scheme
-                "http://127.0.0.1/#/x",                 // 缺 port＝默认口 80 ≠ 5174
+                "http://127.0.0.1:5174.evil.com/#/x",   // 子域延伸（非数字 port，URI 解析失败）
                 "127.0.0.1:5174/#/x",                   // 无 scheme（解析失败）
-                "http://127.0.0.1:5174/#/x with space"  // 非法 URL（含空格，URI 解析失败）
+                "http://127.0.0.1:5174/#/x with space", // 非法 URL（含空格，URI 解析失败）
+                "http://192.168.10.20:5174/#/x",        // 非 loopback 内网地址未登记
+                "http://localhost.evil.com/#/x",        // localhost 前缀套娃≠回环 host
+                "http://2130706433/#/x"                 // 127.0.0.1 的十进制整数形态≠字面回环
         };
         for (String bad : negatives) {
             try {
@@ -264,6 +271,32 @@ public class SsoTicketServiceTest {
         }
         // 判别针：每腿都按 partner 取了登记行（比较确实发生在取回的行上），且只查本 partner
         Mockito.verify(acSsoRedirectService, Mockito.times(negatives.length)).listValid(PARTNER_ID);
+        Mockito.verify(acSsoRedirectService, Mockito.never()).listValid(OTHER_PARTNER_ID);
+    }
+
+    /**
+     * 🔴 回环豁免腿（2026-10-21，用户拍板"127/localhost 别限制"）：回调 origin 是本机回环
+     * （localhost／127.0.0.0/8／::1，http(s) 任意口）⇒ 未登记也出票、回显调用方原串。
+     * 原 origin 负矩阵里的换 port／换 scheme／缺 port 三腿迁入本矩阵（豁免前必拒、豁免后必签）。
+     * 豁免的是比对、不是取数路径：listValid 照常按 partner 入查。
+     */
+    @Test
+    public void loopbackCallbackIssuesWithoutRegistration() {
+        SsoTicketService service = newService(privCfg, 60L);
+        String[] loopbacks = {
+                "http://127.0.0.1:5175/#/x",        // 换 port（登记的是 5174，豁免前必拒）
+                "https://127.0.0.1:5174/#/x",       // 换 scheme（豁免前必拒）
+                "http://127.0.0.1/#/x",             // 缺 port＝默认口 80（豁免前必拒）
+                "http://localhost:3000/#/",         // localhost 任意口
+                "http://[::1]:8080/#/y",            // IPv6 回环（方括号 literal）
+                "http://127.0.0.99:9000/#/z"        // 127.0.0.0/8 段内
+        };
+        for (String incoming : loopbacks) {
+            SsoTicketRes res = service.issue(APP_ID, incoming, loggedInRequest());
+            Assert.assertNotNull("回环回调必须豁免白名单出票: " + incoming, res.getIdToken());
+            Assert.assertEquals("回显必须是调用方原串", incoming, res.getRedirectUri());
+        }
+        Mockito.verify(acSsoRedirectService, Mockito.times(loopbacks.length)).listValid(PARTNER_ID);
         Mockito.verify(acSsoRedirectService, Mockito.never()).listValid(OTHER_PARTNER_ID);
     }
 

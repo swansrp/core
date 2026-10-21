@@ -131,6 +131,7 @@ public interface SsoUserHandler {
 5. 🔴 **接入方前端 `VITE_ssoDomain` 必填**：缺省时框架推导出的 `/sso` 落点无人服务（404）。出票方（IdP）侧需要一张中转页——**前端用本框架时随框架自带**（`#/sso/authorize` 已在 framework router 静态注册 `meta.public`，应用侧零改动；不走登录守卫，登录态分流由页面挂载自查。2026-10-14 自墨枢业务仓下沉框架）；**验票方（子系统）侧不需要任何中转页**。
 6. 🔴 **"登录后还要做的附加动作"＝加 `LoginFillTokenInf` fillToken bean，不写 controller**：core `afterLogin()` 已遍历该 SPI（`SpaceLoginTokenFill` 是现成实现）。子系统只是换了身份解析段，登录后段本来就是继承的。
 7. 🔴 **回调地址口径**：白名单**登记行**收 **origin**（`#` 之前，即 `scheme://host:port`，不带路径/fragment/query）；跳转时整串百分号编码——`&` 不编码会被截断，票挂在 query 上、再带裸 query 必丢参；出票/中转页的回调地址入参名＝**`sso_redirect_uri`**，不得叫 `redirect_uri`（与出票口服务端参数名及 OAuth 习惯名撞车、易误传）。命中判定＝**origin 等值**（M15 追加棒 1，10-14 改拍）：传入完整回调 URL 与登记行各自解析出 origin 后比较——scheme 精确等值（**大小写也敏感**，`HTTP://` 不命中——按字面比较，不做 scheme 归一）、host 等值（大小写不敏感）、port 按缺省口规格化（http→80、https→443）后等值；任一侧解析失败（无 scheme/无 host/非法 URL）⇒ 不命中 ⇒ 拒。**子域延伸**（`a.b.com.evil.com`）、**换 port**、**换 scheme** 一律不命中。落地页路径/hash 由调用方自选，服务端只校验 origin；出票响应的 `redirectUri` 回显调用方原串（非登记行值）。
+   🔴 **回环豁免（2026-10-21 用户拍板「127/localhost 别限制」）**：回调 origin 是**本机回环**（host＝`localhost`／`127.0.0.0/8`／`::1`，仅 http(s)、端口任意）⇒ **跳过登记比对直接放行**——开发联调的 vite 端口不固定，逐口登记是纯运维噪音；票落在用户自己机器的回环地址，不构成跨站外泄面（RFC 8252 §7.3 loopback redirect 同精神）。豁免的只是比对，登录态/partner/私钥配置闸与登记行查询照旧；非 http(s)／解析失败不豁免（fail-closed）；`localhost.evil.com` 前缀套娃、子域延伸、`2130706433` 十进制整数形态等变体**不豁免**，照走白名单比对（守卫腿＝`SsoTicketServiceTest.loopbackCallbackIssuesWithoutRegistration` 与负向矩阵）。
 8. 🔴 **两侧 NTP 同步，时钟偏移预算 <30 秒**：票 `exp = 签发 + ttl`（部署键 `sso.ticket.ttl-seconds`，部署档 60；core 不写兜底默认、缺席即拒；硬上界 900 秒——无 jti 吊销且票走 URL 参数可从浏览器历史/访问日志捞到，误填毫秒口径＝发不可撤的长命凭证）。验签侧 exp 判定含 30 秒偏移容忍（跨机 NTP 漂移不得把刚签出的票判死）⇒ **实际最大存活＝ttl + 30 秒**（60 档即 **90 秒**）。对外文案与风险评估一律按 90 秒口径。
 
 ---
@@ -177,6 +178,8 @@ curl -X POST http://<host>/<ctx>/web/sso/introspect \
 INSERT INTO ac_sso_redirect (partner_id, redirect_uri, remark, create_by, create_at, valid)
 VALUES (<partner_id>, 'http://127.0.0.1:5174', '<用途/环境说明>', '<登记人>', NOW(), '1');
 ```
+
+> 🔴 2026-10-21 起**回环地址（`127.*`／`localhost`／`::1`，http(s) 任意口）的回调豁免登记**（§六 第 7 条回环豁免腿）——本例的 5174 行在豁免生效的部署上已非必需（保留兼容旧版本）。只有**非回环**的域名/内网地址才必须插行。
 
 - 表 `ac_sso_redirect` 由 core 启动期自动建（`MybatisPlusConfig.initTables()` 收容器内全部 Schema bean），无需手工 DDL。
 - 🔴 `(partner_id, redirect_uri)` **普通索引、故意非 UNIQUE**＋`valid` 软删位（§六 第 7 条 origin 等值口径）：撤销登记＝置 `valid='0'`，再登记＝插新行。
