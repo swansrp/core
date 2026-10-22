@@ -47,7 +47,7 @@ class ParseEngineConfigTemplateCoverageTest {
     void 判据本身可被证伪() throws IOException {
         String text = new String(Files.readAllBytes(TEMPLATE), StandardCharsets.UTF_8);
         Set<String> templateLeaves = templateLeaves(text);
-        assertEquals(3, templateLeaves.size(), "三把键全在模板");
+        assertEquals(4, templateLeaves.size(), "四把键全在模板");
         assertTrue(templateLeaves.contains("engine.parse.transcriber"));
         assertFalse(templateLeaves.contains("engine.parse"), "容器节点不许当叶子");
 

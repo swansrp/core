@@ -45,14 +45,6 @@ public class BlobStore {
     /** 预签名有效期：1 小时（框架各实现 READ_EXPIRE_SECONDS 的固定口径） */
     public static final int DEFAULT_EXPIRE_SECONDS = 3600;
 
-    /**
-     * 正文里图片引用的稳定占位 scheme（2026-09-19 定案的占位协议词法）。
-     * 🔴 收在 BlobStore 私有（R-1 禁词白名单只认本文件）：scheme 属业务协议认识，
-     * core 不以公开常量的形式向框架各模块扩散——构建走 {@link #imagePlaceholder}、
-     * 判别走 {@link #isImagePlaceholder}。
-     */
-    private static final String IMAGE_PLACEHOLDER_SCHEME = "inkhub-image://";
-
     private static final Map<String, String> CONTENT_TYPES = new HashMap<>();
 
     static {
@@ -157,21 +149,17 @@ public class BlobStore {
     /**
      * 正文里引用图片用的<b>稳定占位</b>（2026-09-19 定案，取代早期的"改写为预签名 URL"）。
      *
+     * <p>scheme 由调用方传入——占位协议值属业务所有（core 是共享仓，不持有任何项目的协议
+     * 字面量），本方法只钉 {@code scheme + sha/清洗名} 的形状，并把对象名清洗收在
+     * {@link #sanitizeName} 一处（与 {@link #imageKey} 尾段同源）。</p>
+     *
      * <p>实测结论（docs/poc/placement_matrix.md）：正文里放可拉取的签名 URL，知识库引擎会拉图、
      * 缩写引用并注入自己的描述，导致两边文本不一致、引擎偏移 83% 不可用，且签名会过期、
      * 重签即得到不同正文。改存不可拉取的占位后两边文本逐字相同、偏移 100% 可用；
      * 真正的可访问 URL 由展示/使用方在读取边缘调用 {@link #presign(String)} 现签。</p>
      */
-    public static String imagePlaceholder(String sha256, String imageName) {
-        return IMAGE_PLACEHOLDER_SCHEME + sha256 + "/" + sanitizeName(imageName);
-    }
-
-    /**
-     * 判别引用目标是否<b>已经是</b>稳定占位形态（自家导出件/历史产物，直通腿据此原样保留）。
-     * scheme 词法只活在 {@link #imagePlaceholder} 一处，消费方判别走本方法、不写字面量。
-     */
-    public static boolean isImagePlaceholder(String ref) {
-        return ref != null && ref.startsWith(IMAGE_PLACEHOLDER_SCHEME);
+    public static String imagePlaceholder(String scheme, String sha256, String imageName) {
+        return scheme + sha256 + "/" + sanitizeName(imageName);
     }
 
     /**

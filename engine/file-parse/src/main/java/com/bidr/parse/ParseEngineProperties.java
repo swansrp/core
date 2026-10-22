@@ -34,4 +34,12 @@ public class ParseEngineProperties {
      * 缺省空＝不拉任何外链；要放行内网图床就在这里加主机（改了要重启，属环境绑定值）。
      */
     private String passthroughRemoteImageHosts = "";
+
+    /**
+     * 正文图片引用的稳定占位 scheme（协议值<b>业务所有</b>——core 是共享仓，不可能缺省出
+     * 任何项目的协议字面量，故缺省空＝装配快败，是本引擎唯一"不配跑不起来"的键）。
+     * 业务二选一：直接配本键；或自注册 {@link TextPassthroughService}／{@link ParseArtifactWriter}
+     * Bean 在构造时注入自家常量（协议正源留在业务代码，不散布进各环境 yml）。
+     */
+    private String imagePlaceholderScheme = "";
 }

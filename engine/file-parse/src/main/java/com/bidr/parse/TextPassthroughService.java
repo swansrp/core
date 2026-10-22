@@ -33,7 +33,7 @@ import java.util.zip.ZipInputStream;
  * Description: 纯文本直通腿（M17 棒 3 自 InkHub {@code TextPassthroughService} 迁入，
  * D-5 直通腿内置化——扩展名清单从业务词变引擎文件语义）：md/txt 直接读文本、zip 连带包
  * 就地解开，把正文里的图片引用换成稳定占位（{@link BlobStore#imagePlaceholder} 的
- * {@code {sha}/{name}} 形态）后落解析产物——绕开
+ * {@code {sha}/{name}} 形态，scheme 装配注入——协议值业务所有）后落解析产物——绕开
  * 外部解析引擎（它按内容嗅探不收纯文本，改名也绕不过，实测提交那一刻就 HTTP 400
  * {@code Unsupported file type}）。
  *
@@ -108,9 +108,13 @@ public class TextPassthroughService {
     /** 外链取字节器：真形态走 HTTP，单测注入假件（离线不碰网络） */
     RemoteFetcher remoteFetcher = this::httpFetch;
 
-    public TextPassthroughService(BlobStore storage, String remoteImageHosts) {
+    /** 正文图片占位 scheme（协议值业务所有，装配注入——core 不内置任何项目的字面量） */
+    private final String placeholderScheme;
+
+    public TextPassthroughService(BlobStore storage, String remoteImageHosts, String placeholderScheme) {
         this.storage = storage;
         this.remoteImageHosts = remoteImageHosts;
+        this.placeholderScheme = placeholderScheme;
     }
 
     /** 直通判据：纯文本三档＋连带包 zip（{@code ext} 小写扩展名） */
@@ -313,7 +317,7 @@ public class TextPassthroughService {
         Matcher matcher = MD_IMAGE.matcher(markdown);
         while (matcher.find()) {
             String target = matcher.group(2);
-            if (BlobStore.isImagePlaceholder(target)) {
+            if (target.startsWith(placeholderScheme)) {
                 inlined.kept++;
                 continue;
             }
@@ -324,7 +328,7 @@ public class TextPassthroughService {
             String objectName = objectName(resolved.bytes, resolved.name, resolved.ext);
             storage.put(BlobStore.imageKey(anchorSha, objectName), resolved.bytes,
                     BlobStore.contentTypeOf(objectName));
-            inlined.refs.put(target, BlobStore.imagePlaceholder(anchorSha, objectName));
+            inlined.refs.put(target, BlobStore.imagePlaceholder(placeholderScheme, anchorSha, objectName));
             inlined.stored++;
         }
         return inlined;

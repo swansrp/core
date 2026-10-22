@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  * {@code images/xxx.jpg} 相对路径，谁都无法访问，故先入库到对象存储；
  * 早期做法是再把正文里的引用改写成预签名 URL，实测知识库引擎会拉图、缩写引用并注入自己的
  * 描述 → 两边文本不一致、引擎偏移 83% 不可用，且签名过期后正文里的链接全部失效。
- * 现改为稳定占位（{@link BlobStore#imagePlaceholder}，scheme 词法只收在该正源一处）：
+ * 现改为稳定占位（{@link BlobStore#imagePlaceholder}，scheme 由装配注入——协议值业务所有）：
  * 两边文本逐字相同（引擎偏移 100% 可用），
  * 可访问 URL 由读取边缘现签。</p>
  *
@@ -45,10 +45,14 @@ public class DefaultParseArtifactWriter implements ParseArtifactWriter {
 
     private final BlobStore storage;
 
+    /** 正文图片占位 scheme（协议值业务所有，装配注入——core 不内置任何项目的字面量） */
+    private final String placeholderScheme;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public DefaultParseArtifactWriter(BlobStore storage) {
+    public DefaultParseArtifactWriter(BlobStore storage, String placeholderScheme) {
         this.storage = storage;
+        this.placeholderScheme = placeholderScheme;
     }
 
     /** 外部转录腿产物固化：图片入库+改写 → 块偏移重定位 → 正文与页码映射落库 */
@@ -142,7 +146,8 @@ public class DefaultParseArtifactWriter implements ParseArtifactWriter {
             String key = BlobStore.imageKey(anchorSha, image.getName());
             storage.put(key, image.getData(), BlobStore.contentTypeOf(image.getName()));
             // 正文存稳定占位而非预签名 URL：签名在读取边缘现签（见 BlobStore.imagePlaceholder）
-            refs.put(image.getName(), BlobStore.imagePlaceholder(anchorSha, image.getName()));        }
+            refs.put(image.getName(), BlobStore.imagePlaceholder(placeholderScheme, anchorSha, image.getName()));
+        }
         return refs;
     }
 

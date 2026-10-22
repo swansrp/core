@@ -77,8 +77,8 @@ class BlobKeyGoldenTest {
         String name = BlobStore.imageObjectName("../../evil$/a b.png");
         assertEquals("image/" + SHA + "/" + name, BlobStore.imageKey(SHA, "../../evil$/a b.png"),
                 "imageKey 传清洗后的名字须与传原始名等价（幂等）");
-        assertEquals("inkhub-image://" + SHA + "/" + name, BlobStore.imagePlaceholder(SHA, name),
-                "占位与 key 用同一个对象名");
+        assertEquals("demo-image://" + SHA + "/" + name, BlobStore.imagePlaceholder("demo-image://", SHA, name),
+                "占位与 key 用同一个对象名（scheme 业务供给，本行只钉形状与清洗同源）");
     }
 
     /**

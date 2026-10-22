@@ -1,5 +1,5 @@
-# engine/file-parse 配置模板（M17）。全部键带缺省＝不配即可跑；纯 yml＋Spring Environment，
-# 零 sys_config（R-9）；改值要重启（装配期定，无热切）。
+# engine/file-parse 配置模板（M17）。除 image-placeholder-scheme 外全部键带缺省＝不配即可跑；
+# 纯 yml＋Spring Environment，零 sys_config（R-9）；改值要重启（装配期定，无热切）。
 engine:
   parse:
     # 异步转录腿选型键：值＝腿名（tool/document 的 mineru 异步腿出 "mineru"）。
@@ -10,3 +10,6 @@ engine:
     mineru-max-wait-ms: 3600000
     # 直通腿外链图片主机白名单（逗号分隔精确主机名；缺省空＝不拉任何外链，引用原样保留）
     passthrough-remote-image-hosts: ""
+    # 正文图片占位 scheme（🔴 唯一必填键：协议值业务所有，core 不内置任何项目的字面量；
+    # 空＝装配快败。也可不配本键、自注册 TextPassthroughService/ParseArtifactWriter Bean 注入自家常量）
+    image-placeholder-scheme: ""

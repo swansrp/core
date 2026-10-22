@@ -11,7 +11,7 @@ import com.bidr.document.spi.AsyncTranscribeLeg;
  *
  * <p>契约：入参 {@code anchorSha}（解析锚）与 {@code variant}（键代数段，提交方给的透传值，
  * 引擎不当业务版本解释）直接决定产物键——实现不得改键形（R-2 golden 钉死）；
- * markdown 里的图片引用写稳定占位（{@link com.bidr.blob.BlobStore#imagePlaceholder}，R-3 占位协议逐字）。</p>
+ * markdown 里的图片引用写稳定占位（{@link com.bidr.blob.BlobStore#imagePlaceholder}，scheme 由业务装配供给——协议值业务所有）。</p>
  *
  * @author Sharp
  * @since 2026-10-21

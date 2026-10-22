@@ -34,9 +34,12 @@ class DefaultParseArtifactWriterTest {
 
     private static final String SHA = "a1b2c3";
 
+    /** 测试自有 scheme（中性值）：协议值业务所有，core 不内置字面量——断言走 imagePlaceholder 产物对照 */
+    private static final String SCHEME = "test-image://";
+
     private final BlobStore storage = mock(BlobStore.class);
 
-    private final DefaultParseArtifactWriter service = new DefaultParseArtifactWriter(storage);
+    private final DefaultParseArtifactWriter service = new DefaultParseArtifactWriter(storage, SCHEME);
 
     @Test
     void rewritesOnlyReferencedImagesAndKeepsAltAndTitle() {
@@ -97,7 +100,7 @@ class DefaultParseArtifactWriterTest {
 
         byte[] pageMap = storageJson(written.getPageMapKey());
         String rewritten = new String(storageJson(written.getMarkdownKey()), StandardCharsets.UTF_8);
-        assertTrue(rewritten.contains(BlobStore.imagePlaceholder(SHA, "images/one.jpg")), "占位已替换");
+        assertTrue(rewritten.contains(BlobStore.imagePlaceholder(SCHEME, SHA, "images/one.jpg")), "占位已替换");
         JsonNode root = null;
         try {
             root = new ObjectMapper().readTree(pageMap);
@@ -130,7 +133,7 @@ class DefaultParseArtifactWriterTest {
         assertEquals(1, written.getBlockCount());
         assertEquals(3, written.getPageCount());
         String markdown = new String(storageJson(written.getMarkdownKey()), StandardCharsets.UTF_8);
-        assertTrue(markdown.contains("![图](" + BlobStore.imagePlaceholder(SHA, "one.png") + ")"),
+        assertTrue(markdown.contains("![图](" + BlobStore.imagePlaceholder(SCHEME, SHA, "one.png") + ")"),
                 "入库正文里的图片须是稳定占位");
         assertFalse(markdown.contains("http"), "正文里不应残留任何 http(s) 链接");
 

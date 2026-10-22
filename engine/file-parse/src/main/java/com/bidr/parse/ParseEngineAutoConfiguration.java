@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 import java.util.stream.Collectors;
 
@@ -59,15 +60,29 @@ public class ParseEngineAutoConfiguration {
     /** 产物落盘内置默认（业务注册自己的 ParseArtifactWriter 即让位） */
     @Bean
     @ConditionalOnMissingBean(ParseArtifactWriter.class)
-    public ParseArtifactWriter defaultParseArtifactWriter(BlobStore storage) {
-        return new DefaultParseArtifactWriter(storage);
+    public ParseArtifactWriter defaultParseArtifactWriter(BlobStore storage, ParseEngineProperties properties) {
+        return new DefaultParseArtifactWriter(storage, requireScheme(properties));
     }
 
     /** 直通腿（D-5 内置化；业务自建以 @ConditionalOnMissingBean 让位——本件引擎内装、非 Bean 冲突面） */
     @Bean
     @ConditionalOnMissingBean(TextPassthroughService.class)
     public TextPassthroughService textPassthroughService(BlobStore storage, ParseEngineProperties properties) {
-        return new TextPassthroughService(storage, properties.getPassthroughRemoteImageHosts());
+        return new TextPassthroughService(storage, properties.getPassthroughRemoteImageHosts(),
+                requireScheme(properties));
+    }
+
+    /**
+     * 占位 scheme 必填闸：协议值业务所有（core 不内置任何项目的字面量），两内置腿写占位
+     * 离了它产不出合法正文——缺配＝装配期快败，指路两条给法（配键 / 自注册 Bean 注入常量）。
+     */
+    private static String requireScheme(ParseEngineProperties properties) {
+        if (!StringUtils.hasText(properties.getImagePlaceholderScheme())) {
+            throw new IllegalStateException(
+                    "engine.parse.image-placeholder-scheme 未配置——正文占位协议值属业务所有，core 不内置 scheme；"
+                            + "配该键，或自注册 TextPassthroughService/ParseArtifactWriter Bean 在构造时注入自家常量");
+        }
+        return properties.getImagePlaceholderScheme();
     }
 
     /** 页图渲染器（D-7 内置；D-11 裁剪请求时流程跳过调用，Bean 常在） */

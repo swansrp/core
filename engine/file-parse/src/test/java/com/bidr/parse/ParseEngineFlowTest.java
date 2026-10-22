@@ -47,6 +47,9 @@ class ParseEngineFlowTest {
 
     private static final String SHA = "a1b2c3d4e5f6a7b8";
 
+    /** 测试自有 scheme（中性值）：协议值业务所有，core 不内置字面量 */
+    private static final String SCHEME = "test-image://";
+
     private static final String RAW_KEY = "raw/" + SHA + ".md";
 
     private final BlobStore storage = mock(BlobStore.class);
@@ -59,7 +62,7 @@ class ParseEngineFlowTest {
 
     private final DocumentProcessor documentProcessor = mock(DocumentProcessor.class);
 
-    private final ParseArtifactWriter writer = new DefaultParseArtifactWriter(storage);
+    private final ParseArtifactWriter writer = new DefaultParseArtifactWriter(storage, SCHEME);
 
     private final PageImageRenderer pageImageRenderer = new PageImageRenderer(storage);
 
@@ -75,7 +78,7 @@ class ParseEngineFlowTest {
         when(convertStep.getIfAvailable()).thenReturn(null);
         flow = new ParseEngineFlow(storage, processor, convertStep,
                 Collections.<AsyncTranscribeLeg>emptyList(), "", 3_600_000L,
-                writer, new TextPassthroughService(storage, ""), pageImageRenderer,
+                writer, new TextPassthroughService(storage, "", SCHEME), pageImageRenderer,
                 Collections.<ParseEnrichLeg>emptyList());
         stubScopeMirror();
     }
@@ -110,7 +113,7 @@ class ParseEngineFlowTest {
     private ParseEngineFlow flowWithLeg(AsyncTranscribeLeg leg) {
         return new ParseEngineFlow(storage, processor, convertStep,
                 Collections.singletonList(leg), "", 3_600_000L,
-                writer, new TextPassthroughService(storage, ""), pageImageRenderer,
+                writer, new TextPassthroughService(storage, "", SCHEME), pageImageRenderer,
                 Collections.<ParseEnrichLeg>emptyList());
     }
 
@@ -253,7 +256,7 @@ class ParseEngineFlowTest {
                 + "\",\"anchorSha\":\"" + sha + "\",\"anchorKey\":\"" + pdfKey + "\"}");
         ParseEngineFlow tightFlow = new ParseEngineFlow(storage, processor, convertStep,
                 Collections.<AsyncTranscribeLeg>singletonList(leg), "", 1L,
-                writer, new TextPassthroughService(storage, ""), pageImageRenderer,
+                writer, new TextPassthroughService(storage, "", SCHEME), pageImageRenderer,
                 Collections.<ParseEnrichLeg>emptyList());
         try {
             setLong(tightFlow, "mineruMaxWaitMs", 1L);
