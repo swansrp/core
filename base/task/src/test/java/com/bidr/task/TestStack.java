@@ -32,6 +32,9 @@ final class TestStack {
 
     final List<String> observerEvents = new ArrayList<>();
 
+    /** 阶段迁移事件流水（onStage 契约腿断言用）：形如 {@code FIRST->SECOND:ref-1} */
+    final List<String> stageEvents = new ArrayList<>();
+
     private final List<AsyncTaskObserver> observers = new ArrayList<>();
 
     TestStack(boolean wakeEnabled, int maxQueueAhead, Object firstFlow, Object... moreFlows) {
@@ -76,6 +79,25 @@ final class TestStack {
     /** 记录型观察者（打到 observerEvents：形如 SUCCESS:ref-1） */
     AsyncTaskObserver recordingObserver() {
         return (task, status) -> observerEvents.add(status.name() + ":" + task.getBizRef());
+    }
+
+    /**
+     * 阶段迁移记录型观察者（打到 stageEvents：形如 {@code FIRST->SECOND:ref-1}）：两口都显式
+     * 实现——与上面只实现 onTerminal 的 lambda 版互为印证：lambda 能编译本身就是 default 空实现
+     * （不实现 onStage 也不炸）的机器证明。
+     */
+    AsyncTaskObserver stageRecordingObserver() {
+        return new AsyncTaskObserver() {
+            @Override
+            public void onTerminal(SaAsyncTask task, AsyncTaskStatus status) {
+                observerEvents.add(status.name() + ":" + task.getBizRef());
+            }
+
+            @Override
+            public void onStage(SaAsyncTask task, String fromStage, String toStage) {
+                stageEvents.add(fromStage + "->" + toStage + ":" + task.getBizRef());
+            }
+        };
     }
 
     /** 可控三阶段流程（第二阶段行为可换：to/pending/抛异常），阶段体零手工记账 */

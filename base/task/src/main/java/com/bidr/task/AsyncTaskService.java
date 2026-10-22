@@ -341,6 +341,11 @@ public class AsyncTaskService {
      *
      * <p>结构错（目标阶段缺失/禁回跳）抛 {@link StageContractException}：属<b>代码契约错误</b>、
      * 重试无意义，由切面统一置 DEAD（不给补偿扫描反复重跑同一阶段体的机会）。</p>
+     *
+     * <p>真迁移（目标 ≠ 当前）写库成功后发一次 {@link AsyncTaskObserver#onStage}——原地推进
+     * 与丢失所有权都不发：原地是常态路径（外部引擎腿轮询每轮原地一遍），发了＝每 tick 轰一次
+     * 观察者；丢失所有权与终态语义对称（进度不写回即无迁移可言）。通知在内存行更新之后发，
+     * 观察者看到的是已迁移后的行。</p>
      */
     public void advance(SaAsyncTask task, TaskFlowRegistry.FlowDef flow, String targetStage) {
         TaskFlowRegistry.StageDef target = flow.stageOf(targetStage);
@@ -354,12 +359,16 @@ public class AsyncTaskService {
                     + " from=" + task.getStage() + "(order=" + current.getOrder() + ")"
                     + " to=" + targetStage + "(order=" + target.getOrder() + ")");
         }
+        String fromStage = task.getStage();
         if (!repository.updateStage(task.getId(), task.getOwner(), targetStage)) {
             warnLostOwnership(task, "advance->" + targetStage);
             return;
         }
         task.setStage(targetStage);
         task.setStatus(AsyncTaskStatus.RUNNING.name());
+        if (!targetStage.equals(fromStage)) {
+            notifyStage(task, fromStage, targetStage);
+        }
     }
 
     /**
@@ -501,7 +510,7 @@ public class AsyncTaskService {
         }
     }
 
-    // ==================== 终态通知（SUCCESS/DEAD 必发、FAILED 不发；逐件 try-catch） ====================
+    // ==================== 观察者通知（终态 SUCCESS/DEAD 必发、FAILED 不发；阶段真迁移才发；逐件 try-catch） ====================
 
     /** 在与阶段方法同一份重建上下文里逐件通知（观察者抛异常不改任务终态） */
     public void notifyTerminal(SaAsyncTask task, AsyncTaskStatus status) {
@@ -518,6 +527,24 @@ public class AsyncTaskService {
             }
             return null;
         });
+    }
+
+    /**
+     * 阶段迁移通知（{@link AsyncTaskObserver#onStage}，真迁移才发）：与 {@link #notifyTerminal}
+     * 同构（逐件 try-catch，观察者异常只记 ERROR 日志、不影响任务记账），但有两处从简——
+     * 不重读库（advance 的内存行刚更新完，行已带新 stage 与 RUNNING 态，无终态幂等诉求）、
+     * 不包桥（调用处在跑批重建上下文内：runner 的 bridge.execute 包住整个阶段执行段，含切面
+     * 记账，再包一次是空转）。
+     */
+    public void notifyStage(SaAsyncTask task, String fromStage, String toStage) {
+        for (AsyncTaskObserver observer : observers) {
+            try {
+                observer.onStage(task, fromStage, toStage);
+            } catch (Exception e) {
+                log.error("任务阶段迁移观察者异常（不影响任务记账）: observer={} type={} {}->{} {}",
+                        observer.getClass().getName(), task.getTaskType(), fromStage, toStage, e.getMessage(), e);
+            }
+        }
     }
 
     /** 丢失所有权：进度不写回即可，不是业务失败（行已归别人或有更新的状态） */
