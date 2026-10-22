@@ -45,8 +45,13 @@ public class BlobStore {
     /** 预签名有效期：1 小时（框架各实现 READ_EXPIRE_SECONDS 的固定口径） */
     public static final int DEFAULT_EXPIRE_SECONDS = 3600;
 
-    /** 正文里图片引用的稳定占位 scheme（M17 正源化：直通腿等消费方引用本常量，不再各处写字面量） */
-    public static final String IMAGE_PLACEHOLDER_SCHEME = "inkhub-image://";
+    /**
+     * 正文里图片引用的稳定占位 scheme（2026-09-19 定案的占位协议词法）。
+     * 🔴 收在 BlobStore 私有（R-1 禁词白名单只认本文件）：scheme 属业务协议认识，
+     * core 不以公开常量的形式向框架各模块扩散——构建走 {@link #imagePlaceholder}、
+     * 判别走 {@link #isImagePlaceholder}。
+     */
+    private static final String IMAGE_PLACEHOLDER_SCHEME = "inkhub-image://";
 
     private static final Map<String, String> CONTENT_TYPES = new HashMap<>();
 
@@ -159,6 +164,14 @@ public class BlobStore {
      */
     public static String imagePlaceholder(String sha256, String imageName) {
         return IMAGE_PLACEHOLDER_SCHEME + sha256 + "/" + sanitizeName(imageName);
+    }
+
+    /**
+     * 判别引用目标是否<b>已经是</b>稳定占位形态（自家导出件/历史产物，直通腿据此原样保留）。
+     * scheme 词法只活在 {@link #imagePlaceholder} 一处，消费方判别走本方法、不写字面量。
+     */
+    public static boolean isImagePlaceholder(String ref) {
+        return ref != null && ref.startsWith(IMAGE_PLACEHOLDER_SCHEME);
     }
 
     /**

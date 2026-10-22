@@ -26,8 +26,8 @@ import java.util.regex.Pattern;
  * {@code images/xxx.jpg} 相对路径，谁都无法访问，故先入库到对象存储；
  * 早期做法是再把正文里的引用改写成预签名 URL，实测知识库引擎会拉图、缩写引用并注入自己的
  * 描述 → 两边文本不一致、引擎偏移 83% 不可用，且签名过期后正文里的链接全部失效。
- * 现改为稳定占位（{@link BlobStore#imagePlaceholder} 的产物形态，scheme 正源常量在
- * BlobStore）：两边文本逐字相同（引擎偏移 100% 可用），
+ * 现改为稳定占位（{@link BlobStore#imagePlaceholder}，scheme 词法只收在该正源一处）：
+ * 两边文本逐字相同（引擎偏移 100% 可用），
  * 可访问 URL 由读取边缘现签。</p>
  *
  * <p><b>页码映射格式（D8）</b>：块按 start 升序，每个块给 {@code start/end/pageIdx}——

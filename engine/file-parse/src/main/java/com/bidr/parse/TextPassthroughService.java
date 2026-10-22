@@ -32,7 +32,7 @@ import java.util.zip.ZipInputStream;
  * Title: TextPassthroughService
  * Description: 纯文本直通腿（M17 棒 3 自 InkHub {@code TextPassthroughService} 迁入，
  * D-5 直通腿内置化——扩展名清单从业务词变引擎文件语义）：md/txt 直接读文本、zip 连带包
- * 就地解开，把正文里的图片引用换成稳定占位（{@code BlobStore.IMAGE_PLACEHOLDER_SCHEME}，
+ * 就地解开，把正文里的图片引用换成稳定占位（{@link BlobStore#imagePlaceholder} 的
  * {@code {sha}/{name}} 形态）后落解析产物——绕开
  * 外部解析引擎（它按内容嗅探不收纯文本，改名也绕不过，实测提交那一刻就 HTTP 400
  * {@code Unsupported file type}）。
@@ -80,9 +80,6 @@ public class TextPassthroughService {
     /** data URI：{@code data:image/png;base64,....}（大小写与空格宽容，base64 体允许换行） */
     private static final Pattern DATA_URI =
             Pattern.compile("^data:image/([a-zA-Z0-9.+-]+);\\s*base64,(.*)$", Pattern.DOTALL);
-
-    /** 正文里已经是我们的占位（自家导出件），原样保留（scheme 常量正源在 BlobStore） */
-    private static final String PLACEHOLDER_SCHEME = BlobStore.IMAGE_PLACEHOLDER_SCHEME;
 
     /** 可入库图片扩展名（与图片上传/MinerU 客户端认领面同词汇表） */
     private static final Set<String> IMAGE_EXTS = new HashSet<>(Arrays.asList(
@@ -316,7 +313,7 @@ public class TextPassthroughService {
         Matcher matcher = MD_IMAGE.matcher(markdown);
         while (matcher.find()) {
             String target = matcher.group(2);
-            if (target.startsWith(PLACEHOLDER_SCHEME)) {
+            if (BlobStore.isImagePlaceholder(target)) {
                 inlined.kept++;
                 continue;
             }

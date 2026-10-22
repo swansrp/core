@@ -28,8 +28,13 @@ import java.io.ByteArrayOutputStream;
 @Slf4j
 public class PageImageRenderer {
 
-    /** 单次渲染的看门狗预算（毫秒）：超时放弃页图（返回已渲染数），不让任务线程僵尸化 */
-    private static final long RENDER_WATCHDOG_MS = 120_000L;
+    /**
+     * 渲染预算（2026-10-22 用户拍板「慢慢转圈可以接受、失败不能接受」）：
+     * 底座 120s ＋ 每页 2s（扫描件单页渲染＋PNG 编码＋上传的实测上界余量），随页数伸缩。
+     */
+    private static final long RENDER_WATCHDOG_BASE_MS = 120_000L;
+
+    private static final long RENDER_WATCHDOG_PER_PAGE_MS = 2_000L;
 
     /** 渲染分辨率：120 DPI 兼顾可读性与体积（A4 ≈ 992×1403） */
     private static final float DPI = 120f;
@@ -44,48 +49,55 @@ public class PageImageRenderer {
     }
 
     /**
-     * 渲染 PDF 逐页页图（带看门狗）。
+     * 渲染 PDF 逐页页图（看门狗＋动态预算）。
      *
-     * <p>🔴 看门狗（M17 真机 2026-10-22，6.60）：eclipse-temurin:8-jdk 容器不带 fontconfig／
-     * 任何字体，PDFBox 首次 {@code renderImageWithDPI} 触发 AWT 字体环境初始化会<b>无限挂起</b>
-     * （不抛异常＝切面无法计数，任务行 RUNNING 僵尸化）。渲染体放独立守护线程，主线程
-     * {@code RENDER_WATCHDOG_MS} 预算内未完成即放弃（返回已渲染页数），挂起线程自然消亡于
-     * 守护组——页图缺席＝可读 WARN，任务链继续。容器侧根治＝镜像装 fontconfig＋字体。</p>
+     * <p>🔴 看门狗防的是「单次渲染永不返回」——任务线程被无限占用＝任务行 RUNNING 僵尸化
+     * （不抛异常，切面无法计数）。预算随页数伸缩（2026-10-22 用户拍板：慢可接受、失败不可）：
+     * 超预算时任务链先行（快照按<b>已渲染页数</b>上报），<b>渲染线程不取消</b>——继续把剩余页
+     * 渲染上传完，thumb 对象迟到补齐（内容寻址，消费方按需现取，迟到无损）。</p>
      *
      * @param sha256 内容哈希（页图 key 的寻址依据，与原件同源）
      * @param pdf    原件字节
-     * @return 实际渲染成功的页数；非 PDF 或解析失败/超时返回 0
+     * @return 提交时已确认渲染成功的页数；非 PDF 或打不开返回 0
      */
     public int render(String sha256, byte[] pdf) {
         if (pdf == null || pdf.length == 0 || !looksLikePdf(pdf)) {
             return 0;
         }
-        java.util.concurrent.Future<Integer> future = java.util.concurrent.Executors
+        // 页数在主线程读出（加载＝纯结构解析，不触 AWT 字体环境；真正会挂起的渲染在守护线程），
+        // 预算据此伸缩；加载好的文档整体移交给守护线程（本线程不再触碰，关闭归守护线程）
+        final PDDocument document;
+        try {
+            document = PDDocument.load(pdf);
+        } catch (Exception e) {
+            log.warn("PDF 打开失败，跳过页图渲染: sha={} {}", sha256, e.getMessage());
+            return 0;
+        }
+        final int pages = document.getNumberOfPages();
+        final long budgetMs = RENDER_WATCHDOG_BASE_MS + RENDER_WATCHDOG_PER_PAGE_MS * pages;
+        java.util.concurrent.atomic.AtomicInteger rendered = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.Future<?> future = java.util.concurrent.Executors
                 .newSingleThreadExecutor(r -> {
                     Thread t = new Thread(r, "page-image-render-" + sha256.substring(0, 8));
                     t.setDaemon(true);
                     return t;
-                }).submit(() -> renderInner(sha256, pdf));
+                }).submit(() -> renderInner(sha256, document, pages, rendered));
         try {
-            return future.get(RENDER_WATCHDOG_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+            future.get(budgetMs, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (java.util.concurrent.TimeoutException e) {
-            log.warn("页图渲染超看门狗预算（{}s），放弃页图（任务链继续）: sha={} "
-                            + "——容器缺 fontconfig/字体的典型症状，根治＝镜像安装 fontconfig",
-                    RENDER_WATCHDOG_MS / 1000, sha256);
-            future.cancel(true);
-            return 0;
+            log.warn("页图渲染超预算（{}ms / {} 页），任务链继续；渲染线程不取消、剩余页后台补齐: sha={} 已完成={}",
+                    budgetMs, pages, sha256, rendered.get());
         } catch (Exception e) {
             log.warn("页图渲染异常（跳过）: sha={} {}", sha256, e.getMessage());
-            return 0;
         }
+        return rendered.get();
     }
 
-    /** 渲染体（看门狗线程内执行） */
-    private int renderInner(String sha256, byte[] pdf) throws Exception {
-        int rendered = 0;
-        try (PDDocument document = PDDocument.load(pdf)) {
+    /** 渲染体（看门狗线程内执行；文档由主线程移交，本线程负责关闭） */
+    private void renderInner(String sha256, PDDocument document, int pages,
+            java.util.concurrent.atomic.AtomicInteger rendered) {
+        try {
             PDFRenderer renderer = new PDFRenderer(document);
-            int pages = document.getNumberOfPages();
             int limit = Math.min(pages, MAX_PAGES);
             if (pages > MAX_PAGES) {
                 log.warn("PDF 页数超过渲染上限，只渲染前 {} 页: sha={} pages={}", MAX_PAGES, sha256, pages);
@@ -95,16 +107,20 @@ public class PageImageRenderer {
                     BufferedImage image = renderer.renderImageWithDPI(page, DPI);
                     storage.put(BlobStore.thumbKey(sha256, page + 1), toPng(image),
                             BlobStore.contentTypeOf("p.png"));
-                    rendered++;
+                    rendered.incrementAndGet();
                 } catch (Exception e) {
                     log.warn("页图渲染失败（跳过该页）: sha={} page={} {}", sha256, page + 1, e.getMessage());
                 }
             }
-            log.info("页图渲染完成: sha={} 成功={}/{}", sha256, rendered, pages);
-            return rendered;
+            log.info("页图渲染完成: sha={} 成功={}/{}", sha256, rendered.get(), pages);
         } catch (Exception e) {
-            log.warn("PDF 打开失败，跳过页图渲染: sha={} {}", sha256, e.getMessage());
-            return 0;
+            log.warn("页图渲染异常（跳过）: sha={} {}", sha256, e.getMessage());
+        } finally {
+            try {
+                document.close();
+            } catch (Exception ignore) {
+                // 关闭失败不影响结果（堆内临时对象）
+            }
         }
     }
 

@@ -97,7 +97,7 @@ class DefaultParseArtifactWriterTest {
 
         byte[] pageMap = storageJson(written.getPageMapKey());
         String rewritten = new String(storageJson(written.getMarkdownKey()), StandardCharsets.UTF_8);
-        assertTrue(rewritten.contains(BlobStore.IMAGE_PLACEHOLDER_SCHEME), "占位已替换");
+        assertTrue(rewritten.contains(BlobStore.imagePlaceholder(SHA, "images/one.jpg")), "占位已替换");
         JsonNode root = null;
         try {
             root = new ObjectMapper().readTree(pageMap);
@@ -130,7 +130,7 @@ class DefaultParseArtifactWriterTest {
         assertEquals(1, written.getBlockCount());
         assertEquals(3, written.getPageCount());
         String markdown = new String(storageJson(written.getMarkdownKey()), StandardCharsets.UTF_8);
-        assertTrue(markdown.contains("![图](" + BlobStore.IMAGE_PLACEHOLDER_SCHEME + SHA + "/one.png)"),
+        assertTrue(markdown.contains("![图](" + BlobStore.imagePlaceholder(SHA, "one.png") + ")"),
                 "入库正文里的图片须是稳定占位");
         assertFalse(markdown.contains("http"), "正文里不应残留任何 http(s) 链接");
 
