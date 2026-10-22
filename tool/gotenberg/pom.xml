@@ -42,7 +42,7 @@
                 <java.version>1.8</java.version>
                 <!-- 新模块首版未发布过 nexus 时间戳件：先按本地/仓内 0.0.1-SNAPSHOT 解析，
                      随批发布后改钉时间戳版（照 mineru 的 llm.version 钉版形状） -->
-                <document.version>0.0.1-SNAPSHOT</document.version>
+                <document.version>20261023012613-87</document.version>
             </properties>
         </profile>
     </profiles>
