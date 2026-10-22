@@ -29,11 +29,11 @@ import java.util.List;
  *
  * 幂等（重启零重复）：每节点先查库判重，命中即复用、只对自己**新插入**的行绑 admin 角色：
  * - 顶级 topnav：pid IS NULL ∧ menu_type=0 ∧ (title∨path)，查到复用 id、没有先创建；
- * - 导航直挂子行：pid IS NULL ∧ grand_id=导航id ∧ path（库形态如此，见 menu-add.js 同姿势）；
+ * - 导航直挂子行：pid IS NULL ∧ grand_id=导航id ∧ path（库既有行形态如此）；
  * - 下钻行：pid=父id ∧ grand_id=继承祖父 ∧ path；
  * - 叶子自然键 component 只插不覆盖——库里既有行与声明不一致只告警，改行走菜单管理页。
  * 插入行形态照库基线：menu_type / visible='1' / status='1' / client_type='0'
- * （生效值是 '1'，与列注释相反，menu-add.js L8-12 已钉）。
+ * （生效值是 '1'，与列注释"0 显示"相反）。
  *
  * 跨模块分布：声明按页面宿主模块拆成多份（auth/platform/redis/forge/admin/agent-console/insight＋业务），
  * 他人子树只留同名 path 骨架，先 pruneAnchorSkeletons（宿主缺席整支剪除＋告警）再 validate——
@@ -51,7 +51,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MenuSeeder implements ApplicationRunner {
 
-    /** 与 menu-add.js 同口径的审计备注，方便日后按 remark 反查来源 */
+    /** 审计备注：方便日后按 remark 反查播种来源（menu-audit 对账闸同值） */
     static final String REMARK = "menu-seed 播种";
     static final String SYSTEM_USER = "000001";
     static final String DEFAULT_ICON = "SettingOutlined";
@@ -72,7 +72,7 @@ public class MenuSeeder implements ApplicationRunner {
         }
         MenuDeclaration.validate(roots);
         Long adminRoleId = sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID);
-        // R-D D-4：与 MenuAddMain.adminRoleId 同口径硬拒——缺省或 ≤0 时插了菜单也绑不上角色，
+        // R-D D-4：硬拒——缺省或 ≤0 时插了菜单也绑不上角色，
         // 半截播种比不播种更糟（命中即跳过会让下次重启继续跳过，永远缺绑定）。
         if (adminRoleId == null || adminRoleId <= 0L) {
             throw new IllegalStateException("[menu-seed] sys_config 里没有有效的 ACCOUNT_ADMIN_ROLE_ID"
@@ -160,7 +160,7 @@ public class MenuSeeder implements ApplicationRunner {
     }
 
     /**
-     * 插一行并把形态钉到库基线（对照 MenuAddMain.insertMenu）：
+     * 插一行并把形态钉到库基线：
      * visible/status='1'、client_type='0'、ancestors='#'、query=''、is_frame/is_cache='0'；
      * key=menu_id 回填（框架 AdminMenuService.addMenu 同姿势）；只对这一类新行绑 admin 角色。
      */

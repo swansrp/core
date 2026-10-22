@@ -30,7 +30,7 @@ public final class MenuDeclaration {
     public static final String FILE_NAME = "menu-seed.yml";
     /** 顶层键 */
     public static final String ROOT_KEY = "menus";
-    /** 路由段形态：与 menu-add.js 的 --path 校验同口径（单段英文标识） */
+    /** 路由段形态：单段英文标识（字母打头，限 ac_menu.path 列宽内） */
     static final Pattern PATH_PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9_-]{0,49}$");
     /** 列宽（与 ac_menu DDL 对齐，声明超宽在解析期即拦） */
     static final int TITLE_MAX = 50;
