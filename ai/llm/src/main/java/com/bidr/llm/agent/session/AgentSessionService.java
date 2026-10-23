@@ -8,6 +8,7 @@ import com.bidr.llm.agent.conversation.AgentConversationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -57,6 +58,9 @@ public class AgentSessionService {
     /** 通用历史对话存储（会话收口自动落单轮对话；可为空=不落盘） */
     private final ObjectProvider<AgentConversationService> conversationProvider;
 
+    /** SSE 推送通道（M18 棒2；可为空=未装配，行为与改前一致） */
+    private final AgentSessionStreamHub streamHub;
+
     private final ScheduledExecutorService heartbeatExecutor =
             Executors.newSingleThreadScheduledExecutor(runnable -> {
                 Thread thread = new Thread(runnable, "agent-session-heartbeat");
@@ -66,8 +70,16 @@ public class AgentSessionService {
 
     public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
                                ObjectProvider<AgentConversationService> conversationProvider) {
+        this(store, definitionList, conversationProvider, null);
+    }
+
+    @Autowired
+    public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
+                               ObjectProvider<AgentConversationService> conversationProvider,
+                               ObjectProvider<AgentSessionStreamHub> streamHubProvider) {
         this.store = store;
         this.conversationProvider = conversationProvider;
+        this.streamHub = streamHubProvider == null ? null : streamHubProvider.getIfAvailable();
         for (AutonomousAgentDefinition definition : definitionList) {
             AutonomousAgentDefinition existed = definitions.put(definition.agentKey(), definition);
             if (existed != null) {
@@ -134,13 +146,13 @@ public class AgentSessionService {
             throw new ServiceException("会话已结束（" + state.getStatus() + "），无法暂停");
         }
         store.pause(sessionId, note);
-        store.appendEvent(sessionId, AgentEvent.PAUSED,
+        emitAndPublish(sessionId, AgentEvent.PAUSED,
                 note == null || note.trim().isEmpty() ? "用户暂停了会话" : note);
         transition(sessionId, AgentSessionState.PAUSED, null);
     }
 
     /** 恢复（幂等）：清除暂停键；guidance 空时注入默认指导语（让 LLM 知晓恢复事实而非凭空续跑），
-     * 非空时作为用户补充指导注入下一轮上下文 */
+     *  非空时作为用户补充指导注入下一轮上下文 */
     public void resume(String sessionId, String guidance) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
@@ -150,7 +162,7 @@ public class AgentSessionService {
             guidance = "用户未补充新指导，按暂停前的既有计划与进度继续";
         }
         store.resume(sessionId, guidance);
-        store.appendEvent(sessionId, AgentEvent.RESUMED,
+        emitAndPublish(sessionId, AgentEvent.RESUMED,
                 guidance == null || guidance.trim().isEmpty() ? "会话已恢复" : "会话已恢复（附带用户补充指导）");
         transition(sessionId, AgentSessionState.RUNNING, null);
     }
@@ -218,8 +230,11 @@ public class AgentSessionService {
         item.setResolvedAt(System.currentTimeMillis());
         item.setResolveNote(trimmed.isEmpty() ? null : trimmed);
         store.saveState(state);
-        store.appendEvent(sessionId, AgentEvent.CONFIRMATION,
+        emitAndPublish(sessionId, AgentEvent.CONFIRMATION,
                 "待确认口径 #" + confirmationId + (revised ? " 已改口径：" + trimmed : " 已经用户确认"));
+        if (streamHub != null) {
+            streamHub.publishStatus(state);
+        }
         return item;
     }
 
@@ -255,8 +270,12 @@ public class AgentSessionService {
             finalizeStages(state, AgentSessionState.STOPPED, state.getError());
             finalizePlan(state, AgentSessionState.STOPPED);
             store.saveState(state);
-            store.appendEvent(sessionId, AgentEvent.STOPPED, state.getError());
+            emitAndPublish(sessionId, AgentEvent.STOPPED, state.getError());
             store.clearControls(sessionId);
+            // HTTP 线程改写的终态同样收口 SSE 连接（done 帧后关流，前端回落轮询不会挂死）
+            if (streamHub != null) {
+                streamHub.publishDone(state);
+            }
         }
         return state;
     }
@@ -297,11 +316,11 @@ public class AgentSessionService {
     private void runSession(AutonomousAgentDefinition definition, AgentSessionState state,
                             Map<String, Object> payload) {
         String sessionId = state.getSessionId();
-        AgentSessionContext ctx = new AgentSessionContext(state, store, payload);
+        AgentSessionContext ctx = new AgentSessionContext(state, store, payload, streamHub);
         Map<String, Object> startPayload = new HashMap<>();
         startPayload.put("agentKey", state.getAgentKey());
         startPayload.put("payload", payload);
-        store.appendEvent(sessionId, AgentEvent.RUN_START, startPayload);
+        emitAndPublish(sessionId, AgentEvent.RUN_START, startPayload);
         ScheduledFuture<?> heartbeat = heartbeatExecutor.scheduleAtFixedRate(
                 () -> refreshHeartbeat(state, definition), HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS);
         String finalStatus;
@@ -353,17 +372,21 @@ public class AgentSessionService {
         finalizePlan(state, finalStatus);
         store.saveState(state);
         if (AgentSessionState.FINISHED.equals(finalStatus)) {
-            store.appendEvent(sessionId, AgentEvent.FINISH,
+            emitAndPublish(sessionId, AgentEvent.FINISH,
                     state.getSummary() == null ? "会话完成" : state.getSummary());
         } else if (AgentSessionState.FAILED.equals(finalStatus)) {
-            store.appendEvent(sessionId, AgentEvent.ERROR, error);
+            emitAndPublish(sessionId, AgentEvent.ERROR, error);
         } else {
-            store.appendEvent(sessionId, AgentEvent.STOPPED,
+            emitAndPublish(sessionId, AgentEvent.STOPPED,
                     "会话已停止" + (error == null ? "" : "：" + error));
             // 停止事实传达：补一条 GUIDANCE 事件，后续重开/回看时 LLM 与用户都能获知上一轮系用户主动停止，
             // 避免新一轮会话误以为任务仍在延续（协议无停止命令，中断即停，此为事实层补齐）
-            store.appendEvent(sessionId, AgentEvent.GUIDANCE,
+            emitAndPublish(sessionId, AgentEvent.GUIDANCE,
                     "上一轮会话已被用户主动停止；若重新发起，不要假定上一轮任务仍在进行，按新的完整指令执行");
+        }
+        // 终态收口帧：done 之后关该会话全部 SSE 连接（前端回落轮询/重连）
+        if (streamHub != null) {
+            streamHub.publishDone(state);
         }
         try {
             definition.onFinish(ctx, finalStatus, error);
@@ -515,6 +538,20 @@ public class AgentSessionService {
         state.setError(error);
         state.setHeartbeat(System.currentTimeMillis());
         store.saveState(state);
+        // 状态迁移即状态帧（pause/resume 后 SSE 客户端免轮询即时可见；hub 缺席为 no-op）
+        if (streamHub != null) {
+            streamHub.publishStatus(state);
+        }
+    }
+
+    /** 直写 appendEvent 的点位统一补发 SSE 事件帧（seq≤0 落库失败不发；
+     *  与 AgentSessionContext#emit 同口径，双写点共用一个语义） */
+    private long emitAndPublish(String sessionId, String type, Object eventPayload) {
+        long seq = store.appendEvent(sessionId, type, eventPayload);
+        if (seq > 0 && streamHub != null) {
+            streamHub.publishEvent(sessionId, seq, type, eventPayload, System.currentTimeMillis());
+        }
+        return seq;
     }
 
     private AgentSessionState requireState(String sessionId) {

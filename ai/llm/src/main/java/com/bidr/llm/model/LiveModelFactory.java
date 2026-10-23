@@ -24,25 +24,45 @@ import java.util.function.Supplier;
  * 用途（独立超时/密钥口径）由每次 build 传入；AGENT 为当前唯一在用用途。
  * 思考强度旋钮：build 可携 thinkingBudget（思考 token 上限）——null/非正=最强（不携带参数），
  * 框架只暴露旋钮不内置语义，业务侧按 Agent 配置传值（机制进框架、语义留业务）。
+ * live 帧率旋钮（M18 棒2）：liveIntervalMillis 随构造注入（agent 会话 SSE 链路 300ms 级，
+ * 缺省 1000ms＝逐秒轮询口径），build 内 clamp [200,500]——太快要打爆推送通道、
+ * 太慢失去 SSE 实时意义，区间外一律收敛进区间。
  *
  * @author Sharp
  * @since 2026/8/23
  */
 public class LiveModelFactory {
 
+    /** live 帧率缺省（ms）：逐秒推送的历史口径（轮询链路） */
+    private static final long DEFAULT_LIVE_INTERVAL_MS = 1000;
+
+    /** live 帧率下限（ms）：再快对推送通道与前端渲染都是纯浪费 */
+    private static final long LIVE_INTERVAL_MIN_MS = 200;
+
+    /** live 帧率上限（ms）：再慢与 2s 轮询无差别，SSE 链路失去意义 */
+    private static final long LIVE_INTERVAL_MAX_MS = 500;
+
     private final ModelConfigProvider provider;
     private final boolean proxyEnable;
     private final String proxyHost;
     private final int proxyPort;
     private final int syncMaxAttempts;
+    /** live 推流节流间隔（ms），build 时 clamp 进 [200,500] 后透传 */
+    private final long liveIntervalMillis;
 
     public LiveModelFactory(ModelConfigProvider provider, boolean proxyEnable, String proxyHost,
             int proxyPort, int syncMaxAttempts) {
+        this(provider, proxyEnable, proxyHost, proxyPort, syncMaxAttempts, DEFAULT_LIVE_INTERVAL_MS);
+    }
+
+    public LiveModelFactory(ModelConfigProvider provider, boolean proxyEnable, String proxyHost,
+            int proxyPort, int syncMaxAttempts, long liveIntervalMillis) {
         this.provider = provider;
         this.proxyEnable = proxyEnable;
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
         this.syncMaxAttempts = syncMaxAttempts;
+        this.liveIntervalMillis = liveIntervalMillis;
     }
 
     /**
@@ -74,7 +94,8 @@ public class LiveModelFactory {
                 thinkingBudget);
         ChatLanguageModel syncFallback = new RefreshableChatModel(
                 provider, purposeType, syncMaxAttempts, proxy, () -> null);
+        long interval = Math.max(LIVE_INTERVAL_MIN_MS, Math.min(LIVE_INTERVAL_MAX_MS, liveIntervalMillis));
         return new StreamingProgressChatModel(streaming, live,
-                provider.getTimeoutSeconds(purposeType), syncFallback);
+                provider.getTimeoutSeconds(purposeType), syncFallback, true, interval);
     }
 }

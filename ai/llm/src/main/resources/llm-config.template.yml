@@ -1,5 +1,5 @@
 # =============================================================================
-# core/llm 模块读取的全部 yml 键（23 把，正源＝本模块代码里的 ${llm...} 占位符）
+# core/llm 模块读取的全部 yml 键（25 把，正源＝本模块代码里的 ${llm...} 占位符）
 #   重新取证命令（改了代码就跑一次，模板必须跟着更新）：
 #     cd server/framework/core/llm && grep -rho '\${llm[^}]*}' src/main/java | sort -u
 #   机器对账腿＝LlmConfigTemplateCoverageTest（模板叶子键集合与代码 ${llm...} 占位符集合必须**完全相等**，
@@ -55,6 +55,9 @@ llm:
     key-prefix:        # 【出厂默认即可】会话状态/事件流的 Redis 键前缀。[llm:agent:session:]  ✋
     ttl-seconds:       # 【按需调整】会话快照与事件流的键存活秒数，每次写入按当前值续期。[86400＝24 小时]  🔁 sys_config: AGENT_SESSION_TTL_SECONDS（「Agent会话保留(秒)」出厂留空＝按这里/默认）
                        #   ⚠️ 改运行期值只影响之后的写入：已存在的键寿命不变，下次被写才续成新值。
+    live-frame-millis: # 【出厂默认即可】agent 会话 LLM 流式 live 帧节流间隔（毫秒；SSE 推送链路口径，装配时 clamp 进 [200,500]，改了重启生效）。[300]  ✋
+    stream:
+      topic:           # 【出厂默认即可】会话 SSE 帧跨实例扇出的 Redisson RTopic 频道名（多实例共用；Redisson 缺席自动退回单实例本地投递）。[llm:agent:stream]  ✋
   agent-task-gate:
     key-prefix:        # 【出厂默认即可】任务互斥闸门键前缀。[llm:agent:task-gate:]  ✋
     orphan-millis:     # 【按需调整】属主心跳超过这个毫秒数即判失联、强删锁自愈。[90000＝90 秒]  🔁 sys_config: AGENT_TASK_GATE_ORPHAN_MILLIS（「Agent任务失联阈值(毫秒)」出厂留空＝按这里/默认）

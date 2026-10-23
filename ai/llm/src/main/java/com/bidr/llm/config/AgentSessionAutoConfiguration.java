@@ -6,12 +6,15 @@ import com.bidr.llm.agent.gate.InMemoryAgentTaskGate;
 import com.bidr.llm.agent.gate.RedisAgentTaskGate;
 import com.bidr.llm.agent.runtime.spi.AgentRuntimeProvider;
 import com.bidr.llm.agent.session.AgentSessionStore;
+import com.bidr.llm.agent.session.AgentSessionStreamHub;
 import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
 import com.bidr.llm.agent.session.RedisAgentSessionStore;
 import com.bidr.llm.constant.param.LlmParam;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RTopic;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -102,6 +105,75 @@ public class AgentSessionAutoConfiguration {
     public ExternalRuntimeTaskService externalRuntimeTaskService(
             AgentSessionStore store, ObjectProvider<AgentRuntimeProvider> providerHolder) {
         return new ExternalRuntimeTaskService(store, providerHolder::getIfAvailable);
+    }
+
+    /**
+     * agent 会话 SSE 推送通道（M18 棒2）：hub 只投递不落库（单写者仍是 run 线程），
+     * bus 接线见 {@link StreamBusConfiguration}（Redisson 缺席＝仅本地投递的单实例退化）。
+     * SseEmitter 类缺席（无 web 环境）不装配——Controller 同条件缺席，端点整体不可用。
+     */
+    @Bean
+    @ConditionalOnMissingBean(AgentSessionStreamHub.class)
+    @ConditionalOnClass(name = "org.springframework.web.servlet.mvc.method.annotation.SseEmitter")
+    public AgentSessionStreamHub agentSessionStreamHub(ObjectMapper objectMapper) {
+        log.info("装配 AgentSessionStreamHub（agent 会话 SSE 推送通道；总线缺席时仅本地投递）");
+        return new AgentSessionStreamHub(objectMapper);
+    }
+
+    /**
+     * 跨实例帧总线（Redisson RTopic）：把 live/event/status/done 帧信封广播到全部实例，
+     * 各实例经 {@link AgentSessionStreamHub#onBusMessage} 投递本地连接。
+     * Redisson 分支放内嵌配置类做类加载隔离（同 {@link RedisStoreConfiguration} 手法）——
+     * hub 本体不持 Redisson 引用；hub 经 {@link ObjectProvider} 解析（I3）：hub bean 带
+     * {@code @ConditionalOnClass(SseEmitter)} 条件，无 web＋有 Redisson 的应用 hub 缺席，
+     * 直参数解析会启动崩——{@code getIfAvailable()} 为 null 即返回 null（与 Redisson
+     * 缺席返 null 同构）；RedissonClient bean 缺席/解析失败/订阅失败时同样返回 null
+     * （无 bus），hub 保持本地投递模式，SSE 通道单实例仍可用。
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "org.redisson.api.RedissonClient")
+    public static class StreamBusConfiguration {
+
+        @Bean
+        public AgentSessionStreamHub.StreamBus agentSessionStreamBus(
+                ObjectProvider<RedissonClient> redissonProvider, ObjectProvider<AgentSessionStreamHub> hubProvider,
+                @Value("${llm.agent-session.stream.topic:llm:agent:stream}") String topic) {
+            RedissonClient redisson;
+            try {
+                redisson = redissonProvider.getIfAvailable();
+            } catch (Exception e) {
+                log.warn("RedissonClient 解析失败，agent 会话流总线不装配（hub 保持本地投递）：{}", e.getMessage());
+                return null;
+            }
+            if (redisson == null) {
+                log.info("RedissonClient 缺席，agent 会话流总线不装配（hub 保持本地投递）");
+                return null;
+            }
+            AgentSessionStreamHub hub;
+            try {
+                hub = hubProvider.getIfAvailable();
+            } catch (Exception e) {
+                log.warn("AgentSessionStreamHub 解析失败，agent 会话流总线不装配：{}", e.getMessage());
+                return null;
+            }
+            if (hub == null) {
+                log.info("AgentSessionStreamHub 缺席（无 web 形态），agent 会话流总线不装配");
+                return null;
+            }
+            RTopic rTopic = redisson.getTopic(topic);
+            try {
+                // RTopic 回声含发布实例自身（Redis pub/sub 语义），hub 发布侧统一经总线投递，帧序一致
+                rTopic.addListener(String.class, (channel, msg) -> hub.onBusMessage(msg));
+            } catch (Exception e) {
+                log.warn("agent 会话流总线订阅失败（Redis 不可用？hub 保持本地投递）, topic={}, error={}",
+                        topic, e.getMessage());
+                return null;
+            }
+            log.info("装配 agent 会话流总线（RTopic={}，跨实例 SSE 帧扇出）", topic);
+            AgentSessionStreamHub.StreamBus bus = json -> rTopic.publish(json);
+            hub.setBus(bus);
+            return bus;
+        }
     }
 
     /**

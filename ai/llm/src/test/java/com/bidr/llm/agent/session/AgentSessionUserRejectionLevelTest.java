@@ -46,7 +46,8 @@ public class AgentSessionUserRejectionLevelTest {
     /** 端点依赖除 operatorResolver 外全喂 null：下列腿都在触达它们之前抛出 */
     private AgentSessionController controller() {
         return new AgentSessionController(null, null, null, Collections.emptyList(),
-                Mockito.mock(ObjectProvider.class), null, Collections.emptyList());
+                Mockito.mock(ObjectProvider.class), null,
+                Mockito.mock(ObjectProvider.class), Collections.emptyList());
     }
 
     private void save(String status, List<AgentQuestion> questions, List<AgentConfirmation> confirmations) {

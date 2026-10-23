@@ -4,6 +4,7 @@ import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionService;
 import com.bidr.llm.agent.session.AgentSessionState;
+import com.bidr.llm.agent.session.AgentSessionStreamHub;
 import com.bidr.llm.flow.*;
 import com.bidr.llm.flow.trace.FlowTrace;
 import com.bidr.llm.flow.trace.FlowTraceRecorder;
@@ -20,6 +21,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,6 +71,9 @@ public class AgentSessionController {
 
     /** skill 评价底座（会话整体评价入库；Redis 不可用时静默降级） */
     private final SkillRatingService skillRatingService;
+
+    /** SSE 推送通道（hub 缺席=装配未启用，stream 端点报"未启用"错误信封，前端回落轮询） */
+    private final ObjectProvider<AgentSessionStreamHub> streamHubProvider;
 
     /** 评价动作业务钩子（按 skillCode 分发；无实现时端点按请求体自组装直落底座） */
     private final List<AgentRatingListener> ratingListeners;
@@ -214,6 +219,27 @@ public class AgentSessionController {
     public List<AgentEvent> events(@PathVariable("sessionId") String sessionId,
                                    @RequestParam(name = "sinceSeq", defaultValue = "0") long sinceSeq) {
         return agentSessionService.events(sessionId, sinceSeq);
+    }
+
+    /**
+     * 会话 SSE 推送通道（M18 棒2）：live/event/status/done 四类帧实时下发，免 2s 轮询——
+     * 建连即回放 status 全量帧＋events(sinceSeq) 增量帧（重连不丢事件，SSE id=seq），
+     * 之后由 run 线程经 hub 逐帧推送，终态发 done 后关流。会话不存在走平台错误信封
+     * （非 2xx，前端据此回落轮询）；hub 未装配同口径报错。
+     */
+    @ApiTrace(log = false)
+    @GetMapping(value = "/session/{sessionId}/stream", produces = "text/event-stream")
+    public SseEmitter stream(@PathVariable("sessionId") String sessionId,
+                             @RequestParam(name = "sinceSeq", defaultValue = "0") long sinceSeq) {
+        AgentSessionStreamHub hub = streamHubProvider.getIfAvailable();
+        if (hub == null) {
+            throw new ServiceException("SSE 通道未启用");
+        }
+        // 会话校验复用 status（requireState/失联判定/在场信号刷新一站完成，直连不走轮询链路）
+        AgentSessionState state = agentSessionService.status(sessionId);
+        return hub.open(state, sinceSeq,
+                since -> agentSessionService.events(sessionId, since), () -> {
+                });
     }
 
     /**

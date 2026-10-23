@@ -21,10 +21,12 @@ import java.util.function.Supplier;
  * Title: StreamingProgressChatModel
  * Description: 流式模型转同步门面 + 实时进度上报：对外暴露同步 ChatLanguageModel API，
  * 内部走 {@link RawSseStreamingChatModel} 自建 SSE 客户端（reasoning_content 与 content
- * 分离上抛），事件到达期间按节流（每秒至多一条）向 sink 推「思考中·已思 N 字」+ 完整
+ * 分离上抛），事件到达期间按节流向 sink 推「思考中·已思 N 字」+ 完整
  * 思考文本（思考阶段，模型 reasoning_content 全文实时上屏）或「应答中·已收 N 字」+
  * 完整应答文本（正式应答阶段），轮询 live 行替换式展示；另在思考→应答切换点补推尾部思考、
- * onComplete 推「【LLM 思考归档】」独立行，保证每轮思考全文可被前端累积留存（替换式
+ * onComplete 在 verbose 模式先补推最终应答全文帧（最后一次节流吞掉的尾部应答以
+ * 「应答中·已收 N 字」+ 全文收尾，live 不停在半句，如 ask_user 提问卡弹出瞬间）
+ * 再推「【LLM 思考归档】」独立行，保证每轮思考全文可被前端累积留存（替换式
  * live 不再造成上一轮思考丢失），让业务进度窗在单次调用数十秒的思考静默窗内实时看见
  * LLM 完整的思考过程与应答内容；onComplete 返回完整响应，
  * onError 抛异常（cause 链保留，引擎回落/中断识别逻辑与同步路径同口径复用）。
@@ -32,6 +34,10 @@ import java.util.function.Supplier;
  * 精简模式（liveVerbose=false，事件流追加式链路专用）：流式期间仅推状态行（思考中·已思 N 字 /
  * 应答中·已收 N 字），思考全文只在轮末归档推一条——追加式事件流若逐条携带累积全文，
  * 事件体积随思考长度平方膨胀（Redis 存储与轮询传输双重代价）
+ * <p>
+ * 帧率参数化（M18 棒2）：节流间隔经构造器注入（liveIntervalMillis，缺省 1000ms＝
+ * 逐秒推送的轮询口径）；agent 会话 SSE 链路配 300ms 级高频帧。累积文本超 16k 时
+ * 自动降频（间隔下限 500ms），防超长思考/应答把推送通道与前端打爆。
  *
  * @author Sharp
  * @since 2026/8/21
@@ -39,8 +45,15 @@ import java.util.function.Supplier;
 @Slf4j
 public class StreamingProgressChatModel implements ChatLanguageModel {
 
-    /** live 进度推流节流间隔（ms）：轮询间隔 2s，每秒至多一条保证每次轮询都能看到变化 */
-    private static final long LIVE_INTERVAL_MS = 1000;
+    /** live 进度推流节流默认间隔（ms）：轮询间隔 2s 的历史口径（每秒至多一条，每次轮询都能看到变化）；
+     *  SSE 链路经全参构造器注入更短间隔 */
+    private static final long DEFAULT_LIVE_INTERVAL_MS = 1000;
+
+    /** 累积文本超此长度降频（间隔抬到 ≥500ms）：超长思考全文逐 300ms 重发整个累积串，通道代价平方级 */
+    private static final long LIVE_BACKOFF_CHARS = 16000;
+
+    /** 降频后的最小间隔（ms） */
+    private static final long LIVE_BACKOFF_MIN_INTERVAL_MS = 500;
 
     /** 等待首个事件心跳周期（s）：静默窗内 live 行带秒数刷新，避免看似卡死 */
     private static final long WAIT_HEARTBEAT_SECS = 5;
@@ -63,6 +76,8 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
     private final ChatLanguageModel fallback;
     /** live 推送形态：true=状态行+累积全文（替换式展示链路）；false=仅状态行，全文靠轮末归档（追加式事件流链路） */
     private final boolean liveVerbose;
+    /** live 推流节流间隔（ms）：SSE 链路 300ms 级，轮询链路缺省 1000ms */
+    private final long liveIntervalMillis;
     /** 首次回落后同实例后续调用直接走同步，避免每轮试探已知损坏的流式通道 */
     private final AtomicBoolean streamBroken = new AtomicBoolean();
 
@@ -78,11 +93,19 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
 
     public StreamingProgressChatModel(RawSseStreamingChatModel delegate, Consumer<String> liveSink,
                                       long timeoutSeconds, ChatLanguageModel fallback, boolean liveVerbose) {
+        this(delegate, liveSink, timeoutSeconds, fallback, liveVerbose, DEFAULT_LIVE_INTERVAL_MS);
+    }
+
+    /** 全参构造器（M18 棒2 帧率参数化）：liveIntervalMillis 非正回落缺省 1000ms */
+    public StreamingProgressChatModel(RawSseStreamingChatModel delegate, Consumer<String> liveSink,
+                                      long timeoutSeconds, ChatLanguageModel fallback, boolean liveVerbose,
+                                      long liveIntervalMillis) {
         this.delegate = delegate;
         this.liveSink = liveSink;
         this.timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 600;
         this.fallback = fallback;
         this.liveVerbose = liveVerbose;
+        this.liveIntervalMillis = liveIntervalMillis > 0 ? liveIntervalMillis : DEFAULT_LIVE_INTERVAL_MS;
     }
 
     /**
@@ -167,7 +190,7 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
                 // 精简模式只推状态行，全文由轮末归档统一给出）；
                 // 最后一次节流后的尾部思考由应答首 token 前的收尾推送补全，归档不丢字
                 long now = System.currentTimeMillis();
-                if (now - lastPush.get() >= LIVE_INTERVAL_MS) {
+                if (now - lastPush.get() >= intervalMs(reasoningBuf)) {
                     lastPush.set(now);
                     push(liveVerbose
                             ? "思考中·已思 " + n + " 字\n" + reasoningBuf
@@ -181,9 +204,10 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
                     // 首应答 token 延迟即 time-to-first-token：定位「慢在模型思考/排队」还是「网关缓冲」
                     log.info("LLM 流式首应答 token 延迟 {}s", (System.currentTimeMillis() - startMs) / 1000);
                 }
-                if (contentBuf.length() == 0 && liveVerbose) {
+                if (contentBuf.length() == 0 && liveVerbose && reasoningChars.get() > 0) {
                     // 思考→应答切换点：补推最后一次节流后的尾部思考全文，前端归档不丢尾部片段；
-                    // 纯应答调用（无思考）天然跳过。归档（含最终全文）统一由 onComplete 兜底推送，
+                    // 纯应答调用（无思考）天然跳过（reasoningChars>0 护栏对齐本注释——纯应答不推
+                    // 「已思 0 字」空帧）。归档（含最终全文）统一由 onComplete 兜底推送，
                     // live 为替换式展示——不补此处则上一轮思考在下一轮开始时被覆盖丢失（debug 无法回看）；
                     // 精简模式为追加式事件流无覆盖丢失问题，跳过此处由归档兜底
                     push("思考中·已思 " + reasoningChars.get() + " 字\n" + reasoningBuf);
@@ -193,7 +217,7 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
                 long now = System.currentTimeMillis();
                 // 首 token 立即推一次（思考→应答切换点用户即刻可见），之后按节流间隔推；
                 // verbose 携带累积全文（替换式展示），精简模式仅状态行防追加式事件流膨胀
-                if (n == delta.length() || now - lastPush.get() >= LIVE_INTERVAL_MS) {
+                if (n == delta.length() || now - lastPush.get() >= intervalMs(contentBuf)) {
                     lastPush.set(now);
                     push(liveVerbose
                             ? "应答中·已收 " + n + " 字\n" + contentBuf
@@ -205,6 +229,16 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
             public void onComplete(Response<AiMessage> response) {
                 log.info("LLM 流式完成：总 {}s·思考 {} 字·应答 {} 字",
                         (System.currentTimeMillis() - startMs) / 1000, reasoningChars.get(), contentChars.get());
+                // 最终应答全文帧（仅 verbose）：补齐最后一次节流后的尾部应答——1s 节流下末段
+                // token 常被吞（流到此结束则永不补发），live 停在半句（如 ask_user 提问卡弹出时
+                // 用户视角＝残文）；前缀沿用「应答中·已收 N 字」（isLiveStatusLine 词汇表镜像，
+                // 勿改），替换式 live 以完整全文收尾。须在思考归档帧之前：最终应答先进 live，
+                // 归档行走事件流。精简模式不补（追加式事件流无替换覆盖问题，归档兜底）；
+                // contentChars>0 护栏：纯思考流（onToken 零）不推「已收 0 字」空帧
+                // （与归档帧 reasoningChars>0 护栏同风格）
+                if (liveVerbose && contentChars.get() > 0) {
+                    push("应答中·已收 " + contentChars.get() + " 字\n" + contentBuf);
+                }
                 // 本次调用思考全文归档：以独立过程日志行经 live 通道推给前端（与 steps 同源，
                 // 完成态折叠区可回看 + 一键复制可带走），杜绝多轮覆盖丢失——思考过程是 debug 证据链的一部分；
                 // 无思考的纯应答调用不推（避免空归档噪音）
@@ -257,6 +291,12 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
         }
         // onComplete 未带响应体时以累积片段兜底
         return Response.from(AiMessage.from(contentBuf.toString()));
+    }
+
+    /** 当前节流间隔：累积文本超 16k 自动降频（≥500ms），防超长全文逐帧重发打爆通道 */
+    private long intervalMs(CharSequence buf) {
+        return buf.length() > LIVE_BACKOFF_CHARS ? Math.max(liveIntervalMillis, LIVE_BACKOFF_MIN_INTERVAL_MS)
+                : liveIntervalMillis;
     }
 
     private void push(String text) {

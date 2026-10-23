@@ -128,13 +128,16 @@ public class LlmDefaultAutoConfiguration {
      * 流式进度模型工厂：「自建 SSE 流式客户端 + 同步回落」双通道模型的统一装配点
      * （原先散落在问数维护/资产生成两处业务服务的同构 buildLiveModel 归一）；
      * 代理与重试口径随 Bean 构造固化（llm.proxy.* / llm.chat.max-attempts 同源），
- * Provider 缺失时由调用方懒回落同步模型（无流式进度）
+     * Provider 缺失时由调用方懒回落同步模型（无流式进度）。
+     * live 帧率经 {@code llm.agent-session.live-frame-millis} 注入（缺省 300ms＝
+     * agent 会话 SSE 推送通道口径，M18 棒2；工厂 build 内 clamp [200,500]）
      */
     @Bean
     @ConditionalOnMissingBean
-    public LiveModelFactory liveModelFactory(ObjectProvider<ModelConfigProvider> configProvider) {
+    public LiveModelFactory liveModelFactory(ObjectProvider<ModelConfigProvider> configProvider,
+            @Value("${llm.agent-session.live-frame-millis:300}") long liveFrameMillis) {
         return new LiveModelFactory(configProvider.getIfAvailable(),
-                proxyEnable, proxyHost, proxyPort, maxAttempts);
+                proxyEnable, proxyHost, proxyPort, maxAttempts, liveFrameMillis);
     }
 
     /**

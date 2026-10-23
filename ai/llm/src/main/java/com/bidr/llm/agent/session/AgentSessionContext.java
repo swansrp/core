@@ -38,19 +38,35 @@ public class AgentSessionContext {
     /** 作答控制键 JSON 解析（与 AgentSessionService#answer 组装口径一致） */
     private static final ObjectMapper ANSWER_OM = new ObjectMapper();
 
+    /** live 快照持久节流间隔（毫秒）：300ms 级 live 帧不逐帧落 Redis，突发结束后由
+     *  {@link #flushLiveIfDirty()} 在 run 线程下一写点补进快照，轮询兜底客户端不丢尾 */
+    private static final long LIVE_PERSIST_INTERVAL_MILLIS = 1000;
+
     private final AgentSessionState state;
     private final AgentSessionStore store;
     private final Map<String, Object> payload;
+    /** SSE 推送通道（M18 棒2；可空＝测试/未装配兼容，空时行为与改前一致） */
+    private final AgentSessionStreamHub streamHub;
     private final AtomicReference<String> summary = new AtomicReference<>();
+    /** live 节流期间有未持久帧（下一写点 flush） */
+    private volatile boolean liveDirty = false;
+    /** 上次 live 快照持久时刻（节流基准） */
+    private volatile long lastLivePersistAt = 0L;
     /** 计划待办板（状态机下沉框架层）：真源是 state.plan 同一 list 引用，
-     *  变更回调挂快照持久化；公开四方法保留为约定名桥接（见接入指南 §2.4） */
+     *  变更回调挂快照持久化＋状态帧；公开四方法保留为约定名桥接（见接入指南 §2.4） */
     private final PlanBoard planBoard;
 
     public AgentSessionContext(AgentSessionState state, AgentSessionStore store, Map<String, Object> payload) {
+        this(state, store, payload, null);
+    }
+
+    public AgentSessionContext(AgentSessionState state, AgentSessionStore store, Map<String, Object> payload,
+                               AgentSessionStreamHub streamHub) {
         this.state = state;
         this.store = store;
         this.payload = payload;
-        this.planBoard = new PlanBoard(state.getPlan(), this::persistStages);
+        this.streamHub = streamHub;
+        this.planBoard = new PlanBoard(state.getPlan(), this::persistAndPublishStatus);
     }
 
     /** 计划待办板（工具注册用：new AgentPlanTools(ctx.planBoard(), …)） */
@@ -90,9 +106,15 @@ public class AgentSessionContext {
 
     // ---- 事件上报 ----
 
-    /** 追加过程事件（见 AgentEvent 类型常量），返回事件 seq */
+    /** 追加过程事件（见 AgentEvent 类型常量），返回事件 seq；落库成功（seq&gt;0）时
+     *  向 SSE 通道发布事件帧（SSE 客户端免轮询；轮询链路不受影响） */
     public long emit(String type, Object eventPayload) {
-        return store.appendEvent(state.getSessionId(), type, eventPayload);
+        flushLiveIfDirty();
+        long seq = store.appendEvent(state.getSessionId(), type, eventPayload);
+        if (seq > 0 && streamHub != null) {
+            streamHub.publishEvent(state.getSessionId(), seq, type, eventPayload, System.currentTimeMillis());
+        }
+        return seq;
     }
 
     /** 过程日志便捷上报（LOG 事件） */
@@ -100,12 +122,29 @@ public class AgentSessionContext {
         emit(AgentEvent.LOG, line);
     }
 
-    /** LLM 流式实时内容上报（替换式：覆盖 state.live 并落快照，与问数链 live 同口径）；
-     *  适合高频推送（每秒级）：不进追加式事件流不膨胀存储，轮询拿到的永远是最新一帧；
-     *  传 null 即清空（终态收口用） */
+    /** LLM 流式实时内容上报（替换式：覆盖 state.live，与问数链 live 同口径）；
+     *  适合高频推送：不进追加式事件流不膨胀存储——SSE 通道逐帧投递（300ms 级），
+     *  快照持久按 1s 节流（节流期间置 dirty 由 {@link #flushLiveIfDirty()} 兜底），
+     *  轮询拿到的永远是最新一帧；传 null 即清空（终态收口用，不走节流直接持久） */
     public void pushLive(String text) {
         state.setLive(text);
-        persistStages();
+        if (streamHub != null) {
+            streamHub.publishLive(state.getSessionId(), text);
+        }
+        if (text == null) {
+            liveDirty = false;
+            persistStages();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastLivePersistAt >= LIVE_PERSIST_INTERVAL_MILLIS) {
+            lastLivePersistAt = now;
+            liveDirty = false;
+            persistStages();
+        } else {
+            // 不落 Redis：突发帧由下一写点（emit/askQuestion/阶段等）flush 进快照
+            liveDirty = true;
+        }
     }
 
     // ---- 阶段上报（AgentStages 数据源：状态快照全量渲染 + stage 事件实时跳动） ----
@@ -116,7 +155,7 @@ public class AgentSessionContext {
      */
     public void defineStages(AgentStage... stages) {
         state.setStages(new ArrayList<>(Arrays.asList(stages)));
-        persistStages();
+        persistAndPublishStatus();
         for (AgentStage stage : state.getStages()) {
             emit(AgentEvent.STAGE, stage);
         }
@@ -160,12 +199,14 @@ public class AgentSessionContext {
             target.setStartedAt(System.currentTimeMillis());
         }
         target.setEndedAt(AgentStage.RUNNING.equals(status) ? null : System.currentTimeMillis());
-        persistStages();
+        persistAndPublishStatus();
         emit(AgentEvent.STAGE, target);
     }
 
     /** 阶段快照落 store（写失败仅记日志，不阻断业务执行）；
-     *  落快照同时刷新心跳：本方法皆由 run 线程调用（pushLive/阶段/计划等高频写入），
+     *  落快照同时刷新心跳：本方法由 run 线程调用（pushLive/阶段/计划等高频写入），
+     *  或 run 线程阻塞于 LLM 闩期间与之时间互斥的 okhttp 流回调线程（live 帧经
+     *  pushLive 落快照的路径）——两者时间上互斥，单写者实质保持；
      *  活动即存活信号——否则内存快照会把 Redis 心跳回滚为启动时刻，
      *  会话满 180s 后被查询侧误判执行实例失联 */
     private void persistStages() {
@@ -174,6 +215,28 @@ public class AgentSessionContext {
             store.saveState(state);
         } catch (Exception e) {
             log.warn("阶段快照写入失败（忽略）, sessionId={}, error={}", state.getSessionId(), e.getMessage());
+        }
+    }
+
+    /** 语义变更点专用：落快照后向 SSE 通道发 status 帧（全量快照，SSE 客户端免轮询；
+     *  hub 缺席时等价 persistStages）。全量持久本身已携带最新 live——顺手吞掉 pending
+     *  的 live 脏标（否则后续 emit 的 flush 会把同一份快照冗余再写一遍） */
+    private void persistAndPublishStatus() {
+        liveDirty = false;
+        lastLivePersistAt = System.currentTimeMillis();
+        persistStages();
+        if (streamHub != null) {
+            streamHub.publishStatus(state);
+        }
+    }
+
+    /** live 节流尾巴兜底：有未持久帧时立即落快照——保证突发结束后最终帧在 run 线程
+     *  下一写点（emit/askQuestion/阶段/问题上报等）进快照，轮询兜底客户端不丢尾 */
+    private void flushLiveIfDirty() {
+        if (liveDirty) {
+            liveDirty = false;
+            lastLivePersistAt = System.currentTimeMillis();
+            persistStages();
         }
     }
 
@@ -224,7 +287,7 @@ public class AgentSessionContext {
         int id = list.isEmpty() ? 1 : list.get(list.size() - 1).getId() + 1;
         AgentQuestion item = new AgentQuestion(id, question, options);
         list.add(item);
-        persistStages();
+        persistAndPublishStatus();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
         payload.put("question", item.getQuestion());
@@ -256,7 +319,7 @@ public class AgentSessionContext {
             if (System.currentTimeMillis() >= deadline) {
                 q.setStatus(AgentQuestion.EXPIRED);
                 q.setAnsweredAt(System.currentTimeMillis());
-                persistStages();
+                persistAndPublishStatus();
                 emit(AgentEvent.LOG, "提问 #" + q.getId() + " 等待超时未作答，按合理默认继续");
                 return AWAIT_EXPIRED;
             }
@@ -293,14 +356,14 @@ public class AgentSessionContext {
         if (skipped || answer.isEmpty()) {
             q.setStatus(AgentQuestion.SKIPPED);
             q.setAnsweredAt(System.currentTimeMillis());
-            persistStages();
+            persistAndPublishStatus();
             emit(AgentEvent.ANSWERED, "用户跳过了该问题，交由 AI 自行决策");
             return null;
         }
         q.setStatus(AgentQuestion.ANSWERED);
         q.setAnswer(answer);
         q.setAnsweredAt(System.currentTimeMillis());
-        persistStages();
+        persistAndPublishStatus();
         emit(AgentEvent.ANSWERED, answer);
         return answer;
     }
@@ -327,7 +390,7 @@ public class AgentSessionContext {
         int id = list.isEmpty() ? 1 : list.get(list.size() - 1).getId() + 1;
         AgentConfirmation item = new AgentConfirmation(id, question, adopted, evidence, impact);
         list.add(item);
-        persistStages();
+        persistAndPublishStatus();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
         payload.put("question", item.getQuestion());
@@ -350,7 +413,10 @@ public class AgentSessionContext {
 
     /**
      * 暂停阻塞（引擎每轮循环头调用）：暂停期间每秒醒查，恢复或停止时返回。
-     * 暂停/恢复的时刻各补一条事件（前端状态条）；返回恢复指导语（无则 null）
+     * 暂停/恢复的时刻各补一条事件（前端状态条）；<b>不发 status 帧</b>——暂停/恢复的
+     * 状态帧由 HTTP 侧 pause/resume 的 transition 落快照后发布（正确 PAUSED/RUNNING 状态），
+     * 此处 ctx.state 的 status 仍是过期值（RUNNING），再发会把前端回跳到 RUNNING 最长
+     * 一个暂停周期；返回恢复指导语（无则 null）
      */
     public String awaitResumeIfPaused() {
         if (!isPaused() || isStopRequested()) {
