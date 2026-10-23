@@ -324,6 +324,14 @@ public class DriverStatisticSupportService {
         }
         sql.append(" GROUP BY ").append(String.join(", ", groupByParts));
 
+        // 4.1: 聚合后过滤（前端把「列搜索」打在统计列上）: 只允许引用本次 SELECT 的输出别名
+        if (FuncUtil.isNotEmpty(req.getHavingCondition())) {
+            String havingSql = builder.buildHavingCondition(req.getHavingCondition(), outputAliases, parameters);
+            if (FuncUtil.isNotEmpty(havingSql)) {
+                sql.append(" HAVING ").append(havingSql);
+            }
+        }
+
         // 5: 外层排序（聚合结果排序: 列名为行维度字段或 ${列标识}__${度量字段} 别名, 直通反引号）
         if (FuncUtil.isNotEmpty(req.getSortList())) {
             List<String> orderParts = new ArrayList<>();

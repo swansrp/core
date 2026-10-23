@@ -55,6 +55,10 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
         Validator.assertNotEmpty(req.getGroupColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "行维度列");
         Validator.assertNotEmpty(req.getPivotColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "透视列");
         Validator.assertNotEmpty(req.getMeasures(), ErrCodeSys.PA_DATA_NOT_EXIST, "度量列");
+        // 实体数据源这条腿用 MP wrapper 拼 SQL，尚未接 HAVING：静默丢掉条件会返回未过滤的全量行，
+        // 表现成"筛了没反应"的假象，故显式拒绝（动态 Dataset/Matrix 走 DriverStatisticSupportService，已支持）
+        Validator.assertTrue(FuncUtil.isEmpty(req.getHavingCondition()), ErrCodeSys.PA_DATA_NOT_SUPPORT,
+                "实体数据源的透视报表暂不支持统计列过滤");
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
         // 行维度列：select + groupBy
         for (KeyValueResVO group : req.getGroupColumns()) {

@@ -3,12 +3,15 @@ package com.bidr.forge.engine.builder;
 import com.bidr.forge.engine.builder.base.SqlBuilderQueryInf;
 import com.bidr.forge.service.perm.ColumnAliasMap;
 import com.bidr.kernel.constant.dict.portal.PortalConditionDict;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -147,6 +150,19 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
         String fieldName = query.getProperty();
         // 列权限收窄时，条件字段必须能在别名表命中，否则可用物理列名读出隐藏列
         String columnName = ColumnAliasMap.resolve(aliasMap, fieldName);
+        // 格式化列名（子类可重写）
+        return buildRelationCondition(query, formatColumnName(columnName), parameters);
+    }
+
+    /**
+     * 按关系类型拼单个条件（值一律走命名参数绑定，不内联字面量）
+     *
+     * @param query           条件
+     * @param formattedColumn 已按驱动规则格式化好的列引用
+     * @param parameters      参数 Map（占位符序号按当前参数个数续号）
+     * @return SQL 条件片段；关系非法或可绑定值不足时返回空串，由调用方剔除
+     */
+    private String buildRelationCondition(AdvancedQuery query, String formattedColumn, Map<String, Object> parameters) {
         Integer relation = query.getRelation();
         List<?> value = query.getValue();
 
@@ -169,9 +185,6 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
         if (bindValues.size() < conditionDict.requiredValueCount()) {
             return "";
         }
-
-        // 格式化列名（子类可重写）
-        String formattedColumn = formatColumnName(columnName);
 
         switch (conditionDict) {
             case EQUAL:
@@ -289,5 +302,51 @@ public abstract class BaseSqlBuilder implements SqlBuilder {
      */
     public String buildWhereCondition(AdvancedQuery query, Map<String, String> aliasMap, Map<String, Object> parameters) {
         return buildCondition(query, aliasMap, parameters);
+    }
+
+    /**
+     * 构建 HAVING 条件（聚合后过滤，供透视报表按统计列筛行），参数化，口径同 {@link #buildWhereCondition}
+     * <p>
+     * 与 WHERE 的差别：这里引用的是 SELECT 的输出别名（行维度字段名或 {@code ${列标识}__${度量字段}}），
+     * 不是物理列，所以不经 aliasMap 映射；别名可能以数字开头或含 {@code +}，故一律反引号包裹。
+     * property 必须命中本次输出别名白名单——白名单就是"这条 SQL 真正 SELECT 出来的列"，
+     * 名单外直接拒：否则可以拿聚合位去引用未输出的物理列，把隐藏列的值比出来。
+     * </p>
+     *
+     * @param query         聚合后过滤条件树
+     * @param outputAliases 本次查询的输出别名集合
+     * @param parameters    参数 Map
+     * @return HAVING 片段（不含关键字）；条件全为空值时返回空串
+     */
+    public String buildHavingCondition(AdvancedQuery query, Collection<String> outputAliases, Map<String, Object> parameters) {
+        List<String> conditions = new ArrayList<>();
+
+        if (FuncUtil.isNotEmpty(query.getConditionList())) {
+            for (AdvancedQuery subQuery : query.getConditionList()) {
+                String subCondition = buildHavingCondition(subQuery, outputAliases, parameters);
+                if (FuncUtil.isNotEmpty(subCondition)) {
+                    conditions.add("(" + subCondition + ")");
+                }
+            }
+        }
+
+        if (FuncUtil.isNotEmpty(query.getProperty())) {
+            String fieldName = query.getProperty();
+            Validator.assertTrue(outputAliases != null && outputAliases.contains(fieldName),
+                    ErrCodeSys.SYS_ERR_MSG, "统计列过滤不支持该列：" + fieldName);
+            // 别名由本服务用已校验过的字段名拼出，命中白名单即安全，无需再过字符集
+            String fieldCondition = buildRelationCondition(query, "`" + fieldName + "`", parameters);
+            if (FuncUtil.isNotEmpty(fieldCondition)) {
+                conditions.add(fieldCondition);
+            }
+        }
+
+        if (conditions.isEmpty()) {
+            return "";
+        }
+
+        String operator = FuncUtil.isEmpty(query.getAndOr()) ? "AND" :
+                (AdvancedQuery.OR.equals(query.getAndOr()) ? "OR" : "AND");
+        return String.join(" " + operator + " ", conditions);
     }
 }

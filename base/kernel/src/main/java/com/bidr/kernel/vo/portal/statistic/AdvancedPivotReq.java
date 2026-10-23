@@ -1,6 +1,7 @@
 package com.bidr.kernel.vo.portal.statistic;
 
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.AdvancedQueryReq;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -25,4 +26,6 @@ public class AdvancedPivotReq extends AdvancedQueryReq {
     private List<MetricCondition> pivotColumns;
     @ApiModelProperty("度量列")
     private List<PivotMeasure> measures;
+    @ApiModelProperty("聚合后过滤(HAVING)：property 只能引用本次输出别名，即行维度字段名或 ${列标识}__${度量字段}")
+    private AdvancedQuery havingCondition;
 }
