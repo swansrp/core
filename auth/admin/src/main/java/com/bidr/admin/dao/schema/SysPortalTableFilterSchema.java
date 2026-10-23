@@ -32,5 +32,8 @@ public class SysPortalTableFilterSchema extends BaseMybatisSchema<SysPortalTable
                 "\tCHANGE COLUMN `condition` `condition` LONGTEXT NULL COMMENT '筛选条件' AFTER `label`;\n");
         setUpgradeDDL(2, "ALTER TABLE `sys_portal_table_filter`\n" +
                 "\tADD COLUMN `code` varchar(50) NOT NULL COMMENT '筛选条目编码' AFTER `filter_type`;\n");
+        // 多选筛选项的默认值按逗号存多个字典项编码，50 字符会静默截断
+        setUpgradeDDL(3, "ALTER TABLE `sys_portal_table_filter`\n" +
+                "\tMODIFY COLUMN `default_value` varchar(500) NOT NULL COMMENT '默认值';\n");
     }
 }
