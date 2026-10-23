@@ -119,6 +119,22 @@ public class StreamingProgressChatModelFinalFrameTest {
                 firstIndexOfPrefix(frames, "【LLM 思考归档】") >= 0);
     }
 
+    /** 纯应答流腿（护栏回归，R2 S-5）：onReasoning 零、onToken 有——思考→应答切换点
+     *  不推「思考中·已思 0 字」空帧（reasoningChars>0 护栏，对齐其注释「纯应答调用
+     *  天然跳过」），最终全文帧照常由 onComplete 兜底 */
+    @Test
+    public void 纯应答流无已思0字空帧且最终帧照常() {
+        List<String> tokenDeltas = Arrays.asList("答一", "答二尾巴");
+        List<String> frames = run(true, Collections.emptyList(), tokenDeltas);
+        String full = String.join("", tokenDeltas);
+
+        Assert.assertTrue("纯应答流不应有任何「思考中」帧（含切换点的「已思 0 字」空帧）："
+                        + frames, frames.stream().noneMatch(f -> f.startsWith("思考中")));
+        Assert.assertEquals("纯应答流最终全文帧照常兜底（字数精确＝全部 delta 之和）",
+                "应答中·已收 " + full.length() + " 字\n" + full,
+                lastFrameWithPrefix(frames, "应答中"));
+    }
+
     /** 非 verbose 腿：onComplete 后没有「应答中·已收 N 字\n+全文」形态的帧（仅状态行/归档，兼容保留） */
     @Test
     public void nonVerboseOnCompleteKeepsStatusLineOnly() {

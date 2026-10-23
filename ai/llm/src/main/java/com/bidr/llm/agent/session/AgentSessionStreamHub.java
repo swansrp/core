@@ -42,8 +42,11 @@ import java.util.regex.Pattern;
  *         ping 的 comment）一律经单 delivery 线程（daemon，agent-stream-deliver）＋有界队列
  *         （512，满则 DiscardPolicy 整帧丢弃）执行——run 线程/LLM 流回调线程/总线监听线程/
  *         ping 线程只入队，绝不直接碰 SseEmitter.send，慢客户端（后台标签页 throttling 等）
- *         阻塞不住它们；live 帧另按连接 CAS 忙丢（在途即丢本帧，可丢语义），status/events/done
- *         无条件入队（队列满被丢时由前端 sinceSeq 补拉/25s 保活兜底）；建连回放是客户端
+ *         阻塞不住它们；live 帧另有按连接的 CAS 忙丢件（在途即丢本帧）——注意生产形态
+ *         （单 delivery 线程）下投递本就串行、忙位同帧内置复，该件不会触发，真正的背压
+ *         保护＝有界队列＋DiscardPolicy（多线程化投递时才启用忙丢，见 deliverFrame）；
+ *         status/events/done 无条件入队（队列满被丢时由前端 sinceSeq 补拉/25s 保活兜底）；
+ *         建连回放是客户端
  *         自己的 HTTP 请求线程，同步发送不属于被保护线程面；</li>
  *     <li><b>注释心跳</b>：共享 daemon 单线程调度器每 15s 遍历全部连接入队 {@code : ping}
  *         防反代空闲断连（ping 线程只入队不直发，慢连接不队头阻塞其他会话），
@@ -319,8 +322,9 @@ public class AgentSessionStreamHub {
     }
 
     /** delivery 线程上的实际投递：live 帧按连接 CAS 忙丢（忙位被占＝该连接上一条 live
-     *  还在途/慢客户端未吐完 ⇒ 丢本帧，可丢语义；finally 复位），status/events/done
-     *  无条件投递；单连接失败摘连接不外溢 */
+     *  还在途 ⇒ 丢本帧，finally 复位）——生产单 delivery 线程下投递串行、忙位永远先复位
+     *  再投下一帧，此件不会触发（防多线程化投递时的重复在途，属预置防线）；真实背压
+     *  ＝外层有界队列＋DiscardPolicy。status/events/done 无条件投递；单连接失败摘连接不外溢 */
     private void deliverFrame(String sessionId, String kind, String payload, Long id) {
         Map<String, Conn> senders = conns.get(sessionId);
         if (senders == null || senders.isEmpty()) {
@@ -482,7 +486,8 @@ public class AgentSessionStreamHub {
     }
 
     /** 连接条目（FrameSender 包装处）：live 忙位＝该连接 live 帧按 CAS 忙丢的判据
-     *  （被占＝在途未完，新 live 帧直接丢，status/events/done 不受影响） */
+     *  （被占＝在途未完，新 live 帧直接丢，status/events/done 不受影响）——单 delivery
+     *  线程形态下不会触发，多线程化投递时才生效（见 deliverFrame 注释） */
     static final class Conn {
         final FrameSender sender;
         final AtomicBoolean liveBusy = new AtomicBoolean();
