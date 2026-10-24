@@ -44,11 +44,12 @@ import java.util.Map;
  * 模式消费，本切面进链时注解必为方法级。</p>
  *
  * <p><b>嵌套口径（实现取简，沿原口径）</b>：嵌套审计方法共享同一线程上下文，最内层收尾即
- * 整表清空——外层若需自有上下文值参与求值，应在外层方法体内调用内层之前完成；需要更复杂
- * 分层的场景走 sink 直调（programmatic）而非注解。</p>
+ * 整表清空——外层<b>此前</b> put 的值随之丢失。外层若需自有上下文值参与求值，有效时机只有
+ * 「最后一次内层调用返回之后、外层返回之前」这一段（内层清空后重新 put）；需要更复杂分层
+ * 的场景走 sink 直调（programmatic）而非注解。</p>
  *
  * @author coder (棒2, 租户豁免与审计框架治理 2026-10-24)
- * @author sharp (audit 框架增强：成功策略/活动流水维度列/id 兜底 2026-10-24)
+ * @author sharp (audit 框架增强：成功策略/活动流水维度列 2026-10-24)
  */
 @Slf4j
 @Aspect
@@ -122,12 +123,10 @@ public class AuditTrailAspect {
                     AuditTrailSpel.evaluationContext(method, args, result, ctxSnapshot);
 
             String ctxBizId = stringOf(ctxSnapshot.get(AuditContext.RESOURCE_ID_OVERRIDE));
+            // 显式注解模式无反射兜底：bizId 属性空/求值空＝null（行为面与旧版一致、可预测）；
+            // 三级提取（含 getId 反射）只属于默认拦截模式（有请求面，web 三腿全走）
             String bizId = ctxBizId != null ? ctxBizId
                     : nullIfEmpty(AuditTrailSpel.evaluate(anno.bizId(), eval, false));
-            if (bizId == null) {
-                // bizId 属性空/求值空：id 三级提取的反射兜底腿（注解切面无请求面，只走第三腿）
-                bizId = AuditWebSupport.firstIdGetter(args);
-            }
 
             writer.writeQuietly(AuditRecord.builder()
                     .bizType(anno.bizType())

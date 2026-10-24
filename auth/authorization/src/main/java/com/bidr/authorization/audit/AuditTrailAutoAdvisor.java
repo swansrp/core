@@ -141,7 +141,12 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
                 writer.writeQuietly(buildRecord(request, method, targetClass,
                         invocation.getArguments(), result));
             } catch (Exception e) {
-                log.warn("审计默认拦截组装落行失败(不阻断): {}", e.getMessage());
+                // auto 是"拦一切"模式，组装失败静默丢行＝运维无感知——与显式注解模式同纪律（error＋告警）
+                String headline = "endpoint=" + AuditWebSupport.endpointOf(request)
+                        + " bizType=" + annotationBizType(method, targetClass)
+                        + " operator=" + AccountContext.getOperator();
+                log.error("审计默认拦截组装/求值失败，审计行丢弃（不回滚业务） {}", headline, e);
+                writer.alert(headline + " cause=" + e);
             }
             if (successSignal != null) {
                 throw successSignal;
@@ -150,6 +155,12 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
         } finally {
             AuditContext.clear();
         }
+    }
+
+    /** 组装失败定位用 bizType（与 {@link #buildRecord} 的注解解析同源：方法级＞类级，无注解＝null） */
+    private String annotationBizType(Method method, Class<?> targetClass) {
+        AuditTrail anno = effectiveAuditTrail(method, targetClass);
+        return anno == null ? null : anno.bizType();
     }
 
     // ==================== 判定（静态可测） ====================

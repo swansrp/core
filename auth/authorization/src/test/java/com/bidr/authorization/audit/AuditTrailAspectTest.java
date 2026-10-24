@@ -113,9 +113,14 @@ public class AuditTrailAspectTest {
     }
 
     private BizService proxy(BizService target, AuditTrailAspect aspectToWire) {
+        return woven(target, aspectToWire);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T woven(T target, AuditTrailAspect aspectToWire) {
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
         factory.addAspect(aspectToWire);
-        return factory.getProxy();
+        return (T) factory.getProxy();
     }
 
     private ObjectProvider<AuditTrailSink> provider() {
@@ -275,6 +280,44 @@ public class AuditTrailAspectTest {
         @AuditTrail(bizType = "kb_skill", action = "BIND", bizId = "#skillId")
         public String resolverLeg(Long skillId) {
             return "ok";
+        }
+
+        /** bizId 缺省腿（显式模式无反射兜底）：入参带 getId() 也不得反射取值。 */
+        @AuditTrail(bizType = "kb_doc", action = "UPDATE")
+        public String noBizIdLeg(WithId entity) {
+            return "ok";
+        }
+
+        /** 嵌套外层腿：put 发生在内层调用之前（值会被内层 finally 清掉——既定行为）。 */
+        @AuditTrail(bizType = "doc", action = "outer")
+        public String outerPutBefore(Runnable innerCall) {
+            AuditContext.label("外层简述");
+            innerCall.run();
+            return "ok";
+        }
+
+        /** 嵌套外层腿：put 发生在内层返回之后（有效时机）。 */
+        @AuditTrail(bizType = "doc", action = "outer")
+        public String outerPutAfter(Runnable innerCall) {
+            innerCall.run();
+            AuditContext.label("外层简述");
+            return "ok";
+        }
+    }
+
+    /** 嵌套内层腿（经代理调用，其 finally 清空线程上下文）。 */
+    public static class InnerService {
+
+        @AuditTrail(bizType = "doc", action = "inner")
+        public String inner() {
+            return "inner-ok";
+        }
+    }
+
+    /** 带 getId() 的入参对象（显式模式不得反射取它的 id）。 */
+    public static class WithId {
+        public Long getId() {
+            return 66L;
         }
     }
 
@@ -538,7 +581,7 @@ public class AuditTrailAspectTest {
 
     @Test
     public void x6_bizIdBlankFallsBackToIdGetterReflection() {
-        // bizId 属性缺省（空）→ 反射兜底腿：第一个带 getId() 的入参对象（named/pathVar 腿由 auto 侧全链测试覆盖）
+        // firstIdGetter 静态助手（auto 模式三级提取的第三腿）：第一个带 getId() 的入参对象
         Object withId = new Object() {
             @SuppressWarnings("unused")
             public Long getId() {
@@ -547,5 +590,43 @@ public class AuditTrailAspectTest {
         };
         assertEquals("66", AuditWebSupport.firstIdGetter(new Object[]{withId}));
         assertNull("简单类型入参（无 getId）返回 null", AuditWebSupport.firstIdGetter(new Object[]{"plain", 42L}));
+    }
+
+    @Test
+    public void x7_bizIdBlank_explicitAspectDoesNotReflect() {
+        RecordingSink sink = installSink();
+        assertEquals("ok", biz.noBizIdLeg(new WithId()));
+        AuditRecord r = sink.written.get(0);
+        assertEquals("行照发（显式模式漏注解 bizId 不丢行）", 1, sink.written.size());
+        assertEquals("kb_doc", r.getBizType());
+        assertNull("显式注解模式无反射兜底：入参有 getId() 也不取（bizId 空＝null，与旧版行为一致）",
+                r.getBizId());
+    }
+
+    // ---------------------------------------------------------------- N 组：嵌套口径（既定行为钉死）
+
+    @Test
+    public void n1_nestedInnerClearsOuterCtx_putBeforeIsLost() {
+        RecordingSink sink = installSink();
+        InnerService inner = woven(new InnerService(), aspect);
+        BizService outer = woven(new BizService(), aspect);
+        outer.outerPutBefore(inner::inner);
+        assertEquals("内层与外层各一行", 2, sink.written.size());
+        // 第一行是内层（先完成），第二行是外层——外层组装发生在内层 finally 清空之后
+        AuditRecord outerRecord = sink.written.get(1);
+        assertNull("内层清空后，外层此前 put 的 ctx 值不参与求值（嵌套既定行为）",
+                outerRecord.getResourceLabel());
+        assertEquals("doc", outerRecord.getBizType());
+    }
+
+    @Test
+    public void n2_nestedPutAfterInnerSurvives() {
+        RecordingSink sink = installSink();
+        InnerService inner = woven(new InnerService(), aspect);
+        BizService outer = woven(new BizService(), aspect);
+        outer.outerPutAfter(inner::inner);
+        AuditRecord outerRecord = sink.written.get(1);
+        assertEquals("有效时机＝内层返回后、外层返回前 put（javadoc 口径）", "外层简述",
+                outerRecord.getResourceLabel());
     }
 }

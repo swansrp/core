@@ -82,6 +82,36 @@ public class AuditTrailAutoAdvisorTest {
         public String reparse(@RequestParam("fileId") Long fileId) {
             return "ok";
         }
+
+        /** 方法级 @AuditTrail × 方法级 @AuditTrailIgnore 组合（注解优先＝仍跳过默认拦截）。 */
+        @AuditTrail(bizType = "kb_file", action = "REPARSE")
+        @AuditTrailIgnore
+        public String reparseIgnored(@RequestParam("fileId") Long fileId) {
+            return "ok";
+        }
+
+        /** pathVars 独立供 id 腿：named 无 fileId 命中（只有 seq），id 从路径模板取。 */
+        public String patchByPath(@RequestParam("seq") Long seq) {
+            return "ok";
+        }
+    }
+
+    /** 类级烂 SpEL 控制器（组装失败＝行丢弃＋告警，与显式注解模式同纪律）。 */
+    @AuditTrail(bizType = "kb_doc", bizId = "#broken +")
+    public static class BrokenSpelController {
+
+        public String updateThing(String name) {
+            return "ok";
+        }
+    }
+
+    /** 继承非业务包基类的业务子类（带类级注解＝框架继承写面放行形态）。 */
+    @AuditTrail(bizType = "portal_doc", visibility = "COLLAB")
+    public static class PortalInheritedController extends com.bidr.kernel.portal.PortalWriteBase {
+    }
+
+    /** 继承非业务包基类且无类级注解（框架会话面形态——execution 腿命中但闸不放行）。 */
+    public static class PortalInheritedNoAnno extends com.bidr.kernel.portal.PortalWriteBase {
     }
 
     /** 无任何注解的裸控制器（默认拦截哲学：漏注解也有行，bizType null 由 sink 定夺） */
@@ -331,6 +361,12 @@ public class AuditTrailAutoAdvisorTest {
         public String anything() {
             return "ok";
         }
+
+        /** 类级×方法级豁免组合：方法再标一次 @AuditTrailIgnore（组合矩阵腿）。 */
+        @AuditTrailIgnore
+        public String doublyIgnored() {
+            return "ok";
+        }
     }
 
     @Test
@@ -471,5 +507,99 @@ public class AuditTrailAutoAdvisorTest {
         bind(stubRequest("GET", "/web/kb/file/9", "/web/kb/file/{fileId}"));
         target.updateFile(9L);
         assertEquals("GET 不记", 0, sink.written.size());
+    }
+
+    // ---------------------------------------------------------------- J 组补：读白名单段级匹配／豁免矩阵
+
+    @Test
+    public void j2b_pivotReadTail_segmentMatch_notSubstring() throws Exception {
+        assertFalse("裸 /pivot 是读（kernel 映射 {\"/pivot\", \"/pivot/**}）",
+                AuditTrailAutoAdvisor.shouldRecord("POST", "/web/doc/pivot",
+                        method("updateFile", Long.class), PortalController.class, props()));
+        assertFalse("/pivot/** 子路径是读",
+                AuditTrailAutoAdvisor.shouldRecord("POST", "/web/doc/pivot/col/sd",
+                        method("updateFile", Long.class), PortalController.class, props()));
+        assertTrue("/pivotSetting/update 是写——段级匹配不误伤同名前缀端点",
+                AuditTrailAutoAdvisor.shouldRecord("POST", "/web/doc/pivotSetting/update",
+                        method("updateFile", Long.class), PortalController.class, props()));
+    }
+
+    @Test
+    public void j4b_ignoreCombinationMatrix() throws Exception {
+        assertFalse("类级豁免 × 方法无注解：跳过",
+                AuditTrailAutoAdvisor.shouldRecord("POST", "/web/kb/any",
+                        IgnoredController.class.getMethod("anything"), IgnoredController.class, props()));
+        assertFalse("类级豁免 × 方法级豁免：跳过（组合腿）",
+                AuditTrailAutoAdvisor.shouldRecord("POST", "/web/kb/any2",
+                        IgnoredController.class.getMethod("doublyIgnored"), IgnoredController.class, props()));
+        assertFalse("方法级 @AuditTrail × 方法级豁免：注解优先＝仍跳过默认拦截（交显式切面定夺）",
+                AuditTrailAutoAdvisor.shouldRecord("POST", "/web/kb/file/reparse2",
+                        method("reparseIgnored", Long.class), PortalController.class, props()));
+    }
+
+    // ---------------------------------------------------------------- D 组补：路径变量腿区分性
+
+    @Test
+    public void d3_extractPathVars_regexConstraintBranch() {
+        HttpServletRequest req = stubRequest("POST", "/web/kb/file/abc", "/web/kb/file/{fileId:.*}");
+        Map<String, String> vars = AuditWebSupport.extractPathVars(req);
+        assertEquals("正则约束段取冒号前名", "abc", vars.get("fileId"));
+        assertTrue("无变量模板返回空表",
+                AuditWebSupport.extractPathVars(stubRequest("POST", "/web/kb/x", "/web/kb/x")).isEmpty());
+    }
+
+    @Test
+    public void f8_pathVarsLeg_alone_resolvesId() {
+        RecordingSink sink = installSink();
+        PortalController target = proxy(new PortalController(), props());
+        // named 只有 seq（无 fileId 命中）——id 由路径模板变量 {fileId} 独立供出
+        bind(stubRequest("POST", "/web/kb/file/9/patch", "/web/kb/file/{fileId}/patch"));
+        target.patchByPath(3L);
+        assertEquals(1, sink.written.size());
+        assertEquals("路径模板变量腿独立供 id（与 named 腿可区分）", "9", sink.written.get(0).getBizId());
+    }
+
+    // ---------------------------------------------------------------- G 组：auto 模式告警纪律／execution 腿全链
+
+    @Test
+    public void g1_brokenSpel_rowDropped_withErrorAlert() {
+        RecordingSink sink = installSink();
+        BrokenSpelController target = proxy(new BrokenSpelController(), props());
+        bind(stubRequest("POST", "/web/doc/thing/update", "/web/doc/thing/update"));
+        assertEquals("ok", target.updateThing("t"));
+        assertEquals("烂 SpEL 组装失败＝行丢弃", 0, sink.written.size());
+        assertEquals("必须发布告警事件（auto 是拦一切模式，静默丢行运维无感知）", 1, published.size());
+        Object event = published.get(0);
+        assertTrue(event instanceof org.springframework.context.ApplicationEvent);
+        String message = ((com.bidr.kernel.event.ServiceExceptionEvent) event).getErrorMessage();
+        assertTrue("告警含端点定位", message != null && message.contains("/web/doc/thing/update"));
+        assertTrue("告警含 bizType 定位", message != null && message.contains("kb_doc"));
+    }
+
+    @Test
+    public void g2_executionLeg_realProxy_frameworkInheritedWriteFace() {
+        RecordingSink sink = installSink();
+        AuditTrailProperties.Auto p = props();
+        p.setFrameworkBaseClasses(Arrays.asList("com.bidr.kernel.portal.PortalWriteBase"));
+        com.bidr.kernel.portal.PortalWriteBase target = proxy(new PortalInheritedController(), p);
+        bind(stubRequest("POST", "/web/portal/update", "/web/portal/update"));
+        assertEquals("ok", target.updatePortal("r"));
+        assertEquals("execution 腿命中框架继承写面（方法声明在非业务包、within 腿拦不到）", 1,
+                sink.written.size());
+        AuditRecord r = sink.written.get(0);
+        assertEquals("类级注解放行并供 bizType", "portal_doc", r.getBizType());
+        assertEquals("COLLAB", r.getVisibility());
+        assertEquals("POST /web/portal/update", r.getEndpoint());
+    }
+
+    @Test
+    public void g3_executionLeg_frameworkFaceWithoutClassAnno_notRecorded() {
+        RecordingSink sink = installSink();
+        AuditTrailProperties.Auto p = props();
+        p.setFrameworkBaseClasses(Arrays.asList("com.bidr.kernel.portal.PortalWriteBase"));
+        com.bidr.kernel.portal.PortalWriteBase target = proxy(new PortalInheritedNoAnno(), p);
+        bind(stubRequest("POST", "/web/session/update", "/web/session/update"));
+        assertEquals("ok", target.updatePortal("r"));
+        assertEquals("框架会话/平台面（无类级注解）不记", 0, sink.written.size());
     }
 }

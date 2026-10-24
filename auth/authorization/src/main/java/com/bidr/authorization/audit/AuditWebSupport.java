@@ -9,6 +9,7 @@ import org.springframework.web.servlet.HandlerMapping;
 import javax.servlet.http.HttpServletRequest;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,11 +17,12 @@ import java.util.Set;
 
 /**
  * 审计 web 取数/判定静态段（包私有）：默认拦截切面（{@link AuditTrailAutoAdvisor}）的
- * 判定与提取工具，显式注解切面复用端点提取与 id 反射兜底腿。全部静态纯函数、绝不抛错
- * （审计链路纪律：任何取数失败＝返回 null/false，不炸业务）。
+ * 判定与提取工具，显式注解切面只复用端点提取。全部静态纯函数、绝不抛错（审计链路纪律：
+ * 任何取数失败＝返回 null/false，不炸业务）。
  *
  * <p>id 三级提取与路径变量对齐的实现沿 inkhub 真库验证版泛化（同名绑定入参→路径模板
- * 变量→第一个入参 {@code getId()} 反射；复杂对象不做 id 源、不反射转文本，规避泄密）。</p>
+ * 变量→第一个入参 {@code getId()} 反射；复杂对象不做 id 源、不反射转文本，规避泄密）——
+ * 三级提取只服务默认拦截模式（有请求面），显式注解模式不走。</p>
  *
  * @author sharp (audit 框架增强：默认拦截模式 2026-10-24)
  */
@@ -76,15 +78,47 @@ final class AuditWebSupport {
         return writeMethods.contains(httpMethod.toUpperCase());
     }
 
-    /** 读语义判定：请求路径包含任一白名单尾段 */
+    /**
+     * 读语义判定：请求路径按「路径段序列包含」匹配任一白名单尾段（段级精确）。
+     * kernel 透视面映射为 {@code {"/pivot", "/pivot/**"}}——子串 contains 会把
+     * {@code /pivotSetting/update} 这类同名前缀写端点误判成读；段级匹配只认完整段。
+     * 尾段首尾斜杠可有可无（{@code "/general/"} 与 {@code "general"} 等价）。
+     */
     static boolean isReadPath(String path, List<String> readPathTails) {
         if (path == null) {
             return false;
         }
+        String[] pathSegs = segments(path);
         for (String tail : readPathTails) {
-            if (path.contains(tail)) {
+            String[] tailSegs = segments(tail);
+            if (tailSegs.length > 0 && containsSequence(pathSegs, tailSegs)) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    /** 按 '/' 切段并丢弃空段（首尾/重复斜杠形态归一） */
+    private static String[] segments(String path) {
+        List<String> out = new ArrayList<>();
+        for (String seg : path.split("/")) {
+            if (!seg.isEmpty()) {
+                out.add(seg);
+            }
+        }
+        return out.toArray(new String[0]);
+    }
+
+    /** tail 段序列是否作为连续子序列出现在 path 段序列中 */
+    private static boolean containsSequence(String[] path, String[] tail) {
+        outer:
+        for (int i = 0; i + tail.length <= path.length; i++) {
+            for (int j = 0; j < tail.length; j++) {
+                if (!path[i + j].equals(tail[j])) {
+                    continue outer;
+                }
+            }
+            return true;
         }
         return false;
     }

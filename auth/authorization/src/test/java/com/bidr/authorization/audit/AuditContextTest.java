@@ -79,5 +79,37 @@ public class AuditContextTest {
         // 约定键与注解 javadoc/切面取值口径一致——改名即翻红（防三处漂移）
         assertEquals("oldValue", AuditContext.OLD_VALUE);
         assertEquals("newValue", AuditContext.NEW_VALUE);
+        assertEquals("label", AuditContext.LABEL);
+        assertEquals("detail", AuditContext.DETAIL);
+        assertEquals("actionOverride", AuditContext.ACTION_OVERRIDE);
+        assertEquals("groupOverride", AuditContext.GROUP_OVERRIDE);
+        assertEquals("resourceIdOverride", AuditContext.RESOURCE_ID_OVERRIDE);
+    }
+
+    @Test
+    public void t7_convenienceMethods_blankIgnored() {
+        AuditContext.label(null);
+        AuditContext.label("   ");
+        AuditContext.detail(null);
+        AuditContext.detail("");
+        AuditContext.actionOverride(" ");
+        AuditContext.groupOverride(null);
+        AuditContext.resourceIdOverride("");
+        assertNull("label 空白忽略", AuditContext.get(AuditContext.LABEL));
+        assertNull("detail 空白忽略", AuditContext.get(AuditContext.DETAIL));
+        assertNull("actionOverride 空白忽略", AuditContext.get(AuditContext.ACTION_OVERRIDE));
+        assertNull("groupOverride 空白忽略", AuditContext.get(AuditContext.GROUP_OVERRIDE));
+        assertNull("resourceIdOverride 空白忽略", AuditContext.get(AuditContext.RESOURCE_ID_OVERRIDE));
+    }
+
+    @Test
+    public void t8_detailAppendAndPutNullRemoval() {
+        AuditContext.detail("第一步");
+        AuditContext.detail("第二步");
+        AuditContext.detail("第三步");
+        assertEquals("追加式：按调用顺序中文分号连接", "第一步；第二步；第三步", AuditContext.get(AuditContext.DETAIL));
+        AuditContext.put("k", "v");
+        AuditContext.put("k", null);
+        assertNull("put null＝移除该键（与 Map 语义对齐，防 SpEL 侧有键无值歧义）", AuditContext.get("k"));
     }
 }

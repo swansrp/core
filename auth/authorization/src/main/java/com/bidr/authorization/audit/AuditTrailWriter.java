@@ -33,8 +33,9 @@ class AuditTrailWriter {
      * 其余 sink 继续，任一失败即告警。任何异常不出本方法。
      */
     void writeQuietly(AuditRecord record) {
-        String headline = headline(record);
+        String headline = null;
         try {
+            headline = headline(record);
             List<AuditTrailSink> sinks = sinkProvider.orderedStream().collect(Collectors.toList());
             if (sinks.isEmpty()) {
                 log.error("审计无 AuditTrailSink 装配，审计行丢弃（宿主需装实现） {}", headline);
@@ -56,7 +57,7 @@ class AuditTrailWriter {
             }
         } catch (Exception ex) {
             log.error("审计写入段失败，审计行丢弃（不回滚业务） {}", headline, ex);
-            publishAlert(headline + " cause=" + ex);
+            publishAlert((headline == null ? "record=null" : headline) + " cause=" + ex);
         }
     }
 

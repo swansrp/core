@@ -45,11 +45,14 @@ import java.lang.annotation.Target;
  * {@link AuditContext#RESOURCE_ID_OVERRIDE} 分别并入 resource_label / detail /
  * action 覆写 / group 覆写 / biz_id 覆写列，且<b>优先于注解属性</b>。</p>
  *
- * <p><b>id 三级提取兜底</b>：{@code bizId} 属性空（或求值为空）时按 {@link #idParam}
- * 三级提取：①同名绑定入参；②路径模板变量 {@code {idParam}}；③第一个入参 {@code getId()}
- * 反射。显式注解切面（无请求面）只走第三腿；默认拦截模式（web 端点）三腿全走。</p>
+ * <p><b>id 三级提取兜底（仅默认拦截模式）</b>：{@code bizId} 属性空（或求值为空）时按
+ * {@link #idParam} 三级提取：①同名绑定入参；②路径模板变量 {@code {idParam}}；③第一个
+ * 入参 {@code getId()} 反射。三级提取需要请求面，<b>只属于默认拦截模式（web 端点）</b>；
+ * 显式注解切面（无请求面）不走——bizId 空/求值空＝null，行为可预测（需要 id 就显式写
+ * 表达式，或运行时 {@link AuditContext#RESOURCE_ID_OVERRIDE} 覆写）。</p>
  *
- * <p><b>求值失败纪律分级</b>：{@code bizId} 求值失败＝整行丢弃＋告警（定位关键，原裁定）；
+ * <p><b>求值失败纪律分级</b>：{@code bizId} 与 {@code reason} 求值失败＝<b>整行丢弃</b>＋
+ * log.error＋告警（bizId 是定位关键；reason 是变更理由，残缺即失义——都属严格组）；
  * {@code group}/{@code resourceLabel}/{@code detail} 求值失败＝该字段置 null＋log.error
  * ＋告警，行照发（装饰性字段，丢整行反伤可用性）。</p>
  *
@@ -89,14 +92,15 @@ public @interface AuditTrail {
     /**
      * 业务对象标识（biz_erp_audit_log.biz_id 列；单据用 doc_no，主体用 id）。
      * <b>整体是 SpEL 表达式</b>（可用变量见类 javadoc），求值结果转 String；
-     * 求值失败＝本次审计行丢弃＋log.error＋告警（不炸业务）。空/求值空时走
-     * {@link #idParam} 三级提取兜底。
+     * 求值失败＝本次审计行丢弃＋log.error＋告警（不炸业务）。空/求值空时：默认拦截模式走
+     * {@link #idParam} 三级提取兜底，显式注解模式＝null（无反射腿）。
      */
     String bizId() default "";
 
     /**
      * 原因（biz_erp_audit_log.reason 列）。<b>{@code #{...}} 模板＋SpEL 插值</b>
-     * （Spring TemplateParserContext，无表达式的纯文本原样落列）。
+     * （Spring TemplateParserContext，无表达式的纯文本原样落列）。<b>严格求值</b>：
+     * 求值失败＝整行丢弃＋告警（变更理由残缺即失义，与 bizId 同组）。
      */
     String reason() default "";
 
