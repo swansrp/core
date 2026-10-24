@@ -85,7 +85,7 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
      * {@code within(p1..*) || ... || execution(* base1+.*(..)) || ...}。
      * 包名已含尾部通配的照拼不误判（AspectJ 按前缀段匹配）。
      */
-    static String pointcutExpression(AuditTrailProperties.Auto props) {
+    public static String pointcutExpression(AuditTrailProperties.Auto props) {
         StringBuilder sb = new StringBuilder();
         for (String pkg : props.getControllerPackages()) {
             if (pkg == null || pkg.trim().isEmpty()) {
@@ -169,7 +169,7 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
      * 拦截面内是否记：写动词 ∧ 非读白名单 ∧ 非方法级注解（防双记）∧ 未豁免
      * ∧ 框架继承面须类级注解放行。任一不满足→放行不记。
      */
-    static boolean shouldRecord(String httpMethod, String path, Method method,
+    public static boolean shouldRecord(String httpMethod, String path, Method method,
                                 Class<?> targetClass, AuditTrailProperties.Auto props) {
         if (!AuditWebSupport.isWriteMethod(httpMethod, props.getWriteMethods())) {
             return false;
@@ -193,7 +193,7 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
      * （execution 腿按目标类求值不分包，非业务域的框架继承控制器也会进链）的，
      * 须目标类带类级 {@code @AuditTrail} 才放行——框架会话/平台端点不记。
      */
-    static boolean isBusinessDeclaredOrClassAnnotated(Method method, Class<?> targetClass,
+    public static boolean isBusinessDeclaredOrClassAnnotated(Method method, Class<?> targetClass,
                                                       List<String> controllerPackages) {
         String declaring = method.getDeclaringClass().getName();
         for (String pkg : controllerPackages) {

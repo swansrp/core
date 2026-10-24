@@ -21,4 +21,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AuditTrailIgnore {
+
+    /** 豁免理由（纯文档用途，框架不消费）——迁移既有 {@code @AuditIgnore("…")} 的理由文本用 */
+    String value() default "";
 }

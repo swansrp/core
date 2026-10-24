@@ -26,7 +26,7 @@ import java.util.Set;
  *
  * @author sharp (audit 框架增强：默认拦截模式 2026-10-24)
  */
-final class AuditWebSupport {
+public final class AuditWebSupport {
 
     private AuditWebSupport() {
     }
@@ -84,7 +84,7 @@ final class AuditWebSupport {
      * {@code /pivotSetting/update} 这类同名前缀写端点误判成读；段级匹配只认完整段。
      * 尾段首尾斜杠可有可无（{@code "/general/"} 与 {@code "general"} 等价）。
      */
-    static boolean isReadPath(String path, List<String> readPathTails) {
+    public static boolean isReadPath(String path, List<String> readPathTails) {
         if (path == null) {
             return false;
         }
