@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 /**
  * 审计落库 SPI（core 定义、业务装实现——{@code LoginFillTokenInf}/{@code

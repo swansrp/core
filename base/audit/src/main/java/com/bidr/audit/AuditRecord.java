@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import lombok.Builder;
 import lombok.Value;

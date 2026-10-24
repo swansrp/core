@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import com.bidr.kernel.constant.err.ErrCode;
 import com.bidr.kernel.constant.err.ErrCodeLevel;

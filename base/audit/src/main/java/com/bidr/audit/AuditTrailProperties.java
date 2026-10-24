@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * 审计框架配置（前缀 {@code bidr.audit-trail}；显式注解模式零配置，本类只服务
  * <b>默认拦截模式</b>）。注册形态照 {@code ResponseResultProperty} 先例：
- * {@code @Configuration} 落 {@code com.bidr.authorization.audit}，由宿主
+ * {@code @Configuration} 落 {@code com.bidr.audit}，由宿主
  * {@code BaseApplication} 的 {@code @ComponentScan("com.bidr")} 扫到。
  *
  * <p><b>默认拦截模式</b>（{@code auto.enabled=true} 时 {@code AuditTrailAutoAdvisor} 装配）：

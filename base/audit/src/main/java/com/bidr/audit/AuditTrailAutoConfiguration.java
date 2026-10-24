@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
  * 默认 false＝零 bean 装配、宿主零行为变化（ERP 等纯显式注解宿主不受影响）。
  *
  * <p>注册形态沿 core 既有约定：{@code @Configuration} 落
- * {@code com.bidr.authorization.audit}，由宿主 {@code BaseApplication} 的
+ * {@code com.bidr.audit}，由宿主 {@code BaseApplication} 的
  * {@code @ComponentScan("com.bidr")} 扫到，无需 spring.factories。</p>
  *
  * @author sharp (audit 框架增强：默认拦截模式 2026-10-24)

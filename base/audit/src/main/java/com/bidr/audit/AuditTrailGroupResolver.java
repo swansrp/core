@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 /**
  * 审计分组键解析器 SPI（core 定义、宿主装实现——默认无实现＝group 为 null）。

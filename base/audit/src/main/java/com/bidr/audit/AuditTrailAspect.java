@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;

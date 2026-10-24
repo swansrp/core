@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import org.aopalliance.aop.Advice;
 import org.junit.After;
@@ -140,7 +140,7 @@ public class AuditTrailAutoAdvisorTest {
 
     private static AuditTrailProperties.Auto props() {
         AuditTrailProperties.Auto p = new AuditTrailProperties.Auto();
-        p.setControllerPackages(Arrays.asList("com.bidr.authorization.audit"));
+        p.setControllerPackages(Arrays.asList("com.bidr.audit"));
         return p;
     }
 
@@ -287,7 +287,7 @@ public class AuditTrailAutoAdvisorTest {
     public void p1_expressionBothLegsJoined() {
         AuditTrailProperties.Auto p = props();
         p.setFrameworkBaseClasses(Arrays.asList("com.bidr.kernel.controller.BaseAdminController"));
-        assertEquals("within(com.bidr.authorization.audit..*) || "
+        assertEquals("within(com.bidr.audit..*) || "
                         + "execution(* com.bidr.kernel.controller.BaseAdminController+.*(..))",
                 AuditTrailAutoAdvisor.pointcutExpression(p));
     }

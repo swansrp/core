@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 /**
  * 审计成功判定策略 SPI（core 定义、宿主装实现——默认无实现＝只正常返回算成功）。

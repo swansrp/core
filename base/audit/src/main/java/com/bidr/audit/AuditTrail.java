@@ -1,4 +1,4 @@
-package com.bidr.authorization.audit;
+package com.bidr.audit;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

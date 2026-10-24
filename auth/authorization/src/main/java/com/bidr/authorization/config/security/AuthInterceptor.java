@@ -6,7 +6,6 @@ import com.bidr.authorization.annotation.auth.AuthRole;
 import com.bidr.authorization.annotation.captcha.CaptchaVerify;
 import com.bidr.authorization.annotation.msg.MsgCodeVerify;
 import com.bidr.authorization.bo.token.TokenInfo;
-import com.bidr.authorization.audit.AuditContext;
 import com.bidr.authorization.constants.common.ClientType;
 import com.bidr.authorization.constants.common.RequestConst;
 import com.bidr.authorization.bo.account.AccountInfo;
@@ -210,9 +209,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         AccountContext.remove();
         // 租户档与账号档同生命周期收尾（棒2）：Tomcat 线程池复用，不并列清就会串档
         TenantContext.remove();
-        // 审计上下文兜底收尾（棒2）：主清理在 AuditTrailAspect finally（方法级），
-        // 这里兜"注解方法被内部调用、切面不生效"盲区里的 put 残留
-        AuditContext.clear();
+        // 审计上下文的兜底清理由 base-audit 的 AuditContextCleanupFilter 负责（doFilter finally，
+        // 覆盖面比拦截器只多不少）——authorization 反向引用审计包会构成 Maven 循环
     }
 
     private void authCompletion(HttpServletRequest request, HttpServletResponse response) {
