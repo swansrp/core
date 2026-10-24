@@ -38,10 +38,13 @@ public class NotificationPublisher {
     private static final int PARAMS_JSON_MAX = 1000;
 
     private final ObjectProvider<NotificationStore> storeProvider;
+    private final ObjectProvider<NotificationSseHub> sseHubProvider;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public NotificationPublisher(ObjectProvider<NotificationStore> storeProvider) {
+    public NotificationPublisher(ObjectProvider<NotificationStore> storeProvider,
+                                 ObjectProvider<NotificationSseHub> sseHubProvider) {
         this.storeProvider = storeProvider;
+        this.sseHubProvider = sseHubProvider;
     }
 
     /** 发送（扇开：N 收件人＝N 行）；任何失败只 log.error，绝不出本方法 */
@@ -85,6 +88,14 @@ public class NotificationPublisher {
             }
             if (!rows.isEmpty()) {
                 store.save(rows);
+                // SSE 实时推（在线铃铛即收；离线靠下次建连/登录拉 list）。推送失败不影响已落库消息
+                NotificationSseHub hub = sseHubProvider.getIfAvailable();
+                if (hub != null) {
+                    for (NotificationRecord row : rows) {
+                        hub.pushTo(row.getTargetUser(), "notification",
+                                "{\"msgType\":\"" + row.getMsgType() + "\"}");
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("站内信发送失败（不影响业务）: type={} title={} {}", draft.getMsgType(),

@@ -160,7 +160,7 @@ public class NotificationCoreGuardTest {
     public void g1_deadTaskProducesOneRowPerResolver() {
         NotificationStore store = memoryStore();
         NotificationPublisher publisher = new NotificationPublisher(providerOf(
-                Collections.singletonList(store)));
+                Collections.singletonList(store)), emptyProvider());
         NotificationContentResolver resolver = new NotificationContentResolver() {
             @Override
             public boolean supports(String taskType) {
@@ -222,7 +222,7 @@ public class NotificationCoreGuardTest {
                 return false;
             }
         };
-        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(counting)));
+        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(counting)), emptyProvider());
         NotificationContentResolver resolver = new NotificationContentResolver() {
             @Override
             public boolean supports(String taskType) {
@@ -271,7 +271,7 @@ public class NotificationCoreGuardTest {
                 return false;
             }
         };
-        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(explosive)));
+        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(explosive)), emptyProvider());
         NotificationDraft draft = NotificationDraft.builder()
                 .msgType("X").title("t").targetUser("op-1").build();
         publisher.publish(draft);
@@ -350,7 +350,7 @@ public class NotificationCoreGuardTest {
                 return false;
             }
         };
-        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(store)));
+        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(store)), emptyProvider());
         NotificationDraft bad = NotificationDraft.builder()
                 .msgType("X").title("t").targetUser("op-1")
                 .action("Bad_Code", "fileId", 1)   // 大写开头不合规
@@ -373,7 +373,7 @@ public class NotificationCoreGuardTest {
     @Test
     public void g7_missingStore_droppedWithLog_businessUnaffected() {
         // 无 store 装配：publish 丢弃＋log.error，不抛
-        NotificationPublisher publisher = new NotificationPublisher(emptyProvider());
+        NotificationPublisher publisher = new NotificationPublisher(emptyProvider(), emptyProvider());
         publisher.publish(NotificationDraft.builder().msgType("X").title("t").targetUser("op-1").build());
     }
 
@@ -406,7 +406,7 @@ public class NotificationCoreGuardTest {
                 return false;
             }
         };
-        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(store)));
+        NotificationPublisher publisher = new NotificationPublisher(providerOf(Collections.singletonList(store)), emptyProvider());
         TenantContext.set(Collections.singletonList(9L));
         publisher.publish(NotificationDraft.builder().msgType("X").title("t").targetUser("op-1").build());
         assertEquals("draft 未显式给租户＋线程有租户上下文＝publisher 兜底填", Long.valueOf(9L),
