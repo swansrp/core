@@ -11,6 +11,7 @@
         <module>base/platform</module>
         <module>base/task</module>
         <module>base/audit</module>
+        <module>base/notification</module>
         <module>tool/xxl-job</module>
         <module>comm/email</module>
         <module>store/redis</module>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/xsd/maven-4.0.0.xsd http://maven.apache.org/POM/4.0.0">
+    <parent>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <groupId>com.bidr</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <artifactId>base-notification</artifactId>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
+                <authorization.version>${jarVersion}</authorization.version>
+                <base-task.version>${jarVersion}</base-task.version>
+                <platform.version>${jarVersion}</platform.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <kernel.version>20261023053457-88</kernel.version>
+                <authorization.version>20261023053457-88</authorization.version>
+                <base-task.version>20261023053457-88</base-task.version>
+                <platform.version>20261023053457-88</platform.version>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <!-- 操作人/租户取数（AccountContext/TenantContext）——审计行身份列的唯一来源；
+             base 家族依赖 auth 家族的既有方向（base-task 同款） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization</artifactId>
+            <version>${authorization.version}</version>
+        </dependency>
+
+        <!-- 任务终态桥（AsyncTaskObserver/AsyncTaskStatus/SaAsyncTask） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>base-task</artifactId>
+            <version>${base-task.version}</version>
+        </dependency>
+        <!-- 开关面读 sys_config（SysConfigCacheService） -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 本模块测试为 JUnit4（沿 authorization 既有形态）：不强制 junit-platform provider——
+                 SB 2.7 的 starter-test 无 vintage 引擎，强推 platform 会静默跳过 JUnit4（Tests run: 0） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
