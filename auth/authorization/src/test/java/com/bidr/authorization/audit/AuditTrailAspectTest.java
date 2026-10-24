@@ -53,8 +53,8 @@ public class AuditTrailAspectTest {
         AccountContext.remove();
         published.clear();
         sinks.clear();
-        aspect = new AuditTrailAspect(provider(), publisher());
-        biz = proxy(new BizService());
+        aspect = new AuditTrailAspect(provider(), publisher(), emptyProvider(), emptyProvider());
+        biz = proxy(new BizService(), aspect);
     }
 
     @After
@@ -68,6 +68,54 @@ public class AuditTrailAspectTest {
 
     private ApplicationEventPublisher publisher() {
         return published::add;
+    }
+
+    /** 可变内容 provider（成功策略/分组解析器注入用） */
+    private static <T> ObjectProvider<T> providerOf(List<T> list) {
+        return new ObjectProvider<T>() {
+            @Override
+            public T getObject() {
+                if (list.isEmpty()) {
+                    throw new IllegalStateException("no bean");
+                }
+                return list.get(0);
+            }
+
+            @Override
+            public T getObject(Object... args) {
+                return getObject();
+            }
+
+            @Override
+            public T getIfAvailable() {
+                return list.isEmpty() ? null : list.get(0);
+            }
+
+            @Override
+            public T getIfUnique() {
+                return list.size() == 1 ? list.get(0) : null;
+            }
+
+            @Override
+            public Stream<T> orderedStream() {
+                return list.stream();
+            }
+        };
+    }
+
+    /** 空 provider（默认无策略/无解析器形态——宿主零注册时的行为基线） */
+    private static <T> ObjectProvider<T> emptyProvider() {
+        return providerOf(new ArrayList<>());
+    }
+
+    private BizService proxy(BizService target) {
+        return proxy(target, aspect);
+    }
+
+    private BizService proxy(BizService target, AuditTrailAspect aspectToWire) {
+        AspectJProxyFactory factory = new AspectJProxyFactory(target);
+        factory.addAspect(aspectToWire);
+        return factory.getProxy();
     }
 
     private ObjectProvider<AuditTrailSink> provider() {
@@ -101,12 +149,6 @@ public class AuditTrailAspectTest {
                 return snapshot.stream();
             }
         };
-    }
-
-    private BizService proxy(BizService target) {
-        AspectJProxyFactory factory = new AspectJProxyFactory(target);
-        factory.addAspect(aspect);
-        return factory.getProxy();
     }
 
     private RecordingSink installSink() {
@@ -196,6 +238,50 @@ public class AuditTrailAspectTest {
         @AuditTrail(bizType = "doc", action = "create")
         public String noArg() {
             return "no-arg-ok";
+        }
+
+        /** 活动流水腿：group SpEL＋label/detail 模板＋visibility 字面量。 */
+        @AuditTrail(bizType = "kb_file", action = "UPLOAD", bizId = "#fileId",
+                group = "#spaceId", resourceLabel = "#{#fileName}", detail = "上传解析完成",
+                visibility = "COLLAB")
+        public String uploadLeg(Long spaceId, Long fileId, String fileName) {
+            return "ok";
+        }
+
+        /** 成功通道腿：方法体抛成功信号异常（宿主 policy 计成功——落行后原样 rethrow）。 */
+        @AuditTrail(bizType = "kb_space", action = "CREATE", bizId = "#seed")
+        public String noticeLeg(Long seed) {
+            throw new SuccessChannelException("code 0 payload");
+        }
+
+        /** 覆写腿：注解给一套、方法体 ctx 约定键覆写另一套（覆写必须全胜）。 */
+        @AuditTrail(bizType = "kb_member", action = "GRANT", bizId = "#groupId")
+        public String grantLeg(Long groupId) {
+            AuditContext.actionOverride("REVOKE");
+            AuditContext.resourceIdOverride("G-9");
+            AuditContext.label("外部组");
+            AuditContext.detail("改为撤销");
+            AuditContext.groupOverride("77");
+            return "ok";
+        }
+
+        /** 装饰字段烂表达式腿：group 求值失败＝该字段置 null、行照发（分级纪律）。 */
+        @AuditTrail(bizType = "kb_page", action = "UPDATE", bizId = "#id", group = "#broken +")
+        public String brokenGroupLeg(Long id) {
+            return "ok";
+        }
+
+        /** resolver 兜底腿：group 属性空＋无覆写→宿主 resolver 供值。 */
+        @AuditTrail(bizType = "kb_skill", action = "BIND", bizId = "#skillId")
+        public String resolverLeg(Long skillId) {
+            return "ok";
+        }
+    }
+
+    /** 宿主"以异常作成功通道"的模拟（如 Resp.notice 族 NoticeException） */
+    public static class SuccessChannelException extends RuntimeException {
+        public SuccessChannelException(String message) {
+            super(message);
         }
     }
 
@@ -372,5 +458,94 @@ public class AuditTrailAspectTest {
         AuditRecord r = sink.written.get(0);
         assertFalse("occurredAt 不得早于调用窗口", r.getOccurredAt().before(before));
         assertFalse("occurredAt 不得晚于调用窗口", r.getOccurredAt().after(after));
+    }
+
+    // ---------------------------------------------------------------- X 组：框架增强（活动流水维度/成功策略/覆写）
+
+    @Test
+    public void x1_activityFlowColumns_groupLabelDetailVisibility() {
+        RecordingSink sink = installSink();
+        biz.uploadLeg(5L, 9L, "a.pdf");
+        AuditRecord r = sink.written.get(0);
+        assertEquals("group SpEL 求值", "5", r.getGroupKey());
+        assertEquals("label 模板插值", "a.pdf", r.getResourceLabel());
+        assertEquals("detail 模板（纯文本原样）", "上传解析完成", r.getDetail());
+        assertEquals("visibility 字面量透传", "COLLAB", r.getVisibility());
+        assertNull("非 web 测试线程无请求面，endpoint 为 null", r.getEndpoint());
+    }
+
+    @Test
+    public void x2_ctxConventionKeysBeatAnnotation() {
+        RecordingSink sink = installSink();
+        biz.grantLeg(3L);
+        AuditRecord r = sink.written.get(0);
+        assertEquals("actionOverride 覆写注解 GRANT", "REVOKE", r.getAction());
+        assertEquals("resourceIdOverride 覆写 bizId SpEL", "G-9", r.getBizId());
+        assertEquals("label 覆写", "外部组", r.getResourceLabel());
+        assertEquals("detail 覆写", "改为撤销", r.getDetail());
+        assertEquals("groupOverride 覆写", "77", r.getGroupKey());
+    }
+
+    @Test
+    public void x3_successPolicy_successChannelRowWritten_thenRethrown() {
+        RecordingSink sink = installSink();
+        AuditTrailSuccessPolicy policy = thrown -> thrown instanceof SuccessChannelException;
+        AuditTrailAspect policyAspect =
+                new AuditTrailAspect(provider(), publisher(), providerOf(Arrays.asList(policy)), emptyProvider());
+        BizService biz2 = proxy(new BizService(), policyAspect);
+        try {
+            biz2.noticeLeg(11L);
+            fail("成功通道异常必须原样 rethrow（MVC 异常处理器依赖）");
+        } catch (SuccessChannelException expected) {
+            assertEquals("code 0 payload", expected.getMessage());
+        }
+        assertEquals("成功通道照常产审计行", 1, sink.written.size());
+        assertEquals("11", sink.written.get(0).getBizId());
+        assertEquals("无审计失败告警", 0, published.size());
+    }
+
+    @Test
+    public void x3b_noPolicy_exceptionIsFailure_noRow() {
+        RecordingSink sink = installSink();
+        try {
+            biz.noticeLeg(11L);
+            fail("异常必须上抛");
+        } catch (SuccessChannelException expected) {
+            // 默认（无策略）＝异常即失败
+        }
+        assertTrue("无策略时成功通道异常按失败处理不产行", sink.written.isEmpty());
+        assertEquals("按业务异常口径：不告警", 0, published.size());
+    }
+
+    @Test
+    public void x4_decorativeFieldSpelFailureRowSurvives() {
+        RecordingSink sink = installSink();
+        assertEquals("烂 group 表达式不影响业务返回", "ok", biz.brokenGroupLeg(6L));
+        assertEquals("装饰字段失败行照发（分级纪律：只丢字段不丢行）", 1, sink.written.size());
+        assertNull("group 求值失败置 null", sink.written.get(0).getGroupKey());
+        assertEquals("bizId（定位关键）不受装饰字段失败牵连", "6", sink.written.get(0).getBizId());
+    }
+
+    @Test
+    public void x5_groupResolverFallback() {
+        RecordingSink sink = installSink();
+        AuditTrailGroupResolver resolver = () -> "S-1";
+        AuditTrailAspect resolverAspect = new AuditTrailAspect(
+                provider(), publisher(), emptyProvider(), providerOf(Arrays.asList(resolver)));
+        proxy(new BizService(), resolverAspect).resolverLeg(8L);
+        assertEquals("group 属性空＋无覆写→resolver 供值", "S-1", sink.written.get(0).getGroupKey());
+    }
+
+    @Test
+    public void x6_bizIdBlankFallsBackToIdGetterReflection() {
+        // bizId 属性缺省（空）→ 反射兜底腿：第一个带 getId() 的入参对象（named/pathVar 腿由 auto 侧全链测试覆盖）
+        Object withId = new Object() {
+            @SuppressWarnings("unused")
+            public Long getId() {
+                return 66L;
+            }
+        };
+        assertEquals("66", AuditWebSupport.firstIdGetter(new Object[]{withId}));
+        assertNull("简单类型入参（无 getId）返回 null", AuditWebSupport.firstIdGetter(new Object[]{"plain", 42L}));
     }
 }

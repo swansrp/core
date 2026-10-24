@@ -28,6 +28,21 @@ public final class AuditContext {
     /** 约定键：新值（切面自动并入 AuditRecord.newValue → new_value 列） */
     public static final String NEW_VALUE = "newValue";
 
+    /** 约定键：资源简述（切面并入 AuditRecord.resourceLabel，<b>优先于注解 resourceLabel 属性</b>） */
+    public static final String LABEL = "label";
+
+    /** 约定键：业务语义详情（切面并入 AuditRecord.detail，<b>优先于注解 detail 属性</b>；多次追加分号连接） */
+    public static final String DETAIL = "detail";
+
+    /** 约定键：动作覆写（切面并入 AuditRecord.action，<b>优先于注解 action 属性</b>——运行时才能定档的场景） */
+    public static final String ACTION_OVERRIDE = "actionOverride";
+
+    /** 约定键：分组键覆写（切面并入 AuditRecord.groupKey，<b>优先于注解 group 属性与 resolver</b>——如建空间后才知道新 id） */
+    public static final String GROUP_OVERRIDE = "groupOverride";
+
+    /** 约定键：资源标识覆写（切面并入 AuditRecord.bizId，<b>优先于注解 bizId 属性与三级提取</b>——新建面 id 只在返回值里的场景） */
+    public static final String RESOURCE_ID_OVERRIDE = "resourceIdOverride";
+
     private static final ThreadLocal<Map<String, Object>> HOLDER = new ThreadLocal<>();
 
     private AuditContext() {
@@ -82,5 +97,63 @@ public final class AuditContext {
             map.clear();
             HOLDER.remove();
         }
+    }
+
+    // ==================== 类型化便捷方法（约定键门面；core 不含业务值域，值类型一律 String） ====================
+
+    /**
+     * 设置当前审计行的资源简述（如上传文件名/页面名——人话文案源）。
+     * 后写覆盖前写；null/空白静默忽略。
+     */
+    public static void label(String text) {
+        if (notBlank(text)) {
+            put(LABEL, text.trim());
+        }
+    }
+
+    /**
+     * 追加一条业务语义详情到当前审计行（"做了什么"的人话补充）。
+     * 多次调用按调用顺序以中文分号连接；null/空白静默忽略。
+     */
+    public static void detail(String text) {
+        if (!notBlank(text)) {
+            return;
+        }
+        Object existing = get(DETAIL);
+        put(DETAIL, existing == null ? text.trim() : existing + "；" + text.trim());
+    }
+
+    /**
+     * 运行时覆写动作（切面静态解析不出实际动作用途时，如一个接口兼做两种动作）。
+     * 值域归宿主（core 不定义）；null 忽略。
+     */
+    public static void actionOverride(String action) {
+        if (notBlank(action)) {
+            put(ACTION_OVERRIDE, action.trim());
+        }
+    }
+
+    /**
+     * 运行时覆写分组键（注解/resolver 都取不到时，如按 requestId 审批后 Service 从实体取空间）。
+     * null 忽略。
+     */
+    public static void groupOverride(String groupKey) {
+        if (notBlank(groupKey)) {
+            put(GROUP_OVERRIDE, groupKey.trim());
+        }
+    }
+
+    /**
+     * 运行时覆写资源标识（新建类写面的 id 只在返回值里，SpEL/三级提取结构性拿不到时）。
+     * null/空白忽略。
+     */
+    public static void resourceIdOverride(String resourceId) {
+        if (notBlank(resourceId)) {
+            put(RESOURCE_ID_OVERRIDE, resourceId.trim());
+        }
+    }
+
+    private static boolean notBlank(String text) {
+        return text != null && !text.trim().isEmpty();
     }
 }

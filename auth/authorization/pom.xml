@@ -66,6 +66,17 @@
             <artifactId>redis</artifactId>
             <version>${redis.version}</version>
         </dependency>
+        <!-- 审计默认拦截模式（AuditTrailAutoAdvisor）直接使用 web 取数 API：HttpServletRequest/
+             HandlerMethod/RequestContextHolder。版本由 spring-boot-starter-parent BOM 管理；
+             宿主必带 spring-web（kernel 依赖 spring-boot-starter-web），此处显式声明直接使用面 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
