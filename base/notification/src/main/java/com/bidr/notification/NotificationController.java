@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.kernel.config.log.LogSilent;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.validate.Validator;
+import com.bidr.notification.NotificationPage;
 import com.bidr.notification.dao.entity.NotificationRecord;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -53,8 +54,7 @@ public class NotificationController {
     public Page<Map<String, Object>> list(@RequestParam(value = "current", defaultValue = "1") long current,
                                           @RequestParam(value = "size", defaultValue = "20") long size,
                                           @RequestParam(value = "readFlag", required = false) String readFlag) {
-        Page<NotificationRecord> page = (Page<NotificationRecord>) store().page(
-                AccountContext.getOperator(), current, size, readFlag);
+        NotificationPage page = store().page(AccountContext.getOperator(), current, size, readFlag);
         Page<Map<String, Object>> out = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         java.util.List<Map<String, Object>> records = new java.util.ArrayList<>();
         for (NotificationRecord row : page.getRecords()) {

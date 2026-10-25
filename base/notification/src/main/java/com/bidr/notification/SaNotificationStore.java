@@ -2,6 +2,7 @@ package com.bidr.notification;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bidr.authorization.holder.TenantContext;
 import com.bidr.notification.dao.entity.NotificationRecord;
 import com.bidr.notification.dao.repository.SaNotificationRepoService;
@@ -65,7 +66,7 @@ public class SaNotificationStore implements NotificationStore {
     }
 
     @Override
-    public Object page(String receiver, long current, long size, String readFlag) {
+    public NotificationPage page(String receiver, long current, long size, String readFlag) {
         QueryWrapper<NotificationRecord> wrapper = new QueryWrapper<NotificationRecord>()
                 .eq("target_user", receiver)
                 .eq("valid", "1");
@@ -74,7 +75,14 @@ public class SaNotificationStore implements NotificationStore {
             wrapper.eq("read_flag", readFlag.trim());
         }
         wrapper.orderByDesc("pushed_at").orderByDesc("id");
-        return repo.select(wrapper, current, Math.max(1, Math.min(size, 100)));
+        Page<NotificationRecord> mp = repo.select(wrapper, current, Math.max(1, Math.min(size, 100)));
+        // MP Page → core 自有类型（SPI 契约；宿主实现不受持久化框架约束）
+        NotificationPage out = new NotificationPage();
+        out.setRecords(mp.getRecords());
+        out.setTotal(mp.getTotal());
+        out.setCurrent(mp.getCurrent());
+        out.setSize(mp.getSize());
+        return out;
     }
 
     @Override

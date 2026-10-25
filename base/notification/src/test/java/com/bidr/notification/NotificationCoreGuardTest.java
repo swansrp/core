@@ -113,8 +113,8 @@ public class NotificationCoreGuardTest {
             }
 
             @Override
-            public Object page(String receiver, long current, long size, String readFlag) {
-                return null;
+            public NotificationPage page(String receiver, long current, long size, String readFlag) {
+                return new NotificationPage();
             }
 
             @Override
@@ -203,8 +203,8 @@ public class NotificationCoreGuardTest {
             }
 
             @Override
-            public Object page(String r, long c, long s, String f) {
-                return null;
+            public NotificationPage page(String r, long c, long s, String f) {
+                return new NotificationPage();
             }
 
             @Override
@@ -252,8 +252,8 @@ public class NotificationCoreGuardTest {
             }
 
             @Override
-            public Object page(String r, long c, long s, String f) {
-                return null;
+            public NotificationPage page(String r, long c, long s, String f) {
+                return new NotificationPage();
             }
 
             @Override
@@ -331,8 +331,8 @@ public class NotificationCoreGuardTest {
             }
 
             @Override
-            public Object page(String r, long c, long s, String f) {
-                return null;
+            public NotificationPage page(String r, long c, long s, String f) {
+                return new NotificationPage();
             }
 
             @Override
@@ -387,8 +387,8 @@ public class NotificationCoreGuardTest {
             }
 
             @Override
-            public Object page(String r, long c, long s, String f) {
-                return null;
+            public NotificationPage page(String r, long c, long s, String f) {
+                return new NotificationPage();
             }
 
             @Override

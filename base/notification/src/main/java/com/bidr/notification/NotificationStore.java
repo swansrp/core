@@ -26,14 +26,15 @@ public interface NotificationStore {
     void save(List<NotificationRecord> rows);
 
     /**
-     * 收件箱分页（pushed_at 降序、id 降序兜稳定序）。
+     * 收件箱分页（pushed_at 降序、id 降序兜稳定序）。返回 core 自有的
+     * {@link NotificationPage}——🔴 不返回持久化框架的 Page 类型（宿主覆盖实现时不会 ClassCastException）。
      *
      * @param receiver 收件人（服务端取登录人，不接受参数指定）
      * @param current  页码（1 起）
      * @param size     页大小
      * @param readFlag 已读过滤（null/空＝全部，"0"＝未读，"1"＝已读）
      */
-    Object page(String receiver, long current, long size, String readFlag);
+    NotificationPage page(String receiver, long current, long size, String readFlag);
 
     /** 未读数（铃铛徽标数据源） */
     long unreadCount(String receiver);
