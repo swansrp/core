@@ -26,12 +26,23 @@ public class NotificationGate {
 
     /** 任务失败提醒桥开关（缺省 true） */
     public boolean asyncTaskEnabled() {
+        // 🔴 配置项不存在时 getSysConfigValue(String) 会抛 PA_DATA_NOT_EXIST——必须吞掉按缺省开，
+        // 否则 gate 在桥的 try 之外抛异常＝整条提醒链静默中断（真机实测：DEAD 任务零消息）
+        String value = readConfigQuietly("notification.async-task.enabled");
+        return FuncUtil.isEmpty(value) || "true".equalsIgnoreCase(value) || "1".equals(value);
+    }
+
+    /** 读配置（缺项/缓存不可用＝返回 null，绝不抛） */
+    private String readConfigQuietly(String key) {
         SysConfigCacheService cache = configCache.getIfAvailable();
         if (cache == null) {
-            return true;
+            return null;
         }
-        String value = cache.getSysConfigValue("notification.async-task.enabled");
-        return FuncUtil.isEmpty(value) || "true".equalsIgnoreCase(value) || "1".equals(value);
+        try {
+            return cache.getSysConfigValue(key);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** msgType 是否被静音（notification.mute-types，逗号分隔） */
@@ -39,11 +50,7 @@ public class NotificationGate {
         if (FuncUtil.isEmpty(msgType)) {
             return false;
         }
-        SysConfigCacheService cache = configCache.getIfAvailable();
-        if (cache == null) {
-            return false;
-        }
-        String raw = cache.getSysConfigValue("notification.mute-types");
+        String raw = readConfigQuietly("notification.mute-types");
         if (FuncUtil.isEmpty(raw)) {
             return false;
         }

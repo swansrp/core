@@ -36,8 +36,15 @@ public class AsyncTaskNotificationBridge implements AsyncTaskObserver {
 
     @Override
     public void onTerminal(SaAsyncTask task, AsyncTaskStatus status) {
-        if (status != AsyncTaskStatus.DEAD || task == null || !gate.asyncTaskEnabled()) {
+        if (status != AsyncTaskStatus.DEAD || task == null) {
             return;
+        }
+        try {
+            if (!gate.asyncTaskEnabled()) {
+                return;
+            }
+        } catch (Exception e) {
+            log.error("站内信开关读取异常（按开处理）: {}", e.getMessage());
         }
         for (NotificationContentResolver resolver : resolvers.orderedStream()
                 .toArray(NotificationContentResolver[]::new)) {
