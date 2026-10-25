@@ -53,7 +53,8 @@ public class MenuSeeder implements ApplicationRunner {
 
     /** 审计备注：方便日后按 remark 反查播种来源（menu-audit 对账闸同值） */
     static final String REMARK = "menu-seed 播种";
-    static final String SYSTEM_USER = "000001";
+    /** 内置管理员 customerNumber（public：base/notification 报错告警腿缺省收件人同源引用，勿复制字面量） */
+    public static final String SYSTEM_USER = "000001";
     static final String DEFAULT_ICON = "SettingOutlined";
 
     private final AcMenuService acMenuService;
