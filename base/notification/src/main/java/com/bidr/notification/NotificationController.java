@@ -32,13 +32,19 @@ import java.util.Map;
 @Api(tags = "站内信")
 @Auth(AuthLogin.class)
 @RestController
-@RequestMapping(path = "/api/notification")
+@RequestMapping(path = "/web/api/notification")
 public class NotificationController {
 
-    private final NotificationStore store;
+    /** 可选注入：宿主关掉默认 store 又未提供实现时，端点降级为空/0（不让应用起不来） */
+    private final org.springframework.beans.factory.ObjectProvider<NotificationStore> storeProvider;
 
-    public NotificationController(NotificationStore store) {
-        this.store = store;
+    public NotificationController(
+            org.springframework.beans.factory.ObjectProvider<NotificationStore> storeProvider) {
+        this.storeProvider = storeProvider;
+    }
+
+    private NotificationStore store() {
+        return storeProvider.getIfAvailable();
     }
 
     /** 收件箱分页（pushed_at 降序；readFlag 可选 '0'/'1'/缺省全部） */
@@ -47,7 +53,7 @@ public class NotificationController {
     public Page<Map<String, Object>> list(@RequestParam(value = "current", defaultValue = "1") long current,
                                           @RequestParam(value = "size", defaultValue = "20") long size,
                                           @RequestParam(value = "readFlag", required = false) String readFlag) {
-        Page<NotificationRecord> page = (Page<NotificationRecord>) store.page(
+        Page<NotificationRecord> page = (Page<NotificationRecord>) store().page(
                 AccountContext.getOperator(), current, size, readFlag);
         Page<Map<String, Object>> out = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         java.util.List<Map<String, Object>> records = new java.util.ArrayList<>();
@@ -63,7 +69,8 @@ public class NotificationController {
     @LogSilent
     @RequestMapping(value = "/unread-count", method = RequestMethod.GET)
     public long unreadCount() {
-        return store.unreadCount(AccountContext.getOperator());
+        NotificationStore s = store();
+        return s == null ? 0L : s.unreadCount(AccountContext.getOperator());
     }
 
     /** 标记已读（幂等；越权 id 不生效） */
@@ -71,14 +78,20 @@ public class NotificationController {
     @RequestMapping(value = "/read", method = RequestMethod.POST)
     public void markRead(@RequestBody List<Long> ids) {
         Validator.assertNotEmpty(ids, com.bidr.kernel.constant.err.ErrCodeSys.SYS_ERR_MSG, "消息 ID 清单");
-        store.markRead(ids, AccountContext.getOperator());
+        NotificationStore s = store();
+        if (s != null) {
+            s.markRead(ids, AccountContext.getOperator());
+        }
     }
 
     /** 全部已读 */
     @ApiOperation(value = "全部已读", notes = "receiver 恒为登录人")
     @RequestMapping(value = "/read-all", method = RequestMethod.POST)
     public void markAllRead() {
-        store.markAllRead(AccountContext.getOperator());
+        NotificationStore s = store();
+        if (s != null) {
+            s.markAllRead(AccountContext.getOperator());
+        }
     }
 
     /** 视图（action_params/extra 解析成结构返回，前端不二次 JSON.parse） */

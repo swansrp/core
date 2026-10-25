@@ -20,7 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Api(tags = "站内信")
 @Auth(AuthLogin.class)
 @RestController
-@RequestMapping(path = "/api/notification")
+@RequestMapping(path = "/web/api/notification")
 public class NotificationStreamController {
 
     private final NotificationSseHub hub;

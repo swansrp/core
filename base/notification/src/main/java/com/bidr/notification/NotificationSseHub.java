@@ -54,11 +54,28 @@ public class NotificationSseHub {
     }
 
     /** 建连注册（立即发一条 connected 事件，前端据此确认通道并刷新一次未读） */
+    /** 单用户最大并发连接（防同一账号开多标签把注册表撑爆） */
+    private static final int MAX_PER_USER = 5;
+
     public void register(String receiver, SseEmitter emitter) {
         CopyOnWriteArrayList<SseEmitter> list =
                 registry.computeIfAbsent(receiver, k -> new CopyOnWriteArrayList<>());
+        if (list.size() >= MAX_PER_USER) {
+            // 超限：最旧的连接主动收尾（前端会降级轮询）
+            SseEmitter oldest = list.get(0);
+            list.remove(oldest);
+            try {
+                oldest.complete();
+            } catch (Exception ignore) {
+                // 已断开
+            }
+        }
         list.add(emitter);
-        Runnable remove = () -> list.remove(emitter);
+        Runnable remove = () -> {
+            list.remove(emitter);
+            // 列表空＝摘掉收件人条目（否则按登录人无界增长）
+            registry.remove(receiver, list);
+        };
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);
         emitter.onError(t -> remove.run());
@@ -80,6 +97,9 @@ public class NotificationSseHub {
                 emitter.send(SseEmitter.event().name(eventName).data(data));
             } catch (Exception e) {
                 list.remove(emitter);
+                if (list.isEmpty()) {
+                    registry.remove(receiver, list);
+                }
             }
         }
     }

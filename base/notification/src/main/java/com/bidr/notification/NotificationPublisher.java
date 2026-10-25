@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -75,9 +76,11 @@ public class NotificationPublisher {
                 row.setTitle(NotificationText.truncate(draft.getTitle(), 255));
                 row.setSummary(NotificationText.truncate(draft.getSummary(), 300));
                 row.setContent(NotificationText.truncate(draft.getContent(), 2000));
-                row.setActionType(actionParamsJson != null || draft.getActionType() != null
-                        ? validActionType(draft) : null);
-                row.setActionParams(actionParamsJson);
+                // 参数序列化失败/超长（actionParamsJson==null 且 draft 有动作）＝动作整体丢弃，
+                // 不留"可点但无参数"的半残动作（4.1.3 超长整体丢动作）
+                boolean actionDropped = actionParamsJson == null && draft.getActionType() != null;
+                row.setActionType(actionDropped ? null : validActionType(draft));
+                row.setActionParams(actionDropped ? null : actionParamsJson);
                 row.setBizType(NotificationText.truncate(draft.getBizType(), 64));
                 row.setBizId(NotificationText.truncate(draft.getBizId(), 128));
                 row.setDedupeKey(NotificationText.truncate(draft.getDedupeKey(), 128));
@@ -92,8 +95,11 @@ public class NotificationPublisher {
                 NotificationSseHub hub = sseHubProvider.getIfAvailable();
                 if (hub != null) {
                     for (NotificationRecord row : rows) {
+                        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                        payload.put("msgType", row.getMsgType());
+                        payload.put("level", row.getLevel());
                         hub.pushTo(row.getTargetUser(), "notification",
-                                "{\"msgType\":\"" + row.getMsgType() + "\"}");
+                                objectMapper.writeValueAsString(payload));
                     }
                 }
             }
