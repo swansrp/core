@@ -315,6 +315,16 @@ public class AuditTrailAutoAdvisorTest {
         }
     }
 
+    @Test
+    public void p5_getOrderDoesNotRecurse_orStartupDies() {
+        AuditTrailProperties.Auto p = props();
+        AuditTrailAutoAdvisor advisor = advisor(p);
+        // 🔴 P0 回归：AbstractPointcutAdvisor.getOrder() 在未设 order 时取 getAdvice()，
+        // 本类 getAdvice()==this 且实现 Ordered ⇒ 不覆写即 StackOverflowError（auto 开启启动即崩）
+        assertEquals("getOrder 必须覆写为 LOWEST_PRECEDENCE，否则 auto 模式启动 StackOverflowError",
+                org.springframework.core.Ordered.LOWEST_PRECEDENCE, advisor.getOrder());
+    }
+
     // ---------------------------------------------------------------- J 组：判定矩阵（静态）
 
     private static Method method(String name, Class<?>... params) throws Exception {

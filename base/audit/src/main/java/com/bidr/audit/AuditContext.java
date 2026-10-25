@@ -41,6 +41,9 @@ public final class AuditContext {
     /** 约定键：分组键覆写（切面并入 AuditRecord.groupKey，<b>优先于注解 group 属性与 resolver</b>——如建空间后才知道新 id） */
     public static final String GROUP_OVERRIDE = "groupOverride";
 
+    /** 约定键：分组键<b>兜底补位</b>（注解/resolver/入参全取不到时才用——旧 AuditSupport.space 语义） */
+    public static final String GROUP_DEFAULT = "groupDefault";
+
     /** 约定键：资源标识覆写（切面并入 AuditRecord.bizId，<b>优先于注解 bizId 属性与三级提取</b>——新建面 id 只在返回值里的场景） */
     public static final String RESOURCE_ID_OVERRIDE = "resourceIdOverride";
 
@@ -141,6 +144,17 @@ public final class AuditContext {
     public static void groupOverride(String groupKey) {
         if (notBlank(groupKey)) {
             put(GROUP_OVERRIDE, groupKey.trim());
+        }
+    }
+
+    /**
+     * 分组键兜底补位（<b>只在解析器/入参都取不到时</b>生效）——"目标空间≠当前空间"的动作
+     * （建子分组节点、挂租户、跨空间审批）用它，避免把父空间 feed 的行挪到新空间。
+     * null/空白忽略。
+     */
+    public static void groupDefault(String groupKey) {
+        if (notBlank(groupKey)) {
+            put(GROUP_DEFAULT, groupKey.trim());
         }
     }
 

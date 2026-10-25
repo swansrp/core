@@ -123,10 +123,17 @@ public class AuditTrailAspect {
                     AuditTrailSpel.evaluationContext(method, args, result, ctxSnapshot);
 
             String ctxBizId = stringOf(ctxSnapshot.get(AuditContext.RESOURCE_ID_OVERRIDE));
-            // 显式注解模式无反射兜底：bizId 属性空/求值空＝null（行为面与旧版一致、可预测）；
-            // 三级提取（含 getId 反射）只属于默认拦截模式（有请求面，web 三腿全走）
+            // 显式注解模式：无 getId 反射兜底（review P1-2），但**保留 web 面两腿**
+            // （idParam 同名绑定入参／路径模板变量）——否则方法级注解端点的 resource_id 恒 NULL
+            // （review P0-2：活动流水折叠/逐条隐藏/材料文件名回填都依赖该列）
             String bizId = ctxBizId != null ? ctxBizId
                     : nullIfEmpty(AuditTrailSpel.evaluate(anno.bizId(), eval, false));
+            if (bizId == null) {
+                bizId = AuditWebSupport.resolveIdFromWeb(anno.idParam(),
+                        AuditWebSupport.bindNamedArgs(method, args),
+                        AuditWebSupport.currentRequest() == null ? null
+                                : AuditWebSupport.extractPathVars(AuditWebSupport.currentRequest()));
+            }
 
             writer.writeQuietly(AuditRecord.builder()
                     .bizType(anno.bizType())
@@ -169,7 +176,13 @@ public class AuditTrailAspect {
         if (spel != null) {
             return spel;
         }
-        return resolveGroupFromResolvers();
+        String fromResolvers = resolveGroupFromResolvers();
+        if (fromResolvers != null) {
+            return fromResolvers;
+        }
+        // 兜底补位：业务显式"目标空间"只在前面全空时才生效（旧 AuditSupport.space 语义，
+        // 否则建子节点这类"当前空间≠目标空间"的动作会把 parent feed 的行挪走）
+        return stringOf(ctxSnapshot.get(AuditContext.GROUP_DEFAULT));
     }
 
     /** 资源简述：ctx 值优先于注解模板（均降级求值纪律） */

@@ -168,6 +168,32 @@ public final class AuditWebSupport {
         return firstIdGetter(args);
     }
 
+    /**
+     * 显式注解切面的 id 提取（<b>非反射</b>）：仅①{@code idParam} 同名绑定入参 ②路径模板变量。
+     * 显式模式不做 {@code getId()} 反射（review P1-2：恢复"省略 bizId 即 null"的可预测行为）；
+     * 但方法级注解端点跑在 web 线程上，请求面两腿必须保留——否则 {@code resource_id} 恒 NULL
+     * （review P0-2：活动流水折叠/隐藏/材料文件名回填全依赖该列）。
+     */
+    static String resolveIdFromWeb(String idParam, Map<String, String> namedArgs,
+                                   Map<String, String> pathVars) {
+        if (idParam == null || idParam.isEmpty()) {
+            return null;
+        }
+        if (namedArgs != null && namedArgs.containsKey(idParam)) {
+            String v = namedArgs.get(idParam);
+            if (v != null && !v.isEmpty()) {
+                return v;
+            }
+        }
+        if (pathVars != null && pathVars.containsKey(idParam)) {
+            String v = pathVars.get(idParam);
+            if (v != null && !v.isEmpty()) {
+                return v;
+            }
+        }
+        return null;
+    }
+
     /** 反射第一个非空 {@code getId()}（update/delete 的 body VO/IdReqVO 命中；insert 前 id 为空返回 null） */
     static String firstIdGetter(Object[] args) {
         if (args == null) {

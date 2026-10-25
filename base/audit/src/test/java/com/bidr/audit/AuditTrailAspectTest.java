@@ -303,9 +303,23 @@ public class AuditTrailAspectTest {
             AuditContext.label("外层简述");
             return "ok";
         }
+        /** web 面 idParam 腿（@PathVariable 声明名 fileId，非反射）。 */
+        @AuditTrail(bizType = "FILE", action = "DELETE", idParam = "fileId")
+        public String webIdLeg(Long fileId) {
+            return "ok";
+        }
+
+        /** GROUP_DEFAULT 兜底腿（注解 group 空、无入参 spaceId）。 */
+        @AuditTrail(bizType = "doc", action = "outer")
+        public String defaultGroupLeg() {
+            AuditContext.groupDefault("77");
+            return "ok";
+        }
     }
 
     /** 嵌套内层腿（经代理调用，其 finally 清空线程上下文）。 */
+
+
     public static class InnerService {
 
         @AuditTrail(bizType = "doc", action = "inner")
@@ -590,6 +604,38 @@ public class AuditTrailAspectTest {
         };
         assertEquals("66", AuditWebSupport.firstIdGetter(new Object[]{withId}));
         assertNull("简单类型入参（无 getId）返回 null", AuditWebSupport.firstIdGetter(new Object[]{"plain", 42L}));
+    }
+
+    @Test
+    public void x7b_bizIdBlank_webLegsRecoverResourceId_noReflection() {
+        RecordingSink sink = installSink();
+        org.springframework.mock.web.MockHttpServletRequest req =
+                new org.springframework.mock.web.MockHttpServletRequest("POST", "/web/api/file/9/delete");
+        req.setRequestURI("/web/api/file/9/delete");
+        req.setServletPath("/web/api/file/9/delete");
+        req.setAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,
+                "/web/api/file/{fileId}/delete");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
+                new org.springframework.web.context.request.ServletRequestAttributes(req));
+        try {
+            biz.webIdLeg(9L);
+        } finally {
+            org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+        }
+        assertEquals(1, sink.written.size());
+        assertEquals("方法级注解端点 resource_id 必须从路径变量恢复（review P0-2）",
+                "9", sink.written.get(0).getBizId());
+    }
+
+    @Test
+    public void x7c_groupDefault_onlyFillsWhenNothingElse() {
+        RecordingSink sink = installSink();
+        biz.uploadLeg(5L, 9L, "a.pdf");
+        assertEquals("注解 group 有值 → GROUP_DEFAULT 不抢", "5", sink.written.get(0).getGroupKey());
+        AuditContext.clear();
+        biz.defaultGroupLeg();
+        assertEquals("外层补位只在全空时生效（review P1-3）", "77",
+                sink.written.get(1).getGroupKey());
     }
 
     @Test

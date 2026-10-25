@@ -9,6 +9,7 @@ import org.springframework.aop.PointcutAdvisor;
 import org.springframework.aop.support.AbstractPointcutAdvisor;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
@@ -78,6 +79,17 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
     @Override
     public Advice getAdvice() {
         return this;
+    }
+
+    /**
+     * 🔴 必须覆写：{@code AbstractPointcutAdvisor#getOrder()} 在未设 order 时取
+     * {@code getAdvice()}；本类 {@code getAdvice()==this} 且自身实现 {@link Ordered}，
+     * 于是「取 order→取 advice→取 order」自递归——auto 开启时应用启动即 StackOverflowError
+     * （真实故障：pre 环境被运维临时改 enabled=false 绕过）。
+     */
+    @Override
+    public int getOrder() {
+        return Ordered.LOWEST_PRECEDENCE;
     }
 
     /**
@@ -293,7 +305,12 @@ public class AuditTrailAutoAdvisor extends AbstractPointcutAdvisor implements Me
             }
         }
         String param = props.getGroupParam();
-        return AuditWebSupport.resolveId(param, namedArgs, pathVars, null);
+        String fromParam = AuditWebSupport.resolveId(param, namedArgs, pathVars, null);
+        if (fromParam != null) {
+            return fromParam;
+        }
+        // 兜底补位（旧 AuditSupport.space 语义）：前面全空才用
+        return stringOf(ctx.get(AuditContext.GROUP_DEFAULT));
     }
 
     private String resolveLabel(AuditTrail anno, StandardEvaluationContext eval, Map<String, Object> ctx) {
