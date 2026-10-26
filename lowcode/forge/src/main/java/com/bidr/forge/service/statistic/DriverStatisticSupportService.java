@@ -250,8 +250,9 @@ public class DriverStatisticSupportService {
                                            AdvancedPivotReq req,
                                            StatisticQueryContext ctx,
                                            Map<String, String> aliasMap) {
-        // 1: 校验行维度与度量（透视列可空=仅行维度；前端未配透视列时会下发 total 虚拟列，一般非空）
-        Validator.assertNotEmpty(req.getGroupColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "行维度列");
+        // 1: 校验度量；行维度与透视列至少其一非空（行维度可空=整体聚成一行；透视列可空=前端未配时下发的 total 虚拟列兜底）
+        Validator.assertTrue(FuncUtil.isNotEmpty(req.getGroupColumns()) || FuncUtil.isNotEmpty(req.getPivotColumns()),
+                ErrCodeSys.PA_DATA_NOT_EXIST, "行维度列");
         Validator.assertNotEmpty(req.getMeasures(), ErrCodeSys.PA_DATA_NOT_EXIST, "度量列");
         List<MetricCondition> pivots = FuncUtil.isEmpty(req.getPivotColumns())
                 ? Collections.emptyList() : req.getPivotColumns();
@@ -322,7 +323,10 @@ public class DriverStatisticSupportService {
                 sql.append(" WHERE ").append(whereSql);
             }
         }
-        sql.append(" GROUP BY ").append(String.join(", ", groupByParts));
+        if (FuncUtil.isNotEmpty(groupByParts)) {
+            // 行维度为空时不拼 GROUP BY: 无 GROUP BY 的聚合查询天然返回单行(全过滤集的总计)
+            sql.append(" GROUP BY ").append(String.join(", ", groupByParts));
+        }
 
         // 4.1: 聚合后过滤（前端把「列搜索」打在统计列上）: 只允许引用本次 SELECT 的输出别名
         if (FuncUtil.isNotEmpty(req.getHavingCondition())) {
