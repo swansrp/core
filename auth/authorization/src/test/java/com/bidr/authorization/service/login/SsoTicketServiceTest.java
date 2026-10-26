@@ -114,9 +114,13 @@ public class SsoTicketServiceTest {
         pubCfg = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
     }
 
+    @SuppressWarnings("unchecked")
     private SsoTicketService newService(String privateKey, Long ttlSeconds) {
+        org.springframework.beans.factory.ObjectProvider<com.bidr.authorization.service.sso.SsoTicketAuthorizer> provider =
+                org.mockito.Mockito.mock(org.springframework.beans.factory.ObjectProvider.class);
+        org.mockito.Mockito.when(provider.getIfAvailable()).thenReturn(null);
         return new SsoTicketService(tokenService, acUserService, acPartnerService, acSsoRedirectService,
-                privateKey, ttlSeconds);
+                provider, privateKey, ttlSeconds);
     }
 
     private MockHttpServletRequest loggedInRequest() {

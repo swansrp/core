@@ -90,16 +90,24 @@ public class SsoTicketService {
      */
     private final Long ticketTtlSeconds;
 
+    /**
+     * M23 出票准入 SPI（纯加法）：宿主侧实现则调，无实现＝放行。
+     * ObjectProvider getIfAvailable()＝null 时不调（与 SsoUserHandler 同款取用纪律）。
+     */
+    private final org.springframework.beans.factory.ObjectProvider<com.bidr.authorization.service.sso.SsoTicketAuthorizer> ticketAuthorizerProvider;
+
     public SsoTicketService(TokenService tokenService,
                             AcUserService acUserService,
                             AcPartnerService acPartnerService,
                             AcSsoRedirectService acSsoRedirectService,
+                            org.springframework.beans.factory.ObjectProvider<com.bidr.authorization.service.sso.SsoTicketAuthorizer> ticketAuthorizerProvider,
                             @Value("${" + SsoConfigKeys.JWT_PRIVATE_KEY + ":}") String jwtPrivateKey,
                             @Value("${" + SsoConfigKeys.TICKET_TTL_SECONDS + ":}") Long ticketTtlSeconds) {
         this.tokenService = tokenService;
         this.acUserService = acUserService;
         this.acPartnerService = acPartnerService;
         this.acSsoRedirectService = acSsoRedirectService;
+        this.ticketAuthorizerProvider = ticketAuthorizerProvider;
         this.jwtPrivateKey = jwtPrivateKey;
         this.ticketTtlSeconds = ticketTtlSeconds;
     }
@@ -149,6 +157,13 @@ public class SsoTicketService {
         String loginName = callerUser == null ? null : callerUser.getUserName();
         Validator.assertNotBlank(loginName, ErrCodeSys.SYS_ERR_MSG,
                 "当前账号无登录名（ac_user.user_name），拒绝签发SSO票据");
+
+        // 5.5) M23 出票准入 SPI（纯加法，无实现＝放行）：宿主侧按应用准入决定是否放行
+        com.bidr.authorization.service.sso.SsoTicketAuthorizer authorizer = ticketAuthorizerProvider.getIfAvailable();
+        if (authorizer != null) {
+            Validator.assertTrue(authorizer.canIssue(partner, callerUser), ErrCodeSys.SYS_ERR_MSG,
+                    "当前用户无该应用的访问权限，拒绝签发SSO票据");
+        }
 
         // 6) 签票：exp 只算一次（G-8，承诺面 41）——同一个值既签进票内、又回吐给 expiresAt，
         // 🔴 禁止再读一次 System.currentTimeMillis()：两次读数跨秒边界会让 expiresAt 与票内 exp 差 1 秒
