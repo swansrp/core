@@ -83,6 +83,34 @@ public class SsoJwtUtilTest {
         Assert.assertEquals(USERNAME, SsoJwtUtil.verifyAndGetUsername(token, pubCfg));
     }
 
+    /**
+     * 签发方自验腿（M23 introspect-ticket）：只给 PKCS#8 私钥、不给公钥配置时，
+     * 必须能从私钥派生公钥并验通。🔴 反面对照：拿 getPrivateExponent() 派生公钥的旧写法必翻红
+     * （2026-10-27 真机踩过：公钥指数取成私钥指数，验签恒失败）。
+     */
+    @Test
+    public void verifyByPrivateKeyDerivesPublicKeyAndPasses() {
+        String token = SsoJwtUtil.sign(privCfg, USERNAME, 60L);
+        Assert.assertEquals("私钥派生公钥必须验通（公钥指数＝getPublicExponent）",
+                USERNAME, SsoJwtUtil.verifyAndGetUsernameByPrivateKey(token, privCfg));
+        // 错钥仍拒：另一对密钥签的票，用本私钥验必须回 null 不抛
+        KeyPair other = generateFreshKeyPair();
+        String otherPriv = Base64.getEncoder().encodeToString(other.getPrivate().getEncoded());
+        String otherToken = SsoJwtUtil.sign(otherPriv, USERNAME, 60L);
+        Assert.assertNull("别家私钥派生出的公钥不得验通本钥签的票",
+                SsoJwtUtil.verifyAndGetUsernameByPrivateKey(otherToken, privCfg));
+    }
+
+    private static KeyPair generateFreshKeyPair() {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            return generator.generateKeyPair();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     // ==================== 黄金票腿（承诺面 13：字节级互通，不许自签自验替代） ====================
 
     @Test

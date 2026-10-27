@@ -37,6 +37,10 @@ public class SsoIntrospectTicketService {
     private final AcTenantService acTenantService;
     private final AcUserTenantService acUserTenantService;
 
+    /** M23 应用功能集填充 SPI（无实现＝空集；宿主侧业务判定不塞进 core） */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.beans.factory.ObjectProvider<SsoAppGrantProvider> appGrantProviderProvider;
+
     /**
      * 验 SSO 票并返回用户身份 + 租户列表 + 应用功能集。
      *
@@ -48,8 +52,19 @@ public class SsoIntrospectTicketService {
      */
     public SsoIntrospectTicketRes introspect(String idToken, String publicKey,
                                               String appCode, String tenantCode) {
+        return introspect(idToken, publicKey, false, appCode, tenantCode);
+    }
+
+    /**
+     * 验票并返回身份；byPrivateKey=true 时按「签发方自验」把 PKCS#8 私钥派生公钥再验
+     * （墨枢自身不声明 sso.jwt.public-key，见 SsoJwtUtil#verifyAndGetUsernameByPrivateKey 类注）。
+     */
+    public SsoIntrospectTicketRes introspect(String idToken, String verifyKey, boolean byPrivateKey,
+                                              String appCode, String tenantCode) {
         // 1. 验票
-        String username = SsoJwtUtil.verifyAndGetUsername(idToken, publicKey);
+        String username = byPrivateKey
+                ? SsoJwtUtil.verifyAndGetUsernameByPrivateKey(idToken, verifyKey)
+                : SsoJwtUtil.verifyAndGetUsername(idToken, verifyKey);
         if (StringUtils.isBlank(username)) {
             return errorRes("SSO票验签失败或已过期");
         }
@@ -88,6 +103,22 @@ public class SsoIntrospectTicketService {
         app.setTenantCode(tenantCode);
         app.setGroups(Collections.emptyList());
         app.setFunctions(Collections.emptyList());
+        // 宿主侧 SPI 填充组/功能集（无实现＝空集，存量形态零位移）
+        if (appGrantProviderProvider != null) {
+            SsoAppGrantProvider provider = appGrantProviderProvider.getIfAvailable();
+            if (provider != null) {
+                try {
+                    SsoAppGrant grant = provider.resolve(appCode, tenantCode, acUser);
+                    if (grant != null) {
+                        if (grant.getGroups() != null) app.setGroups(grant.getGroups());
+                        if (grant.getFunctions() != null) app.setFunctions(grant.getFunctions());
+                    }
+                } catch (Exception e) {
+                    // 填充失败不阻断身份/租户返回（功能集降级为空，消费方按无权限处理）
+                    log.warn("[introspect-ticket]功能集填充失败，按空集返回: {}", e.getClass().getSimpleName());
+                }
+            }
+        }
         res.setApp(app);
 
         log.info("[introspect-ticket]username={}, tenants={}, app={}", username, tenants.size(), appCode);

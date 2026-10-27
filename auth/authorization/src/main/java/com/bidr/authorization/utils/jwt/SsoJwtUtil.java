@@ -11,8 +11,11 @@ import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
@@ -215,6 +218,40 @@ public class SsoJwtUtil {
             // 兜底收窄契约：包括 base64/解析/KeySpec 等一切异常 ⇒ 拒票不抛出。
             // 只打异常类名（G-7）：Jackson 消息会回显被解析内容，外部可控文本不得进日志
             log.warn("[SSO验票]票或公钥不可解析，按拒票处理: {}", t.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    /**
+     * 验票（签发方自验：只有 PKCS#8 私钥、没有公钥配置的形态）。
+     *
+     * <p>JWT 签名用私钥、验签必须用公钥；PKCS#8 私钥里含 RSA 模数与公钥指数，
+     * 可现场派生 X.509 公钥后走同一套 {@link #verifyAndGetUsername} 判定。
+     * 这条腿专供 introspect-ticket 在墨枢自身（签发方）使用；
+     * 🔴 **不得**反过来要求墨枢声明 {@code sso.jwt.public-key}——那会误触发
+     * {@code SsoJwtUserHandler} 出生，把自签票变成打开本账号的通道（M15 纪律）。</p>
+     *
+     * @param token            三段点分票串
+     * @param privateKeyBase64 PKCS#8 私钥配置值（容忍 PEM 头尾/空白）
+     * @return 验签通过且未过期时的 username claim；其余一律 null（契约同 verifyAndGetUsername）
+     */
+    public static String verifyAndGetUsernameByPrivateKey(String token, String privateKeyBase64) {
+        try {
+            if (StringUtils.isBlank(token) || StringUtils.isBlank(privateKeyBase64)) {
+                return null;
+            }
+            RSAPrivateKey privateKey = (RSAPrivateKey) parsePrivateKey(privateKeyBase64);
+            // 🔴 公钥指数必须取 getPublicExponent()（RSAPrivateCrtKey），不是 getPrivateExponent()——
+            // 后者是私钥指数，拿它派生出的"公钥"验签必失败（2026-10-27 实测踩过）。
+            Validator.assertTrue(privateKey instanceof RSAPrivateCrtKey,
+                    ErrCodeSys.PA_PARAM_FORMAT, "SSO出票私钥（缺少CRT参数，无法派生公钥）");
+            RSAPrivateCrtKey crtKey = (RSAPrivateCrtKey) privateKey;
+            RSAPublicKey publicKey = (RSAPublicKey) KeyFactory.getInstance("RSA")
+                    .generatePublic(new RSAPublicKeySpec(crtKey.getModulus(), crtKey.getPublicExponent()));
+            String publicKeyBase64 = Base64.getEncoder().encodeToString(publicKey.getEncoded());
+            return verifyAndGetUsername(token, publicKeyBase64);
+        } catch (Throwable t) {
+            log.warn("[SSO验票]私钥派生公钥失败，按拒票处理: {}", t.getClass().getSimpleName());
             return null;
         }
     }

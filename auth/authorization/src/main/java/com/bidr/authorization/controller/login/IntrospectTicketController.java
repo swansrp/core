@@ -57,9 +57,10 @@ public class IntrospectTicketController {
         String idToken = body != null ? body.get("id_token") : null;
         String appCode = body != null ? body.get("app_code") : null;
         String tenantCode = body != null ? body.get("tenant_code") : null;
-        // 签发方（墨枢自身）有 private-key（PKCS#8 含公钥，可验自有票）；子系统用 public-key。
-        // 取可用者：private-key 优先（墨枢自签自验），否则 public-key（子系统验墨枢票）。
-        String verifyKey = StringUtils.isNotBlank(jwtPrivateKey) ? jwtPrivateKey : jwtPublicKey;
-        return introspectTicketService.introspect(idToken, verifyKey, appCode, tenantCode);
+        // 签发方（墨枢自身）只有 private-key ⇒ 现场派生公钥验签（🔴 不得声明 sso.jwt.public-key，
+        // 那会误触发 SsoJwtUserHandler）；子系统形态用 public-key。
+        boolean issuerSide = StringUtils.isNotBlank(jwtPrivateKey);
+        String verifyKey = issuerSide ? jwtPrivateKey : jwtPublicKey;
+        return introspectTicketService.introspect(idToken, verifyKey, issuerSide, appCode, tenantCode);
     }
 }
