@@ -12,6 +12,7 @@ import com.bidr.kernel.vo.portal.statistic.PivotMeasure;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.github.yulichang.wrapper.segments.SelectString;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,13 +123,52 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
             // ELSE NULL: DISTINCT 自动忽略 NULL, 只统计命中行的去重值
             return String.format("count(distinct %s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
         } else if (FuncUtil.equals(agg, AGG_RATIO)) {
-            // 比率度量: 分子/分母各自按同一透视条件聚合后再相除(条件只包一边会把另一腿算进错误分母),
-            // 除零或空组回落 NULL, 前端按空单元格渲染
-            return String.format("sum(%s) / nullif(sum(%s), 0)",
+            // 比率度量: 分子/分母各自按同一透视条件、按各自配置的聚合(缺省 sum)聚合后再相除(条件只包一边会把另一腿算进错误分母),
+            // 除零或空组回落 NULL, 前端按空单元格渲染; 分母腿配 max 服务组内恒定的目标值口径(达成率=sum(实际)/max(目标))
+            return buildRatioExpr(measure,
                     parseStatisticSelect(pivot.getCondition(), measure.getNumerator(), true),
                     parseStatisticSelect(pivot.getCondition(), measure.getDenominator(), true));
         } else {
             return String.format("sum(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), false));
         }
+    }
+
+    /**
+     * 度量聚合方式 → SQL 聚合表达式（未知值回落 sum；kernel 实体模式与 forge 数据集模式两个生成点共用）
+     */
+    static String buildAggExpr(String agg, String innerExpr) {
+        if (FuncUtil.equals(agg, AGG_COUNT)) {
+            return "count(" + innerExpr + ")";
+        } else if (FuncUtil.equals(agg, AGG_AVG)) {
+            return "avg(" + innerExpr + ")";
+        } else if (FuncUtil.equals(agg, AGG_MIN)) {
+            return "min(" + innerExpr + ")";
+        } else if (FuncUtil.equals(agg, AGG_MAX)) {
+            return "max(" + innerExpr + ")";
+        } else if (FuncUtil.equals(agg, AGG_COUNT_DISTINCT)) {
+            return "count(distinct " + innerExpr + ")";
+        }
+        return "sum(" + innerExpr + ")";
+    }
+
+    /**
+     * ratio 腿聚合解析：不配=sum；白名单外拒收——拼 SQL 层静默回落会把错数伪装成正常数字
+     */
+    static String resolveRatioLegAgg(String legAgg, String legLabel) {
+        if (FuncUtil.isEmpty(legAgg)) {
+            return AGG_SUM;
+        }
+        Validator.assertTrue(Arrays.asList(AGG_SUM, AGG_COUNT, AGG_AVG, AGG_MIN, AGG_MAX, AGG_COUNT_DISTINCT).contains(legAgg),
+                ErrCodeSys.SYS_ERR_MSG, "比率度量" + legLabel + "聚合方式非法：" + legAgg);
+        return legAgg;
+    }
+
+    /**
+     * ratio 除法壳：两腿各按配置聚合（缺省 sum）后相除，除零回落 NULL。
+     * 分母腿配 max 用于组内恒定值口径（如目标列在明细粒度重复出现，sum 分母会乘以组内行数）。
+     */
+    static String buildRatioExpr(PivotMeasure measure, String numeratorExpr, String denominatorExpr) {
+        return buildAggExpr(resolveRatioLegAgg(measure.getNumeratorAgg(), "分子"), numeratorExpr)
+                + " / nullif(" + buildAggExpr(resolveRatioLegAgg(measure.getDenominatorAgg(), "分母"), denominatorExpr) + ", 0)";
     }
 }

@@ -23,4 +23,8 @@ public class PivotMeasure {
     private String numerator;
     @ApiModelProperty("比率聚合分母字段（agg=ratio 时必填）")
     private String denominator;
+    @ApiModelProperty("比率分子腿聚合方式（agg=ratio 时可选，不配=sum）")
+    private String numeratorAgg;
+    @ApiModelProperty("比率分母腿聚合方式（agg=ratio 时可选，不配=sum；组内恒定的目标值配 max，防分母随行数放大）")
+    private String denominatorAgg;
 }

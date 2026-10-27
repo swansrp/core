@@ -16,8 +16,8 @@ import java.util.regex.Pattern;
  * 1105 errCode=2 detailMessage=select list expression not produced by aggregation output
  * (missing from GROUP BY clause?)，整张报表 500。原因是 ratio 分支把 分子/分母 两条
  * 裸 CASE WHEN 表达式直接相除，两腿都没进聚合函数，GROUP BY 行维度之外就是非法 SELECT。
- * 期望口径：与 kernel 的 AdminStatisticPivotInf.buildPivotAgg 一致，恒为
- * sum(分子腿) / nullif(sum(分母腿), 0)，两腿各自独立套同一透视条件。
+ * 期望口径：与 kernel 实体模式共用 AdminStatisticPivotInf.buildRatioExpr 除法壳，两腿各自独立套
+ * 同一透视条件，腿聚合缺省 sum（老配置产物逐字节不变），分母腿可配 max 服务组内恒定目标值口径。
  * <p>
  * 产物 SQL 的捕获工装见 {@link PivotSqlTestSupport}（排序形态单测共用）。
  *
@@ -76,6 +76,39 @@ public class DriverStatisticPivotRatioTest {
             Assert.fail("缺少分子的比率度量应在拼 SQL 前被拒");
         } catch (ServiceException expected) {
             Assert.assertTrue(expected.getMessage().contains("weightedScore"), expected.getMessage());
+        }
+    }
+
+    @Test
+    public void testRatioDenominatorAggMaxForConstantTarget() {
+        String sql = PivotSqlTestSupport.pivot(PivotSqlTestSupport.req(PIVOT_L3,
+                PivotSqlTestSupport.ratioMeasure("achieveRate", "actualAmt", "targetAmt", null, "max")));
+
+        Pattern expected = Pattern.compile(
+                "sum\\(case when t\\.grade_level = :param_\\d+ then t\\.actual_amt else null end\\)"
+                        + " / nullif\\(max\\(case when t\\.grade_level = :param_\\d+ then t\\.target_amt else null end\\), 0\\)"
+                        + " AS `L3__achieveRate`");
+        Assert.assertTrue(expected.matcher(sql).find(), "分母腿应按 max 聚合（sum 分母会随行数放大）: " + sql);
+        Assert.assertFalse(sql.contains("max(max("), "腿聚合不得嵌套: " + sql);
+    }
+
+    @Test
+    public void testRatioExplicitSumLegsEqualDefault() {
+        String defaultSql = PivotSqlTestSupport.pivot(PivotSqlTestSupport.req(PIVOT_L3,
+                PivotSqlTestSupport.ratioMeasure("weightedScore", "propStdScore", "phaseProp")));
+        String explicitSql = PivotSqlTestSupport.pivot(PivotSqlTestSupport.req(PIVOT_L3,
+                PivotSqlTestSupport.ratioMeasure("weightedScore", "propStdScore", "phaseProp", "sum", "sum")));
+        Assert.assertEquals(explicitSql, defaultSql, "显式 sum/sum 必须与不配置逐字节等价（老配置零变化）");
+    }
+
+    @Test
+    public void testRatioInvalidLegAggRejected() {
+        PivotMeasure measure = PivotSqlTestSupport.ratioMeasure("weightedScore", "propStdScore", "phaseProp", "sum", "median");
+        try {
+            PivotSqlTestSupport.pivot(PivotSqlTestSupport.req(PIVOT_L3, measure));
+            Assert.fail("白名单外的腿聚合应在拼 SQL 前被拒收，静默回落会产出错数");
+        } catch (ServiceException expected) {
+            Assert.assertTrue(expected.getMessage().contains("聚合方式非法"), expected.getMessage());
         }
     }
 }

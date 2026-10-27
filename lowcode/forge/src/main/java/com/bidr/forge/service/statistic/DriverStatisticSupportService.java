@@ -298,16 +298,16 @@ public class DriverStatisticSupportService {
                             ctx.formatColumnExpression(ColumnAliasMap.resolve(aliasMap, measure.getNumerator())));
                     String denExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
                             ctx.formatColumnExpression(ColumnAliasMap.resolve(aliasMap, measure.getDenominator())));
-                    // 两腿各自 sum 后再相除：裸列会让聚合查询 SELECT 引用未 GROUP BY 的列（Doris 直接拒）
-                    selectParts.add(buildPivotAggExpr(AdminStatisticPivotInf.AGG_SUM, numExpr)
-                            + " / nullif(" + buildPivotAggExpr(AdminStatisticPivotInf.AGG_SUM, denExpr) + ", 0)"
+                    // 两腿各自进聚合函数再相除（裸列会让聚合查询 SELECT 引用未 GROUP BY 的列，Doris 直接拒）；
+                    // 腿聚合缺省 sum、可配 max 等（组内恒定目标值口径），除法壳与 kernel 实体模式共用同一实现
+                    selectParts.add(AdminStatisticPivotInf.buildRatioExpr(measure, numExpr, denExpr)
                             + " AS `" + aggAlias + "`");
                 } else {
                     // resolve 内含字段名安全校验（请求侧字段名拼入反引号位置）
                     String measureDb = ColumnAliasMap.resolve(aliasMap, measure.getField());
                     String innerExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
                             ctx.formatColumnExpression(measureDb));
-                    selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
+                    selectParts.add(AdminStatisticPivotInf.buildAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
                 }
                 outputAliases.add(aggAlias);
             }
@@ -369,30 +369,6 @@ public class DriverStatisticSupportService {
         String condSql = builder.buildWhereCondition(pivot.getCondition(), aliasMap, parameters);
         return "case when " + (FuncUtil.isEmpty(condSql) ? "1=1" : condSql)
                 + " then " + columnExpr + " else null end";
-    }
-
-    /**
-     * 构建单个透视单元格的聚合表达式（ratio 不走单一聚合，在主循环按 分子/分母 各自 sum 后相除拼装）
-     * 聚合语义对齐 kernel 的 AdminStatisticPivotInf.buildPivotAgg：
-     * else null 对 sum/count/avg/min/max/countDistinct 均安全（聚合函数自动忽略 NULL）
-     */
-    private static String buildPivotAggExpr(String agg, String innerExpr) {
-        if (FuncUtil.equals(agg, "count")) {
-            return "count(" + innerExpr + ")";
-        }
-        if (FuncUtil.equals(agg, "avg")) {
-            return "avg(" + innerExpr + ")";
-        }
-        if (FuncUtil.equals(agg, "min")) {
-            return "min(" + innerExpr + ")";
-        }
-        if (FuncUtil.equals(agg, "max")) {
-            return "max(" + innerExpr + ")";
-        }
-        if (FuncUtil.equals(agg, "countDistinct")) {
-            return "count(distinct " + innerExpr + ")";
-        }
-        return "sum(" + innerExpr + ")";
     }
 
     // 简要：指标为主时的结果组装
