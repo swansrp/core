@@ -44,6 +44,13 @@ public class MenuService {
 
     public List<MenuTreeRes> getMenuTree(String customerNumber) {
         AcUser acUser = acUserService.getByCustomerNumber(customerNumber);
+        // 防御（2026-10-27 epc 联调）：数据闸按当前租户过滤 ac_user 时，零归属账号连自己也查不到，
+        // 原实现直接 acUser.getUserId() ⇒ NPE 500。改为明确业务拒绝，前端可提示重新登录/分配租户。
+        if (acUser == null) {
+            throw new com.bidr.kernel.exception.ServiceException(
+                    com.bidr.kernel.constant.err.ErrCodeSys.SYS_ERR_MSG,
+                    "当前账号不存在或不在当前租户内，请重新登录或联系管理员分配租户");
+        }
         Long userId = acUser.getUserId();
         String clientType = ClientTypeHolder.get();
         List<AcMenu> roleMenuList = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
