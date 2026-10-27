@@ -120,6 +120,8 @@ public class SsoIntrospectTicketService {
             }
         }
         res.setApp(app);
+        // 子系统账号对齐键（epc 联调 M23-1：两侧 user_id/customer_number 独立，子系统按 username 对齐本地账号）
+        res.setUsername(username);
 
         log.info("[introspect-ticket]username={}, tenants={}, app={}", username, tenants.size(), appCode);
         return res;
