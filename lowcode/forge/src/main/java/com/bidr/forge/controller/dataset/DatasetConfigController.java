@@ -53,7 +53,10 @@ public class DatasetConfigController {
     public DatasetConfigRes parseSqlAndSave(@Validated @RequestBody DatasetConfigReq req) {
         try {
             DatasetConfigRes res = datasetConfigService.save(req);
-            Resp.notice("保存成功，共生成 "
+            // notice(String...) 是抛 NoticeException 且不带 body，return 永远走不到、前端 payload 为空；
+            // 必须用 notice(resp, msg) 重载把保存结果带回（前端靠 payload.datasetId 回选左侧列表，否则新建后
+            // 永远停在新建态，再点一次保存就会重复建一条）
+            Resp.notice(res, "保存成功，共生成 "
                     + res.getTables().size() + " 个数据集，" + res.getColumns().size() + " 个字段");
             return res;
         } catch (JSQLParserException e) {
