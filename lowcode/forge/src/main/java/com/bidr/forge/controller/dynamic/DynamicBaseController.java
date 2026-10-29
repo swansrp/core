@@ -14,6 +14,7 @@ import com.bidr.forge.engine.driver.PortalDriver;
 import com.bidr.forge.service.perm.PortalAccessGuard;
 import com.bidr.forge.service.perm.PortalRowPolicyService;
 import com.bidr.kernel.constant.err.ErrCodeSys;
+import com.bidr.kernel.controller.inf.statistic.AdminStatisticPivotInf;
 import com.bidr.kernel.exception.NoticeException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
@@ -136,10 +137,12 @@ public class DynamicBaseController implements PortalSqlInf {
     /**
      * 对透视结果逐行剪掉命中隐藏 token 的键（防被构造的 req 绕过，与 {@link #applyPivotColumnPolicy} 双保险）
      * <p>
-     * 列键形态：行维度=字段名（{@code c:field}）；度量子列={@code ${itemValue}__${field}}（{@code p:}/{@code m:}）。
+     * 列键形态：行维度=字段名（{@code c:field}）；度量子列={@code ${itemValue}__${度量输出键}}（{@code p:}/{@code m:}）。
+     * 输出键同字段多条件时带后缀（如 {@code amt_2}），须经本次请求的 key→field 映射还原后比 {@code m:} 权限。
      * </p>
      */
-    protected List<Map<String, Object>> stripPivotHiddenColumns(String portalName, List<Map<String, Object>> rows) {
+    protected List<Map<String, Object>> stripPivotHiddenColumns(String portalName, AdvancedPivotReq req,
+                                                                List<Map<String, Object>> rows) {
         if (FuncUtil.isEmpty(rows)) {
             return rows;
         }
@@ -150,6 +153,14 @@ public class DynamicBaseController implements PortalSqlInf {
         if (FuncUtil.isEmpty(hiddenC) && FuncUtil.isEmpty(hiddenPM)) {
             return rows;
         }
+        Map<String, String> measureKeyToField = new LinkedHashMap<>();
+        if (req != null && FuncUtil.isNotEmpty(req.getMeasures())) {
+            for (PivotMeasure measure : req.getMeasures()) {
+                if (FuncUtil.isNotEmpty(measure.getField())) {
+                    measureKeyToField.put(AdminStatisticPivotInf.measureKey(measure), measure.getField());
+                }
+            }
+        }
         for (Map<String, Object> row : rows) {
             row.keySet().removeIf(key -> {
                 int idx = key.indexOf("__");
@@ -157,7 +168,8 @@ public class DynamicBaseController implements PortalSqlInf {
                     return hiddenC.contains("c:" + key);
                 }
                 String itemValue = key.substring(0, idx);
-                String field = key.substring(idx + 2);
+                String measurePart = key.substring(idx + 2);
+                String field = measureKeyToField.getOrDefault(measurePart, measurePart);
                 return hiddenPM.contains("p:" + itemValue)
                         || hiddenPM.contains("m:" + field)
                         || hiddenC.contains("c:" + field);

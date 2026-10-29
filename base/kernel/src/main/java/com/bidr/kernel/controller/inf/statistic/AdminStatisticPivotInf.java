@@ -4,6 +4,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.kernel.vo.common.KeyValueResVO;
+import com.bidr.kernel.vo.portal.AdvancedQuery;
 import com.bidr.kernel.vo.portal.Query;
 import com.bidr.kernel.vo.portal.SortVO;
 import com.bidr.kernel.vo.portal.statistic.AdvancedPivotReq;
@@ -16,6 +17,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Title: AdminStatisticPivotInf
@@ -36,6 +38,67 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
     String AGG_COUNT_DISTINCT = "countDistinct";
     String AGG_RATIO = "ratio";
     String PIVOT_ALIAS_SPLITTER = "__";
+
+    /**
+     * 列输出键安全字符集：与 forge 侧 SqlIdentifierUtil 同口径（kernel 不能依赖 forge）。
+     * 输出键会被拼进 SELECT 别名的引号位置，必须排除引号/反引号/空白等可改写语句结构的字符。
+     */
+    Pattern SAFE_MEASURE_KEY = Pattern.compile("^[A-Za-z0-9_$.\\-\\u4e00-\\u9fa5]+$");
+
+    /**
+     * 度量输出键：config 未配 key 时回落到字段名（老配置零行为变更）
+     */
+    static String measureKey(PivotMeasure measure) {
+        return FuncUtil.isEmpty(measure.getKey()) ? measure.getField() : measure.getKey();
+    }
+
+    /**
+     * 输出键是否可拼进反引号别名（同字段多条件时前端会生成 field_2 这类后缀）
+     */
+    static boolean isSafeMeasureKey(String key) {
+        return key != null && !key.contains("--") && SAFE_MEASURE_KEY.matcher(key).matches();
+    }
+
+    /**
+     * 条件树里是否存在至少一条真正生效的叶子条件（空对象 {}、空 conditionList 均视为无）
+     */
+    static boolean hasCondition(AdvancedQuery query) {
+        if (query == null) {
+            return false;
+        }
+        if (FuncUtil.isNotEmpty(query.getProperty())) {
+            return true;
+        }
+        if (FuncUtil.isEmpty(query.getConditionList())) {
+            return false;
+        }
+        for (AdvancedQuery sub : query.getConditionList()) {
+            if (hasCondition(sub)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 透视列条件与度量自身条件按 AND 叠加：列条件圈定父表头的切片，度量条件再圈定该度量自己的口径。
+     * 任一侧无有效条件时原样返回另一侧，避免多包一层改变既有 SQL 形状。
+     */
+    static AdvancedQuery mergeCondition(AdvancedQuery pivotCondition, AdvancedQuery measureCondition) {
+        boolean pivotHas = hasCondition(pivotCondition);
+        boolean measureHas = hasCondition(measureCondition);
+        if (!measureHas) {
+            return pivotCondition;
+        }
+        if (!pivotHas) {
+            return measureCondition;
+        }
+        AdvancedQuery merged = new AdvancedQuery();
+        merged.setAndOr(AdvancedQuery.AND);
+        merged.getConditionList().add(pivotCondition);
+        merged.getConditionList().add(measureCondition);
+        return merged;
+    }
 
     /**
      * 透视聚合查询
@@ -74,13 +137,16 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
             Validator.assertNotNull(pivot.getCondition(), ErrCodeSys.PA_DATA_NOT_EXIST, "透视列条件");
             for (PivotMeasure measure : req.getMeasures()) {
                 Validator.assertNotBlank(measure.getField(), ErrCodeSys.PA_DATA_NOT_EXIST, "度量字段");
+                // 输出键会拼进别名，同字段多条件时不再是字段名本身，单独按字符集校验
+                String aggKey = measureKey(measure);
+                Validator.assertTrue(isSafeMeasureKey(aggKey), ErrCodeSys.SYS_ERR_MSG, "度量列标识非法：" + aggKey);
                 if (FuncUtil.equals(measure.getAgg(), AGG_RATIO)) {
                     Validator.assertNotBlank(measure.getNumerator(), ErrCodeSys.PA_DATA_NOT_EXIST, "比率度量分子字段");
                     Validator.assertNotBlank(measure.getDenominator(), ErrCodeSys.PA_DATA_NOT_EXIST, "比率度量分母字段");
                 }
                 wrapper.getSelectColum().add(new SelectString(String.format("%s as '%s'",
                         buildPivotAgg(pivot, measure),
-                        pivot.getValue() + PIVOT_ALIAS_SPLITTER + measure.getField()), wrapper.getAlias()));
+                        pivot.getValue() + PIVOT_ALIAS_SPLITTER + aggKey), wrapper.getAlias()));
             }
         }
         wrapper.from(from -> buildSubFromWrapper(query, from));
@@ -103,33 +169,34 @@ public interface AdminStatisticPivotInf<ENTITY, VO> extends AdminStatisticBaseIn
      * 构建单个透视单元格的条件聚合表达式
      *
      * @param pivot   父表头列（携带列条件）
-     * @param measure 度量列
+     * @param measure 度量列（可携带自己的条件，与列条件按 AND 叠加）
      * @return 聚合 SQL 片段
      */
     default String buildPivotAgg(MetricCondition pivot, PivotMeasure measure) {
         String agg = FuncUtil.isEmpty(measure.getAgg()) ? AGG_SUM : measure.getAgg();
+        AdvancedQuery condition = mergeCondition(pivot.getCondition(), measure.getCondition());
         if (FuncUtil.equals(agg, AGG_COUNT)) {
-            return String.format("count(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
+            return String.format("count(%s)", parseStatisticSelect(condition, measure.getField(), true));
         } else if (FuncUtil.equals(agg, AGG_AVG)) {
             // ELSE NULL 保证均值分母只计算命中行
-            return String.format("avg(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
+            return String.format("avg(%s)", parseStatisticSelect(condition, measure.getField(), true));
         } else if (FuncUtil.equals(agg, AGG_MIN)) {
             // ELSE NULL: min 自动忽略 NULL, 未命中行不影响最小值
-            return String.format("min(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
+            return String.format("min(%s)", parseStatisticSelect(condition, measure.getField(), true));
         } else if (FuncUtil.equals(agg, AGG_MAX)) {
             // ELSE NULL: max 自动忽略 NULL, 未命中行不影响最大值
-            return String.format("max(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
+            return String.format("max(%s)", parseStatisticSelect(condition, measure.getField(), true));
         } else if (FuncUtil.equals(agg, AGG_COUNT_DISTINCT)) {
             // ELSE NULL: DISTINCT 自动忽略 NULL, 只统计命中行的去重值
-            return String.format("count(distinct %s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), true));
+            return String.format("count(distinct %s)", parseStatisticSelect(condition, measure.getField(), true));
         } else if (FuncUtil.equals(agg, AGG_RATIO)) {
             // 比率度量: 分子/分母各自按同一透视条件、按各自配置的聚合(缺省 sum)聚合后再相除(条件只包一边会把另一腿算进错误分母),
             // 除零或空组回落 NULL, 前端按空单元格渲染; 分母腿配 max 服务组内恒定的目标值口径(达成率=sum(实际)/max(目标))
             return buildRatioExpr(measure,
-                    parseStatisticSelect(pivot.getCondition(), measure.getNumerator(), true),
-                    parseStatisticSelect(pivot.getCondition(), measure.getDenominator(), true));
+                    parseStatisticSelect(condition, measure.getNumerator(), true),
+                    parseStatisticSelect(condition, measure.getDenominator(), true));
         } else {
-            return String.format("sum(%s)", parseStatisticSelect(pivot.getCondition(), measure.getField(), false));
+            return String.format("sum(%s)", parseStatisticSelect(condition, measure.getField(), false));
         }
     }
 

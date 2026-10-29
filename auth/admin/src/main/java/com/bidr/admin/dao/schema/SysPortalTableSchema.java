@@ -54,5 +54,11 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         // 多Tab页面的筛选栏归宿主共享, 故 per-tab 的行级过滤只能挂在成员表格自身上
         setUpgradeDDL(9, "ALTER TABLE `sys_portal_table`\n" +
                 "\tADD COLUMN `fixed_condition` TEXT NULL COMMENT '表格常驻条件JSON(与default_condition同构,支持条件变量)' AFTER `default_sort`;\n");
+        // 度量布局第三档 pivotRow(透视值熔进行里)超 CHAR(4) 长度 ⇒ 加宽; 列注释同步补全三档
+        setUpgradeDDL(10, "ALTER TABLE `sys_portal_table`\n" +
+                "\tMODIFY COLUMN `pivot_measure_layout` VARCHAR(20) NOT NULL DEFAULT 'col' COMMENT '透视度量布局: col=列 row=行 pivotRow=透视列转行';\n");
+        // pivot_total_pos 扩语义到 pivotRow 布局(组内小计行在前/在后), 仅更新列注释, 列类型不变
+        setUpgradeDDL(11, "ALTER TABLE `sys_portal_table`\n" +
+                "\tMODIFY COLUMN `pivot_total_pos` CHAR(5) NOT NULL DEFAULT 'last' COMMENT '透视合计位置: row=合计列(透视列前/后) pivotRow=组内小计行(组内前/后); first=靠前 last=靠后';\n");
     }
 }

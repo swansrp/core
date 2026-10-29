@@ -145,6 +145,6 @@ public class DynamicQueryController extends DynamicBaseController {
         PortalDriver<Map<String, Object>> driver = getDriver(portalName);
         applyRowPolicy(portalName, req);
         applyPivotColumnPolicy(portalName, req);
-        return stripPivotHiddenColumns(portalName, driver.pivot(req, portalName, getRoleId()));
+        return stripPivotHiddenColumns(portalName, req, driver.pivot(req, portalName, getRoleId()));
     }
 }
