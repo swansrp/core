@@ -33,7 +33,7 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <platform.version>20261027130904-93</platform.version>
+                <platform.version>20261029153824-94</platform.version>
             </properties>
         </profile>
     </profiles>

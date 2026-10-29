@@ -45,8 +45,8 @@
                 <!-- 新模块首版未发布过 nexus 时间戳件：先按本地/仓内 0.0.1-SNAPSHOT 解析，
                      随批发布后改钉时间戳版（照 mineru 的 llm.version 钉版形状） -->
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <llm.version>20261027130904-93</llm.version>
-                <mineru.version>20261027130904-93</mineru.version>
+                <llm.version>20261029153824-94</llm.version>
+                <mineru.version>20261029153824-94</mineru.version>
             </properties>
         </profile>
     </profiles>

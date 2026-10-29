@@ -46,11 +46,11 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20261027130904-93</kernel.version>
-                <llm.version>20261027130904-93</llm.version>
-                <oss.version>20261027130904-93</oss.version>
-                <platform.version>20261027130904-93</platform.version>
-                <authorization.version>20261027130904-93</authorization.version>
+                <kernel.version>20261029153824-94</kernel.version>
+                <llm.version>20261029153824-94</llm.version>
+                <oss.version>20261029153824-94</oss.version>
+                <platform.version>20261029153824-94</platform.version>
+                <authorization.version>20261029153824-94</authorization.version>
             </properties>
         </profile>
     </profiles>
