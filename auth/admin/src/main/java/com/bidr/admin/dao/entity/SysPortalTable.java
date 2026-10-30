@@ -109,6 +109,13 @@ public class SysPortalTable {
     private String pivotTotalPos;
 
     /**
+     * 透视总计行(最底汇总行): 空=跟随Portal配置(summary) 1=显示 0=隐藏
+     */
+    @TableField(value = "pivot_summary_show")
+    @ApiModelProperty(value = "透视总计行: 空=跟随Portal配置 1=显示 0=隐藏")
+    private String pivotSummaryShow;
+
+    /**
      * Tab成员JSON(仅宿主): [{tableId,label,order}]
      */
     @TableField(value = "tab_items")

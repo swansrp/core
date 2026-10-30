@@ -60,5 +60,8 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         // pivot_total_pos 扩语义到 pivotRow 布局(组内小计行在前/在后), 仅更新列注释, 列类型不变
         setUpgradeDDL(11, "ALTER TABLE `sys_portal_table`\n" +
                 "\tMODIFY COLUMN `pivot_total_pos` CHAR(5) NOT NULL DEFAULT 'last' COMMENT '透视合计位置: row=合计列(透视列前/后) pivotRow=组内小计行(组内前/后); first=靠前 last=靠后';\n");
+        // 透视总计行(最底汇总行)显示控制: 空=跟随所绑 Portal 配置的 summary 开关(默认), 1=显示, 0=隐藏
+        setUpgradeDDL(12, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `pivot_summary_show` CHAR(1) NOT NULL DEFAULT '' COMMENT '透视总计行: 空=跟随Portal配置 1=显示 0=隐藏' AFTER `pivot_total_pos`;\n");
     }
 }
