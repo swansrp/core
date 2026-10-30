@@ -3,8 +3,10 @@ package com.bidr.forge.service.dataset;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bidr.forge.dao.entity.SysDataset;
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetSqlSnapshot;
 import com.bidr.forge.dao.entity.SysDatasetTable;
 import com.bidr.forge.dao.repository.SysDatasetColumnService;
+import com.bidr.forge.dao.repository.SysDatasetSqlSnapshotService;
 import com.bidr.forge.dao.repository.SysDatasetService;
 import com.bidr.forge.dao.repository.SysDatasetTableService;
 import com.bidr.forge.utils.DatasetBaseFilterUtil;
@@ -45,6 +47,7 @@ public class DatasetConfigService {
     private final SysDatasetService sysDatasetService;
     private final SysDatasetTableService sysDatasetTableService;
     private final SysDatasetColumnService sysDatasetColumnService;
+    private final SysDatasetSqlSnapshotService sysDatasetSqlSnapshotService;
 
     /**
      * 解析SQL并生成配置（不保存）
@@ -127,6 +130,7 @@ public class DatasetConfigService {
                 log.info("Dataset配置无变更，跳过更新，datasetId={}", datasetId);
                 // 但如果用户只是改了 SQL 注释（备注），也需要把备注更新到列配置表
                 persistColumnRemarksIfOnlyRemarksChanged(existingConfig, newConfig);
+                saveSqlSnapshot(datasetId, req);
                 DatasetConfigRes unchanged = getConfig(datasetId);
                 unchanged.setBaseFilter(baseFilter);
                 return unchanged;
@@ -157,7 +161,31 @@ public class DatasetConfigService {
                 isNewDataset ? "新增" : "更新",
                 baseFilter, baseFilterFromSql);
 
+        // SQL 有实际变更时留一份快照(误粘贴后可回滚)
+        saveSqlSnapshot(datasetId, req);
+
         return newConfig;
+    }
+
+    /**
+     * 保存 SQL 快照: 每次保存数据集且 SQL 与最新快照不同时插一条, 供误粘贴后回滚。
+     * 必须在 SQL 解析成功之后调用(解析失败抛异常时不会留下无效快照)。
+     */
+    private void saveSqlSnapshot(Long datasetId, DatasetConfigReq req) {
+        if (FuncUtil.isEmpty(datasetId) || FuncUtil.isEmpty(req.getSql())) {
+            return;
+        }
+        SysDatasetSqlSnapshot latest = sysDatasetSqlSnapshotService.getLatest(datasetId);
+        if (latest != null && req.getSql().equals(latest.getSqlText())) {
+            return; // 与最新快照相同, 不重复留版本
+        }
+        SysDatasetSqlSnapshot snapshot = new SysDatasetSqlSnapshot();
+        snapshot.setDatasetId(datasetId);
+        snapshot.setSqlText(req.getSql());
+        snapshot.setDataSource(req.getDataSource());
+        snapshot.setRemark(req.getRemark());
+        sysDatasetSqlSnapshotService.insertSnapshot(snapshot);
+        log.info("已留存Dataset SQL快照，datasetId={}", datasetId);
     }
 
     /**

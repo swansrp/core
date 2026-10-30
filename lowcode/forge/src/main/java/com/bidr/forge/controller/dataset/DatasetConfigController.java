@@ -1,6 +1,8 @@
 package com.bidr.forge.controller.dataset;
 
 import com.bidr.forge.dao.entity.SysDatasetColumn;
+import com.bidr.forge.dao.entity.SysDatasetSqlSnapshot;
+import com.bidr.forge.dao.repository.SysDatasetSqlSnapshotService;
 import com.bidr.forge.service.dataset.DatasetConfigService;
 import com.bidr.forge.vo.dataset.DatasetColumnReq;
 import com.bidr.forge.vo.dataset.DatasetConfigReq;
@@ -36,6 +38,21 @@ import java.util.List;
 public class DatasetConfigController {
 
     private final DatasetConfigService datasetConfigService;
+    private final SysDatasetSqlSnapshotService sysDatasetSqlSnapshotService;
+
+    @ApiOperation("数据集SQL快照列表(新→旧, 默认最近50条, 不含SQL全文)")
+    @GetMapping("/snapshot/list")
+    public List<SysDatasetSqlSnapshot> snapshotList(@RequestParam Long datasetId,
+                                                    @RequestParam(defaultValue = "50") Integer limit) {
+        return sysDatasetSqlSnapshotService.listByDatasetId(datasetId, limit);
+    }
+
+    @ApiOperation("数据集SQL快照详情(含SQL全文)")
+    @GetMapping("/snapshot/{id}")
+    public SysDatasetSqlSnapshot snapshotDetail(@PathVariable Long id) {
+        SysDatasetSqlSnapshot snapshot = sysDatasetSqlSnapshotService.selectById(id);
+        return snapshot;
+    }
 
     @ApiOperation("解析SQL生成配置（仅预览，不保存，datasetId可为空）")
     @PostMapping("/parse")
