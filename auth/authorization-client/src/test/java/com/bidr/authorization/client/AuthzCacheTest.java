@@ -1,5 +1,6 @@
 package com.bidr.authorization.client;
 
+import com.bidr.authorization.authz.AuthzVersionHolder;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

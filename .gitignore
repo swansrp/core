@@ -28,5 +28,8 @@ target/
 *.rar
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*/.mvn/jvm.config
-/.mvn/
+hs_err_pid*
+
+# 构建隔离：本地 Maven 仓库指向（各克隆/各 worktree 自持，不入库）；CI 用 CLI 覆盖
+/.mvn/jvm.config
+/.mvn/maven.config

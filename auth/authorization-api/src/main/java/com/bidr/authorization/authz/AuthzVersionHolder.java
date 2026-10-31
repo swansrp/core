@@ -1,7 +1,5 @@
-package com.bidr.authorization.client;
+package com.bidr.authorization.authz;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
 /**

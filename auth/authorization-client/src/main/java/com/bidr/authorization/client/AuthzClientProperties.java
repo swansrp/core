@@ -1,5 +1,7 @@
 package com.bidr.authorization.client;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 /**
  * Title: AuthzClientProperties
  * Description: client 装配属性（enabled 开关 + server 地址 + fail 策略）。
@@ -8,6 +10,7 @@ package com.bidr.authorization.client;
  * @author Sharp
  * @since 2026-10-31
  */
+@ConfigurationProperties(prefix = "my.authz.client")
 public class AuthzClientProperties {
 
     /** 🔴 默认 false——引 jar 不改变行为；子系统 yml 显式 my.authz.client.enabled=true 才装配 */
