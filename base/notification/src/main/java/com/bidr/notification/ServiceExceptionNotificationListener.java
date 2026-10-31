@@ -1,6 +1,6 @@
 package com.bidr.notification;
 
-import com.bidr.authorization.service.menu.MenuSeeder;
+import com.bidr.authorization.constants.AuthConstants;
 import com.bidr.kernel.event.ServiceExceptionEvent;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import org.springframework.util.StringUtils;
  * <table border="1">
  *   <caption>notification.error-alert.target-user 三态</caption>
  *   <tr><th>配置值</th><th>行为</th></tr>
- *   <tr><td>未配置 / 读异常</td><td>缺省发内置管理员 000001（{@link MenuSeeder#SYSTEM_USER} 单一正源）</td></tr>
+ *   <tr><td>未配置 / 读异常</td><td>缺省发内置管理员 000001（{@link AuthConstants#SYSTEM_USER} 单一正源）</td></tr>
  *   <tr><td>非空且 ≠ off</td><td>该值为收件人（ac_user.customer_number）</td></tr>
  *   <tr><td>off（忽略大小写）/ 空串</td><td>整腿关闭，本条不发</td></tr>
  * </table>
@@ -91,13 +91,13 @@ public class ServiceExceptionNotificationListener {
 
     /**
      * 收件人解析（三态；照 {@link NotificationGate}"缺项读取会抛、须吞掉"的现行口径全程 quiet）：
-     * 读异常/缺项 → 缺省 {@link MenuSeeder#SYSTEM_USER}；非空且 ≠ off → 该值；
+     * 读异常/缺项 → 缺省 {@link AuthConstants#SYSTEM_USER}；非空且 ≠ off → 该值；
      * off（忽略大小写）或空串 → {@code null}＝不发。
      */
     private String resolveTargetUser() {
         String configured = readConfigQuietly();
         if (configured == null) {
-            return MenuSeeder.SYSTEM_USER;
+            return AuthConstants.SYSTEM_USER;
         }
         String trimmed = configured.trim();
         if (trimmed.isEmpty() || "off".equalsIgnoreCase(trimmed)) {

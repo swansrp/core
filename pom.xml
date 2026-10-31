@@ -16,6 +16,7 @@
         <module>comm/email</module>
         <module>store/redis</module>
         <module>auth/authorization</module>
+        <module>auth/authorization-api</module>
         <module>comm/sms</module>
         <module>comm/mqtt</module>
         <module>store/neo4j</module>

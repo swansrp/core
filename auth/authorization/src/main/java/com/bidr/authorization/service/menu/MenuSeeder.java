@@ -1,5 +1,7 @@
 package com.bidr.authorization.service.menu;
 
+import com.bidr.authorization.constants.AuthConstants;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.constants.param.AccountParam;
@@ -54,7 +56,10 @@ public class MenuSeeder implements ApplicationRunner {
     /** 审计备注：方便日后按 remark 反查播种来源（menu-audit 对账闸同值） */
     static final String REMARK = "menu-seed 播种";
     /** 内置管理员 customerNumber（public：base/notification 报错告警腿缺省收件人同源引用，勿复制字面量） */
-    public static final String SYSTEM_USER = "000001";
+    /** @deprecated 正源已外移 {@link com.bidr.authorization.constants.AuthConstants#SYSTEM_USER}（T2.3a）
+     */
+    @Deprecated
+    public static final String SYSTEM_USER = AuthConstants.SYSTEM_USER;
     static final String DEFAULT_ICON = "SettingOutlined";
 
     private final AcMenuService acMenuService;
