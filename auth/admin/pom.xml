@@ -72,6 +72,12 @@
             <artifactId>authorization</artifactId>
             <version>${authorization.version}</version>
         </dependency>
+        <!-- T2.3a 拆分：admin-api（Sys* 门户元数据正源）。本模块=管理服务器侧，forge/insight 后续可换直依 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>admin-api</artifactId>
+            <version>${jarVersion}</version>
+        </dependency>
     </dependencies>
 
     <build>
