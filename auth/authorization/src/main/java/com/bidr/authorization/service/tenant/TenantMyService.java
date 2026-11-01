@@ -1,9 +1,7 @@
 package com.bidr.authorization.service.tenant;
 
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.constants.err.AccountErrCode;
-import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUserTenant;
@@ -11,12 +9,12 @@ import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
+import com.bidr.authorization.service.permit.PermitService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.TenantMyVO;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,17 +31,16 @@ import java.util.stream.Collectors;
  * Description: 框架内置「我的租户」清单与切换（2026-10-21 用户拍板：多租户系统内置顶栏齿轮切换面，
  * 系统管理员可切所有租户）。
  * <p>
- * 可切集判定（{@link #elevated}）：
+ * 可切集判定（{@link #elevated}）——🔴 <b>两个条件同时成立</b>（2026-11-01 用户裁定，原 ∨ 改 &&）：
  * <ol>
- *   <li><b>平台档</b>＝{@link AuthAdmin#matchesAdminRole}（sys_config {@link AccountParam#ACCOUNT_ADMIN_ROLE_ID}
- *       × 角色比对，R-C M-2 收口谓词；🔴 不读 {@code TenantContext.isPlatform()}——那只由
- *       {@code @Auth(AuthAdmin)} 切面置位，本端点挂 {@code AuthLogin} 档下恒 false，10-20 撤回的正是这条死路）；</li>
- *   <li><b>系统管理级</b>＝登录烤的租户集为空（{@code TenantContext.getTenantIds()} null/空
- *       ＝ D3 既有「无租户集＝系统管理级，可见全量数据」语义的自然延伸——数据面既已旁路，
- *       切换面同样全量）。</li>
+ *   <li><b>系统管理级</b>＝登录烤的租户集为空（{@code TenantContext.getTenantIds()} null/空）；</li>
+ *   <li><b>平台管理员</b>＝{@link PermitService#isAdmin()}（2026-11-01 统一后全平台唯一 isAdmin 实现；
+ *       🔴 不读 {@code TenantContext.isPlatform()}——那只由
+ *       {@code @Auth(AuthAdmin)} 切面置位，本端点挂 {@code AuthLogin} 档下恒 false，10-20 撤回的正是这条死路）。</li>
  * </ol>
- * 两档命中 ⇒ 清单＝全部有效租户；切换 ⇒ 目标租户存在且 valid 即可，且 🔴 同步把 token 的
- * {@code TENANT_IDS} 改写为目标租户单元素集——数据闸（ac_user 锚点 EXISTS 按 TENANT_IDS）
+ * ⇒ 只有"既没绑租户、又是超管"的平台账号（种子 bidrAdmin 形态）可代言任意租户；
+ * JIT 新号（无绑定但非超管）与绑了租户的超管一律不可。
+ * <p>命中 ⇒ 清单＝全部有效租户；切换 ⇒ 目标租户存在且 valid 即可，且 🔴 同步把 token 的
  * 与业务 TenantLine（按 TENANT_ID）才能一齐跟到目标租户；下次登录 {@code buildTenantIds}
  * 按真实关系重烤，系统级自动落回旁路语义。
  * </p>
@@ -65,7 +62,7 @@ public class TenantMyService {
 
     private final AcTenantService acTenantService;
     private final AcUserTenantService acUserTenantService;
-    private final SysConfigCacheService sysConfigCacheService;
+    private final PermitService permitService;
     private final TokenService tokenService;
 
     /**
@@ -120,15 +117,14 @@ public class TenantMyService {
     }
 
     /**
-     * 提权档＝平台档 ∨ 系统管理级（判定口径见类注）。private：测试经构造注入后反射/子类化皆不需要，
-     * 判定纯函数 {@link AuthAdmin#matchesAdminRole} 自身已被守卫覆盖。
+     * 提权档＝「系统管理级（登录烤的租户集为空）」<b>且</b>「平台管理员角色」——2026-11-01 用户裁定：
+     * 两个条件必须同时成立（原为 ∨，用户评「OR 不够严肃」）。
+     * <p>为什么必须 &&：单靠"没绑租户"不够格——JIT 新建的 SSO 账号默认无绑定，
+     * 若按 ∨ 判定它一登录就获得代言任意租户的能力（fail-open 特权）；反之绑了租户的超管也不该再代言。
+     * 只有"既没绑、又是超管"＝真正的平台账号（种子 bidrAdmin 形态）才放行。</p>
      */
     private boolean elevated() {
-        if (FuncUtil.isEmpty(TenantContext.getTenantIds())) {
-            return true;
-        }
-        AccountInfo account = AccountContext.get();
-        return AuthAdmin.matchesAdminRole(account, sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID));
+        return FuncUtil.isEmpty(TenantContext.getTenantIds()) && permitService.isAdmin();
     }
 
     private Long userId() {

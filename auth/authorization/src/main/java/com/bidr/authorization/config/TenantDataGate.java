@@ -1,12 +1,15 @@
 package com.bidr.authorization.config;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
 import com.bidr.kernel.config.db.TenantGateSuppressor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.FromItem;
@@ -85,18 +88,27 @@ public class TenantDataGate implements DataPermissionHandler {
         if (!isAnchorTable(anchorTableName)) {
             return where;
         }
-        List<Long> tenantIds = TenantContext.getTenantIds();
-        if (tenantIds == null || tenantIds.isEmpty()) {
-            return where;
-        }
         if (TenantContext.isPlatform()) {
             return where;
+        }
+        List<Long> tenantIds = TenantContext.getTenantIds();
+        if (tenantIds == null || tenantIds.isEmpty()) {
+            // 🔴 2026-11-01 用户裁定（&& 口径）：无租户绑定不再自动等于"全量可见"。
+            // 分层：①无请求上下文（定时任务/异步/初始化，AccountContext 缺席）＝内部任务，保持兼容旁路；
+            //      ②已登录但无租户绑定且非平台档（JIT 新号形态）＝一条也看不到（恒假表达式 1=0），
+            //        不再 fail-open 把"没填"当成超级权限。
+            return AccountContext.get() == null ? where : denyAll();
         }
         Expression gate = buildTenantExists(columnQualifier, tenantIds);
         if (gate == null) {
             return where;
         }
         return where == null ? gate : new AndExpression(where, gate);
+    }
+
+    /** 恒假表达式（1 = 0）：无租户绑定的登录态对锚点表一条也查不到 */
+    private static Expression denyAll() {
+        return new EqualsTo(new LongValue(1), new LongValue(0));
     }
 
     /**
@@ -111,8 +123,15 @@ public class TenantDataGate implements DataPermissionHandler {
         if (TenantGateSuppressor.isSuppressed()) {
             return false;
         }
+        if (TenantContext.isPlatform()) {
+            return false;
+        }
         List<Long> tenantIds = TenantContext.getTenantIds();
-        return tenantIds != null && !tenantIds.isEmpty() && !TenantContext.isPlatform();
+        if (tenantIds == null || tenantIds.isEmpty()) {
+            // 与 appendGate 同一分层：内部任务（无上下文）短路；登录态无租户需下探注入 1=0
+            return AccountContext.get() != null;
+        }
+        return true;
     }
 
     /**

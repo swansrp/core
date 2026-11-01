@@ -11,6 +11,7 @@ import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.constants.token.TokenType;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
+import com.bidr.authorization.service.permit.PermitService;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -80,12 +81,19 @@ public class AuthLogin implements AuthRole {
         userInfo.setPermitInfoList(permitInfoList);
         AccountInfo accountInfo = buildAccountInfo(userInfo, map);
         AccountContext.set(accountInfo);
-        // 租户档接线（棒2）：token 缺 TENANT_IDS（老项目/老 token）⇒ null＝旁路形态，数据闸放行；
-        // 空集合＝无归属，按主线程裁定同样旁路。平台档由 AuthAdmin 通过路径另行置位。
+        // 租户档接线（棒2）：token 缺 TENANT_IDS（老项目/老 token）⇒ null；
+        // 🔴 2026-11-01 && 口径：null/空集不再自动等于"旁路全量"，是否放行改由数据闸结合平台档判定。
         TenantContext.set(accountInfo.getTenantIds());
         // 当前租户（2026-10-19）：token TENANT_ID 键（登录烤入首个/切换端点改写）；
-        // 缺键＝系统管理级用户或未启用租户项目，保持 null＝行级隔离旁路；脏值按缺键处理（兼容口径同 parseTenantIds）。
+        // 缺键＝未选当前租户，保持 null（脏值按缺键处理，兼容口径同 parseTenantIds）。
         TenantContext.setCurrentTenantId(parseCurrentTenantId(map));
+        // 🔴 平台档（2026-11-01）：&& 口径的前提——平台档必须是"账号属性"，每个请求都置位。
+        // 此前只有 @Auth(AuthAdmin) 端点经 AuthAdmin 置位，同一账号在数据面时真时假；
+        // 与 PermitService.isAdmin 同一静态比对，判据不新增第二份。
+        if (PermitService.containsAdminRole(accountInfo.getRoleInfoMap(),
+                sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID))) {
+            TenantContext.markPlatform();
+        }
     }
 
     private UserInfo buildUserInfo(Map<String, Object> map) {

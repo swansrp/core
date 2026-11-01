@@ -1,8 +1,6 @@
 package com.bidr.authorization.service.tenant;
 
-import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.constants.err.AccountErrCode;
-import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserTenant;
@@ -10,12 +8,12 @@ import com.bidr.authorization.dao.mapper.AcUserDao;
 import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.authorization.service.permit.PermitService;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +39,7 @@ public class AcTenantPortalService {
 
     private final AcTenantService acTenantService;
     private final AcUserTenantService acUserTenantService;
-    private final SysConfigCacheService sysConfigCacheService;
+    private final PermitService permitService;
     /** 🔴 portal 专用 ac_user 取数口（挂 @InterceptorIgnore，M-24）——管理面所有 ac_user 读点
      * （guard operator 解析、addMember 目标查在否、listMembers 展示列）都走它，
      * 不经被租户闸按登录 claims 改写的通用 select/selectById 路径 */
@@ -252,15 +250,13 @@ public class AcTenantPortalService {
     }
 
     /**
-     * 平台档腿：判据与 {@link AuthAdmin#validate} 收口同一静态谓词
-     * {@link AuthAdmin#matchesAdminRole}（sys_config ACCOUNT_ADMIN_ROLE_ID × 角色比对，
-     * R-C M-2——两处判据不许各写一份）；只回答"是不是平台管理员"，
+     * 平台档腿：委托 {@link PermitService#isAdmin()}（2026-11-01 统一——全平台唯一实现，
+     * 取上下文/回落 token 与角色比对都在那里，本类不再自带判据）；只回答"是不是平台管理员"，
      * 不回答成员/管理员身份（那必须现查表）。
      * <p>包可见性：测试子类改写本腿注入平台档场景，不为测试拓宽公开 API。</p>
      */
     boolean isPlatformTier() {
-        Long adminRoleId = sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID);
-        return AuthAdmin.matchesAdminRole(AccountContext.get(), adminRoleId);
+        return permitService.isAdmin();
     }
 
     // ==================== 纯判权内核（static，脱离 Spring 可直测） ====================

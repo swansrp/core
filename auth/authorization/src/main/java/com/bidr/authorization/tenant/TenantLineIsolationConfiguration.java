@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
 import com.bidr.kernel.config.db.MybatisPlusInterceptorCustomizer;
 import net.sf.jsqlparser.JSQLParserException;
@@ -335,10 +336,13 @@ public class TenantLineIsolationConfiguration {
 
         /**
          * 该表是否跳过改写。豁免判定（顺序即语义）：
-         * ① 平台档（AuthAdmin → markPlatform）——跨租户全量视图；
+         * ① 平台档（账号角色命中 sys_config 管理员角色；AuthLogin 构建上下文时置位，AuthAdmin 端点亦置位）
+         *    ——跨租户全量视图；
          * ② 内部操作段（TenantContext.runWithoutIsolation）；
-         * ③ 用户不属于任何租户（租户集 null/空）＝系统管理级，不拦截（用户 2026-10-19 拍板；
-         *    与框架 TenantDataGate"空集旁路"既有口径一致）；
+         * ③ 租户集 null/空——🔴 <b>2026-11-01 && 口径</b>：不再一律旁路。分两层：
+         *    无请求上下文（定时任务/异步/初始化，AccountContext 缺席）＝内部任务兼容旁路；
+         *    已登录但无租户绑定且非平台（JIT 新号）＝不忽略，进改写后由 {@link #getTenantId()}
+         *    返回不可命中值（-1）⇒ 看不到任何隔离表数据（原为 fail-open 全量可见）；
          * ④ 表不在隔离集（未实现 TenantIsolated）。
          * 其余（租户集非空的普通用户）进入改写，当前租户缺失由 {@link #getTenantId()} 抛。
          */
@@ -349,7 +353,8 @@ public class TenantLineIsolationConfiguration {
             }
             List<Long> tenantIds = TenantContext.getTenantIds();
             if (tenantIds == null || tenantIds.isEmpty()) {
-                return true;
+                // 内部任务（无请求上下文）保持兼容旁路；登录态无租户且非平台 ⇒ 进改写按 -1 过滤
+                return AccountContext.get() == null;
             }
             return !isolatedTables().contains(bareName(tableName));
         }
@@ -363,6 +368,14 @@ public class TenantLineIsolationConfiguration {
          */
         @Override
         public Expression getTenantId() {
+            Long current = TenantContext.currentTenantId();
+            List<Long> tenantIds = TenantContext.getTenantIds();
+            if (current == null && AccountContext.get() != null
+                    && (tenantIds == null || tenantIds.isEmpty())) {
+                // 🔴 2026-11-01 && 口径：登录态无租户绑定且非平台 ⇒ 返回 -1（不可能与真实 tenant_id 相等）
+                // ⇒ 查询恒空。写路径不受影响（ignoreInsert 恒 true，值由实体填充链负责）。
+                return new LongValue(-1L);
+            }
             return new LongValue(TenantContext.requireCurrentTenantId());
         }
 

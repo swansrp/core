@@ -34,8 +34,9 @@ import java.util.Map;
  * <p>覆盖：成员模式清单装配（对齐/current/admin 标/停用租户不展示）／系统管理级与平台档
  * 全量腿（含成员关系行 isAdmin 标真）／switch 四态：成员只改 TENANT_ID（零位移）、
  * 平台档切非成员租户两键同改（数据闸跟切）、非成员拒、停用租户拒、空参拒。</p>
- * <p>🔴 提权档判定两腿各有用例：平台档（matchesAdminRole×sys_config 角色参数）
- * 与系统管理级（登录烤集为空）——10-20 撤回的死路（isPlatform() 切面位）不在被测面。</p>
+ * <p>🔴 提权档判定（2026-11-01 起 && ：系统管理级（登录烤集为空）且 平台管理员角色）：
+ * 正反两面各有用例——无绑定＋超管放行；无绑定非超管、绑了租户的超管一律拒（封堵 JIT 新号 fail-open）。
+ * 10-20 撤回的死路（isPlatform() 切面位）不在被测面。</p>
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -62,7 +63,11 @@ public class TenantMyServiceTest {
         acUserTenantService = Mockito.mock(AcUserTenantService.class);
         sysConfigCacheService = Mockito.mock(SysConfigCacheService.class);
         tokenService = Mockito.mock(TokenService.class);
-        service = new TenantMyService(acTenantService, acUserTenantService, sysConfigCacheService, tokenService);
+        service = new TenantMyService(acTenantService, acUserTenantService,
+                // 平台档判定已收口 PermitService.isAdmin（2026-11-01）：用真实现 + mock 依赖，
+                // 行为与收口前一致（AccountContext 有角色映射时走上下文路）
+                new com.bidr.authorization.service.permit.PermitService(sysConfigCacheService, tokenService),
+                tokenService);
 
         Mockito.when(acTenantService.listValid()).thenReturn(Arrays.asList(t1, t2));
         Mockito.when(acTenantService.getById(1L)).thenReturn(t1);
@@ -117,20 +122,31 @@ public class TenantMyServiceTest {
     // ==================== 清单：提权档全量 ====================
 
     @Test
-    public void systemLevelListFullTenants() {
-        // 不设 TenantContext（烤集为 null＝系统管理级旁路档）
+    public void systemLevelAdminListFullTenants() {
+        // 不设 TenantContext（烤集 null＝系统管理级）＋ 超管角色 ⇒ 2026-11-01 起 && 才提权
+        grantAdminRole();
         Mockito.when(acUserTenantService.listByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
         List<TenantMyVO> rows = service.listMy();
 
-        Assert.assertEquals("系统管理级必须看到全部有效租户", 2, rows.size());
+        Assert.assertEquals("系统管理级＋超管必须看到全部有效租户", 2, rows.size());
         Assert.assertEquals(Boolean.FALSE, rows.get(0).getIsAdmin());
         Mockito.verify(acUserTenantService).listByUserId(USER_ID);
     }
 
     @Test
+    public void systemLevelWithoutAdminRoleCannotListAll() {
+        // 空集但非超管（JIT 新号形态）⇒ 不得提权：只列本人成员关系（此处为空）
+        Mockito.when(acUserTenantService.listByUserId(USER_ID)).thenReturn(Collections.emptyList());
+
+        List<TenantMyVO> rows = service.listMy();
+
+        Assert.assertTrue("无绑定但非超管不得看到全部租户（&& 判据封堵 fail-open）", rows.isEmpty());
+    }
+
+    @Test
     public void platformTierListFullTenantsAndFlagsMemberAdmin() {
-        TenantContext.set(Collections.singletonList(1L));
+        // && 判据：必须"无绑定＋超管"才提权，故此处不设 TenantContext
         TenantContext.setCurrentTenantId(1L);
         grantAdminRole();
         Mockito.when(acUserTenantService.listByUserId(USER_ID))
@@ -138,7 +154,7 @@ public class TenantMyServiceTest {
 
         List<TenantMyVO> rows = service.listMy();
 
-        Assert.assertEquals("平台档必须看到全部有效租户（含非成员租户）", 2, rows.size());
+        Assert.assertEquals("平台账号必须看到全部有效租户（含非成员租户）", 2, rows.size());
         Assert.assertEquals(Boolean.TRUE, rows.get(0).getIsAdmin());
         Assert.assertEquals(Boolean.FALSE, rows.get(1).getIsAdmin());
         Assert.assertEquals(Boolean.TRUE, rows.get(0).getCurrent());
@@ -160,9 +176,8 @@ public class TenantMyServiceTest {
 
     @Test
     public void platformSwitchNonMemberTenantRewritesBothKeys() {
-        TenantContext.set(Collections.singletonList(1L));
+        // && 判据：无绑定＋超管 ⇒ 提权；非成员关系不查
         grantAdminRole();
-        // 非成员：getRelation 无行
 
         service.switchTenant(2L);
 
@@ -172,12 +187,38 @@ public class TenantMyServiceTest {
     }
 
     @Test
-    public void systemLevelSwitchRewritesBothKeys() {
-        // 不设 TenantContext＝系统管理级
+    public void systemLevelAdminSwitchRewritesBothKeys() {
+        // 不设 TenantContext（系统管理级）＋超管角色 ⇒ && 成立
+        grantAdminRole();
         service.switchTenant(1L);
 
         Mockito.verify(tokenService).putItem(TokenItem.TENANT_ID.name(), 1L);
         Mockito.verify(tokenService).putItem(TokenItem.TENANT_IDS.name(), Collections.singletonList(1L));
+    }
+
+    @Test
+    public void unboundWithoutAdminRoleSwitchRejected() {
+        // && 判据的反面：无绑定但非超管（JIT 新号）⇒ 不得代言，按成员闸拒绝
+        try {
+            service.switchTenant(1L);
+            Assert.fail("无绑定且非超管不得切换任意租户（2026-11-01 && 判据）");
+        } catch (ServiceException e) {
+            Assert.assertEquals(AccountErrCode.AC_TENANT_NOT_MEMBER, e.getErrCode());
+        }
+        Mockito.verify(tokenService, Mockito.never()).putItem(Mockito.anyString(), Mockito.any());
+    }
+
+    @Test
+    public void boundAdminSwitchNonMemberTenantRejected() {
+        // 反面之二：绑了租户的超管也不再是提权档（原 ∨ 下可切，&& 下不可）
+        TenantContext.set(Collections.singletonList(1L));
+        grantAdminRole();
+        try {
+            service.switchTenant(2L);
+            Assert.fail("绑了租户的超管不得代言非成员租户（&& 判据）");
+        } catch (ServiceException e) {
+            Assert.assertEquals(AccountErrCode.AC_TENANT_NOT_MEMBER, e.getErrCode());
+        }
     }
 
     @Test
