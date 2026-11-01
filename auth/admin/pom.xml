@@ -32,6 +32,7 @@
                 <platform.version>${jarVersion}</platform.version>
                 <redis.version>${jarVersion}</redis.version>
                 <authorization.version>${jarVersion}</authorization.version>
+                <admin-api.version>${jarVersion}</admin-api.version>
             </properties>
         </profile>
         <profile>
@@ -43,10 +44,13 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20261030131043-95</kernel.version>
-                <platform.version>20261030131043-95</platform.version>
-                <redis.version>20261030131043-95</redis.version>
-                <authorization.version>20261030131043-95</authorization.version>
+                <kernel.version>20261101105214-96</kernel.version>
+                <platform.version>20261101105214-96</platform.version>
+                <redis.version>20261101105214-96</redis.version>
+                <authorization.version>20261101105214-96</authorization.version>
+                <!-- T2.3a 拆分：admin-api 自 96 批起 CI 发版；此前用 ${jarVersion}（root 兜底 SNAPSHOT）
+                     致 public-snapshots 世界解析炸（2026-11-01 CI forge 构建失败修复） -->
+                <admin-api.version>20261101105214-96</admin-api.version>
             </properties>
         </profile>
     </profiles>
@@ -76,7 +80,7 @@
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>admin-api</artifactId>
-            <version>${jarVersion}</version>
+            <version>${admin-api.version}</version>
         </dependency>
     </dependencies>
 
