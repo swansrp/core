@@ -88,4 +88,16 @@ public interface CreateUserService {
      * @param user 用户
      */
     void bindDefaultRole(AcUser user);
+
+    /**
+     * 建号租户可赋性预检（T1.1 棒3）：租户模式开启时该身份能否完成建号赋籍。
+     * <p>供批量同步链（MDM/飞书逐个调建号漏斗）在循环侧逐个预判——命中租户、或
+     * 非租户形态（解析空＋行级隔离未开）⇒ true；租户形态下拿不到有效租户（解析空、
+     * 或编码在 ac_tenant 无有效行＝配置漂移）⇒ false，调用方应跳过该身份并记 warn，
+     * 让批内其余身份继续同步（漏斗本体仍保留同判据的抛错面，双保险 fail-closed）。</p>
+     *
+     * @param userName 身份账号（与建号漏斗同口径）
+     * @return true＝可建号（需赋籍或本就非租户形态）；false＝租户形态下拒建
+     */
+    boolean isTenantAssignable(String userName);
 }

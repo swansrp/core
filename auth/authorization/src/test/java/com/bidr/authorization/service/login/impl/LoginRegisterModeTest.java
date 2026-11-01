@@ -53,7 +53,8 @@ public class LoginRegisterModeTest {
                 Mockito.mock(TokenService.class),
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
-                Mockito.mock(HttpServletRequest.class));
+                Mockito.mock(HttpServletRequest.class),
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class));
         impl.setRegisterModeYml(yml);
         return impl;
     }
@@ -268,7 +269,8 @@ public class LoginRegisterModeTest {
                 Mockito.mock(TokenService.class),
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
-                Mockito.mock(HttpServletRequest.class));
+                Mockito.mock(HttpServletRequest.class),
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class));
         service.bindRegisterTenant(100L, tenant(7L));
         ArgumentCaptor<AcUserTenant> captor = ArgumentCaptor.forClass(AcUserTenant.class);
         Mockito.verify(relationRepo).insert(captor.capture());

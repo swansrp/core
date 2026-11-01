@@ -22,6 +22,7 @@ import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.service.tenant.TenantBindOnLoginService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.authorization.vo.login.LoginRes;
@@ -64,6 +65,7 @@ public class LoginServiceImpl implements LoginService {
     private final AcUserRoleMenuService acUserRoleMenuService;
     private final CreateUserService creatUserService;
     private final HttpServletRequest request;
+    private final TenantBindOnLoginService tenantBindOnLoginService;
 
     @Autowired(required = false)
     private CustomerNumberHandler customerNumberHandler;
@@ -428,8 +430,12 @@ public class LoginServiceImpl implements LoginService {
         String clientType = ClientTypeHolder.get();
         UserRolePermitInfo info = acUserRoleMenuService.getByCustomerNumberAndClientType(acUser.getCustomerNumber(),
                 clientType);
+        Map<Long, RoleInfo> roleMap = ReflectionUtil.reflectToMap(info.getRoleInfoList(), RoleInfo::getRoleId);
         buildPermitTree(info, accessToken);
-        buildAccountInfo(info, accessToken);
+        buildAccountInfo(info, accessToken, roleMap);
+        // 登录补绑钩子（T1.1 棒3）：存量零绑定老号在此补籍/拒登，必须在 buildTenantIds 之前——
+        // 补绑结果随即被同请求的现查烤进 token；fillToken 是全部登录链的公共装配点，一处挂接全链生效
+        tenantBindOnLoginService.bindOnLogin(acUser.getUserId(), acUser.getUserName(), roleMap);
         buildTenantIds(acUser.getUserId(), accessToken);
         TokenHolder.set(accessToken);
     }
@@ -485,9 +491,8 @@ public class LoginServiceImpl implements LoginService {
         }
     }
 
-    private void buildAccountInfo(UserRolePermitInfo info, TokenInfo accessToken) {
-        Map<Long, RoleInfo> role = ReflectionUtil.reflectToMap(info.getRoleInfoList(), RoleInfo::getRoleId);
+    private void buildAccountInfo(UserRolePermitInfo info, TokenInfo accessToken, Map<Long, RoleInfo> roleMap) {
         tokenService.putItem(accessToken, TokenItem.USER_INFO.name(), ReflectionUtil.copy(info, UserInfo.class));
-        tokenService.putItem(accessToken, TokenItem.ROLE_MAP.name(), role);
+        tokenService.putItem(accessToken, TokenItem.ROLE_MAP.name(), roleMap);
     }
 }
