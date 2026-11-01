@@ -16,15 +16,17 @@ import java.util.Base64;
  *
  * <p>三条承重语义：
  * <ol>
- *   <li><b>单次有效</b>：{@link #consume} 读值后<b>立即删除</b>再返回——同一 code 第二次消费
- *       落空（并发双读的窗口见类注末尾的已知面登记）；</li>
+ *   <li><b>单次有效</b>：{@link #consume} 以 Redis DEL 的原子性裁决消费权（GET 只取值、
+ *       DEL 删到行者独占）——同一 code 二次/并发二次消费一律落空（RFC 6749 §4.1.2 的
+ *       单次有效 MUST，review 第 1 轮 I-5 已收口）；</li>
  *   <li><b>过期失效</b>：存键即带 TTL（{@code identity.idp.code-ttl-seconds}，默认 300 秒），
  *       Redis 到期自动清——不消费也会过期；</li>
  *   <li><b>不可预测</b>：code＝{@link SecureRandom} 32 字节 base64url（约 256 bit 熵），
  *       禁 UUID 等可猜测形态。</li>
  * </ol>
- * 🔴 已知面（demo 形态如实登记）：读＋删两步非原子，毫秒级并发双读理论上可双中——授权码 5 分钟
- * 一次性＋绑 client/redirect/用户，爆破/重放收益趋零；原子化（Lua/SETNX 语义）留 P2 记录。</p>
+ * 原子化收口说明（review 第 1 轮 I-5）：旧形态「GET→DEL 不看 DEL 结果」存在毫秒级并发双读
+ * 窗口（旧类注登记"留 P2"）；现形态 DEL 单键操作在 Redis 侧原子，删到行（返回 true）的
+ * 恰好一方独占消费权，并发双消费恰一成功，窗口关闭。</p>
  *
  * @author Sharp
  * @since 2026-11-02
@@ -58,7 +60,9 @@ public class OAuth2AuthorizationCodeService {
     }
 
     /**
-     * 消费授权码：读值后<b>立即删除</b>（单次有效）——第二次消费同一 code 落空。
+     * 消费授权码：原子单次有效（review 第 1 轮 I-5 收口形态）——GET 取值后以 DEL 的返回值
+     * 裁决：删到行（true）者独占消费权，DEL=0（已被并发消费/已过期）一律落空。
+     * 并发双消费恰一成功。
      *
      * @param code 明文 code
      * @return 绑定上下文；code 不存在/已过期/已消费一律 null（调用方按 invalid_grant 拒）
@@ -68,8 +72,13 @@ public class OAuth2AuthorizationCodeService {
             return null;
         }
         String key = CODE_KEY_PREFIX + code.trim();
+        // 前置 GET 只为取值，不参与胜负判定；DEL 是 Redis 原子操作＝消费权闸——
+        // 键含 256bit 随机 code，GET 拿到值而 DEL=0 只可能发生在并发抢先消费场景
         OAuth2AuthorizationCode context = redisService.get(key, OAuth2AuthorizationCode.class);
-        redisService.delete(key);
+        if (!Boolean.TRUE.equals(redisService.delete(key))) {
+            // DEL=0 ⇒ 已被并发消费（或已过期）⇒ 走既有无效路径，调用方按 invalid_grant 拒
+            return null;
+        }
         return context;
     }
 

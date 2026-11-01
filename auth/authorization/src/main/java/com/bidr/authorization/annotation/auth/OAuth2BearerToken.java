@@ -32,7 +32,9 @@ import java.util.Map;
  * 业务拒绝（绝不静默回落 X-App-Key 轨——fail-closed，调用方显式声明了要走 JWT 轨）。</p>
  *
  * <p><b>校验序</b>：抽头 → 验签（JWKS 同钥＝identity.idp 公钥，公钥缺省从私钥派生）→
- * exp 自判（{@link IdpJwtUtil#verify} 内含 30 秒偏移容忍）→ 构造
+ * exp 自判（{@link IdpJwtUtil#verify} 内含 30 秒偏移容忍）→ <b>iss 硬校验＝inkhub</b>
+ * （review 第 1 轮 S-1 收口：与 idm SSO 共钥，缺 iss 或 iss≠inkhub 的一律拒，堵两族票互串；
+ * app_id 白名单本批不做，待拍板项）→ 构造
  * {@link AccountInfo}（claims 映射：uid→userId、sub→customerNumber、username→userName、
  * name→name、tenant_ids→tenantIds）置 {@link AccountContext}＋{@link TenantContext}
  * （{@code AuthLogin.buildContext} 同款接线——数据面租户闸依赖 TenantContext 就位；
@@ -49,6 +51,16 @@ public class OAuth2BearerToken implements AuthRole {
 
     /** RFC 6750：Authorization 头 scheme 前缀（大小写不敏感） */
     private static final String BEARER_PREFIX = "bearer ";
+
+    /**
+     * Bearer 轨认定的唯一签发方（review 第 1 轮 S-1 收口）：硬编码值与
+     * {@code OAuth2TokenService.ISSUER} 单一真相对齐（签发侧恒签 iss=inkhub）。
+     * 背景：inkhub IdP 与 idm SSO 共用同一钥对（identity.idp.public-key ≡
+     * bidr.idm.jwt-public-key），只验签时两族票可互串——iss 硬校验把「验签通过」
+     * 收窄为「本产品 IdP 签发」。
+     */
+    /** 与签发侧单一真相对齐（OAuth2TokenService.ISSUER），review 第2轮 nit-1 收口 */
+    private static final String EXPECTED_ISSUER = com.bidr.authorization.service.oauth2.OAuth2TokenService.ISSUER;
 
     private final IdentityIdpProperties idpProperties;
 
@@ -75,6 +87,13 @@ public class OAuth2BearerToken implements AuthRole {
         Map<String, Object> claims = IdpJwtUtil.verify(jwt, publicKey);
         if (claims == null) {
             // 验签失败/过期/脏串统一拒（验票面只 WARN 不回显细节，IdpJwtUtil 已打点）
+            Validator.assertException(ErrCodeSys.SYS_ERR_MSG,
+                    "access_token 无效或已过期，拒绝访问");
+        }
+        // iss 硬校验（review 第 1 轮 S-1 收口）：缺失或非 inkhub 一律拒（同钥下的 idm SSO 票
+        // 等外来票源就此不可互串）；复用同一拒绝文案，不向调用方回显票面差异。
+        // 待拍板：app_id 白名单校验（ac_partner 粒度收窄）本批不做，登记于 javadoc，待 #14 联动裁定。
+        if (!EXPECTED_ISSUER.equals(asString(claims.get(IdpJwtUtil.CLAIM_ISS)))) {
             Validator.assertException(ErrCodeSys.SYS_ERR_MSG,
                     "access_token 无效或已过期，拒绝访问");
         }

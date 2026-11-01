@@ -46,8 +46,9 @@ public class OAuth2AuthorizationCodeServiceTest {
                 ArgumentMatchers.<Class<?>>any(), ArgumentMatchers.<Class<?>>any()))
                 .thenAnswer(invocation -> store.get(invocation.getArgument(0, String.class)));
         Mockito.when(redisService.delete(ArgumentMatchers.anyString())).thenAnswer(invocation -> {
-            store.remove(invocation.getArgument(0, String.class));
-            return Boolean.TRUE;
+            // 真 Redis DEL 语义：删到行（键在场）返回 true，键缺席返回 false——
+            // consume 的原子消费权闸依赖该语义（review 第 1 轮 I-5）
+            return store.remove(invocation.getArgument(0, String.class)) != null;
         });
         codeService = new OAuth2AuthorizationCodeService(redisService, properties);
     }
@@ -84,6 +85,32 @@ public class OAuth2AuthorizationCodeServiceTest {
         String code = codeService.issue(context());
         Assert.assertNotNull(codeService.consume(code));
         Assert.assertNull("授权码单次有效：二次消费必须落空", codeService.consume(code));
+    }
+
+    /**
+     * review 第 1 轮 I-5 收口：并发双消费恰一成功（RFC 6749 §4.1.2 单次有效 MUST）。
+     * 单测以 DEL=0 路径钉死——GET 拿到值但 DEL 返回 false（消费权被并发方抢走）必须落空；
+     * 真并发恰一成功由 Redis DEL 的单键原子性保证（键含 256bit 随机 code，不重发）。
+     */
+    @Test
+    public void consume_delLostRace_evenWithFreshReadReturnsNull() {
+        String code = codeService.issue(context());
+        String key = OAuth2AuthorizationCodeService.CODE_KEY_PREFIX + code;
+
+        // 并发抢先方已把键删掉（DEL=0）；本方 GET 恰在删除前读到了值——胜负只看 DEL
+        Mockito.when(redisService.delete(key)).thenReturn(Boolean.FALSE);
+
+        Assert.assertNull("GET 有值但 DEL=0 ⇒ 消费权被并发方独占 ⇒ 落空", codeService.consume(code));
+    }
+
+    @Test
+    public void consume_delGateExactlyOneWinnerUnderSimulatedRace() {
+        // 两线程同 code 消费的离线形态：先到方 DEL=true 拿走上下文，后到方 DEL=false 落空
+        String code = codeService.issue(context());
+        Assert.assertNotNull("先到方（DEL=true）独占消费权", codeService.consume(code));
+        Mockito.when(redisService.delete(OAuth2AuthorizationCodeService.CODE_KEY_PREFIX + code))
+                .thenReturn(Boolean.FALSE);
+        Assert.assertNull("后到方（DEL=0）落空——恰一成功", codeService.consume(code));
     }
 
     @Test

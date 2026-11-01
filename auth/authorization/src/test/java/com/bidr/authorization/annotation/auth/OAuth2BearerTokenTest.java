@@ -61,9 +61,16 @@ public class OAuth2BearerTokenTest {
 
     /** 任务书 claim 形态的票（exp 默认一小时） */
     private String token(long exp) {
+        return token(exp, "inkhub");
+    }
+
+    /** 自定 iss 的票（S-1 判定矩阵用：缺失传 null，异值传任意串） */
+    private String token(long exp, String iss) {
         long now = System.currentTimeMillis() / 1000L;
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put(IdpJwtUtil.CLAIM_ISS, "inkhub");
+        if (iss != null) {
+            claims.put(IdpJwtUtil.CLAIM_ISS, iss);
+        }
         claims.put(IdpJwtUtil.CLAIM_SUB, "000001");
         claims.put(IdpJwtUtil.CLAIM_UID, 42L);
         claims.put(IdpJwtUtil.CLAIM_USERNAME, "zhangsan");
@@ -140,5 +147,35 @@ public class OAuth2BearerTokenTest {
         } catch (ServiceException e) {
             Assert.assertTrue(e.getMessage().contains("Authorization 头形态非法"));
         }
+    }
+
+    /** review 第 1 轮 S-1：缺 iss 的票（同钥自签也拒）——iss 硬校验 */
+    @Test
+    public void validate_missingIssuer_rejected() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer "
+                + token(System.currentTimeMillis() / 1000L + 3600, null));
+        try {
+            bearer.validate(request);
+            Assert.fail("缺 iss 的票必须拒");
+        } catch (ServiceException e) {
+            Assert.assertTrue(e.getMessage().contains("access_token 无效或已过期"));
+        }
+        Assert.assertNull("拒绝后不得残留上下文", AccountContext.get());
+    }
+
+    /** review 第 1 轮 S-1：iss≠inkhub 的同钥票（idm SSO 票互串场景）——一律拒 */
+    @Test
+    public void validate_foreignIssuer_rejected() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer "
+                + token(System.currentTimeMillis() / 1000L + 3600, "idm"));
+        try {
+            bearer.validate(request);
+            Assert.fail("iss≠inkhub 的票必须拒（共钥互串面）");
+        } catch (ServiceException e) {
+            Assert.assertTrue(e.getMessage().contains("access_token 无效或已过期"));
+        }
+        Assert.assertNull("拒绝后不得残留上下文", AccountContext.get());
     }
 }
