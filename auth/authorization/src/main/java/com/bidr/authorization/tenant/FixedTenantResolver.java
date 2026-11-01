@@ -4,7 +4,6 @@ import com.bidr.authorization.config.TenantProperties;
 import com.bidr.hub.spi.TenantResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -21,10 +20,12 @@ import java.util.Optional;
  *   <li>配置有值 ⇒ 返回去空白后的 code；code 是否真实在库由 TenantSeeder 保证（本类不查库）。</li>
  * </ul>
  *
- * <p>装配形态：{@code @Component + @ConditionalOnMissingBean(TenantResolver.class)}——
- * 客户桥（pack-bidr / pack-plsintec，棒3 接线）如自带租户推导实现，同容器注册即顶替本默认实现；
- * 注意该条件注解在组件扫描面属"注册序敏感"形态（非 auto-configuration 面），桥实现须走
- * 显式声明（配置类）而非组件扫描，以确保默认实现先评估（机制登记，防静默双实现）。</p>
+ * <p>装配形态：{@code @Component}——本默认实现恒注册。🔴 棒7 启动证据（2026-11-02 02:05 boot
+ * APPLICATION FAILED：CreateUserServiceImpl 注入 TenantResolver 无候选）：原
+ * {@code @ConditionalOnMissingBean(TenantResolver.class)} 在组件扫描面（非 auto-configuration 面）
+ * 未能把本默认实现注册进容器——一旦 7fff12b2 让身份创建点真正注入该类型即显形。仓内亦无第二实现，
+ * 客户桥（pack-bidr / pack-plsintec）如未来自带租户推导实现，须走显式声明（配置类）并在该处
+ * 收编默认实现（机制登记，防静默双实现）。</p>
  *
  * @author Sharp
  * @since 2026-11-01
@@ -32,7 +33,6 @@ import java.util.Optional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnMissingBean(TenantResolver.class)
 public class FixedTenantResolver implements TenantResolver {
 
     private final TenantProperties tenantProperties;
