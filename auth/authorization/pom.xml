@@ -38,12 +38,12 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20261030131043-95</kernel.version>
+                <kernel.version>20261101110847-97</kernel.version>
                 <!-- t23 线 authorization-api 拆分新增：CI 尚未发过 api 件的新版本，暂留 88（2026-11-01 合流） -->
-                <authorization-api.version>20261101105214-96</authorization-api.version>
-                <platform.version>20261030131043-95</platform.version>
-                <redis.version>20261030131043-95</redis.version>
-                <email.version>20261030131043-95</email.version>
+                <authorization-api.version>20261101110847-97</authorization-api.version>
+                <platform.version>20261101110847-97</platform.version>
+                <redis.version>20261101110847-97</redis.version>
+                <email.version>20261101110847-97</email.version>
             </properties>
         </profile>
     </profiles>
