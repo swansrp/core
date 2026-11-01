@@ -30,7 +30,7 @@ import java.util.List;
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "identity.clients")
+@ConfigurationProperties(prefix = "identity")
 public class ClientProperties {
 
     /** 三方应用清单；空列表＝不种 ac_partner/ac_sso_redirect */
