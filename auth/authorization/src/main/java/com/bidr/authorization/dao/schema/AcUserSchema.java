@@ -13,6 +13,14 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class AcUserSchema extends BaseMybatisSchema<AcUser> {
+
+    /**
+     * 工厂态管理员密码 hash（user_id=1 'BidrAdmin' 初始密码的 48 位盐化 MD5，Md5Util.generate 形态）。
+     * <p>两处引用正源（T1.0 棒1 提取）：① {@link #setInitData} 种子行字面量；② AdminUserSeeder
+     * 的 pristine 判据——hash 与本常量相等 ＝ 密码从未被人工改过，种子链才允许按配置重置。</p>
+     */
+    public static final String FACTORY_ADMIN_PASSWORD_HASH = "a49a1ea1612f58a29968025b73ba2653274711c198c79465";
+
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `ac_user` (\n" +
                 "  `user_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID',\n" +
@@ -51,6 +59,6 @@ public class AcUserSchema extends BaseMybatisSchema<AcUser> {
         setInitData("INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`," +
                 " `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, " +
                 "`create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', " +
-                "'a49a1ea1612f58a29968025b73ba2653274711c198c79465', 0, NOW(), 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
+                "'" + FACTORY_ADMIN_PASSWORD_HASH + "', 0, NOW(), 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
     }
 }
