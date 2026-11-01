@@ -69,6 +69,23 @@ public class SsoLoginServiceImpl {
         String userName = ssoUserHandler.resolveUserName();
         Validator.assertNotBlank(userName, ErrCodeSys.SYS_ERR_MSG,
                 "SSO身份源未返回用户身份（id_token 缺失或未通过上游验签），无法完成单点登录");
+        return issueFor(userName);
+    }
+
+    /**
+     * 凭已验签用户名铸产品登录态（T1.1 棒4 自 {@link #login()} 拆出的公共装配点）。
+     * <p>三分支与框架侧 bidr 形态既有 SSO 登录服务逐支等价：ac_user 命中→login；未命中→
+     * 主数据 ac_account 命中→loginOrReg；均无→经 {@link CreateUserService} 漏斗建号并置
+     * SSO 用户类型后 login。身份来源不在此方法内——调用方各自解析（SsoUserHandler 线程态 /
+     * pack-spi IdentityBridge principal），本方法只管"凭用户名装配登录态"。</p>
+     * <p>调用方两个：本类 {@link #login()}（/web/sso/login 链，M-15 保留）与
+     * {@link IdentityBridgeLoginService}（/web/auth/login SPI 链，凭 BridgeUserPrincipal.username
+     * 复用同一装配，不复制三分支）。</p>
+     *
+     * @param userName 已验签用户名（与 ac_user.user_name 口径对齐；空白由调用方先行拒绝）
+     * @return 登录态与 token
+     */
+    public LoginRes issueFor(String userName) {
         AcUser acUser = acUserService.getUserByUserName(userName);
         if (acUser == null) {
             log.info("新用户 {} 查询主数据, 创建新用户", userName);
