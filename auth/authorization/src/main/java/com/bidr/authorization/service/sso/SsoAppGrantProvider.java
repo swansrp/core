@@ -5,12 +5,11 @@ import com.bidr.authorization.dao.entity.AcUser;
 /**
  * M23 应用功能集填充 SPI（core 纯加法）。
  *
- * <p>{@code SsoIntrospectTicketService} 在返回身份/租户之后调用本 SPI，由宿主侧
- * 按 {@code app_code + tenant_code + user} 查出该用户的有效组/功能码填充
- * {@code app.groups} / {@code app.functions}。无实现＝返回空集（存量零位移）。</p>
+ * <p>历史：原 introspect-ticket 链（T1.3 棒 8 下线）曾作为本 SPI 的唯一 core 侧调用方；
+ * SPI 本体与宿主侧实现保留（宿主自用面），后续宿主按需接入。</p>
  *
  * <p>🔴 core 不依赖 {@code inkhub_app_group} 等业务表；业务判定永远在宿主侧
- * （与 {@code SsoTicketAuthorizer} / {@code SsoUserHandler} 同款纪律）。</p>
+ * （与 {@code SsoUserHandler} 同款纪律）。</p>
  *
  * @author sharp
  * @since 2026-10-27

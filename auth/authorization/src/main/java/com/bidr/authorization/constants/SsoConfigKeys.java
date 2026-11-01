@@ -4,8 +4,10 @@ package com.bidr.authorization.constants;
  * Title: SsoConfigKeys
  * Description: SSO 出票/验票面的配置键名收口（M15 棒 0b-1 纯加法）。
  * <p>
- * 键名正源只在本类声明一次，消费方（如 {@code SsoTicketService} 的 {@code @Value}）经编译期
- * 字符串常量拼接引用，避免键名散落。🔴 墨枢侧只配私钥——公钥键 {@link #JWT_PUBLIC_KEY}
+ * 键名正源只在本类声明一次，消费方经编译期
+ * 字符串常量拼接引用，避免键名散落。（历史：原 M15 出票口消费方已随 T1.3 棒 8 下线，
+ * TICKET_* 键与其 yml 声明暂留作配置面存量，清理另批拍板。）
+ * 🔴 墨枢侧只配私钥——公钥键 {@link #JWT_PUBLIC_KEY}
  * 属"接入方（子系统）"配置，<b>永不进墨枢任何配置文件</b>（M15 承诺面 20 的口径来源）。
  * 本批 sys_config 无新增键（白名单＝core 自有表 ac_sso_redirect，(partner_id, redirect_uri) 组合判定，
  * 10-14 改拍：反向 SPI 整层撤销、表移入 framework core）。

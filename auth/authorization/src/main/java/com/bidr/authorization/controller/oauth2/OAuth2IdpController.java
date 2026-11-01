@@ -8,7 +8,6 @@ import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
-import com.bidr.authorization.service.login.SsoTicketService;
 import com.bidr.authorization.service.oauth2.OAuth2AuthorizationCode;
 import com.bidr.authorization.service.oauth2.OAuth2AuthorizationCodeService;
 import com.bidr.authorization.service.oauth2.OAuth2ClientService;
@@ -41,7 +40,7 @@ import java.util.Map;
  * Description: 产品内部 IdP 三端点（T1.2 棒 6 纯加法，RFC 6749 授权码腿 demo 形态）：
  * <ul>
  *   <li>{@code GET/POST /web/oauth2/authorize}——授权码签发口：要求已登录（判据＝
- *       {@code SsoTicketService.issue} 同款：{@link AuthTokenUtil#extractToken} +
+ *       原 M15 出票口同款（该口已随 T1.3 棒 8 下线）：{@link AuthTokenUtil#extractToken} +
  *       {@link TokenService#verifyToken}，不依赖线程态）。未登录 ⇒ 302 本地登录页
  *       {@code /#/login?redirect_uri=<原 authorize 地址>}（SPA Login 页约定参数名
  *       {@code redirect_uri}、值不带前导斜杠，登录后由 Login 页 replace 回跳）；
@@ -94,7 +93,7 @@ public class OAuth2IdpController {
                           @RequestParam(value = "state", required = false) String state,
                           @RequestParam(value = "scope", required = false) String scope,
                           HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // 1) 登录态先判（SsoTicketService.issue 同款判据：手抽 token＋redis 核验，不依赖线程态）
+        // 1) 登录态先判（原 M15 出票口同款判据：手抽 token＋redis 核验，不依赖线程态）
         TokenInfo caller = AuthTokenUtil.extractToken(request);
         boolean login = caller != null && tokenServiceSession.verifyToken(caller);
         if (!login) {

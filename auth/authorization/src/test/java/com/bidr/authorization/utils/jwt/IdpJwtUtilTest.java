@@ -16,7 +16,7 @@ import java.util.Map;
  * Title: IdpJwtUtilTest
  * Description: IdP RS256 JWT 签发/验签往返矩阵（T1.2 棒 6，JUnit4 随 authorization 主流引擎）：
  * 全 claim 往返、篡改拒绝、过期拒绝、kid 确定性、私钥派生公钥可用。密钥用例内现生成（RSA-2048，
- * SsoTicketServiceTest 同款做法，不依赖部署钥匙）。
+ * 同款做法，不依赖部署钥匙）。
  *
  * @author Sharp
  * @since 2026-11-02

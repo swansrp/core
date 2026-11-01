@@ -138,7 +138,7 @@ public class AuthLogin implements AuthRole {
      * 绝不抛错）；空集合 ⇒ 空 List（用户无租户归属）；有值 ⇒ 逐项转 Long，
      * 脏元素（非数字/坏 JSON 串）按缺键旁路或跳过——token 经 redis 回读，
      * List 实形与 JSON 串形（{@code "[1,2]"}）都必须兼容。</p>
-     * <p>public＝解析收口唯一入口，token 回查面（SsoTokenIntrospectService）透出租户集复用同一解析。</p>
+     * <p>public＝解析收口唯一入口，token 回查面透出租户集复用同一解析（原回查端点已随 T1.3 棒 8 下线）。</p>
      */
     public static List<Long> parseTenantIds(Map<String, Object> map) {
         Object raw = map == null ? null : map.get(TokenItem.TENANT_IDS.name());
@@ -165,7 +165,7 @@ public class AuthLogin implements AuthRole {
 
     /**
      * TENANT_ID（当前租户）解析（登录解析唯一入口 buildContext 调用；public 静态供离线单测直断，
-     * 形态同 {@link #parseTenantIds}——token 回查面（SsoTokenIntrospectService）将来透出当前租户复用）。
+     * 形态同 {@link #parseTenantIds}——token 回查面将来透出当前租户复用（原回查端点已随 T1.3 棒 8 下线））。
      * <p>口径：缺键/null/脏值 ⇒ {@code null}（＝未选当前租户；系统管理级用户与老 token 落此态，
      * 行级隔离按其租户集判定旁路，绝不抛错）；有值 ⇒ 转 Long——token 经 redis 回读，
      * 数字形与字符串形都要兼容（切换端点写 Long、redis 带回 String）。</p>

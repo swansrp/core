@@ -84,7 +84,8 @@ public class SsoJwtUtilTest {
     }
 
     /**
-     * 签发方自验腿（M23 introspect-ticket）：只给 PKCS#8 私钥、不给公钥配置时，
+     * 签发方自验腿（原 M23 introspect-ticket 消费，该链已随 T1.3 棒 8 下线；工具腿保留）：
+     * 只给 PKCS#8 私钥、不给公钥配置时，
      * 必须能从私钥派生公钥并验通。🔴 反面对照：拿 getPrivateExponent() 派生公钥的旧写法必翻红
      * （2026-10-27 真机踩过：公钥指数取成私钥指数，验签恒失败）。
      */
@@ -439,7 +440,7 @@ public class SsoJwtUtilTest {
     /**
      * 🔴 F-C 下界腿：{@code signWithExp} 的 exp 不得早于当前时刻——挡的形态＝把 ttl 口径的值（60）当 epoch 传入，
      * 旧判据只闸 {@code exp > 0} ⇒ 静默签出一枚"生来即过期"的票，出票口回 200 而子系统永远验不通。
-     * <p>判据取"不早于"（{@code >=}）而非"严格晚于"＝{@code SsoTicketService} 先算 exp 再签，ttl=1 的档跨秒时
+     * <p>判据取"不早于"（{@code >=}）而非"严格晚于"＝原出票编排先算 exp 再签，ttl=1 的档跨秒时
      * exp 会恰好等于签票时的 now，严格判据会让它随机被拒；而 exp==now 的票仍在 30 秒容忍内可用，不构成放行洞。</p>
      */
     @Test

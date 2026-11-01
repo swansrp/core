@@ -227,7 +227,7 @@ public class SsoJwtUtil {
      *
      * <p>JWT 签名用私钥、验签必须用公钥；PKCS#8 私钥里含 RSA 模数与公钥指数，
      * 可现场派生 X.509 公钥后走同一套 {@link #verifyAndGetUsername} 判定。
-     * 这条腿专供 introspect-ticket 在墨枢自身（签发方）使用；
+     * 这条腿原供墨枢自身（签发方）的票回查链使用（该链已随 T1.3 棒 8 下线，工具腿保留）；
      * 🔴 **不得**反过来要求墨枢声明 {@code sso.jwt.public-key}——那会误触发
      * {@code SsoJwtUserHandler} 出生，把自签票变成打开本账号的通道（M15 纪律）。</p>
      *
