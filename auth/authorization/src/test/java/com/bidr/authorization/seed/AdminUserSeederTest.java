@@ -54,8 +54,9 @@ public class AdminUserSeederTest {
         Mockito.verify(userService, Mockito.times(1)).updateById(captor.capture());
         AcUser updated = captor.getValue();
         Assert.assertNotEquals(AcUserSchema.FACTORY_ADMIN_PASSWORD_HASH, updated.getPassword());
-        Assert.assertTrue("pristine 重置后必须能用配置明文验过",
-                Md5Util.verify("Init#12345", updated.getPassword()));
+        // 🔴 双 md5 惯例：存侧 generate(md5(明文))，登录侧提交 md5(明文)——verify 必须用 md5 后的候选串
+        Assert.assertTrue("pristine 重置后必须能用配置明文的 md5 验过（双 md5 惯例）",
+                Md5Util.verify(Md5Util.MD5("Init#12345"), updated.getPassword()));
     }
 
     /** 腿二：非 pristine（人工已改，hash ≠ 工厂态）→ 一律不覆盖（连配置了 initial-password 也不动）。 */

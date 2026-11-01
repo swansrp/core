@@ -131,11 +131,13 @@ public class AdminUserSeeder implements ApplicationRunner {
         }
         String initial = adminProperties.getInitialPassword();
         if (FuncUtil.isNotEmpty(initial)) {
-            user.setPassword(Md5Util.generate(initial));
+            // 🔴 平台密码惯例＝双 md5（登录侧提交 md5(明文)，存侧 generate(md5(明文))）：
+            // 同款见 PasswordServiceImpl 与 AdminUserServiceImpl；单层 generate 与登录链 verify 不匹配（清库演练 2026-11-01 实证）。
+            user.setPassword(Md5Util.generate(Md5Util.MD5(initial)));
             log.info("[admin-seed] 已按 identity.admin.initial-password 落管理员密码 user_id={}", user.getUserId());
         } else {
             String plain = randomPlain(RANDOM_PASSWORD_LENGTH);
-            user.setPassword(Md5Util.generate(plain));
+            user.setPassword(Md5Util.generate(Md5Util.MD5(plain)));
             log.warn("[admin-seed] identity.admin.initial-password 未配置——已为管理员随机生成密码，"
                     + "明文仅此一次打印（请立即取用并修改）user_id={} password={}", user.getUserId(), plain);
         }
