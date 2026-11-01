@@ -250,8 +250,9 @@ public class DriverStatisticSupportService {
                                            AdvancedPivotReq req,
                                            StatisticQueryContext ctx,
                                            Map<String, String> aliasMap) {
-        // 1: 校验行维度与度量（透视列可空=仅行维度；前端未配透视列时会下发 total 虚拟列，一般非空）
-        Validator.assertNotEmpty(req.getGroupColumns(), ErrCodeSys.PA_DATA_NOT_EXIST, "行维度列");
+        // 1: 校验度量；行维度与透视列至少其一非空（行维度可空=整体聚成一行；透视列可空=前端未配时下发的 total 虚拟列兜底）
+        Validator.assertTrue(FuncUtil.isNotEmpty(req.getGroupColumns()) || FuncUtil.isNotEmpty(req.getPivotColumns()),
+                ErrCodeSys.PA_DATA_NOT_EXIST, "行维度列");
         Validator.assertNotEmpty(req.getMeasures(), ErrCodeSys.PA_DATA_NOT_EXIST, "度量列");
         List<MetricCondition> pivots = FuncUtil.isEmpty(req.getPivotColumns())
                 ? Collections.emptyList() : req.getPivotColumns();
@@ -285,7 +286,11 @@ public class DriverStatisticSupportService {
                     ErrCodeSys.SYS_ERR_MSG, "透视列标识非法：" + pivot.getValue());
             for (PivotMeasure measure : req.getMeasures()) {
                 Validator.assertTrue(FuncUtil.isNotEmpty(measure.getField()), ErrCodeSys.SYS_ERR_MSG, "度量字段不能为空");
-                String aggAlias = pivot.getValue() + "__" + measure.getField();
+                // 输出键=配置的 key(同字段多条件各出一列时区分用), 缺省回落字段名; 会拼进反引号别名, 单独校验字符集
+                String measureKey = AdminStatisticPivotInf.measureKey(measure);
+                Validator.assertTrue(SqlIdentifierUtil.isSafeIdentifier(measureKey),
+                        ErrCodeSys.SYS_ERR_MSG, "度量列标识非法：" + measureKey);
+                String aggAlias = pivot.getValue() + "__" + measureKey;
                 if (FuncUtil.equals(measure.getAgg(), AdminStatisticPivotInf.AGG_RATIO)) {
                     // ratio 的 field 仅作输出别名（真实取数走分子/分母），不经别名映射，故单独按字符集校验
                     Validator.assertTrue(SqlIdentifierUtil.isSafeIdentifier(measure.getField()),
@@ -293,20 +298,20 @@ public class DriverStatisticSupportService {
                     // 比率度量: 分子/分母列各自解析（同受列权限约束）、分别套同一透视条件，聚合后相除，除零/空组回落 NULL
                     Validator.assertTrue(FuncUtil.isNotEmpty(measure.getNumerator()) && FuncUtil.isNotEmpty(measure.getDenominator()),
                             ErrCodeSys.SYS_ERR_MSG, "比率度量缺少分子/分母字段：" + measure.getField());
-                    String numExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
+                    String numExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot, measure,
                             ctx.formatColumnExpression(ColumnAliasMap.resolve(aliasMap, measure.getNumerator())));
-                    String denExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
+                    String denExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot, measure,
                             ctx.formatColumnExpression(ColumnAliasMap.resolve(aliasMap, measure.getDenominator())));
-                    // 两腿各自 sum 后再相除：裸列会让聚合查询 SELECT 引用未 GROUP BY 的列（Doris 直接拒）
-                    selectParts.add(buildPivotAggExpr(AdminStatisticPivotInf.AGG_SUM, numExpr)
-                            + " / nullif(" + buildPivotAggExpr(AdminStatisticPivotInf.AGG_SUM, denExpr) + ", 0)"
+                    // 两腿各自进聚合函数再相除（裸列会让聚合查询 SELECT 引用未 GROUP BY 的列，Doris 直接拒）；
+                    // 腿聚合缺省 sum、可配 max 等（组内恒定目标值口径），除法壳与 kernel 实体模式共用同一实现
+                    selectParts.add(AdminStatisticPivotInf.buildRatioExpr(measure, numExpr, denExpr)
                             + " AS `" + aggAlias + "`");
                 } else {
                     // resolve 内含字段名安全校验（请求侧字段名拼入反引号位置）
                     String measureDb = ColumnAliasMap.resolve(aliasMap, measure.getField());
-                    String innerExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot,
+                    String innerExpr = buildPivotInnerExpr(builder, aliasMap, parameters, pivot, measure,
                             ctx.formatColumnExpression(measureDb));
-                    selectParts.add(buildPivotAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
+                    selectParts.add(AdminStatisticPivotInf.buildAggExpr(measure.getAgg(), innerExpr) + " AS `" + aggAlias + "`");
                 }
                 outputAliases.add(aggAlias);
             }
@@ -322,7 +327,10 @@ public class DriverStatisticSupportService {
                 sql.append(" WHERE ").append(whereSql);
             }
         }
-        sql.append(" GROUP BY ").append(String.join(", ", groupByParts));
+        if (FuncUtil.isNotEmpty(groupByParts)) {
+            // 行维度为空时不拼 GROUP BY: 无 GROUP BY 的聚合查询天然返回单行(全过滤集的总计)
+            sql.append(" GROUP BY ").append(String.join(", ", groupByParts));
+        }
 
         // 4.1: 聚合后过滤（前端把「列搜索」打在统计列上）: 只允许引用本次 SELECT 的输出别名
         if (FuncUtil.isNotEmpty(req.getHavingCondition())) {
@@ -354,41 +362,42 @@ public class DriverStatisticSupportService {
     }
 
     /**
-     * 构建透视单元格内部取数表达式：无透视条件=裸列；有条件=case when 条件 then 列 else null end
+     * 构建透视单元格内部取数表达式：无任何条件=裸列；有条件=case when 条件 then 列 else null end
+     * 透视列条件圈定父表头切片、度量自身条件圈定该度量口径，两侧按 AND 叠加；
      * ratio 度量的分子/分母必须各自独立包同一条件（只包一边会把另一腿算进错误分母）
      */
     private static String buildPivotInnerExpr(BaseSqlBuilder builder, Map<String, String> aliasMap,
-                                              Map<String, Object> parameters, MetricCondition pivot, String columnExpr) {
-        if (FuncUtil.isEmpty(pivot.getCondition())) {
+                                              Map<String, Object> parameters, MetricCondition pivot,
+                                              PivotMeasure measure, String columnExpr) {
+        boolean hasPivotCondition = FuncUtil.isNotEmpty(pivot.getCondition());
+        boolean hasMeasureCondition = AdminStatisticPivotInf.hasCondition(measure.getCondition());
+        if (!hasPivotCondition && !hasMeasureCondition) {
             return columnExpr;
         }
-        String condSql = builder.buildWhereCondition(pivot.getCondition(), aliasMap, parameters);
-        return "case when " + (FuncUtil.isEmpty(condSql) ? "1=1" : condSql)
-                + " then " + columnExpr + " else null end";
-    }
-
-    /**
-     * 构建单个透视单元格的聚合表达式（ratio 不走单一聚合，在主循环按 分子/分母 各自 sum 后相除拼装）
-     * 聚合语义对齐 kernel 的 AdminStatisticPivotInf.buildPivotAgg：
-     * else null 对 sum/count/avg/min/max/countDistinct 均安全（聚合函数自动忽略 NULL）
-     */
-    private static String buildPivotAggExpr(String agg, String innerExpr) {
-        if (FuncUtil.equals(agg, "count")) {
-            return "count(" + innerExpr + ")";
+        List<String> conditionParts = new ArrayList<>();
+        if (hasPivotCondition) {
+            String pivotSql = builder.buildWhereCondition(pivot.getCondition(), aliasMap, parameters);
+            if (FuncUtil.isNotEmpty(pivotSql)) {
+                conditionParts.add(pivotSql);
+            } else if (!hasMeasureCondition) {
+                // 列条件存在但内容为空(前端占位下发 {})时保持原形态 1=1, 与历史 SQL 逐字节一致
+                conditionParts.add("1=1");
+            }
         }
-        if (FuncUtil.equals(agg, "avg")) {
-            return "avg(" + innerExpr + ")";
+        if (hasMeasureCondition) {
+            String measureSql = builder.buildWhereCondition(measure.getCondition(), aliasMap, parameters);
+            if (FuncUtil.isNotEmpty(measureSql)) {
+                conditionParts.add(measureSql);
+            }
         }
-        if (FuncUtil.equals(agg, "min")) {
-            return "min(" + innerExpr + ")";
+        if (conditionParts.isEmpty()) {
+            return columnExpr;
         }
-        if (FuncUtil.equals(agg, "max")) {
-            return "max(" + innerExpr + ")";
-        }
-        if (FuncUtil.equals(agg, "countDistinct")) {
-            return "count(distinct " + innerExpr + ")";
-        }
-        return "sum(" + innerExpr + ")";
+        // 单条件不包括号(既有形态), 叠加时逐条包括号防 or 组把 AND 吞掉
+        String conditionSql = conditionParts.size() == 1
+                ? conditionParts.get(0)
+                : "(" + String.join(") and (", conditionParts) + ")";
+        return "case when " + conditionSql + " then " + columnExpr + " else null end";
     }
 
     // 简要：指标为主时的结果组装

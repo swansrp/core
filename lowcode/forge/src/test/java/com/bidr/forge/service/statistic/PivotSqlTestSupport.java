@@ -37,6 +37,8 @@ final class PivotSqlTestSupport {
         ALIAS_MAP.put("propStdScore", "t.prop_std_score");
         ALIAS_MAP.put("phaseProp", "t.phase_prop");
         ALIAS_MAP.put("score", "t.score");
+        ALIAS_MAP.put("actualAmt", "t.actual_amt");
+        ALIAS_MAP.put("targetAmt", "t.target_amt");
     }
 
     private PivotSqlTestSupport() {
@@ -160,6 +162,13 @@ final class PivotSqlTestSupport {
         measure.setAgg("ratio");
         measure.setNumerator(numerator);
         measure.setDenominator(denominator);
+        return measure;
+    }
+
+    static PivotMeasure ratioMeasure(String field, String numerator, String denominator, String numeratorAgg, String denominatorAgg) {
+        PivotMeasure measure = ratioMeasure(field, numerator, denominator);
+        measure.setNumeratorAgg(numeratorAgg);
+        measure.setDenominatorAgg(denominatorAgg);
         return measure;
     }
 

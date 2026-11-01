@@ -3,7 +3,7 @@ set -euo pipefail
 
 REMOTE_ORIGIN="origin"
 # 直接把 gitee 仓库 URL 填在这里，不需要提前配 remote
-GITEE_URL="https://gitee.com/swansrp/core.git"
+GITEE_URL="git@gitee.com:swansrp/core.git"
 DRY_RUN=false
 STASHED=false
 INITIAL_BRANCH=""
