@@ -23,7 +23,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link BindRepo} 注解的通用处理器。
  * <p>
  * 启动时扫描所有 {@link BaseSqlRepo} Bean，按 entityClass 建立索引。
- * 运行时根据注解上的 entity() 自动定位 Repo，执行批量查询 + 字段提取。
+ * 运行时根据注解上的 entity() 定位 Repo，执行批量查询 + 字段提取。定位链＝
+ * <b>精确匹配优先、SPI 兜底</b>（T2.3c/T2.3d）：
+ * ① repoIndex 精确命中（既有显式 entity 用例零变化）；② miss 时遍历容器内全部
+ * {@link BindRepoResolver} Bean 求解（占位实体如 UserRef/DeptRef → 真实 Repo + 有效实体类）；
+ * ③ 仍无 → log.warn + 跳过绑定。列名解析 / valid 判定一律用解析出的
+ * {@link BindRepoResolver.BindTarget#getEffectiveEntityClass() 有效实体类}，而非注解原样声明的占位类。
  * <p>
  * 一个 Handler 处理所有 @BindRepo 注解（包括 @BindUser、@BindDept 等通过元注解桥接的快捷注解），
  * 无需为每种实体编写子类。
@@ -66,6 +71,19 @@ public class BindRepoHandler {
      */
     private final Map<String, ConditionChain> conditionCache = new ConcurrentHashMap<>();
 
+    /**
+     * 注解声明的 entityClass → Repo 解析结果（含 SPI 兜底）的缓存，Optional.empty() 为负缓存哨兵。
+     * <p>
+     * 解析链（repoIndex 精确匹配 → BindRepoResolver SPI 兜底）结果按声明的 entityClass 稳定，
+     * 缓存避免每次请求重复遍历 SPI（先例：{@link #conditionCache}）。
+     */
+    private final Map<Class<?>, Optional<BindRepoResolver.BindTarget>> targetCache = new ConcurrentHashMap<>();
+
+    /**
+     * 容器内全部 {@link BindRepoResolver} Bean，延迟初始化（首个 repoIndex miss 时扫描一次）
+     */
+    private volatile List<BindRepoResolver> resolvers;
+
 
     /**
      * 批量转换：根据 @BindRepo 注解配置，查询实体并提取目标字段值。
@@ -81,17 +99,20 @@ public class BindRepoHandler {
         }
 
         Class<?> entityClass = annotation.entity();
-        BaseSqlRepo<?, ?> repo = getRepo(entityClass);
-        if (repo == null) {
+        BindRepoResolver.BindTarget target = resolveTarget(entityClass);
+        if (target == null) {
             log.warn("@BindRepo: 未找到 {} 对应的 BaseSqlRepo Bean，跳过绑定", entityClass.getName());
             return result;
         }
+        BaseSqlRepo<?, ?> repo = target.getRepo();
+        // 有效实体类（占位类经 SPI 解析后的真实实体）：列名解析/valid 判定一律以此为准
+        Class<?> effectiveClass = target.getEffectiveEntityClass();
 
         String matchField = annotation.matchField();
         String matchField2 = annotation.matchField2();
         boolean dual = FuncUtil.isNotEmpty(matchField2);
         String extractField = annotation.extractField();
-        String matchColumn = resolveColumnName(entityClass, matchField);
+        String matchColumn = resolveColumnName(effectiveClass, matchField);
 
         // 构建 WHERE matchColumn IN (sourceValues) [AND matchColumn2 IN (...)] [AND valid = '1']
         QueryWrapper wrapper = new QueryWrapper();
@@ -107,12 +128,12 @@ public class BindRepoHandler {
                 }
             }
             wrapper.in(matchColumn, values1);
-            wrapper.in(resolveColumnName(entityClass, matchField2), values2);
+            wrapper.in(resolveColumnName(effectiveClass, matchField2), values2);
         } else {
             wrapper.in(matchColumn, sourceValues);
         }
-        if (ReflectionUtil.existedField(entityClass, VALID_FIELD)) {
-            String validColumn = resolveColumnName(entityClass, VALID_FIELD);
+        if (ReflectionUtil.existedField(effectiveClass, VALID_FIELD)) {
+            String validColumn = resolveColumnName(effectiveClass, VALID_FIELD);
             wrapper.eq(validColumn, CommonConst.YES);
         }
 
@@ -193,6 +214,69 @@ public class BindRepoHandler {
     }
 
     /**
+     * 解析注解声明的 entityClass 到真实 Repo + 有效实体类（精确匹配优先、SPI 兜底），结果缓存。
+     * <p>
+     * 链路：① repoIndex 精确命中（既有显式 entity 用例零变化，SPI 不参与）；
+     * ② miss → 遍历容器内全部 {@link BindRepoResolver} Bean，取首个有效命中（占位实体场景，T2.3c/T2.3d）；
+     * ③ 仍无 → 返回 null（调用方维持 log.warn + 跳过，不抛异常）。
+     *
+     * @param entityClass 注解声明的实体类（可能是占位标记类）
+     * @return 解析结果；null 表示无任何通道可解析
+     */
+    private BindRepoResolver.BindTarget resolveTarget(Class<?> entityClass) {
+        Optional<BindRepoResolver.BindTarget> cached = targetCache.get(entityClass);
+        if (cached == null) {
+            cached = doResolveTarget(entityClass);
+            targetCache.put(entityClass, cached);
+        }
+        return cached.orElse(null);
+    }
+
+    private Optional<BindRepoResolver.BindTarget> doResolveTarget(Class<?> entityClass) {
+        // ① 精确匹配优先（同时触发 repoIndex/nameIndex 延迟初始化）
+        BaseSqlRepo<?, ?> repo = getRepo(entityClass);
+        if (repo != null) {
+            return Optional.of(new BindRepoResolver.BindTarget(repo, entityClass));
+        }
+        // ② SPI 兜底：遍历全部 BindRepoResolver Bean，取首个有效命中
+        for (BindRepoResolver resolver : getResolvers()) {
+            Optional<BindRepoResolver.BindTarget> resolved = resolver.resolve(entityClass);
+            if (resolved != null && resolved.isPresent()) {
+                BindRepoResolver.BindTarget t = resolved.get();
+                if (t.getRepo() != null && t.getEffectiveEntityClass() != null) {
+                    return Optional.of(t);
+                }
+            }
+        }
+        // ③ 仍无 → empty（负缓存，调用方 warn+跳过）
+        return Optional.empty();
+    }
+
+    /**
+     * 容器内全部 {@link BindRepoResolver} Bean，首个 repoIndex miss 时扫描一次后固化
+     */
+    private List<BindRepoResolver> getResolvers() {
+        if (resolvers == null) {
+            synchronized (this) {
+                if (resolvers == null) {
+                    List<BindRepoResolver> list = new ArrayList<>();
+                    String[] names = BeanUtil.getBeanNamesForType(BindRepoResolver.class);
+                    if (FuncUtil.isNotEmpty(names)) {
+                        for (String name : names) {
+                            Object bean = BeanUtil.getBean(name);
+                            if (bean instanceof BindRepoResolver) {
+                                list.add((BindRepoResolver) bean);
+                            }
+                        }
+                    }
+                    resolvers = list;
+                }
+            }
+        }
+        return resolvers;
+    }
+
+    /**
      * Java 属性名 → 数据库列名
      */
     private String resolveColumnName(Class<?> entityClass, String fieldName) {
@@ -258,11 +342,14 @@ public class BindRepoHandler {
      * @return 查询结果列表，永不为 null
      */
     private List<?> selectIn(Class<?> entityClass, String matchField, String matchField2, boolean dual, Set<Object> values) {
-        BaseSqlRepo<?, ?> repo = getRepo(entityClass);
-        if (repo == null) {
+        BindRepoResolver.BindTarget target = resolveTarget(entityClass);
+        if (target == null) {
             log.warn("@BindRepo(List): 未找到 {} 对应的 BaseSqlRepo Bean，跳过绑定", entityClass.getName());
             return Collections.emptyList();
         }
+        BaseSqlRepo<?, ?> repo = target.getRepo();
+        // 有效实体类（占位类经 SPI 解析后的真实实体）：列名解析/valid 判定一律以此为准
+        Class<?> effectiveClass = target.getEffectiveEntityClass();
         QueryWrapper wrapper = new QueryWrapper();
         if (dual) {
             Set<Object> values1 = new HashSet<>();
@@ -274,13 +361,13 @@ public class BindRepoHandler {
                     values2.add(parts[1]);
                 }
             }
-            wrapper.in(resolveColumnName(entityClass, matchField), values1);
-            wrapper.in(resolveColumnName(entityClass, matchField2), values2);
+            wrapper.in(resolveColumnName(effectiveClass, matchField), values1);
+            wrapper.in(resolveColumnName(effectiveClass, matchField2), values2);
         } else {
-            wrapper.in(resolveColumnName(entityClass, matchField), values);
+            wrapper.in(resolveColumnName(effectiveClass, matchField), values);
         }
-        if (ReflectionUtil.existedField(entityClass, VALID_FIELD)) {
-            wrapper.eq(resolveColumnName(entityClass, VALID_FIELD), CommonConst.YES);
+        if (ReflectionUtil.existedField(effectiveClass, VALID_FIELD)) {
+            wrapper.eq(resolveColumnName(effectiveClass, VALID_FIELD), CommonConst.YES);
         }
         Method selectMethod = ReflectionUtil.getMethod(repo.getClass(), "select", Wrapper.class);
         if (selectMethod == null) {
@@ -419,15 +506,18 @@ public class BindRepoHandler {
      * @return 实例值组合键 → 实例列表；无入值或查询为空时返回空 Map
      */
     private Map<String, List<Object>> queryAndGroup(List<Path> rows, List<Edge> incoming, Class<?> nodeClass) {
-        BaseSqlRepo<?, ?> repo = getRepo(nodeClass);
-        if (repo == null) {
+        BindRepoResolver.BindTarget target = resolveTarget(nodeClass);
+        if (target == null) {
             log.warn("@BindRepo(condition): 未找到 {} 对应的 BaseSqlRepo Bean，跳过绑定", nodeClass.getName());
             return Collections.emptyMap();
         }
+        BaseSqlRepo<?, ?> repo = target.getRepo();
+        // 有效实体类（占位目标实体经 SPI 解析后的真实实体）：裸名/列名/valid 判定一律以此为准
+        Class<?> effectiveClass = target.getEffectiveEntityClass();
         // 目标侧裸名一次解析：属性名优先，兼容 @TableField 列名写法；IN 条件与实例取键必须用同一份解析结果
         List<String> toProps = new ArrayList<>(incoming.size());
         for (Edge e : incoming) {
-            toProps.add(resolveTargetProp(nodeClass, e.toProp));
+            toProps.add(resolveTargetProp(effectiveClass, e.toProp));
         }
         QueryWrapper wrapper = new QueryWrapper();
         for (int i = 0; i < incoming.size(); i++) {
@@ -442,10 +532,10 @@ public class BindRepoHandler {
             if (vals.isEmpty()) {
                 return Collections.emptyMap();
             }
-            wrapper.in(resolveColumnName(nodeClass, toProps.get(i)), vals);
+            wrapper.in(resolveColumnName(effectiveClass, toProps.get(i)), vals);
         }
-        if (ReflectionUtil.existedField(nodeClass, VALID_FIELD)) {
-            wrapper.eq(resolveColumnName(nodeClass, VALID_FIELD), CommonConst.YES);
+        if (ReflectionUtil.existedField(effectiveClass, VALID_FIELD)) {
+            wrapper.eq(resolveColumnName(effectiveClass, VALID_FIELD), CommonConst.YES);
         }
         Method selectMethod = ReflectionUtil.getMethod(repo.getClass(), "select", Wrapper.class);
         if (selectMethod == null) {
