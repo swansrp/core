@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -158,5 +159,37 @@ public class HttpAuthzCheckApiTest {
     public void baseUrl未配置_快速失败() {
         properties.setServerBaseUrl("");
         assertThrows(IllegalStateException.class, () -> api.authzVersion());
+    }
+
+    /** 修复轮（棒4 I-2）：生产构造 RestTemplate 显式 connect/read 超时（自定义值链路） */
+    @Test
+    public void 生产构造_超时显式已设() throws Exception {
+        properties.setConnectTimeoutMs(1234);
+        properties.setReadTimeoutMs(5678);
+
+        RestTemplate restTemplate = HttpAuthzCheckApi.productionRestTemplate(properties);
+
+        assertTrue(restTemplate.getRequestFactory() instanceof SimpleClientHttpRequestFactory);
+        assertEquals(1234, timeoutField(restTemplate, "connectTimeout"));
+        assertEquals(5678, timeoutField(restTemplate, "readTimeout"));
+    }
+
+    /** 修复轮（棒4 I-2）：生产构造缺省超时 3000/5000（Properties 默认值链路） */
+    @Test
+    public void 生产构造_默认超时3000_5000() throws Exception {
+        RestTemplate restTemplate = HttpAuthzCheckApi.productionRestTemplate(new AuthzClientProperties());
+
+        assertEquals(3000, timeoutField(restTemplate, "connectTimeout"));
+        assertEquals(5000, timeoutField(restTemplate, "readTimeout"));
+    }
+
+    /**
+     * 读 SimpleClientHttpRequestFactory 的 connectTimeout/readTimeout（spring-web 5.3 只有
+     * setter 无 getter，反射读私有 int 字段——字段名 Spring 2.5 起稳定）。
+     */
+    private static int timeoutField(RestTemplate restTemplate, String fieldName) throws Exception {
+        java.lang.reflect.Field field = SimpleClientHttpRequestFactory.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(restTemplate.getRequestFactory());
     }
 }

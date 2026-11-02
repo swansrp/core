@@ -37,6 +37,16 @@ public class AuthzClientProperties {
      */
     private long versionRefreshMs = 5000L;
 
+    /**
+     * 修复轮（review 棒4 I-2）：HTTP 连接超时（毫秒），缺省 3000——
+     * hub 挂起防护：failMode 对「挂起」不可达（不拒连不回包的假死既不抛 RestClientException
+     * 也不返回），<b>超时是第一道闸</b>。
+     */
+    private int connectTimeoutMs = 3000;
+
+    /** 修复轮（review 棒4 I-2）：HTTP 读超时（毫秒），缺省 5000（同上挂起防护） */
+    private int readTimeoutMs = 5000;
+
     public enum FailMode { CLOSED, OPEN_TO_CACHE }
 
     public boolean isEnabled() { return enabled; }
@@ -62,4 +72,12 @@ public class AuthzClientProperties {
     public long getVersionRefreshMs() { return versionRefreshMs; }
 
     public void setVersionRefreshMs(long versionRefreshMs) { this.versionRefreshMs = versionRefreshMs; }
+
+    public int getConnectTimeoutMs() { return connectTimeoutMs; }
+
+    public void setConnectTimeoutMs(int connectTimeoutMs) { this.connectTimeoutMs = connectTimeoutMs; }
+
+    public int getReadTimeoutMs() { return readTimeoutMs; }
+
+    public void setReadTimeoutMs(int readTimeoutMs) { this.readTimeoutMs = readTimeoutMs; }
 }

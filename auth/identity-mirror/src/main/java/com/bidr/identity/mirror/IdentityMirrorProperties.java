@@ -39,4 +39,14 @@ public class IdentityMirrorProperties {
 
     /** 调度 cron（Spring 6 段式）；缺省 0 0 * * * ?＝每整点一次 */
     private String cron = "0 0 * * * ?";
+
+    /**
+     * HTTP 连接超时（毫秒），缺省 3000——hub 挂起防护（不拒连不回包的假死既不抛异常也不返回，
+     * 超时是第一道闸）；mirror 侧无 failMode 可言，调用方是调度线程，挂起＝占死线程＋同宿主
+     * @Scheduled 任务连带饿死，失败趟不写水位则 watermark 停滞是唯一探测面。
+     */
+    private int connectTimeoutMs = 3000;
+
+    /** HTTP 读超时（毫秒），缺省 5000（同上挂起防护） */
+    private int readTimeoutMs = 5000;
 }

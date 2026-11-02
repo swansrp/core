@@ -8,6 +8,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -30,7 +31,9 @@ import java.util.List;
  *
  * <p><b>测试缝</b>：{@link RestTemplate} 经构造注入可替换（单测 mock 之，五腿判定链见
  * {@code RemoteAuthzCheckerTest}）。HTTP 通道＝直连 RestTemplate（低频判定＋消费方有缓存，
- * 无连接池诉求；失败上抛 {@link RestClientException} 由调用方按 failMode 处置）。</p>
+ * 无连接池诉求；失败上抛 {@link RestClientException} 由调用方按 failMode 处置）。
+ * 生产构造显式 connect/read 超时（{@link #productionRestTemplate}）——hub 挂起防护：
+ * failMode 对挂起不可达，超时是第一道闸。</p>
  *
  * <p>🔴 client 纪律：本模块禁依赖 authorization(server)；判定数据一律经本接口走 HTTP。</p>
  *
@@ -50,15 +53,28 @@ public class HttpAuthzCheckApi implements AuthzCheckApi {
     private final AuthzClientProperties properties;
     private final RestTemplate restTemplate;
 
-    /** 生产构造：直连 RestTemplate */
+    /** 生产构造：SimpleClientHttpRequestFactory 显式 connect/read 超时（挂起防护，见 {@link #productionRestTemplate}） */
     public HttpAuthzCheckApi(AuthzClientProperties properties) {
-        this(properties, new RestTemplate());
+        this(properties, productionRestTemplate(properties));
     }
 
-    /** 测试缝构造：RestTemplate 可注入替换（mock / fake transport） */
+    /** 测试缝构造：RestTemplate 可注入替换（mock / fake transport），不受超时改动影响 */
     public HttpAuthzCheckApi(AuthzClientProperties properties, RestTemplate restTemplate) {
         this.properties = properties;
         this.restTemplate = restTemplate;
+    }
+
+    /**
+     * 生产 RestTemplate：直连构造＋{@link SimpleClientHttpRequestFactory} 显式
+     * connect/read 超时（my.authz.client.connect-timeout-ms / read-timeout-ms，缺省 3000/5000）。
+     * hub 挂起防护：failMode 对「挂起」不可达（假死既不抛 RestClientException 也不返回，
+     * 请求线程被逐个占满故障横向传染），<b>超时是第一道闸</b>。
+     */
+    static RestTemplate productionRestTemplate(AuthzClientProperties properties) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(properties.getConnectTimeoutMs());
+        factory.setReadTimeout(properties.getReadTimeoutMs());
+        return new RestTemplate(factory);
     }
 
     @Override
