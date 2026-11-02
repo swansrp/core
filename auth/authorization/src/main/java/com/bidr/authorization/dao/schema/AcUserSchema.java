@@ -16,8 +16,17 @@ public class AcUserSchema extends BaseMybatisSchema<AcUser> {
 
     /**
      * 工厂态管理员密码 hash（user_id=1 'BidrAdmin' 初始密码的 48 位盐化 MD5，Md5Util.generate 形态）。
-     * <p>两处引用正源（T1.0 棒1 提取）：① {@link #setInitData} 种子行字面量；② AdminUserSeeder
-     * 的 pristine 判据——hash 与本常量相等 ＝ 密码从未被人工改过，种子链才允许按配置重置。</p>
+     *
+     * <p>唯一用途＝{@link #setInitData} 的种子行字面量。🔴 <b>纪律（2026-11-02 定稿，勿再长出第二个种子器）</b>：
+     * 该 hash 只标识"这个号从没被人工设过密码"，<b>任何启动过程都不许据此改写口令</b>。
+     * 历史教训＝T1.0 的 AdminUserSeeder 曾以"hash 等于本常量"为 pristine 判据：只要库里处于工厂态，
+     * <b>下一次重启就随机重置口令并把明文打进日志</b>；联调环境里把口令故意设回工厂值后，一次部署就把
+     * 在场的人全部锁在门外（2026-11-02 6.60 实锤）。该 seeder 已退役，配置项 {@code identity.admin.*}
+     * 一并删除。交付需要指定初始口令时走运维 SQL 或框架既有首登设密链（{@code /web/login/password/init}）。</p>
+     *
+     * <p>空库引导链路（清库后自动成立，与本常量有关的部分）：{@code ac_user} 建表即插
+     * user_id=1/'000001'/'BidrAdmin'/工厂 hash（本类 setInitData）→ {@code ac_role} 插角色 1/2
+     * （AcRoleSchema）→ {@code ac_user_role} 插 (1,1) 角色绑定（AcUserRoleSchema）。</p>
      */
     public static final String FACTORY_ADMIN_PASSWORD_HASH = "a49a1ea1612f58a29968025b73ba2653274711c198c79465";
 

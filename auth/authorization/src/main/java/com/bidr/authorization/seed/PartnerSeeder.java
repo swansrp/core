@@ -23,7 +23,8 @@ import java.util.List;
  * Title: PartnerSeeder
  * Description: 三方应用＋SSO 回调白名单种子器（T1.0 空库引导·棒1）——
  * identity.clients 有值就把 ac_partner / ac_sso_redirect 保证到位（M-7：两张表＝client 注册面），
- * 种子链第三棒（TenantSeeder → AdminUserSeeder → 本类）。
+ * 种子链：TenantSeeder → 本类（原第二棒 AdminUserSeeder 已于 2026-11-02 退役——超管账号与角色
+ * 绑定由 AcUserSchema/AcUserRoleSchema 的 setInitData 在建表那一次种下，且不再有启动过程改口令）。
  *
  * <p>幂等语义：逐 client 按 app_key 判重 upsert——缺则建（形态照现库行取证：
  * probe-seed-baseline.md，platform=''、status=1）；有则只同步 app_secret（配置是密钥正源），

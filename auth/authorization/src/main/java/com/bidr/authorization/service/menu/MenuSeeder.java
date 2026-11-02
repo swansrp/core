@@ -32,10 +32,10 @@ import java.util.List;
  * ApplicationRunner.run() 在容器刷新**之后**才由 SpringApplication 调用——建表先于种子天然成立。
  *
  * 显式 @Order 锚点（T1.0 棒1）：本类原先无 Ordered/@Order（隐式 LOWEST_PRECEDENCE，与同批
- * runner 平局靠注册序决胜＝跨平台不可靠）。Identity 种子链 TenantSeeder→AdminUserSeeder→
- * PartnerSeeder（seed 包）要求排在本类之后，故本类钉 LOWEST_PRECEDENCE-4，链上三棒依次
- * -3/-2/-1，全链仍早于其余无序 runner 平局面（AccountContextFillManager 等是 CommandLineRunner，
- * 天然在本链之后，不受影响）。
+ * runner 平局靠注册序决胜＝跨平台不可靠）。Identity 种子链 TenantSeeder→PartnerSeeder
+ * （seed 包）要求排在本类之后，故本类钉 LOWEST_PRECEDENCE-4，链上依次 -3/-1（原 -2 位的
+ * AdminUserSeeder 已于 2026-11-02 退役，槽位空出保留），全链仍早于其余无序 runner 平局面
+ * （AccountContextFillManager 等是 CommandLineRunner，天然在本链之后，不受影响）。
  *
  * 幂等（重启零重复）：每节点先查库判重，命中即复用、只对自己**新插入**的行绑 admin 角色：
  * - 顶级 topnav：pid IS NULL ∧ menu_type=0 ∧ (title∨path)，查到复用 id、没有先创建；

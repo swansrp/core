@@ -29,7 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  *
  * <p>时序：排在 MenuSeeder 之后（显式 @Order，MenuSeeder 同批加了锚点值，见该类注释），
- * AdminUserSeeder/PartnerSeeder 依次更后——种子链 TenantSeeder → AdminUserSeeder → PartnerSeeder。</p>
+ * PartnerSeeder 更后——种子链 TenantSeeder → PartnerSeeder（AdminUserSeeder 已于 2026-11-02 退役：
+ * 超管由 setInitData 建表即种，且不再有启动过程改写既有口令）。</p>
  *
  * <p>⚠ 本类 DB 写路径不在离线单测覆盖（离线腿 mock AcTenantService 断言三态分支；
  * 建行真值交真机腿：起服务后核 ac_tenant，重启第二次应零新增）。</p>
