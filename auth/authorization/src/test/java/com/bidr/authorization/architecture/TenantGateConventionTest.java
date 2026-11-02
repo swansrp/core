@@ -41,7 +41,8 @@ import java.util.stream.Collectors;
  * <ul>
  * <li>腿 1 空 TenantContext ⇒ 同实例返回（老项目零感知机制核·null 态）；</li>
  * <li>腿 2 空集合档 ⇒ 无请求上下文（内部任务）时同实例返回；
- * 🔴 11-01 起登录态空集＝恒假 1=0（腿 2b/2c：与原 where 合并，保留 ? 占位）；</li>
+ * 🔴 11-01 起登录态空集＝恒假 1=0（腿 2b/2c：与原 where 合并，保留 ? 占位）；
+ * 顶层 OR 必须整体加括号后再 AND（腿 2d/5b，JSqlParser 的 AND 优先级不得让闸穿透）；</li>
  * <li>腿 3 清单外表 ⇒ 同实例返回，含负对照针 ac_user_tenant；库名前缀 bidr.ac_user 必须命中；
  * 🔴 新增 Blocker 回归针：喂 {@code MappedStatement.getId()} 的"方法名形态"
  * （…AcUserDao.selectById）不得误命中锚点——修1 之前的载体错就错在该参数不是表名（M-23）；</li>
@@ -134,6 +135,26 @@ public class TenantGateConventionTest {
         }
     }
 
+    /** 腿 2d：登录态无租户 + 顶层 OR 的 where ⇒ 恒假必须 AND 在整个 OR 之外。
+     *  🔴 负向锚：JSqlParser 4.6 实测裸合并会输出 {@code a = ? OR b = ? AND 1 = 0}
+     *  （AND 优先级高于 OR，左支照常出行）——本腿钉死原 where 必须被 Parenthesis 包住。 */
+    @Test
+    public void denyAllWrapsTopLevelOrWhereInParenthesis() throws Exception {
+        Expression original = where("customer_number = ? OR name = ?");
+        TenantContext.set(Collections.<Long>emptyList());
+        AccountContext.set(new AccountInfo());
+        try {
+            String sql = gate.getSqlSegment(original, "ac_user").toString();
+            Assert.assertTrue("原 where 必须整体加括号: " + sql, sql.startsWith("("));
+            int or = sql.indexOf(" OR ");
+            int close = sql.indexOf(") AND 1 = 0");
+            Assert.assertTrue("恒假必须在括号外与整个 OR 合并: " + sql, close > 0);
+            Assert.assertTrue("OR 必须落在括号内（否则 1=0 只落在最后一个分支）: " + sql, or > 0 && or < close);
+        } finally {
+            AccountContext.remove();
+        }
+    }
+
     /** 腿 3：清单外表原样返回；负对照针 ac_user_tenant；bidr.ac_user 前缀命中；
      *  🔴 Blocker 回归针：MP 传入的方法名形态（MappedStatement.getId()）不得误命中锚点 */
     @Test
@@ -187,6 +208,20 @@ public class TenantGateConventionTest {
         TenantContext.remove();
         Assert.assertFalse("负对照失效：无档时结果不应含 EXISTS",
                 gate.getSqlSegment(original, "ac_user").toString().contains("EXISTS"));
+    }
+
+    /** 腿 5b：有档非空 + 顶层 OR 的 where ⇒ EXISTS 必须 AND 在整个 OR 之外（同腿 2d 的括号纪律，
+     *  覆盖非空租户合并路径；裸合并时 OR 左支绕过租户闸） */
+    @Test
+    public void existsGateWrapsTopLevelOrWhereInParenthesis() throws Exception {
+        TenantContext.set(Arrays.asList(7L, 9L));
+        Expression original = where("status = '1' OR dept_id = 3");
+        String sql = gate.getSqlSegment(original, "ac_user").toString();
+        Assert.assertTrue("原 where 必须整体加括号: " + sql, sql.startsWith("("));
+        int or = sql.indexOf(" OR ");
+        int close = sql.indexOf(") AND EXISTS");
+        Assert.assertTrue("EXISTS 必须在括号外与整个 OR 合并: " + sql, close > 0);
+        Assert.assertTrue("OR 必须落在括号内（否则租户闸只约束最后一个分支）: " + sql, or > 0 && or < close);
     }
 
     /** 腿 6a：文本预判收紧——FROM/JOIN 段词边界命中才进改写候选；族表与字面量不碰；多语句/null 不碰 */
