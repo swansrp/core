@@ -2,6 +2,7 @@ package com.bidr.authorization.controller.admin;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthAdmin;
+import com.bidr.authorization.annotation.auth.AuthLogin;
 import com.bidr.authorization.dao.entity.AcResourcePerm;
 import com.bidr.authorization.dao.repository.AcResourcePermService;
 import com.bidr.authorization.holder.AccountContext;
@@ -84,6 +85,10 @@ public class AcResourcePermController {
      * </p>
      */
     @ApiOperation(value = "查询当前用户命中某资源的授权行扩展数据（原始串，前端解析）")
+    // 运行态接口：Portal 装载时所有登录用户都要拉「本人生效的隐藏列 token」（列权限体验层），
+    // 方法级 @Auth 覆盖类级 AuthAdmin（AuthInterceptor 方法优先），仅需登录；返回的只有当前用户
+    // 自己命中的行，不泄露他人授权；管理员走 getMatchedRows 的 adminBypass 自然返回空集。
+    @Auth(AuthLogin.class)
     @RequestMapping(value = "/my-matched-extra", method = RequestMethod.GET)
     public List<String> myMatchedExtra(@RequestParam String resourceType, @RequestParam String resourceId) {
         return resourcePermFilterService.getMatchedRows(resourceType, resourceId).stream()
