@@ -17,9 +17,14 @@ import org.springframework.context.annotation.Configuration;
  *     client:
  *       enabled: true
  *       server-base-url: http://hub:8080
+ *       app-key: xxx
+ *       app-secret: yyy
  *       fail-mode: CLOSED
+ *       version-refresh-ms: 5000
  * </pre>
- * T2.3b 在此注册 HttpAuthzCheckApi（实现 {@link AuthzCheckApi}）与缓存 Bean。
+ * T2.3b 装配三件：缓存 Bean ＋ {@link HttpAuthzCheckApi}（实现 {@link AuthzCheckApi}，
+ * /authz 三端点 HTTP 面）＋ {@link RemoteAuthzChecker}（实现 api
+ * {@code AuthzChecker}，AuthAdmin 端点 admin 门槛经 ObjectProvider 消费）。
  *
  * @author Sharp
  * @since 2026-10-31
@@ -32,5 +37,17 @@ public class AuthzClientAutoConfiguration {
     @Bean
     public AuthzCache authzCache() {
         return new AuthzCache();
+    }
+
+    @Bean
+    public HttpAuthzCheckApi httpAuthzCheckApi(AuthzClientProperties properties) {
+        return new HttpAuthzCheckApi(properties);
+    }
+
+    @Bean
+    public RemoteAuthzChecker remoteAuthzChecker(AuthzCheckApi authzCheckApi,
+                                                 AuthzCache authzCache,
+                                                 AuthzClientProperties properties) {
+        return new RemoteAuthzChecker(authzCheckApi, authzCache, properties);
     }
 }

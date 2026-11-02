@@ -5,7 +5,6 @@ import com.bidr.authorization.dao.entity.AcResourcePerm;
 import com.bidr.authorization.dao.mapper.AcResourcePermMapper;
 import com.bidr.authorization.vo.perm.ResourcePermSaveBySubjectReq;
 import com.bidr.authorization.vo.perm.ResourcePermSaveReq;
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.ConditionVariableUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
  * @since 2026/07/20
  */
 @Service
-public class AcResourcePermService extends BaseSqlRepo<AcResourcePermMapper, AcResourcePerm> {
+public class AcResourcePermService extends AuthzVersionedSqlRepo<AcResourcePermMapper, AcResourcePerm> {
 
     /**
      * 查询某资源的全部授权记录

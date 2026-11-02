@@ -1,6 +1,7 @@
 package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bidr.authorization.authz.AuthzVersionHolder;
 import com.bidr.authorization.constants.dict.DataPermitScopeDict;
 import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.entity.AcDeptMenu;
@@ -9,7 +10,6 @@ import com.bidr.authorization.dao.entity.AcUserDept;
 import com.bidr.authorization.dao.mapper.AcDeptMenuDao;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.dao.repository.RecursionService;
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
-public class AcDeptMenuService extends BaseSqlRepo<AcDeptMenuDao, AcDeptMenu> {
+public class AcDeptMenuService extends AuthzVersionedSqlRepo<AcDeptMenuDao, AcDeptMenu> {
 
     private final RecursionService recursionService;
     private final AcUserDeptService acUserDeptService;
@@ -55,7 +55,12 @@ public class AcDeptMenuService extends BaseSqlRepo<AcDeptMenuDao, AcDeptMenu> {
         AcDeptMenu acDeptMenu = new AcDeptMenu();
         acDeptMenu.setDeptId(deptId);
         acDeptMenu.setMenuId(menuId);
-        super.deleteByMultiId(acDeptMenu);
+        boolean removed = super.deleteByMultiId(acDeptMenu);
+        if (removed) {
+            // T2.3b：deleteByMultiId 是 IMppService default 方法，不经 AuthzVersionedSqlRepo
+            // 拦截面，此处显式补 bump（部门菜单写点，client 缓存失效信号）
+            AuthzVersionHolder.bump();
+        }
     }
 
    /**

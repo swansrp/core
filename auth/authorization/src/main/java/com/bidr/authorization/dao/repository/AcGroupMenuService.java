@@ -9,7 +9,6 @@ import com.bidr.authorization.dao.entity.AcUserGroup;
 import com.bidr.authorization.dao.mapper.AcGroupMenuMapper;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.dao.repository.RecursionService;
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,7 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
-public class AcGroupMenuService extends BaseSqlRepo<AcGroupMenuMapper, AcGroupMenu> {
+public class AcGroupMenuService extends AuthzVersionedSqlRepo<AcGroupMenuMapper, AcGroupMenu> {
 
     private final RecursionService recursionService;
     private final AcUserGroupService acUserGroupService;
