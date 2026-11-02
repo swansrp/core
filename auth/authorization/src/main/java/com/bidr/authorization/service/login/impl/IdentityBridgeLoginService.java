@@ -1,9 +1,9 @@
 package com.bidr.authorization.service.login.impl;
 
 import com.bidr.authorization.vo.login.LoginRes;
-import com.bidr.hub.spi.IdentityBridge;
-import com.bidr.hub.spi.dto.BridgeUserPrincipal;
-import com.bidr.hub.spi.dto.IdentityLoginCmd;
+import com.bidr.authorization.identity.IdentityBridge;
+import com.bidr.authorization.identity.BridgeUserPrincipal;
+import com.bidr.authorization.identity.IdentityLoginCmd;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import lombok.RequiredArgsConstructor;

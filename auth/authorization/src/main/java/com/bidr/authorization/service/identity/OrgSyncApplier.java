@@ -5,7 +5,7 @@ import com.bidr.authorization.dao.entity.AcDept;
 import com.bidr.authorization.dao.repository.AcAccountService;
 import com.bidr.authorization.dao.repository.AcDeptService;
 import com.bidr.authorization.service.account.AccountInitService;
-import com.bidr.hub.spi.dto.OrgSyncResult;
+import com.bidr.authorization.identity.OrgSyncResult;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.utils.FuncUtil;

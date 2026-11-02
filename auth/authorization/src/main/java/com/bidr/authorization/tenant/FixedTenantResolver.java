@@ -1,7 +1,7 @@
 package com.bidr.authorization.tenant;
 
 import com.bidr.authorization.config.TenantProperties;
-import com.bidr.hub.spi.TenantResolver;
+import com.bidr.authorization.tenant.TenantResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

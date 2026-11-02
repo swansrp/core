@@ -6,7 +6,7 @@ import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUserTenant;
 import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
-import com.bidr.hub.spi.TenantResolver;
+import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;

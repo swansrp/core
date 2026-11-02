@@ -7,7 +7,7 @@ import com.bidr.authorization.dao.entity.AcUserTenant;
 import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.service.permit.PermitService;
-import com.bidr.hub.spi.TenantResolver;
+import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.FuncUtil;

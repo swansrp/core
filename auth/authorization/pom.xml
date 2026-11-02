@@ -61,14 +61,6 @@
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
         </dependency>
-        <!-- T1.0 棒1：TenantResolver SPI 契约（pack-spi 是跨仓契约件，版本恒 0.0.1-SNAPSHOT——
-             聚合件族无 dated 发布口径，与 pack-spi pom 对 com.bidr:core 的写法同口径；
-             依赖方向 core→pack-spi 是"内核实现 SPI"的正向形态，pack-spi 不反依 core 任何 jar） -->
-        <dependency>
-            <groupId>com.bidr</groupId>
-            <artifactId>pack-spi</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>platform</artifactId>

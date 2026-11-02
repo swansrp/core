@@ -1,8 +1,8 @@
 package com.bidr.authorization.service.identity;
 
 import com.bidr.authorization.config.OrgSyncProperties;
-import com.bidr.hub.spi.IdentityBridge;
-import com.bidr.hub.spi.dto.OrgSyncResult;
+import com.bidr.authorization.identity.IdentityBridge;
+import com.bidr.authorization.identity.OrgSyncResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;

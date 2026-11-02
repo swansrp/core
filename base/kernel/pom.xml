@@ -40,17 +40,6 @@
     </profiles>
 
     <dependencies>
-        <!--
-          T1.1 棒5：NotifyChannel SPI 契约（内核通知派发器 NotifyChannelDispatcher 只认此接口，
-          ADR-0001"内核零具体渠道代码"）。依赖方向 core→pack-spi 是"内核实现 SPI"的正向形态
-          （与 authorization 棒4 同口径）；pack-spi 零传递 jar（契约件只挂 com.bidr:core 聚合 pom
-          作装配标记），不会给 kernel 下游增重。版本恒 0.0.1-SNAPSHOT：聚合件族无 dated 发布口径。
-        -->
-        <dependency>
-            <groupId>com.bidr</groupId>
-            <artifactId>pack-spi</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

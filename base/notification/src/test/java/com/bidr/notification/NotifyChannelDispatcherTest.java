@@ -1,7 +1,9 @@
-package com.bidr.kernel.event;
+package com.bidr.notification;
+import com.bidr.kernel.event.ExceptionAlertEvent;
+import com.bidr.kernel.event.ServiceExceptionEvent;
 
-import com.bidr.hub.spi.NotifyChannel;
-import com.bidr.hub.spi.dto.NotifyMessage;
+import com.bidr.notification.NotifyChannel;
+import com.bidr.notification.NotifyMessage;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.exception.ServiceException;
 import org.junit.Assert;

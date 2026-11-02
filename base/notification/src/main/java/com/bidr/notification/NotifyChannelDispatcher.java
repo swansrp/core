@@ -1,7 +1,9 @@
-package com.bidr.kernel.event;
+package com.bidr.notification;
+import com.bidr.kernel.event.ExceptionAlertEvent;
+import com.bidr.kernel.event.ServiceExceptionEvent;
 
-import com.bidr.hub.spi.NotifyChannel;
-import com.bidr.hub.spi.dto.NotifyMessage;
+import com.bidr.notification.NotifyChannel;
+import com.bidr.notification.NotifyMessage;
 import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.utils.FuncUtil;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,7 @@ import java.util.stream.Collectors;
 /**
  * Title: NotifyChannelDispatcher
  * Description: 通知渠道派发器（T1.1 棒5，ADR-0001"内核 SPI 派发"半边）——监听内核两类告警事件
- * （{@link ExceptionAlertEvent}＝@ExceptionAlert 注解链、{@link ServiceExceptionEvent}＝全局异常
+ * （{@link ExceptionAlertEvent}＝@ExceptionAlert 注解链、{@link com.bidr.kernel.event.ServiceExceptionEvent}＝全局异常
  * 处理器链），映为 pack-spi {@link NotifyMessage} 纯数据后遍历投递给全部启用渠道
  * （{@code ObjectProvider<NotifyChannel>} 逐个 {@code enabled()} 过滤后 {@code send}）。
  * 内核零具体渠道代码：本类只认 pack-spi {@link NotifyChannel} 接口，飞书/企微/邮件等具体渠道

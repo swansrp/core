@@ -8,7 +8,7 @@ import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.login.RoleBindService;
-import com.bidr.hub.spi.TenantResolver;
+import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
 import org.junit.Before;
