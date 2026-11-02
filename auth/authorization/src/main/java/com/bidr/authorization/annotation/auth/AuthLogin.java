@@ -189,7 +189,8 @@ public class AuthLogin implements AuthRole {
     /**
      * dev 冒烟免登：dev profile 下请求头 Token 为固定令牌时，不走 redis 校验，
      * 直接按系统初始化内置管理员（ac_user user_id=1 / BidrAdmin / 客户号 000001）构建上下文，
-     * 并注入系统管理员角色（AuthAdmin 依赖的校验连带通过）；非 dev 环境恒返回 false
+     * 并注入系统管理员角色（AuthAdmin 依赖的校验连带通过）＋平台档（数据闸/行级隔离旁路）；
+     * 非 dev 环境恒返回 false
      */
     private boolean buildDevAdminContext(HttpServletRequest request) {
         if (!isDevProfile()) {
@@ -214,7 +215,12 @@ public class AuthLogin implements AuthRole {
         map.put(TokenItem.NICK_NAME.name(), "系统管理员");
         UserInfo userInfo = buildUserInfo(map);
         userInfo.setRoleInfoMap(buildAdminRoleMap());
-        AccountContext.set(buildAccountInfo(userInfo, map));
+        AccountInfo accountInfo = buildAccountInfo(userInfo, map);
+        AccountContext.set(accountInfo);
+        // 🔴 与 buildContext 同口径接线租户档：内置管理员无租户绑定（null），&& 口径下若不置平台档，
+        // 数据闸会对 ac_user 拼恒假 1=0——dev 冒烟腿查用户全为空（2026-11-02 修）。
+        TenantContext.set(accountInfo.getTenantIds());
+        TenantContext.markPlatform();
         TokenHolder.set(tokenInfo != null ? tokenInfo
                 : AuthTokenUtil.buildToken(DEV_ADMIN_TOKEN, TokenType.WEB_ACCESS_TOKEN, customerNumber, 0));
         log.warn("dev 冒烟令牌生效，已以系统管理员（BidrAdmin）身份构建上下文");
