@@ -97,7 +97,14 @@ public class TenantDataGate implements DataPermissionHandler {
             // 分层：①无请求上下文（定时任务/异步/初始化，AccountContext 缺席）＝内部任务，保持兼容旁路；
             //      ②已登录但无租户绑定且非平台档（JIT 新号形态）＝一条也看不到（恒假表达式 1=0），
             //        不再 fail-open 把"没填"当成超级权限。
-            return AccountContext.get() == null ? where : denyAll();
+            if (AccountContext.get() == null) {
+                return where;
+            }
+            Expression deny = denyAll();
+            // 🔴 必须与原 where 合并而不是替换：原 where 里的 ? 占位符仍由 MyBatis 参数表绑定，
+            // 直接返回 1=0 会让占位符与参数数量错位（Parameter index out of range → 500），
+            // "空结果"只能是 SQL 语义，不能靠参数越界来终止查询。
+            return where == null ? deny : new AndExpression(where, deny);
         }
         Expression gate = buildTenantExists(columnQualifier, tenantIds);
         if (gate == null) {

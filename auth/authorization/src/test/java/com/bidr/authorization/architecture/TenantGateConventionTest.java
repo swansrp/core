@@ -1,9 +1,11 @@
 package com.bidr.authorization.architecture;
 
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
+import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.config.TenantDataGate;
 import com.bidr.authorization.config.TenantGateConfiguration;
 import com.bidr.authorization.dao.mapper.AcUserDao;
+import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
 import com.bidr.kernel.config.db.TenantGateSuppressor;
 import net.sf.jsqlparser.expression.Expression;
@@ -38,7 +40,8 @@ import java.util.stream.Collectors;
  * <p>A 组（handler 纯函数腿，走 {@code getSqlSegment} 直调，钉判序四态与机制核）：
  * <ul>
  * <li>腿 1 空 TenantContext ⇒ 同实例返回（老项目零感知机制核·null 态）；</li>
- * <li>腿 2 空集合档 ⇒ 同实例返回（用户弹卡终裁：空集与 null 同旁路、全量可见）；</li>
+ * <li>腿 2 空集合档 ⇒ 无请求上下文（内部任务）时同实例返回；
+ * 🔴 11-01 起登录态空集＝恒假 1=0（腿 2b/2c：与原 where 合并，保留 ? 占位）；</li>
  * <li>腿 3 清单外表 ⇒ 同实例返回，含负对照针 ac_user_tenant；库名前缀 bidr.ac_user 必须命中；
  * 🔴 新增 Blocker 回归针：喂 {@code MappedStatement.getId()} 的"方法名形态"
  * （…AcUserDao.selectById）不得误命中锚点——修1 之前的载体错就错在该参数不是表名（M-23）；</li>
@@ -97,6 +100,38 @@ public class TenantGateConventionTest {
         TenantContext.set(Collections.<Long>emptyList());
         Assert.assertSame("空集合与 null 同旁路（终裁口径），不得筛成空结果",
                 original, gate.getSqlSegment(original, "ac_user"));
+    }
+
+    /** 腿 2b：已登录但租户集为空 ⇒ 恒假 1=0 与原 where 做 AND，保留 ? 占位（参数绑定不得错位） */
+    @Test
+    public void loggedInWithoutTenantIdsMergesDenyAllKeepingWhereParameters() throws Exception {
+        Expression original = where("customer_number = ? AND `valid` = ?");
+        TenantContext.set(Collections.<Long>emptyList());
+        AccountContext.set(new AccountInfo());
+        try {
+            Expression gated = gate.getSqlSegment(original, "ac_user");
+            Assert.assertNotSame("登录态无租户绑定必须拒绝，不得 fail-open 返回原 where", original, gated);
+            String sql = gated.toString();
+            Assert.assertTrue("原 where 的 ? 占位符必须保留（MyBatis 按位绑定参数）: " + sql,
+                    sql.contains("customer_number = ?"));
+            Assert.assertTrue("必须 AND 上恒假表达式 1 = 0: " + sql, sql.contains("1 = 0"));
+        } finally {
+            AccountContext.remove();
+        }
+    }
+
+    /** 腿 2c：登录态无租户且原 where 为 null ⇒ 直接返回 1=0（无参数可保留） */
+    @Test
+    public void loggedInWithoutTenantIdsAndNoWhereReturnsDenyAll() {
+        TenantContext.set(Collections.<Long>emptyList());
+        AccountContext.set(new AccountInfo());
+        try {
+            Expression gated = gate.getSqlSegment(null, "ac_user");
+            Assert.assertNotNull(gated);
+            Assert.assertEquals("1 = 0", gated.toString());
+        } finally {
+            AccountContext.remove();
+        }
     }
 
     /** 腿 3：清单外表原样返回；负对照针 ac_user_tenant；bidr.ac_user 前缀命中；
