@@ -6,6 +6,7 @@ import com.bidr.authorization.bo.account.UserRolePermitInfo;
 import com.bidr.authorization.bo.role.RoleInfo;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.common.ClientType;
+import com.bidr.authorization.constants.dict.UserTypeDict;
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
@@ -295,6 +296,45 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public String getRegisterMode() {
         return resolveRegisterMode();
+    }
+
+    /**
+     * 租户模式闸·SSO 首登建号前（口径见接口注释）：tenant/closed 一律拒绝自动建号，
+     * 避免产生「零租户归属＝数据旁路」账号。open 保持历史行为。
+     */
+    @Override
+    public void assertSsoAutoCreateAllowed() {
+        String mode = resolveRegisterMode();
+        if (REGISTER_MODE_TENANT.equals(mode)) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "当前为租户模式，账号需由管理员/主系统创建并分配租户后使用");
+        }
+        if (REGISTER_MODE_CLOSED.equals(mode)) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "自助注册已关闭，账号请联系管理员创建");
+        }
+    }
+
+    /**
+     * 租户模式闸·SSO 已有账号登录前：tenant 模式下 SSO/REGISTER 类型必须至少有一个租户归属。
+     * 🔴 只拦自动创建类型（SSO/REGISTER）——SYSTEM/ACCOUNT 的系统管理级旁路语义不动。
+     */
+    @Override
+    public void assertSsoTenantReady(AcUser user) {
+        if (user == null || !REGISTER_MODE_TENANT.equals(resolveRegisterMode())) {
+            return;
+        }
+        String userType = user.getUserType();
+        boolean autoCreatedType = UserTypeDict.SSO.getValue().equals(userType)
+                || UserTypeDict.REGISTER.getValue().equals(userType);
+        if (!autoCreatedType) {
+            return;
+        }
+        List<AcUserTenant> relations = acUserTenantService.listByUserId(user.getUserId());
+        if (relations == null || relations.isEmpty()) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "该账号尚未分配租户，请联系管理员分配后重新登录");
+        }
     }
 
     /**

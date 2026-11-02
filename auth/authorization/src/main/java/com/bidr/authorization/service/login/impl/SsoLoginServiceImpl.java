@@ -91,14 +91,21 @@ public class SsoLoginServiceImpl {
             log.info("新用户 {} 查询主数据, 创建新用户", userName);
             AcAccount account = accountService.getAccountByUserName(userName);
             if (account == null) {
+                // 🔴 租户模式闸（2026-10-27）：tenant/closed 下不得自动创建零归属账号
+                loginService.assertSsoAutoCreateAllowed();
                 log.info("用户 {} 不在主数据名单中, 创建新用户", userName);
                 AcUser newUser = createUserService.createUser(userName, Md5Util.MD5(userName));
                 newUser.setUserType(UserTypeDict.SSO.getValue());
                 return loginService.login(newUser);
             } else {
-                return loginService.loginOrReg(account);
+                LoginRes res = loginService.loginOrReg(account);
+                // 主数据账号可能刚由 loginOrReg 落地：按 username 复核租户归属（tenant 模式）
+                loginService.assertSsoTenantReady(acUserService.getUserByUserName(userName));
+                return res;
             }
         } else {
+            // 存量账号：tenant 模式下 SSO/REGISTER 类型必须已有租户归属
+            loginService.assertSsoTenantReady(acUser);
             return loginService.login(acUser);
         }
     }
