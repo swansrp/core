@@ -1,7 +1,6 @@
 package com.bidr.authorization.service.login.impl;
 
 import com.bidr.authorization.constants.dict.UserTypeDict;
-import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.authorization.dao.entity.AcUserTenant;
 import com.bidr.authorization.dao.repository.AcTenantService;
@@ -11,7 +10,6 @@ import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.exception.ServiceException;
-import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -35,25 +33,21 @@ import static org.junit.Assert.fail;
  */
 public class SsoTenantModeGateTest {
 
+    /** mode＝yml {@code my.auth.register-mode}（唯一来源；null/空白归一为 open）。 */
     private static LoginServiceImpl service(String mode, AcUserTenantService relationService) {
-        SysConfigCacheService cache = Mockito.mock(SysConfigCacheService.class);
-        if (mode != null) {
-            SysConfig row = new SysConfig();
-            row.setConfigKey(AccountParam.ACCOUNT_REGISTER_MODE.name());
-            row.setConfigValue(mode);
-            Mockito.when(cache.getCache(AccountParam.ACCOUNT_REGISTER_MODE.name())).thenReturn(row);
-        }
-        return new LoginServiceImpl(
+        LoginServiceImpl impl = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
                 Mockito.mock(AcTenantService.class),
                 relationService,
-                cache,
+                Mockito.mock(SysConfigCacheService.class),
                 Mockito.mock(TokenService.class),
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
                 Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
-                new RegisterModeService(cache));
+                new RegisterModeService());
+        impl.setRegisterModeYml(mode);
+        return impl;
     }
 
     private static AcUserTenantService relationService(List<AcUserTenant> rows) {

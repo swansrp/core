@@ -72,7 +72,7 @@ public class LoginServiceImpl implements LoginService {
 
     /** 测试注入用（离线单测不起 Spring）；包可见不构成对外入口，风格同 AcTenantPortalService#isPlatformTier 的测试口。 */
     void setRegisterModeYml(String registerModeYml) {
-        registerModeService.setYmlFallback(registerModeYml);
+        registerModeService.setRegisterMode(registerModeYml);
     }
 
     @Override
@@ -327,8 +327,8 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * 生效注册模式：委托 {@link RegisterModeService#current()}，三级链（库值 → yml → open）
-     * 与租户绑定漏斗、ac_user 数据闸共用同一读取点，注册闸与前端形态不得各读一份。
+     * 生效注册模式：委托 {@link RegisterModeService#current()}（yml {@code my.auth.register-mode} → open，
+     * 不读 sys_config），与租户绑定漏斗、ac_user 数据闸共用同一读取点，注册闸与前端形态不得各读一份。
      */
     String resolveRegisterMode() {
         return registerModeService.current();

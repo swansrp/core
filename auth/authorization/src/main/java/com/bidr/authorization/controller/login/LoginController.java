@@ -135,7 +135,7 @@ public class LoginController {
     }
 
     @Auth(AuthNone.class)
-    @ApiOperation(value = "获取生效的自助注册模式", notes = "open/tenant/closed，三级链与注册闸同一读取点")
+    @ApiOperation(value = "获取生效的自助注册模式", notes = "open/tenant/closed，只读 yml my.auth.register-mode，与注册闸同一读取点")
     @RequestMapping(value = "/register-mode", method = RequestMethod.GET)
     public String registerMode() {
         return loginService.getRegisterMode();

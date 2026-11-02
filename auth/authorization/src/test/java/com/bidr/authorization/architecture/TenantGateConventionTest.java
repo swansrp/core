@@ -365,7 +365,7 @@ public class TenantGateConventionTest {
     }
 
     /**
-     * 腿 10c：open 判档自身失败（如 sys_config 读取异常）⇒ 不得抛穿 beforeQuery，
+     * 腿 10c：open 判档自身失败（异常）⇒ 不得抛穿 beforeQuery，
      * 方向是"按非 open 保留租户闸"（fail-close 到隔离侧，不得静默变成全放）。
      */
     @Test

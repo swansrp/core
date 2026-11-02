@@ -78,15 +78,15 @@ public interface LoginService {
     LoginRes refreshLogin(String refreshToken);
 
     /**
-     * 当前生效的自助注册模式（open/tenant/closed）：库值 → yml my.auth.register-mode → open，
-     * 与注册闸共用同一读取点；登录页据此决定注册入口形态。
+     * 当前生效的自助注册模式（open/tenant/closed）：只读 yml {@code my.auth.register-mode}（缺省＝open），
+     * 与注册闸共用同一读取点；登录页据此决定注册入口形态。🔴 不入 sys_config、不热改——切模式＝改 yml＋重启。
      *
      * @return 归一后的注册模式
      */
     String getRegisterMode();
 
     /**
-     * 租户模式闸·建号前（SSO 首登）：{@code ACCOUNT_REGISTER_MODE=tenant/closed} 时禁止自动创建账号。
+     * 租户模式闸·建号前（SSO 首登）：yml {@code my.auth.register-mode=tenant/closed} 时禁止自动创建账号。
      *
      * <p>背景（2026-10-27 子系统联调）：SSO/IdM 首登查不到账号时原实现无条件自注册一个
      * <b>零租户归属</b>账号——空租户集在 core 又被解释为「系统管理级」旁路（可切任意租户、
@@ -118,7 +118,7 @@ public interface LoginService {
     LoginRes register(String loginId, String password);
 
     /**
-     * 用户名密码注册（带租户码）：租户注册模式（ACCOUNT_REGISTER_MODE=tenant）下码必填且须命中有效租户，
+     * 用户名密码注册（带租户码）：租户注册模式（yml {@code my.auth.register-mode=tenant}）下码必填且须命中有效租户，
      * 注册即挂该租户（ac_user_tenant，is_admin=false）；open 模式选填、给了同样校验并挂。
      *
      * @param loginId    用户名
