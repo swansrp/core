@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.login.RoleBindService;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
 import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -29,7 +30,8 @@ public class CreateUserPasswordMarkerTest {
                 Mockito.mock(AcUserDeptService.class),
                 Mockito.mock(TenantResolver.class),
                 Mockito.mock(AcTenantService.class),
-                Mockito.mock(AcUserTenantService.class));
+                Mockito.mock(AcUserTenantService.class),
+                Mockito.mock(RegisterModeService.class));
     }
 
     @Test

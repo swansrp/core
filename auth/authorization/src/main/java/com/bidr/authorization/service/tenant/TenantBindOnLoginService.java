@@ -7,6 +7,7 @@ import com.bidr.authorization.dao.entity.AcUserTenant;
 import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.service.permit.PermitService;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
 import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
@@ -29,8 +30,10 @@ import java.util.Optional;
  * （fillToken 是全部登录链——密码/SSO/企微/短信 loginOrReg/refreshLogin/ghost/扫码——的
  * 公共装配点，一处挂接全链生效，补绑结果随即被同请求的 buildTenantIds 现查烤进 token）。</p>
  *
- * <p>裁定（全部满足才补绑：零绑定 ∧ 非平台档 ∧ 租户模式开）：</p>
+ * <p>裁定（全部满足才补绑：非 open 注册模式 ∧ 零绑定 ∧ 非平台档 ∧ 租户模式开）：</p>
  * <ul>
+ *   <li>🔴 open 注册模式（{@link RegisterModeService#isOpen()}）⇒ 钩子整体惰性——open＝全局账号形态，
+ *       不与租户发生关系（2026-11-02 用户裁定）；数据闸同口径旁路，登录链零感知；</li>
  *   <li>租户模式关（{@code my.tenant.line-enabled} 默认 false）⇒ 钩子整体惰性，不绑不拒；</li>
  *   <li>已有绑定 ⇒ 跳过（补绑只做一次，不重复）；</li>
  *   <li>平台档（超管）⇒ 不绑不拒——种子超管零绑定旁路"要看谁就代言谁"定稿；
@@ -56,6 +59,7 @@ public class TenantBindOnLoginService {
     private final AcTenantService acTenantService;
     private final AcUserTenantService acUserTenantService;
     private final SysConfigCacheService sysConfigCacheService;
+    private final RegisterModeService registerModeService;
 
     /**
      * 租户行级隔离开关（M-2，与 TenantLineIsolationConfiguration 同键）：
@@ -77,6 +81,10 @@ public class TenantBindOnLoginService {
      * @param roleMap  登录时点将烤入 token 的角色映射（DB 侧现查，见类注超管判据裁定）
      */
     public void bindOnLogin(Long userId, String userName, Map<Long, RoleInfo> roleMap) {
+        // open＝全局账号形态：不与租户发生关系（2026-11-02 用户裁定），补绑/拒登整体不适用
+        if (registerModeService.isOpen()) {
+            return;
+        }
         if (!tenantLineEnabled) {
             return;
         }

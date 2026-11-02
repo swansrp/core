@@ -46,7 +46,10 @@ public enum AccountParam implements Param {
                     + "tenant 模式下存量 SSO/REGISTER 类型账号若无租户归属亦拒绝登录。"
                     + "自动供给通道＝集成方先经嵌入/开放接口按主系统租户分配建号并挂租户；"
                     + "短信/微信登录仍属登录面豁免（自动建号可事后在成员管理拉入租户）；"
-                    + "账号租户流向子系统走 OAuth2 IdP 链（introspect 私有协议已随 T1.3 棒 8 下线）"),
+                    + "账号租户流向子系统走 OAuth2 IdP 链（introspect 私有协议已随 T1.3 棒 8 下线）。"
+                    + "🔴 2026-11-02 起本开关同时决定「账号与租户的关系」：open＝全局账号形态——建号/首登建号"
+                    + "不赋默认租户（即便配了 identity.tenant.code）、存量零绑定账号登录不补绑、ac_user 数据闸整体旁路；"
+                    + "tenant/closed＝按 identity.tenant.code 赋默认租户并受数据闸约束"),
 
     LOGIN_SINGLETON("渠道单一用户登录控制", "1",
             "【按需调整】1＝同一账号同渠道只允许一处在线，重复登录会顶掉旧会话（多人共用账号调试时会被互相踢下线，届时可置 0）；改后立即生效"),

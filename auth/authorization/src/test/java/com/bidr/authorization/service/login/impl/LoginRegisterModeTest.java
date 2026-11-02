@@ -54,7 +54,8 @@ public class LoginRegisterModeTest {
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
-                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class));
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
+                new RegisterModeService(cache));
         impl.setRegisterModeYml(yml);
         return impl;
     }
@@ -261,16 +262,18 @@ public class LoginRegisterModeTest {
     @Test
     public void bindRegisterTenantInsertsPlainMembership() {
         AcUserTenantService relationRepo = Mockito.mock(AcUserTenantService.class);
+        SysConfigCacheService cache = Mockito.mock(SysConfigCacheService.class);
         LoginServiceImpl service = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
                 Mockito.mock(AcTenantService.class),
                 relationRepo,
-                Mockito.mock(SysConfigCacheService.class),
+                cache,
                 Mockito.mock(TokenService.class),
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
-                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class));
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
+                new RegisterModeService(cache));
         service.bindRegisterTenant(100L, tenant(7L));
         ArgumentCaptor<AcUserTenant> captor = ArgumentCaptor.forClass(AcUserTenant.class);
         Mockito.verify(relationRepo).insert(captor.capture());

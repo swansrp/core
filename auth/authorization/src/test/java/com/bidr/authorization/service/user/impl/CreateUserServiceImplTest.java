@@ -8,6 +8,7 @@ import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.login.RoleBindService;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
 import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
@@ -23,7 +24,8 @@ import java.util.Optional;
  * <p>钉口径：三链（MDM 同步/飞书同步→AcAccount 重载；SSO JIT/注册/手机号→6 参重载）
  * 在漏斗内经 {@link TenantResolver} 赋租户——命中即幂等落 ac_user_tenant（is_admin 恒 false）、
  * 编码在库无行（配置漂移）拒建且零写入、解析空＋租户模式开拒建（fail-closed）、
- * 解析空＋模式关＝非租户形态合法不绑。拒建判定在落库前：抛错时连 ac_user 都不插。</p>
+ * 解析空＋模式关＝非租户形态合法不绑；🔴 open 注册模式（2026-11-02 用户裁定）＝全局账号，
+ * 即便 resolver 命中也不赋默认租户、line-enabled 下也不 fail-closed。拒建判定在落库前：抛错时连 ac_user 都不插。</p>
  * <p>同步链循环侧预检 {@code isTenantAssignable} 两态同钉（跳过逻辑依赖它与漏斗同判据）。</p>
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
@@ -40,6 +42,7 @@ public class CreateUserServiceImplTest {
     private AcTenantService acTenantService;
     private AcUserTenantService acUserTenantService;
     private TenantResolver tenantResolver;
+    private RegisterModeService registerModeService;
     private CreateUserServiceImpl service;
 
     @Before
@@ -48,6 +51,8 @@ public class CreateUserServiceImplTest {
         acTenantService = Mockito.mock(AcTenantService.class);
         acUserTenantService = Mockito.mock(AcUserTenantService.class);
         tenantResolver = Mockito.mock(TenantResolver.class);
+        // 默认 isOpen()＝false（Mockito 布尔缺省）＝tenant/closed 形态；open 腿在用例内单独置 true
+        registerModeService = Mockito.mock(RegisterModeService.class);
         // insert 回填主键（真实链由 MyBatis-Plus 回填），落籍需要 userId
         Mockito.when(acUserService.insert(Mockito.any(AcUser.class))).thenAnswer(inv -> {
             inv.getArgument(0, AcUser.class).setUserId(USER_ID);
@@ -60,7 +65,8 @@ public class CreateUserServiceImplTest {
                 Mockito.mock(AcUserDeptService.class),
                 tenantResolver,
                 acTenantService,
-                acUserTenantService);
+                acUserTenantService,
+                registerModeService);
     }
 
     // ==================== 建号漏斗四态 ====================
@@ -139,6 +145,38 @@ public class CreateUserServiceImplTest {
 
         Assert.assertNotNull(user);
         Mockito.verify(acUserService).insert(Mockito.any(AcUser.class));
+        Mockito.verify(acUserTenantService, Mockito.never())
+                .insertIfAbsent(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    // ==================== open 注册模式：全局账号，不赋默认租户（2026-11-02 用户裁定） ====================
+
+    @Test
+    public void openRegisterModeSkipsTenantBindingEvenWhenResolverHits() {
+        service.setTenantLineEnabled(true);
+        Mockito.when(registerModeService.isOpen()).thenReturn(true);
+        Mockito.when(tenantResolver.resolveTenantCode("openUser")).thenReturn(Optional.of(CODE));
+        Mockito.when(acTenantService.getByCode(CODE)).thenReturn(tenant(TENANT_ID));
+
+        AcUser user = service.createUser("openUser", "md5hash", "名", null, null, null);
+
+        Assert.assertNotNull("open 形态建号照常（全局账号）", user);
+        Mockito.verifyNoInteractions(tenantResolver);
+        Mockito.verify(acUserTenantService, Mockito.never())
+                .insertIfAbsent(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    public void openRegisterModeNeverRejectsCreationForUnresolvedIdentity() {
+        // open 形态即便 my.tenant.line-enabled=true 也不得 fail-closed（与闸旁路同口径）
+        service.setTenantLineEnabled(true);
+        Mockito.when(registerModeService.isOpen()).thenReturn(true);
+        Mockito.when(tenantResolver.resolveTenantCode("openUser")).thenReturn(Optional.empty());
+
+        AcUser user = service.createUser("openUser", "md5hash", "名", null, null, null);
+
+        Assert.assertNotNull(user);
+        Assert.assertTrue("同步链预检在 open 下必须放行", service.isTenantAssignable("openUser"));
         Mockito.verify(acUserTenantService, Mockito.never())
                 .insertIfAbsent(Mockito.any(), Mockito.any(), Mockito.any());
     }

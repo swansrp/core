@@ -52,7 +52,8 @@ public class SsoTenantModeGateTest {
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
-                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class));
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
+                new RegisterModeService(cache));
     }
 
     private static AcUserTenantService relationService(List<AcUserTenant> rows) {

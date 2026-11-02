@@ -13,6 +13,7 @@ import com.bidr.authorization.dao.repository.AcUserDeptService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.login.RoleBindService;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.constant.CommonConst;
@@ -49,6 +50,7 @@ public class CreateUserServiceImpl implements CreateUserService {
     private final TenantResolver tenantResolver;
     private final AcTenantService acTenantService;
     private final AcUserTenantService acUserTenantService;
+    private final RegisterModeService registerModeService;
 
     /**
      * 租户行级隔离开关（M-2，与 TenantLineIsolationConfiguration 同键）：true＝租户交付形态，
@@ -158,6 +160,8 @@ public class CreateUserServiceImpl implements CreateUserService {
      * {@link #createUser(AcAccount)}，SSO JIT／注册／手机号 loginOrReg 汇入 6 参重载——
      * 两处各自调本判定＋{@link #bindCreateUserTenant}，判据只此一份勿散改。
      * <ul>
+     *   <li>🔴 open 注册模式 ⇒ 返回 null：open＝全局账号形态，不参与租户（2026-11-02 用户裁定），
+     *       即便配了 {@code identity.tenant.code} 也不赋默认租户；</li>
      *   <li>resolver 命中 → 查 {@link AcTenantService#getByCode}：查无 ⇒ 抛
      *       {@link IllegalStateException}（配置说有租户而库里没有＝A/B 库漂移，宁可拒建）；</li>
      *   <li>解析空＋租户模式开（{@code my.tenant.line-enabled}）⇒ 抛异常拒建号
@@ -166,6 +170,9 @@ public class CreateUserServiceImpl implements CreateUserService {
      * </ul>
      */
     private AcTenant resolveCreateTenantTarget(String userName) {
+        if (registerModeService.isOpen()) {
+            return null;
+        }
         Optional<String> code = tenantResolver.resolveTenantCode(userName);
         if (!code.isPresent()) {
             if (tenantLineEnabled) {

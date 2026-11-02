@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUserTenant;
 import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
 import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.platform.service.cache.SysConfigCacheService;
@@ -22,7 +23,7 @@ import java.util.Optional;
 /**
  * Title: TenantBindOnLoginServiceTest
  * Description: 登录补绑钩子（T1.1 棒3）离线单测——Mockito 直构不起 Spring。
- * <p>钉口径：租户模式关钩子整体惰性；已有绑定跳过；平台档（超管）零绑定不绑不拒
+ * <p>钉口径：open 注册模式钩子整体惰性（全局账号形态，不碰租户）；租户模式关钩子整体惰性；已有绑定跳过；平台档（超管）零绑定不绑不拒
  * （判据＝登录时点 DB 角色集 × sys_config ACCOUNT_ADMIN_ROLE_ID，与 PermitService.containsAdminRole
  * 同一纯函数——登录时点 token 未装配，isAdmin() 不可用）；存量零绑定老号补绑一次
  * （幂等落 ac_user_tenant，is_admin 恒 false）；resolver 空／编码在库无行（漂移）拒登 fail-closed。</p>
@@ -43,6 +44,7 @@ public class TenantBindOnLoginServiceTest {
     private AcUserTenantService acUserTenantService;
     private SysConfigCacheService sysConfigCacheService;
     private TenantResolver tenantResolver;
+    private RegisterModeService registerModeService;
     private TenantBindOnLoginService service;
 
     @Before
@@ -51,10 +53,12 @@ public class TenantBindOnLoginServiceTest {
         acUserTenantService = Mockito.mock(AcUserTenantService.class);
         sysConfigCacheService = Mockito.mock(SysConfigCacheService.class);
         tenantResolver = Mockito.mock(TenantResolver.class);
+        // 默认 isOpen()＝false（Mockito 布尔缺省）＝tenant/closed 形态；open 腿在用例内单独置 true
+        registerModeService = Mockito.mock(RegisterModeService.class);
         Mockito.when(sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID)).thenReturn(ADMIN_ROLE_ID);
         Mockito.when(acUserTenantService.listByUserId(USER_ID)).thenReturn(Collections.emptyList());
         service = new TenantBindOnLoginService(tenantResolver, acTenantService, acUserTenantService,
-                sysConfigCacheService);
+                sysConfigCacheService, registerModeService);
     }
 
     // ==================== 登录钩子四态 ====================
@@ -111,6 +115,17 @@ public class TenantBindOnLoginServiceTest {
         }
         Mockito.verify(acUserTenantService, Mockito.never())
                 .insertIfAbsent(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    public void openRegisterModeHookInertEvenWithLineEnabled() {
+        // open＝全局账号形态（2026-11-02 用户裁定）：即便 line-enabled=true 也不补绑、不拒登、不查 resolver
+        service.setTenantLineEnabled(true);
+        Mockito.when(registerModeService.isOpen()).thenReturn(true);
+
+        service.bindOnLogin(USER_ID, USER_NAME, new HashMap<>(0));
+
+        Mockito.verifyNoInteractions(acUserTenantService, tenantResolver, sysConfigCacheService);
     }
 
     // ==================== 边界腿 ====================
