@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -80,6 +81,15 @@ public class OAuth2IdpController {
     private final AcUserTenantService acUserTenantService;
     private final IdentityIdpProperties idpProperties;
 
+    /**
+     * 浏览器会话 cookie 名（登录成功时由 LoginController 种下）。
+     *
+     * <p>存在的唯一理由＝authorize 是**整页导航**：浏览器无法携带 SPA 存在 localStorage 里的
+     * Authorization 头，只认头的实现会把每个已登录用户都当成未登录、302 回登录页——登录后再跳
+     * authorize 依旧无头，形成死循环。因此本端点额外接受 cookie 回退（header 优先，语义不变）。</p>
+     */
+    public static final String SESSION_COOKIE = "INKHUB_TOKEN";
+
     @Auth(AuthNone.class)
     @ApiOperation(value = "授权码签发（authorize）",
             notes = "参数 response_type=code + client_id + redirect_uri + state(可选) + scope(可选)。"
@@ -94,7 +104,11 @@ public class OAuth2IdpController {
                           @RequestParam(value = "scope", required = false) String scope,
                           HttpServletRequest request, HttpServletResponse response) throws IOException {
         // 1) 登录态先判（原 M15 出票口同款判据：手抽 token＋redis 核验，不依赖线程态）
+        //    header 优先；无头时回退会话 cookie（整页导航带不上 header，见 SESSION_COOKIE 注释）
         TokenInfo caller = AuthTokenUtil.extractToken(request);
+        if (caller == null) {
+            caller = AuthTokenUtil.resolveToken(readSessionCookie(request));
+        }
         boolean login = caller != null && tokenServiceSession.verifyToken(caller);
         if (!login) {
             redirect302(response, loginBackUrl(request));
@@ -186,6 +200,20 @@ public class OAuth2IdpController {
             return null;
         }
         return IdpJwksUtil.buildJwks(publicKey, IdpJwtUtil.computeKid(publicKey));
+    }
+
+    /** 读登录会话 cookie（无则返回 null；只在本端点用于 authorize 的整页导航回退） */
+    private static String readSessionCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (SESSION_COOKIE.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     /** SPA 登录页回跳地址：/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）> */
