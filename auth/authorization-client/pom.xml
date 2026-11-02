@@ -30,6 +30,8 @@
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <authorization-api.version>${jarVersion}</authorization-api.version>
+                <platform.version>${jarVersion}</platform.version>
+                <redis.version>${jarVersion}</redis.version>
             </properties>
         </profile>
         <profile>
@@ -44,12 +46,18 @@
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>20261101110847-97</kernel.version>
                 <authorization-api.version>20261101110847-97</authorization-api.version>
+                <platform.version>20261101110847-97</platform.version>
+                <redis.version>20261101110847-97</redis.version>
             </properties>
         </profile>
     </profiles>
 
     <dependencies>
-        <!-- 🔴 client 纪律：只依赖 api，禁依赖 authorization(server)——dep-direction-check.mjs 断言② -->
+        <!-- 🔴 client 纪律：禁依赖 authorization(server)——dep-direction-check.mjs 断言②（server→client 单向，
+             server pom 是唯一下游）。T2.3c 起 client 装客户端运行时（AuthInterceptor/TokenServiceImpl 等），
+             在 api＋kernel 之外新增运行时件直接使用面（均按实际 import 最小集）：
+             redis/platform＝TokenServiceImpl（RedisService＋SysConfigCacheService）；
+             spring-web/spring-webmvc＝AuthInterceptor（MVC 拦截器）与 AuthorizationConfigureAdapter。 -->
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>authorization-api</artifactId>
@@ -59,6 +67,25 @@
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>redis</artifactId>
+            <version>${redis.version}</version>
+        </dependency>
+        <!-- 直接使用面显式声明（版本 spring-boot-starter-parent BOM 管理；宿主必带 web 栈） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

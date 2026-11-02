@@ -1,5 +1,6 @@
 package com.bidr.authorization.service.permit;
 
+import com.bidr.authorization.authz.PlatformRoles;
 import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.bo.role.RoleInfo;
 import com.bidr.authorization.constants.token.TokenItem;
@@ -50,23 +51,12 @@ public class PermitService {
     }
 
     /**
-     * 唯一比对实现（纯函数，无 Spring 依赖）：角色映射里是否含平台管理员角色。
-     * <p>主判 containsKey（映射以 roleId 为键），再遍历 values 兜底——
-     * 兼容映射被其他序列化路径重建后键类型漂移的形态，两条都为假才算非管理员。</p>
+     * 兼容委托（T2.3c 上提）：比对逻辑正源已随类型面迁至 api
+     * {@link PlatformRoles#containsAdminRole}（逻辑逐字平移），本签名保留供既有调用方
+     * （TenantBindOnLoginService/AuthAdmin.matchesAdminRole 兼容面等）零改动。
      */
     public static boolean containsAdminRole(Map<Long, RoleInfo> roleInfoMap, Long adminRoleId) {
-        if (FuncUtil.isEmpty(roleInfoMap) || adminRoleId == null) {
-            return false;
-        }
-        if (roleInfoMap.containsKey(adminRoleId)) {
-            return true;
-        }
-        for (RoleInfo role : roleInfoMap.values()) {
-            if (role != null && FuncUtil.equals(role.getRoleId(), adminRoleId)) {
-                return true;
-            }
-        }
-        return false;
+        return PlatformRoles.containsAdminRole(roleInfoMap, adminRoleId);
     }
 
     /** 角色映射取数：上下文优先，空则回落 token（token 取不到时返回 null，由比对函数判 false）。 */

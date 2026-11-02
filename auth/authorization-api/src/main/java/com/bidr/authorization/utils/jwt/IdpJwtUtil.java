@@ -26,7 +26,7 @@ import java.util.Map;
  * Title: IdpJwtUtil
  * Description: 产品内部 IdP 的 RS256 JWT 签发/验签工具（T1.2 棒 6 纯加法，零第三方 JWT 依赖）。
  *
- * <p>与 {@link SsoJwtUtil} 的分工：那边是 SSO 票专用——票形状钉死 {@code {username, exp}} 两个
+ * <p>与 {@code SsoJwtUtil}（住 authorization server 模块，未随 T2.3c 上提）的分工：那边是 SSO 票专用——票形状钉死 {@code {username, exp}} 两个
  * claim、header 固定、ttl 硬上界 900 秒（M15 纪律，不许改）；本工具面向 IdP access_token 的
  * <b>任意 claims</b> 形态（iss/sub/uid/username/name/tenant_ids/app_id/iat/exp 九 claim，
  * 存活 3600 秒），三段 base64url 点分串、{@code SHA256withRSA}（＝RS256）签名与密钥解析口径

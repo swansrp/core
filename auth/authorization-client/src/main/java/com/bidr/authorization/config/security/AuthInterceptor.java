@@ -13,8 +13,8 @@ import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.holder.TenantContext;
 import com.bidr.authorization.holder.TokenHolder;
-import com.bidr.authorization.service.captcha.CaptchaService;
-import com.bidr.authorization.service.sms.MsgVerificationService;
+import com.bidr.authorization.service.captcha.CaptchaVerifier;
+import com.bidr.authorization.service.msg.MsgCodeVerifier;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.tenant.CrossTenant;
 import com.bidr.authorization.tenant.TenantExemptIdentityFill;
@@ -59,8 +59,14 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private final ApplicationContext applicationContext;
     private final TokenService tokenService;
-    private final CaptchaService captchaService;
-    private final MsgVerificationService msgVerificationService;
+    /**
+     * 图形/短信验证码校验 SPI（T2.3c 上提改 ObjectProvider 可选注入——宿主装配
+     * server 侧 CaptchaService/MsgVerificationService（已 implements api 校验面）即生效；
+     * 端点带 @CaptchaVerify/@MsgCodeVerify 而宿主无实现时 fail-closed 报错，
+     * 不带注解的端点零影响）
+     */
+    private final ObjectProvider<CaptchaVerifier> captchaVerifier;
+    private final ObjectProvider<MsgCodeVerifier> msgCodeVerifier;
     /** 豁免入口身份接线 SPI（可选——宿主无实现时静默跳过；ERP 侧装实现，LoginFillTokenInf 同族先例） */
     private final ObjectProvider<TenantExemptIdentityFill> tenantExemptIdentityFill;
     @Value("${my.cors.enable:false}")
@@ -156,7 +162,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (!method.isAnnotationPresent(IgnoreAuth.class)) {
             request.setAttribute(Auth.class.getName(), auth);
             if (auth != null) {
-                for (Class<? extends AuthRole> authRoleClazz : auth.value()) {
+                for (Class<? extends AuthRole> authRoleClazz : effectiveRoles(auth)) {
                     ((AuthRole) applicationContext.getBean(
                             StringUtils.uncapitalize(authRoleClazz.getSimpleName()))).validate(request, auth.perms(),
                             auth.extraData());
@@ -165,6 +171,20 @@ public class AuthInterceptor implements HandlerInterceptor {
                 ((AuthRole) applicationContext.getBean(AuthLogin.class)).validate(request);
             }
         }
+    }
+
+    /**
+     * @Auth 角色集归一（T2.3c 上提适配）：api 的 Auth.value() 默认改空数组（api 禁依赖 client，
+     * 原默认 AuthLogin.class 编译不过），空＝「登录默认」，此处归一回 AuthLogin——
+     * 与上提前裸 @Auth 的对外行为逐位等价。
+     */
+    @SuppressWarnings("unchecked")
+    private Class<? extends AuthRole>[] effectiveRoles(Auth auth) {
+        Class<? extends AuthRole>[] roles = auth.value();
+        if (roles != null && roles.length > 0) {
+            return roles;
+        }
+        return new Class[]{AuthLogin.class};
     }
 
     private void validateCaptcha(HttpServletRequest request, Method method) {
@@ -192,13 +212,25 @@ public class AuthInterceptor implements HandlerInterceptor {
     private void captchaVerify(HttpServletRequest request, String captchaVerifyType) {
         CaptchaVerificationReq req = HttpUtil.getParamMap(request, CaptchaVerificationReq.class);
         TokenInfo token = tokenService.getToken();
-        captchaService.validateCaptcha(token, captchaVerifyType, req.getGraphCode());
+        CaptchaVerifier verifier = captchaVerifier.getIfAvailable();
+        if (verifier == null) {
+            log.error("端点声明 @CaptchaVerify 但宿主未装配 CaptchaVerifier 实现（fail-closed，验证码校验不得静默跳过）");
+            throw Validator.<RuntimeException>assertException(ErrCodeSys.SYS_ERR_MSG,
+                    "[captcha] 验证码校验服务未装配，带 @CaptchaVerify 的端点已拒绝访问");
+        }
+        verifier.validateCaptcha(token, captchaVerifyType, req.getGraphCode());
     }
 
     private void msgCodeVerify(HttpServletRequest request, String msgCodeVerifyType) {
         MsgVerificationReq req = HttpUtil.getParamMap(request, MsgVerificationReq.class);
         TokenInfo token = tokenService.getToken();
-        msgVerificationService.validateMsgCode(token, req, msgCodeVerifyType);
+        MsgCodeVerifier verifier = msgCodeVerifier.getIfAvailable();
+        if (verifier == null) {
+            log.error("端点声明 @MsgCodeVerify 但宿主未装配 MsgCodeVerifier 实现（fail-closed，短信码校验不得静默跳过）");
+            throw Validator.<RuntimeException>assertException(ErrCodeSys.SYS_ERR_MSG,
+                    "[msg] 短信验证码校验服务未装配，带 @MsgCodeVerify 的端点已拒绝访问");
+        }
+        verifier.validateMsgCode(token, req, msgCodeVerifyType);
     }
 
     @Override
@@ -216,7 +248,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     private void authCompletion(HttpServletRequest request, HttpServletResponse response) {
         Auth auth = (Auth) request.getAttribute(Auth.class.getName());
         if (auth != null) {
-            for (Class<? extends AuthRole> authRoleClazz : auth.value()) {
+            for (Class<? extends AuthRole> authRoleClazz : effectiveRoles(auth)) {
                 ((AuthRole) applicationContext.getBean(
                         StringUtils.uncapitalize(authRoleClazz.getSimpleName()))).completion(request, response);
             }

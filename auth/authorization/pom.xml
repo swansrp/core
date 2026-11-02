@@ -24,6 +24,7 @@
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <authorization-api.version>${jarVersion}</authorization-api.version>
+                <authorization-client.version>${jarVersion}</authorization-client.version>
                 <platform.version>${jarVersion}</platform.version>
                 <redis.version>${jarVersion}</redis.version>
                 <email.version>${jarVersion}</email.version>
@@ -41,6 +42,7 @@
                 <kernel.version>20261101110847-97</kernel.version>
                 <!-- t23 线 authorization-api 拆分新增：CI 尚未发过 api 件的新版本，暂留 88（2026-11-01 合流） -->
                 <authorization-api.version>20261101110847-97</authorization-api.version>
+                <authorization-client.version>20261101110847-97</authorization-client.version>
                 <platform.version>20261101110847-97</platform.version>
                 <redis.version>20261101110847-97</redis.version>
                 <email.version>20261101110847-97</email.version>
@@ -60,6 +62,13 @@
             <groupId>com.bidr</groupId>
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
+        </dependency>
+        <!-- T2.3c 上提：authorization-client（客户端运行时：AuthInterceptor/AuthLogin/TokenServiceImpl 等）。
+             server→client 单向（client 禁反向依赖 server，dep-direction 断言②）；经此传递供货给存量依赖方 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization-client</artifactId>
+            <version>${authorization-client.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bidr</groupId>

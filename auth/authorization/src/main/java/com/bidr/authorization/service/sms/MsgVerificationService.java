@@ -2,6 +2,7 @@ package com.bidr.authorization.service.sms;
 
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.config.msg.IMsgVerification;
+import com.bidr.authorization.service.msg.MsgCodeVerifier;
 import com.bidr.authorization.vo.msg.MsgVerificationReq;
 
 /**
@@ -11,7 +12,7 @@ import com.bidr.authorization.vo.msg.MsgVerificationReq;
  * @author Sharp
  * @since 2023/04/27 10:05
  */
-public interface MsgVerificationService {
+public interface MsgVerificationService extends MsgCodeVerifier {
     /**
      * @param msgCodeType
      * @return

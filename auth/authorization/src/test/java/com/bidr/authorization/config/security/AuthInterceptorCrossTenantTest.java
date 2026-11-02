@@ -6,8 +6,8 @@ import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.holder.TenantContext;
 import com.bidr.authorization.holder.TokenHolder;
-import com.bidr.authorization.service.captcha.CaptchaService;
-import com.bidr.authorization.service.sms.MsgVerificationService;
+import com.bidr.authorization.service.captcha.CaptchaVerifier;
+import com.bidr.authorization.service.msg.MsgCodeVerifier;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.tenant.CrossTenant;
 import com.bidr.authorization.tenant.TenantExemptIdentityFill;
@@ -77,15 +77,22 @@ public class AuthInterceptorCrossTenantTest {
         Mockito.when(provider.getIfAvailable())
                 .thenAnswer(inv -> (TenantExemptIdentityFill) fillCalls::incrementAndGet);
 
+        // T2.3c 上提后构造面：验证码校验改 ObjectProvider<CaptchaVerifier>/<MsgCodeVerifier>
+        // （本测试端点不带 @CaptchaVerify/@MsgCodeVerify，空 provider 即可——只接线、断言零改动）
         interceptor = new AuthInterceptor(wac, Mockito.mock(TokenService.class),
-                Mockito.mock(CaptchaService.class), Mockito.mock(MsgVerificationService.class), provider);
+                emptyProvider(), emptyProvider(), provider);
 
         // "宿主无 SPI 实现"形态：getIfAvailable 返回 null
-        @SuppressWarnings("unchecked")
-        ObjectProvider<TenantExemptIdentityFill> emptyProvider = Mockito.mock(ObjectProvider.class);
-        Mockito.when(emptyProvider.getIfAvailable()).thenReturn(null);
         cleanHostInterceptor = new AuthInterceptor(wac, Mockito.mock(TokenService.class),
-                Mockito.mock(CaptchaService.class), Mockito.mock(MsgVerificationService.class), emptyProvider);
+                emptyProvider(), emptyProvider(), emptyProvider());
+    }
+
+    /** 空 SPI provider（getIfAvailable 恒 null）——构造接线的公共件 */
+    @SuppressWarnings("unchecked")
+    private static <T> ObjectProvider<T> emptyProvider() {
+        ObjectProvider<T> empty = Mockito.mock(ObjectProvider.class);
+        Mockito.when(empty.getIfAvailable()).thenReturn(null);
+        return empty;
     }
 
     @After

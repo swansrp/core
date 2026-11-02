@@ -11,7 +11,7 @@ import com.bidr.authorization.constants.token.TokenItem;
 import com.bidr.authorization.constants.token.TokenType;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
-import com.bidr.authorization.service.permit.PermitService;
+import com.bidr.authorization.authz.PlatformRoles;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -89,8 +89,8 @@ public class AuthLogin implements AuthRole {
         TenantContext.setCurrentTenantId(parseCurrentTenantId(map));
         // 🔴 平台档（2026-11-01）：&& 口径的前提——平台档必须是"账号属性"，每个请求都置位。
         // 此前只有 @Auth(AuthAdmin) 端点经 AuthAdmin 置位，同一账号在数据面时真时假；
-        // 与 PermitService.isAdmin 同一静态比对，判据不新增第二份。
-        if (PermitService.containsAdminRole(accountInfo.getRoleInfoMap(),
+        // 与 PermitService.isAdmin 同一静态比对，判据不新增第二份（T2.3c 上提后比对正源＝api PlatformRoles）。
+        if (PlatformRoles.containsAdminRole(accountInfo.getRoleInfoMap(),
                 sysConfigCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID))) {
             TenantContext.markPlatform();
         }
