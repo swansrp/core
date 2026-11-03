@@ -77,7 +77,10 @@ public enum AccountParam implements Param {
             "【现场必配·启用邮件时】邮件内跳转的改密页地址，出厂是占位星号——必须改成实际访问域名，且保留 userId/token 两个 %s 参数"),
 
     PASSWORD_EXPIRED("密码有效期", "365",
-            "【按需调整】密码多少天未改强制过期（天），默认 365；有等保/合规要求时按其数值设置");
+            "【按需调整】密码多少天未改强制过期（天），默认 365；有等保/合规要求时按其数值设置"),
+
+    AC_PARTNER_HISTORY_RETENTION_DAYS("对接访问记录保留天数", "90",
+            "【按需调整】ac_partner_history 保留多少天，默认 90 天；等保要求留痕更久时调大（表会持续变大）");
 
     private final String title;
     private final String defaultValue;
