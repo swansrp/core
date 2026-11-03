@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *     <li>腿 14~20（修复轮 1／F1）：重建跟随清旧 id 孤儿关系、空列表删本用户关系（与 null 区分）、
  *         不写水位、并发撞唯一键重读走 update（重读仍空则原样抛）、customerNumber 空⇒零写返回 null、
  *         腿 11 补「旧行真被 deleteById」、userName=null 按 customerNumber 定位。</li>
+ *     <li>腿 21~23（修复轮 2／C1）：关系行 insert 撞键吞掉不计数、不抛；租户行 upsert 撞键跳过租户写入
+ *         但用户行与关系比对照常完成；入参 name 为 null 且无其它差异 ⇒ 零 UPDATE（不恒发空更名）。</li>
  * </ul>
  *
  * @author Sharp
@@ -682,5 +684,69 @@ public class IdentityMirrorSyncServiceTest {
         Mockito.verify(userRepo, Mockito.times(1)).findByUserName(null);
         Mockito.verify(userRepo, Mockito.never()).insert(Mockito.any(IdmUserMirror.class));
         Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
+    }
+
+    // ============ 腿 21~23：修复轮 2（C1-8 关系行撞键 / C1-1 租户行撞键 / C1-7 name=null 判差）============
+
+    /**
+     * 腿 21（C1-8）：关系行 insert 撞 (userId,tenantId) 唯一键 ⇒ 吞掉、不计数、不抛，登录链正常返回。
+     * 桩：{@code listByUserId} 返回空（看似该插）＋ insert 一律抛（模拟另一并发请求已插好）。
+     */
+    @Test
+    public void applyUserScopeSwallowsDuplicateKeyOnRelationInsert() {
+        users.put(20L, userRow(20L, "000020", "bidr20", "本人"));
+        tenants.put(10L, tenantRow(10L, "T01", "租户一"));
+        Mockito.when(userTenantRepo.listByUserId(20L)).thenReturn(new ArrayList<>());
+        Mockito.when(userTenantRepo.insert(Mockito.any(IdmUserTenantMirror.class)))
+                .thenThrow(new DuplicateKeyException("uk_user_tenant: 000020-10"));
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "bidr20", "本人", items);
+
+        Assert.assertEquals("撞键不得穿出登录链，仍返回上游 id", Long.valueOf(20L), mirrorId);
+        Mockito.verify(userTenantRepo, Mockito.times(1)).insert(Mockito.any(IdmUserTenantMirror.class));
+        Assert.assertTrue("撞键关系行不得落库（关系零新增）", relations.isEmpty());
+        Mockito.verify(userTenantRepo, Mockito.never())
+                .deleteByUserAndTenant(Mockito.anyLong(), Mockito.anyLong());
+        Assert.assertEquals("撞键不得牵连租户行", 1, tenants.size());
+        Assert.assertTrue("用户行照常就位", users.containsKey(20L));
+    }
+
+    /**
+     * 腿 22（C1-1）：租户行 upsert 撞唯一键（两用户并发首登同一新租户）⇒ 本作用域吞掉并跳过租户 upsert，
+     * 用户行与关系比对照常完成（不整段丢弃）。
+     */
+    @Test
+    public void applyUserScopeSwallowsDuplicateKeyOnTenantInsert() {
+        Mockito.when(tenantRepo.insert(Mockito.any(IdmTenantMirror.class)))
+                .thenThrow(new DuplicateKeyException("PRIMARY: 10"));
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "newbie", "新人", items);
+
+        Assert.assertEquals("租户行撞键不得穿出登录链", Long.valueOf(20L), mirrorId);
+        Assert.assertNotNull("用户行必须照常落库（不整段丢弃）", users.get(20L));
+        Mockito.verify(tenantRepo, Mockito.times(1)).insert(Mockito.any(IdmTenantMirror.class));
+        Assert.assertTrue("撞键的租户行不得落库", tenants.isEmpty());
+        Mockito.verify(userTenantRepo, Mockito.times(1)).insert(Mockito.any(IdmUserTenantMirror.class));
+        Assert.assertEquals("关系照常写（租户撞键不牵连关系比对）", 1, relations.size());
+    }
+
+    /**
+     * 腿 23（C1-7）：入参 name 为 null ⇒ 以镜像既有姓名参与判差，其余字段也没变 ⇒ 零 UPDATE
+     * （修复前拿 null 判差恒为「有差异」，每次登录都发一条把 name 写空的 UPDATE）。
+     */
+    @Test
+    public void applyUserScopeSkipsUpdateWhenOnlyIncomingNameIsNull() {
+        users.put(20L, userRow(20L, "000020", "bidr20", "既有姓名"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "bidr20", null, null);
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Assert.assertEquals("既有姓名不得被空值抹平", "既有姓名", users.get(20L).getName());
+        Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
+        Mockito.verify(userRepo, Mockito.never()).insert(Mockito.any(IdmUserMirror.class));
     }
 }

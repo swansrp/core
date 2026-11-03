@@ -19,7 +19,6 @@ import org.springframework.util.StringUtils;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -103,7 +102,8 @@ public class IdentityMirrorSyncService {
      *       非 null 空列表 ⇒ 本用户关系全删（与 null 语义刻意区分，由调用方决定给不给空列表）。</li>
      *   <li>{@code tenantItems != null} ⇒ 先按 id upsert 这些租户行，再对本用户关系做全量比对增删
      *       （只动本用户，不碰其他人）。</li>
-     *   <li>并发首登撞唯一键（用户行 / 关系行）按「已存在」处置，异常不穿出登录链。</li>
+     *   <li>并发首登撞唯一键：用户行<b>重读命中 ⇒ 走 update 腿；重读仍无行 ⇒ 原样抛出</b>（不吞未知错误）；
+ *       关系行／租户行撞键按「已存在」处置（跳过本次写），异常不穿出登录链。</li>
      *   <li>不写水位（全量同步才写）、不做作用域外删除。</li>
      * </ul>
      * 写入面仍唯一（本类）：子系统登录链不需要运维凭据拉全量快照，只写自己那一行。
@@ -149,12 +149,12 @@ public class IdentityMirrorSyncService {
         }
         // 删旧插新跟随上游新 id：两个业务键各自可能命中残留行（同一行去重），旧 id 的关系随后清孤儿
         Set<Long> staleIds = new HashSet<>();
-        Long staleByCustomerNumber = followRebuiltRow(located, byCustomerNumber, resolvedId, customerNumber,
+        Long staleByCustomerNumber = followRebuiltRow(located, byCustomerNumber, resolvedId,
                 "customerNumber", IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
         if (staleByCustomerNumber != null) {
             staleIds.add(staleByCustomerNumber);
         }
-        Long staleByUserName = followRebuiltRow(located, byUserName, resolvedId, userName, "userName",
+        Long staleByUserName = followRebuiltRow(located, byUserName, resolvedId, "userName",
                 IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
         if (staleByUserName != null) {
             staleIds.add(staleByUserName);
@@ -180,17 +180,21 @@ public class IdentityMirrorSyncService {
                 if (concurrent == null) {
                     throw e;
                 }
-                log.warn("[身份镜像]登录作用域写撞唯一键（并发首登），改走 update 腿: id={} userName={} customerNumber={}",
-                        resolvedId, userName, customerNumber);
+                log.info("[身份镜像]登录作用域写撞唯一键（并发首登），改走 update 腿: id={} userName={} customerNumber={} cause={}",
+                        resolvedId, userName, customerNumber, e.getMessage());
                 current = concurrent;
             }
         }
-        if (!inserted && current != null && userChanged(current, customerNumber, userName, name)) {
-            current.setCustomerNumber(customerNumber);
-            current.setUserName(userName);
-            current.setName(name);
-            current.setUpdateAt(now);
-            userMirrorService.updateById(current);
+        if (!inserted && current != null) {
+            // name 为 null 时以镜像既有值参与判差与写回：updateById 忽略 null 字段，若拿 null 判差则每次登录恒发空 UPDATE
+            String effName = name != null ? name : current.getName();
+            if (userChanged(current, customerNumber, userName, effName)) {
+                current.setCustomerNumber(customerNumber);
+                current.setUserName(userName);
+                current.setName(effName);
+                current.setUpdateAt(now);
+                userMirrorService.updateById(current);
+            }
         }
 
         // 用户行已就位后清旧 id 孤儿关系（旧 id ≠ resolvedId，不影响随后按 resolvedId 重插）
@@ -203,7 +207,13 @@ public class IdentityMirrorSyncService {
         int tenantCount = 0;
         if (tenantItems != null) {
             tenantCount = tenantItems.size();
-            syncTenants(tenantItems, now);
+            try {
+                syncTenants(tenantItems, now);
+            } catch (DuplicateKeyException e) {
+                // 并发首登同一新租户：租户行 PK 撞键已由他人写入 ⇒ 本次跳过租户 upsert，关系照常比对
+                // 🔴 catch 只在本作用域调用点：全量 synchronize() 仍须上抛让 job 重试
+                log.warn("[身份镜像]租户行并发撞键（已由他人写入），本次跳过租户 upsert: {}", e.getMessage());
+            }
             Map<Long, IdmUserTenantMirror> existingRelations = new HashMap<>();
             for (IdmUserTenantMirror relation : userTenantMirrorService.listByUserId(resolvedId)) {
                 if (relation.getTenantId() != null) {
@@ -228,8 +238,8 @@ public class IdentityMirrorSyncService {
                         relationsInserted++;
                     } catch (DuplicateKeyException e) {
                         // 并发首登撞 (userId,tenantId) 唯一键 ⇒ 关系已存在：不计数、不抛
-                        log.warn("[身份镜像]关系行已存在（并发写吞掉唯一键冲突）: userId={} tenantId={}",
-                                resolvedId, item.getId());
+                        log.info("[身份镜像]关系行已存在（并发写吞掉唯一键冲突）: userId={} tenantId={} cause={}",
+                                resolvedId, item.getId(), e.getMessage());
                     }
                 }
             }
@@ -251,13 +261,9 @@ public class IdentityMirrorSyncService {
      * 任何一次全量比对认领它（本形态全量 job 可能不装配）⇒ 必须在此显式逐条删除。
      * 只按 userId 收窄，绝不碰其他人的关系行。</p>
      *
-     * @param staleId 被删旧用户 id（null ⇒ 直接返回 0）
-     * @return 删到的关系行数（日志/排障用）
+     * @param staleId 被删旧用户 id（调用方只传 {@code followRebuiltRow} 返回的非 null 值）
      */
-    private int purgeUserRelations(Long staleId) {
-        if (staleId == null) {
-            return 0;
-        }
+    private void purgeUserRelations(Long staleId) {
         int purged = 0;
         for (IdmUserTenantMirror relation : userTenantMirrorService.listByUserId(staleId)) {
             if (userTenantMirrorService.deleteByUserAndTenant(staleId, relation.getTenantId())) {
@@ -267,7 +273,6 @@ public class IdentityMirrorSyncService {
         if (purged > 0) {
             log.warn("[身份镜像]重建跟随清孤儿关系: 旧用户 id={} 删除关系 {} 条", staleId, purged);
         }
-        return purged;
     }
 
     /** 用户按 id upsert：insert miss 行、有差异才 update、无差异跳过（返回 {inserted, updated}） */
@@ -293,17 +298,12 @@ public class IdentityMirrorSyncService {
                 }
                 IdmUserMirror current = existing.get(item.getId());
                 if (current == null) {
-                    Long staleByCustomerNumber = followRebuiltRow(existing,
-                            existingByCustomerNumber.get(item.getCustomerNumber()),
-                            item.getId(), item.getCustomerNumber(), "customerNumber",
+                    followRebuiltRow(existing, existingByCustomerNumber.get(item.getCustomerNumber()),
+                            item.getId(), "customerNumber",
                             IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
-                    Long staleByUserName = followRebuiltRow(existing,
-                            existingByUserName.get(item.getUserName()),
-                            item.getId(), item.getUserName(), "userName",
+                    followRebuiltRow(existing, existingByUserName.get(item.getUserName()),
+                            item.getId(), "userName",
                             IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
-                    // 删旧行后业务键 map 同步剔除旧 id 行：保持「map 值必在库」不变式（F1-4）
-                    removeStaleEntry(existingByCustomerNumber, staleByCustomerNumber, IdmUserMirror::getId);
-                    removeStaleEntry(existingByUserName, staleByUserName, IdmUserMirror::getId);
                     IdmUserMirror row = new IdmUserMirror();
                     row.setId(item.getId());
                     row.setCustomerNumber(item.getCustomerNumber());
@@ -331,6 +331,10 @@ public class IdentityMirrorSyncService {
                 }
             }
         }
+        // 全部 upsert 完成后统一剔除指向已删旧 id 的条目：保持「业务键 map 值必在库」不变式（F1-4）；
+        // 放在循环外统一扫，双业务键同命中同一残留行时两张 map 都不会残留（不依赖单腿返回值）
+        existingByCustomerNumber.values().removeIf(r -> !existing.containsKey(r.getId()));
+        existingByUserName.values().removeIf(r -> !existing.containsKey(r.getId()));
         return new int[]{inserted, updated};
     }
 
@@ -354,7 +358,7 @@ public class IdentityMirrorSyncService {
                 IdmTenantMirror current = existing.get(item.getId());
                 if (current == null) {
                     followRebuiltRow(existing, existingByTenantCode.get(item.getTenantCode()),
-                            item.getId(), item.getTenantCode(), "tenantCode",
+                            item.getId(), "tenantCode",
                             IdmTenantMirror::getId, staleId -> tenantMirrorService.deleteById(staleId));
                     IdmTenantMirror row = new IdmTenantMirror();
                     row.setId(item.getId());
@@ -378,6 +382,8 @@ public class IdentityMirrorSyncService {
                 }
             }
         }
+        // 同 syncUsers：全部 upsert 后统一剔除指向已删旧 id 的业务键条目（F1-4）
+        existingByTenantCode.values().removeIf(r -> !existing.containsKey(r.getId()));
         return new int[]{inserted, updated};
     }
 
@@ -395,7 +401,7 @@ public class IdentityMirrorSyncService {
      * @return 被删掉的旧行 id（未删 ⇒ null）——单用户作用域写用它清旧 id 的残留关系行；
      *         全量同步忽略返回值（其后全量比对自愈）
      */
-    private <T> Long followRebuiltRow(Map<Long, T> existing, T stale, Long incomingId, String keyValue,
+    private <T> Long followRebuiltRow(Map<Long, T> existing, T stale, Long incomingId,
                                       String keyName, Function<T, Long> idGetter,
                                       Consumer<Long> deleter) {
         if (stale == null) {
@@ -411,18 +417,6 @@ public class IdentityMirrorSyncService {
         deleter.accept(staleId);
         existing.remove(staleId);
         return staleId;
-    }
-
-    /** 业务键 map 剔除指向已删旧 id 的条目（F1-4：保持「map 值必在库」不变式） */
-    private static <K, T> void removeStaleEntry(Map<K, T> byKey, Long staleId, Function<T, Long> idGetter) {
-        if (staleId == null) {
-            return;
-        }
-        for (Iterator<Map.Entry<K, T>> it = byKey.entrySet().iterator(); it.hasNext(); ) {
-            if (Objects.equals(idGetter.apply(it.next().getValue()), staleId)) {
-                it.remove();
-            }
-        }
     }
 
     /** 关系按 (userId,tenantId) 全量比对增删（返回 {inserted, deleted}） */
