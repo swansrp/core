@@ -15,11 +15,11 @@ import org.springframework.stereotype.Service;
 public class AcDeptSchema extends BaseMybatisSchema<AcDept> {
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `ac_dept` (\n" +
-                "  `dept_id` varchar(20) NOT NULL COMMENT '部门id',\n" +
-                "  `pid` varchar(20) DEFAULT NULL COMMENT '父部门id',\n" +
-                "  `grand_id` varchar(20) DEFAULT NULL COMMENT '祖父id',\n" +
-                "  `ancestors` varchar(50) DEFAULT '' COMMENT '祖级列表',\n" +
-                "  `name` varchar(30) DEFAULT '' COMMENT '部门名称',\n" +
+                "  `dept_id` varchar(50) NOT NULL COMMENT '部门id',\n" +
+                "  `pid` varchar(50) DEFAULT NULL COMMENT '父部门id',\n" +
+                "  `grand_id` varchar(50) DEFAULT NULL COMMENT '祖父id',\n" +
+                "  `ancestors` varchar(200) DEFAULT '' COMMENT '祖级列表',\n" +
+                "  `name` varchar(100) DEFAULT '' COMMENT '部门名称',\n" +
                 "  `abbreviate` varchar(50) DEFAULT NULL COMMENT '简称',\n" +
                 "  `founded_time` datetime DEFAULT NULL COMMENT '建立时间',\n" +
                 "  `category` varchar(20) DEFAULT NULL COMMENT '类别',\n" +
