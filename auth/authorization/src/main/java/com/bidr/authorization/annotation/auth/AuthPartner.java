@@ -11,6 +11,7 @@ import com.bidr.authorization.dao.entity.AcPartnerHistory;
 import com.bidr.authorization.dao.repository.AcPartnerHistoryService;
 import com.bidr.authorization.dao.repository.AcPartnerService;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.authorization.holder.TenantContext;
 import com.bidr.kernel.config.response.Response;
 import com.bidr.kernel.utils.Base64Util;
 import com.bidr.kernel.utils.HttpUtil;
@@ -51,6 +52,12 @@ public class AuthPartner implements AuthRole {
         Validator.assertNotNull(acPartner, AccountErrCode.AC_PARTNER_NOT_EXISTED);
         Validator.assertEquals(acPartner.getAppSecret(), info[1], AccountErrCode.AC_PARTNER_SECRET_INVALID);
         buildContext(acPartner);
+        // 机器凭证＝平台级服务间凭证（ac_partner 本就是平台登记面）：显式置平台档，
+        // 否则 TenantDataGate 判序会把本上下文当「已登录无租户非平台」，ac_user 锚点查询
+        // 被注入 1=0 —— open-api 成员同步按登录名回填（getById(ac_user)）就恒空
+        // （6.60 真机首验抓到：projects/teams 有数、members 全空）。AuthAdmin 同款：只有
+        // 校验全过才可达标记；TenantContext 由 AuthInterceptor.afterCompletion 每请求 remove。
+        TenantContext.markPlatform();
         request.setAttribute(AcPartnerHistory.class.getName(), buildPartnerHistory(request, acPartner));
     }
 

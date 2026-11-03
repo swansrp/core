@@ -75,6 +75,38 @@ public class AuthPartnerTest {
         verifyNoInteractions(historyService);
     }
 
+    @Test
+    public void validateSuccessMarksPlatformTier() {
+        // 6.60 真机抓到的缺口：机器凭证上下文不置平台档 ⇒ TenantDataGate 判「已登录无租户非平台」，
+        // ac_user 锚点查询被注入 1=0 ⇒ open-api 成员按登录名回填恒空。校验全过后必须 markPlatform
+        // （对齐 AuthAdmin：拒绝路径不得标记）。
+        AcPartner partner = new AcPartner();
+        partner.setAppKey("epc-ai");
+        partner.setAppSecret("s3cret");
+        partner.setPlatform("epc");
+        org.mockito.Mockito.when(acPartnerService.getByAppKey("epc-ai")).thenReturn(partner);
+
+        Assert.assertFalse("前置：上下文未建立时不得是平台档", com.bidr.authorization.holder.TenantContext.isPlatform());
+        authPartner.validate(request("epc-ai:s3cret"));
+        Assert.assertTrue("机器凭证校验通过后必须置平台档（TenantDataGate 旁路判据）",
+                com.bidr.authorization.holder.TenantContext.isPlatform());
+    }
+
+    @Test
+    public void validateFailureMustNotMarkPlatform() {
+        // 与上一条互为红绿两态：拒绝路径绝不落平台档标记（防线程池残留假平台档）。
+        ServiceException ex = Assert.assertThrows(ServiceException.class,
+                () -> authPartner.validate(request("epc-ai")));
+        Assert.assertSame(AccountErrCode.AC_PARTNER_SECRET_INVALID, ex.getErrCode());
+        Assert.assertFalse("拒绝路径不得置平台档", com.bidr.authorization.holder.TenantContext.isPlatform());
+    }
+
+    @org.junit.After
+    public void clearTenantContext() {
+        // 线程池串档防线（TenantContextTest 同款口径）：测试自己清自己。
+        com.bidr.authorization.holder.TenantContext.remove();
+    }
+
     private static MockHttpServletRequest request(String apiKey) {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("x-api-key", Base64Util.encode(apiKey));
