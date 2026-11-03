@@ -11,6 +11,7 @@ import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
+import org.mockito.Mockito;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;

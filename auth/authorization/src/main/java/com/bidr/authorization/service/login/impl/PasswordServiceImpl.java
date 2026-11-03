@@ -91,7 +91,11 @@ public class PasswordServiceImpl implements PasswordService {
             user = acUserService.getByCustomerNumber(AccountContext.getOperator());
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
-        if (FuncUtil.isNotEmpty(req.getLoginId())) {
+        // 归属校验只在「已登录」时比对 operator：过期改密/首次设密发生在登录页（无会话，operator=null），
+        // 归属证明＝旧密码验签（下方 AC_PASSWORD_OLD_NOT_RIGHT）＋验证码，不做会话比对；
+        // 已登录态传他人 loginId 仍恒拒（#47：原判据不区分有无会话，把过期改密整条路堵死成
+        // 「不能修改他人密码」——6.60 真机 zhang_p 实证，password_last_time 空即触发过期）。
+        if (FuncUtil.isNotEmpty(req.getLoginId()) && FuncUtil.isNotEmpty(AccountContext.getOperator())) {
             Validator.assertEquals(user.getCustomerNumber(), AccountContext.getOperator(),
                     AccountErrCode.AC_PASSWORD_OWNER_MISMATCH);
         }
