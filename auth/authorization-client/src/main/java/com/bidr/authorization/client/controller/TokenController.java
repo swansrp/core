@@ -1,4 +1,4 @@
-package com.bidr.authorization.controller.common;
+package com.bidr.authorization.client.controller;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Title: TokenController
  * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ *
+ * <p>T3.1 棒0：自 authorization(server) 同 URL 迁入 client（M-36 迁移不并存，server 原件已删）——
+ * 宿主（hub／epc）共用同一套会话端点实现，逻辑逐行不变。VO 已上提 authorization-api 同包名（M-20）。</p>
  *
  * @author Sharp
  * @since 2023/04/26 16:53

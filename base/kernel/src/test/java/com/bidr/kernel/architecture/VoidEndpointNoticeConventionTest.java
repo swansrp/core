@@ -125,7 +125,7 @@ public class VoidEndpointNoticeConventionTest {
         Path root = frameworkRoot();
         assertEndpointClean(root.resolve("base/kernel/src/main/java/com/bidr/kernel/controller/BaseAdminController.java"),
                 "Resp.notice(\"导入任务已提交\")");
-        assertEndpointClean(root.resolve("auth/authorization/src/main/java/com/bidr/authorization/controller/login/LogoffController.java"),
+        assertEndpointClean(root.resolve("auth/authorization-client/src/main/java/com/bidr/authorization/client/controller/LogoffController.java"),
                 "Resp.notice(\"已退出登录\")");
         // 断言型端点改成了非 void 返回值，不再是扫描面里的 void 端点
         String userInfo = new String(Files.readAllBytes(root.resolve(

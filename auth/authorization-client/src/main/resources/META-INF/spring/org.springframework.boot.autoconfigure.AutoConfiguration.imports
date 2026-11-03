@@ -1,2 +1,3 @@
 com.bidr.authorization.client.config.AuthzClientAutoConfiguration
 com.bidr.authorization.client.oauth2.IdpBearerAutoConfiguration
+com.bidr.authorization.client.oauth2.OAuth2ClientAutoConfiguration
