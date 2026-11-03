@@ -30,8 +30,11 @@ public class LogoffController {
 
     @RequestMapping(value = "", method = RequestMethod.POST)
     public void logoff() {
+        // 语义＝删票即完成。原第二行 verifyToken(null) 在删票之后验 null 必然 assertNotNull 炸
+        // （TokenServiceImpl:78）⇒ 登出永远以「登录信息已过期」异常信封收场、前端不跳登录页
+        // （6.60 真机 #39 实证：日志 LogoffController.java:34 栈）。删票后本无票可验，验票收尾
+        // 无意义——2023 年出生时即如此，T3.1 重构 TokenService 后由潜伏转为必炸。
         tokenService.removeToken();
-        tokenService.verifyToken(null);
         Resp.notice("已退出登录");
     }
 }
