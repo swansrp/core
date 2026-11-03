@@ -44,6 +44,11 @@ public class MenuService {
 
     public List<MenuTreeRes> getMenuTree(String customerNumber) {
         AcUser acUser = acUserService.getByCustomerNumber(customerNumber);
+        if (acUser == null) {
+            // 数据闸对「登录态但无租户绑定」的用户恒假（ac_user 查不到）——这是无权限，不是系统错误，
+            // 菜单给空集合；不能让 null.getUserId() 变成 500。
+            return Collections.emptyList();
+        }
         Long userId = acUser.getUserId();
         String clientType = ClientTypeHolder.get();
         List<AcMenu> roleMenuList = acUserRoleMenuService.getAllMenu(customerNumber, clientType);

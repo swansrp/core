@@ -15,8 +15,10 @@ import java.util.function.Supplier;
  * <li>未 set（无上下文）⇒ {@code null}＝旁路形态——老项目、老 token、免登链路都落这里，
  * 数据闸据此放行，绝不抛错；</li>
  * <li>set 了 null ⇒ 同上返回 {@code null}（口径统一，调用方无需区分"没 set"与"set 了空档"）；</li>
- * <li>set 了空列表 ⇒ 返回空列表＝用户无租户归属；🔴 数据闸口径（用户弹卡终裁）＝
- * <b>空集与 null 同为旁路（全量可见，兼容优先）</b>，消费方不得据空集判"拒绝"。</li>
+ * <li>set 了空列表 ⇒ 返回空列表＝用户无租户归属；🔴 数据闸口径（2026-11-01 用户裁定，
+ * "&& 口径"）：<b>无请求上下文（内部任务/异步/初始化）时旁路；已登录态则按拒绝处理
+ * （恒假 1=0）</b>——"没填租户"不再等于超级权限。消费方需区分两态时以
+ * {@code AccountContext.get() == null} 为准。</li>
  * </ul></p>
  * <p>isPlatform()：平台档标记位，未 set 或从未标记 ⇒ false；由棒2 在构建上下文时经
  * {@code set(tenantIds, true)} 或 {@code markPlatform()} 显式置位。</p>

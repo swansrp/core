@@ -32,8 +32,8 @@ import java.util.Map;
  * Description: 框架内置「我的租户」清单/切换的离线单测——真 ThreadLocal 上下文
  * （AccountContext/TenantContext 直设直清）＋构造注入 Mockito 桩，不起 Spring。
  * <p>覆盖：成员模式清单装配（对齐/current/admin 标/停用租户不展示）／系统管理级与平台档
- * 全量腿（含成员关系行 isAdmin 标真）／switch 四态：成员只改 TENANT_ID（零位移）、
- * 平台档切非成员租户两键同改（数据闸跟切）、非成员拒、停用租户拒、空参拒。</p>
+ * 全量腿（含成员关系行 isAdmin 标真）／switch 四态：成员与提权档都只改 TENANT_ID
+ * （TENANT_IDS 零位移——写窄会让提权档自毁切换资格）、非成员拒、停用租户拒、空参拒。</p>
  * <p>🔴 提权档判定（2026-11-01 起 && ：系统管理级（登录烤集为空）且 平台管理员角色）：
  * 正反两面各有用例——无绑定＋超管放行；无绑定非超管、绑了租户的超管一律拒（封堵 JIT 新号 fail-open）。
  * 10-20 撤回的死路（isPlatform() 切面位）不在被测面。</p>
@@ -175,25 +175,43 @@ public class TenantMyServiceTest {
     }
 
     @Test
-    public void platformSwitchNonMemberTenantRewritesBothKeys() {
+    public void platformSwitchNonMemberTenantRewritesOnlyTenantId() {
         // && 判据：无绑定＋超管 ⇒ 提权；非成员关系不查
         grantAdminRole();
 
         service.switchTenant(2L);
 
         Mockito.verify(tokenService).putItem(TokenItem.TENANT_ID.name(), 2L);
-        Mockito.verify(tokenService).putItem(TokenItem.TENANT_IDS.name(), Collections.singletonList(2L));
+        Mockito.verify(tokenService, Mockito.never())
+                .putItem(Mockito.eq(TokenItem.TENANT_IDS.name()), Mockito.any());
         Assert.assertEquals(Long.valueOf(2L), TenantContext.currentTenantId());
     }
 
     @Test
-    public void systemLevelAdminSwitchRewritesBothKeys() {
+    public void systemLevelAdminSwitchRewritesOnlyTenantId() {
         // 不设 TenantContext（系统管理级）＋超管角色 ⇒ && 成立
         grantAdminRole();
         service.switchTenant(1L);
 
         Mockito.verify(tokenService).putItem(TokenItem.TENANT_ID.name(), 1L);
-        Mockito.verify(tokenService).putItem(TokenItem.TENANT_IDS.name(), Collections.singletonList(1L));
+        Mockito.verify(tokenService, Mockito.never())
+                .putItem(Mockito.eq(TokenItem.TENANT_IDS.name()), Mockito.any());
+    }
+
+    /**
+     * 切换资格不自毁（2026-11-02 回归腿）：提权档切完，下一请求按 token 重建的租户集仍为空
+     * ⇒ {@code elevated()} 继续成立，清单仍给全量、齿轮不消失。
+     */
+    @Test
+    public void elevatedSwitchKeepsElevationSoSwitcherSurvives() {
+        grantAdminRole();
+        Mockito.when(acUserTenantService.listByUserId(USER_ID)).thenReturn(Collections.emptyList());
+
+        service.switchTenant(2L);
+        List<TenantMyVO> rows = service.listMy();
+
+        Assert.assertEquals("切换后清单不得清空（TENANT_IDS 零位移）", 2, rows.size());
+        Assert.assertEquals(Boolean.TRUE, rows.get(1).getCurrent());
     }
 
     @Test

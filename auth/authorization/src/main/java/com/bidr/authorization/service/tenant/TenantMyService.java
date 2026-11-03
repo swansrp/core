@@ -40,9 +40,11 @@ import java.util.stream.Collectors;
  * </ol>
  * ⇒ 只有"既没绑租户、又是超管"的平台账号（种子 bidrAdmin 形态）可代言任意租户；
  * JIT 新号（无绑定但非超管）与绑了租户的超管一律不可。
- * <p>命中 ⇒ 清单＝全部有效租户；切换 ⇒ 目标租户存在且 valid 即可，且 🔴 同步把 token 的
- * 与业务 TenantLine（按 TENANT_ID）才能一齐跟到目标租户；下次登录 {@code buildTenantIds}
- * 按真实关系重烤，系统级自动落回旁路语义。
+ * <p>命中 ⇒ 清单＝全部有效租户；切换 ⇒ 目标租户存在且 valid 即可，只改写 token 的 TENANT_ID。
+ * 🔴 提权档<b>不改写 TENANT_IDS</b>（2026-11-02）：平台档自 2026-11-01 起是每请求置位的账号属性
+ * （{@code AuthLogin.buildContext} 按 ACCOUNT_ADMIN_ROLE_ID 判），数据闸与行级隔离都按平台档旁路，
+ * TENANT_IDS 不再承担"跟切"职责；写了反而推翻 {@link #elevated()} 的"登录烤集为空"条件，
+ * 使切换一次后清单变空、齿轮消失（切换资格自毁）。
  * </p>
  * <p>
  * 普通成员（有租户集且非平台档）：清单＝成员关系 × 有效租户目录对齐（停用租户的关系行不展示，
@@ -97,7 +99,8 @@ public class TenantMyService {
 
     /**
      * 切换当前租户（改写 token TENANT_ID 键，免重登录；下一请求经 AuthLogin 重建线程态）。
-     * 判定与改写口径见类注；🔴 成员路径不动 TENANT_IDS（零位移），提权路径两键同改（数据闸跟切）。
+     * 判定与改写口径见类注；🔴 两条路径都<b>只动 TENANT_ID</b>、不动 TENANT_IDS——
+     * 成员档的租户集是"可见面"，提权档的租户集是"提权判据"（写窄即自毁切换资格）。
      */
     public void switchTenant(Long tenantId) {
         Validator.assertNotNull(tenantId, ErrCodeSys.PA_PARAM_FORMAT, "tenantId");
@@ -109,9 +112,6 @@ public class TenantMyService {
             Validator.assertNotNull(relation, AccountErrCode.AC_TENANT_NOT_MEMBER);
         }
         tokenService.putItem(TokenItem.TENANT_ID.name(), tenantId);
-        if (elevated) {
-            tokenService.putItem(TokenItem.TENANT_IDS.name(), Collections.singletonList(tenantId));
-        }
         TenantContext.setCurrentTenantId(tenantId);
         log.info("[租户切换]工号: {}, 目标租户: {} ({}), 提权档: {}", userId(), tenant.getName(), tenant.getId(), elevated);
     }
