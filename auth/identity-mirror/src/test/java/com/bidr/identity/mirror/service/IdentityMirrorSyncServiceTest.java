@@ -13,7 +13,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.springframework.dao.DuplicateKeyException;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -63,8 +65,15 @@ public class IdentityMirrorSyncServiceTest {
         stateRepo = Mockito.mock(IdmMirrorStateService.class);
 
         Mockito.when(userRepo.listAll()).thenAnswer(inv -> new ArrayList<>(users.values()));
+        // 🔴 UK 强制（对账单 #23）：模拟真库 uk_customer_number——同号不同 id 的 insert 必炸
         Mockito.when(userRepo.insert(Mockito.any(IdmUserMirror.class))).thenAnswer(inv -> {
             IdmUserMirror row = inv.getArgument(0);
+            for (IdmUserMirror other : users.values()) {
+                if (row.getCustomerNumber() != null && row.getCustomerNumber().equals(other.getCustomerNumber())
+                        && !row.getId().equals(other.getId())) {
+                    throw new DuplicateKeyException("uk_customer_number: " + row.getCustomerNumber());
+                }
+            }
             users.put(row.getId(), row);
             return true;
         });
@@ -73,10 +82,21 @@ public class IdentityMirrorSyncServiceTest {
             users.put(row.getId(), row);
             return true;
         });
+        Mockito.when(userRepo.deleteById(Mockito.any(Serializable.class))).thenAnswer(inv -> {
+            Long id = ((Number) inv.getArgument(0)).longValue();
+            return users.remove(id) != null;
+        });
 
         Mockito.when(tenantRepo.listAll()).thenAnswer(inv -> new ArrayList<>(tenants.values()));
+        // 🔴 UK 强制（对账单 #23）：模拟真库 uk_tenant_code
         Mockito.when(tenantRepo.insert(Mockito.any(IdmTenantMirror.class))).thenAnswer(inv -> {
             IdmTenantMirror row = inv.getArgument(0);
+            for (IdmTenantMirror other : tenants.values()) {
+                if (row.getTenantCode() != null && row.getTenantCode().equals(other.getTenantCode())
+                        && !row.getId().equals(other.getId())) {
+                    throw new DuplicateKeyException("uk_tenant_code: " + row.getTenantCode());
+                }
+            }
             tenants.put(row.getId(), row);
             return true;
         });
@@ -84,6 +104,10 @@ public class IdentityMirrorSyncServiceTest {
             IdmTenantMirror row = inv.getArgument(0);
             tenants.put(row.getId(), row);
             return true;
+        });
+        Mockito.when(tenantRepo.deleteById(Mockito.any(Serializable.class))).thenAnswer(inv -> {
+            Long id = ((Number) inv.getArgument(0)).longValue();
+            return tenants.remove(id) != null;
         });
 
         Mockito.when(userTenantRepo.listAll()).thenAnswer(inv -> new ArrayList<>(relations));
@@ -146,6 +170,14 @@ public class IdentityMirrorSyncServiceTest {
         item.setUserId(userId);
         item.setTenantId(tenantId);
         return item;
+    }
+
+    private static IdmUserTenantMirror relRow(long userId, long tenantId) {
+        IdmUserTenantMirror row = new IdmUserTenantMirror();
+        row.setUserId(userId);
+        row.setTenantId(tenantId);
+        row.setValid("1");
+        return row;
     }
 
     private static SnapshotRes snapshot(long watermark) {
@@ -234,5 +266,85 @@ public class IdentityMirrorSyncServiceTest {
         Mockito.verify(userTenantRepo, Mockito.times(1)).deleteByUserAndTenant(2L, 10L);
         Assert.assertEquals("撤销后只剩一条关系", 1, relations.size());
         Assert.assertEquals("2000", states.get(IdentityMirrorSyncService.STATE_KEY_SNAPSHOT).getStateValue());
+    }
+
+    // ======================== 腿 4~6：上游软删重建（对账单 #23 方案 A） ========================
+    // 场景：上游「停用=置 valid=0 行还在，再启用同 code=插新行（新 id）」——镜像保留行
+    // （upsert-only 不删行）占住唯一键，同步必须删旧插新跟随上游新 id，否则永久撞键。
+
+    /** 腿 4：用户同 customer_number 重建——镜像旧 id=5 让位，新 id=9 落库且仅一行 */
+    @Test
+    public void userRebuiltWithSameCustomerNumberFollowsNewUpstreamId() {
+        IdmUserMirror stale = new IdmUserMirror();
+        stale.setId(5L);
+        stale.setCustomerNumber("000009");
+        stale.setName("老王");
+        stale.setValid("1");
+        users.put(5L, stale);
+        SnapshotRes snap = new SnapshotRes();
+        snap.setWatermark(3000L);
+        snap.getUsers().add(user(9L, "000009", "王五新"));
+        Mockito.when(client.fetchSnapshot()).thenReturn(snap);
+
+        IdentityMirrorSyncService.SyncResult result = service.synchronize();
+
+        Assert.assertFalse("旧 id 行必须让位（删旧插新）", users.containsKey(5L));
+        IdmUserMirror row = users.get(9L);
+        Assert.assertNotNull("新 id 行必须落库", row);
+        Assert.assertEquals("000009", row.getCustomerNumber());
+        Assert.assertEquals("王五新", row.getName());
+        Assert.assertEquals(1, result.usersInserted);
+    }
+
+    /** 腿 5：租户同 tenant_code 重建——与腿 4 同构 */
+    @Test
+    public void tenantRebuiltWithSameTenantCodeFollowsNewUpstreamId() {
+        IdmTenantMirror stale = new IdmTenantMirror();
+        stale.setId(5L);
+        stale.setTenantCode("TOLD");
+        stale.setTenantName("旧租户");
+        stale.setValid("1");
+        tenants.put(5L, stale);
+        SnapshotRes snap = new SnapshotRes();
+        snap.setWatermark(3000L);
+        snap.getTenants().add(tenant(9L, "TOLD", "新租户名"));
+        Mockito.when(client.fetchSnapshot()).thenReturn(snap);
+
+        IdentityMirrorSyncService.SyncResult result = service.synchronize();
+
+        Assert.assertFalse("旧 id 行必须让位（删旧插新）", tenants.containsKey(5L));
+        IdmTenantMirror row = tenants.get(9L);
+        Assert.assertNotNull("新 id 行必须落库", row);
+        Assert.assertEquals("TOLD", row.getTenantCode());
+        Assert.assertEquals("新租户名", row.getTenantName());
+        Assert.assertEquals(1, result.tenantsInserted);
+    }
+
+    /** 腿 6：重建用户的历史关系自愈——旧 (5,10) 删、新 (9,10) 插，零孤儿残留 */
+    @Test
+    public void relationsOfRebuiltUserSelfHealToNewId() {
+        IdmUserMirror stale = new IdmUserMirror();
+        stale.setId(5L);
+        stale.setCustomerNumber("000009");
+        stale.setName("老王");
+        stale.setValid("1");
+        users.put(5L, stale);
+        relations.add(relRow(5L, 10L));
+        SnapshotRes snap = new SnapshotRes();
+        snap.setWatermark(3000L);
+        snap.getUsers().add(user(9L, "000009", "王五新"));
+        snap.getTenants().add(tenant(10L, "T01", "租户一"));
+        snap.getUserTenants().add(relation(9L, 10L));
+        Mockito.when(client.fetchSnapshot()).thenReturn(snap);
+
+        IdentityMirrorSyncService.SyncResult result = service.synchronize();
+
+        Assert.assertEquals("旧关系 (5,10) 必须删", 1, result.relationsDeleted);
+        Assert.assertEquals("新关系 (9,10) 必须插", 1, result.relationsInserted);
+        Assert.assertEquals("零孤儿：只剩指向新 id 的一条", 1, relations.size());
+        Assert.assertEquals(9L, relations.get(0).getUserId().longValue());
+        Assert.assertEquals(10L, relations.get(0).getTenantId().longValue());
+        Assert.assertFalse("旧用户行已让位", users.containsKey(5L));
+        Assert.assertTrue("新用户行在位", users.containsKey(9L));
     }
 }
