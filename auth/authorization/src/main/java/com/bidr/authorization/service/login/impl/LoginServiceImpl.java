@@ -363,17 +363,16 @@ public class LoginServiceImpl implements LoginService {
 
     /**
      * 注册即挂租户：is_admin 恒 false（租户管理员由成员管理面另行授予，注册入口不得自授管理员）。
-     * 包可见＝离线单测直断 is_admin 针（不构成对外入口）。
+     * 落籍走幂等收口 insertIfAbsent（对齐建号点 bindCreateUserTenant）：createUser 内部已按
+     * TenantResolver 归属落籍一次（T1.1 建号必绑），Fixed 形态下两源同码，裸 insert 必撞
+     * ac_user_tenant PRIMARY（6.60 真机注册实证 Duplicate entry '2548-1'，注册整体 500）。
+     * 包可见＝离线单测直断落籍腿（不构成对外入口）。
      */
     void bindRegisterTenant(Long userId, AcTenant tenant) {
         if (tenant == null) {
             return;
         }
-        AcUserTenant relation = new AcUserTenant();
-        relation.setUserId(userId);
-        relation.setTenantId(tenant.getId());
-        relation.setIsAdmin(Boolean.FALSE);
-        acUserTenantService.insert(relation);
+        acUserTenantService.insertIfAbsent(userId, tenant.getId(), Boolean.FALSE);
     }
 
     @Override

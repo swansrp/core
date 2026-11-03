@@ -12,8 +12,6 @@ import com.bidr.kernel.exception.ServiceException;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -207,7 +205,10 @@ public class LoginRegisterModeTest {
     // ==================== 绑定腿（is_admin 恒 false 的裁定针） ====================
 
     @Test
-    public void bindRegisterTenantInsertsPlainMembership() {
+    public void bindRegisterTenantUsesIdempotentUpsert() {
+        // 6.60 真机 #44：createUser 建号点已按 TenantResolver insertIfAbsent 落籍一次（T1.1 建号必绑），
+        // 注册腿再裸 insert 即撞 ac_user_tenant PRIMARY（Duplicate '2548-1'，注册整体 500）。
+        // 注册腿必须与建号点同走幂等收口；is_admin 恒 false 裁定针不变。
         AcUserTenantService relationRepo = Mockito.mock(AcUserTenantService.class);
         LoginServiceImpl service = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
@@ -221,10 +222,7 @@ public class LoginRegisterModeTest {
                 Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
                 new RegisterModeService());
         service.bindRegisterTenant(100L, tenant(7L));
-        ArgumentCaptor<AcUserTenant> captor = ArgumentCaptor.forClass(AcUserTenant.class);
-        Mockito.verify(relationRepo).insert(captor.capture());
-        Assert.assertEquals("挂关系必须指向命中租户", 7L, captor.getValue().getTenantId().longValue());
-        Assert.assertEquals("绑定用户", 100L, captor.getValue().getUserId().longValue());
-        Assert.assertEquals("is_admin 恒 false（注册入口不得自授管理员）", Boolean.FALSE, captor.getValue().getIsAdmin());
+        Mockito.verify(relationRepo).insertIfAbsent(100L, 7L, Boolean.FALSE);
+        Mockito.verify(relationRepo, Mockito.never()).insert(Mockito.any(AcUserTenant.class));
     }
 }
