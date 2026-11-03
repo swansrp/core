@@ -31,7 +31,7 @@ public class IdentitySnapshotRes {
     private long watermark;
 
     /**
-     * 有效用户全量（id/customerNumber/name 三面）
+     * 有效用户全量（id/customerNumber/userName/name 四面）
      */
     @ApiModelProperty(value = "用户全量")
     private List<UserItem> users = new ArrayList<>();
@@ -49,7 +49,7 @@ public class IdentitySnapshotRes {
     private List<UserTenantItem> userTenants = new ArrayList<>();
 
     /**
-     * 用户条目（🔴 只允许身份三面：加角色/权限字段前先过 G9 边界裁定）
+     * 用户条目（🔴 只允许身份四面：加角色/权限字段前先过 G9 边界裁定）
      */
     @Data
     public static class UserItem {
@@ -59,6 +59,9 @@ public class IdentitySnapshotRes {
 
         @ApiModelProperty(value = "用户编码")
         private String customerNumber;
+
+        @ApiModelProperty(value = "登录名")
+        private String userName;
 
         @ApiModelProperty(value = "用户姓名")
         private String name;

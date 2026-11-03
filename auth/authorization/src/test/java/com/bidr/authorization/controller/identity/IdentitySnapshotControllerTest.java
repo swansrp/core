@@ -24,7 +24,7 @@ import java.util.List;
  * Description: 身份快照端点单测（T2.3d provider 侧，纯 JUnit4＋Mockito）——
  * mock 三个既有 repository，直调 {@code snapshot()} 断言装配映射：
  * <ul>
- *     <li>用户：userId/customerNumber/name 三面直拷（取数经 valid='1' wrapper，装配不关心）；</li>
+ *     <li>用户：userId/customerNumber/userName/name 四面直拷（取数经 valid='1' wrapper，装配不关心）；</li>
  *     <li>租户：code→tenantCode、name→tenantName 的字段改名映射；</li>
  *     <li>关系：userId/tenantId 两面直拷；</li>
  *     <li>watermark＞0；</li>
@@ -52,6 +52,7 @@ public class IdentitySnapshotControllerTest {
         AcUser user = new AcUser();
         user.setUserId(7L);
         user.setCustomerNumber("000007");
+        user.setUserName("wb");
         user.setName("王五");
         Mockito.when(acUserService.getQueryWrapper()).thenReturn(new LambdaQueryWrapper<>());
         Mockito.when(acUserService.select(Mockito.any(Wrapper.class))).thenReturn(Collections.singletonList(user));
@@ -77,6 +78,7 @@ public class IdentitySnapshotControllerTest {
         IdentitySnapshotRes.UserItem user = res.getUsers().get(0);
         Assert.assertEquals(Long.valueOf(7L), user.getId());
         Assert.assertEquals("000007", user.getCustomerNumber());
+        Assert.assertEquals("登录名（T2.4a 补料）直拷", "wb", user.getUserName());
         Assert.assertEquals("王五", user.getName());
 
         Assert.assertEquals(1, res.getTenants().size());

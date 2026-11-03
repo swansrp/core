@@ -32,6 +32,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *         全 never，「无差异跳过」分支吃掉一切）＋水位不重写；</li>
  *     <li>腿 3（差异面真实可写）：改名/撤关系/水位前移 → 只动差异行（证明腿 2 的零写是
  *         diff 判定结果而非"永远不写"的假幂等）。</li>
+ *     <li>腿 4~7：上游同业务键软删重建（customer_number／user_name／tenant_code）删旧插新；</li>
+ *     <li>腿 8~13（T2.4a）：{@code applyUserScope} 单用户作用域写——新用户首写、老用户改名走 update、
+ *         tenantItems=null 只写用户行、同登录名重建跟随、关系收缩只动本用户、定位不到返回 null。</li>
  * </ul>
  *
  * @author Sharp
@@ -65,13 +68,17 @@ public class IdentityMirrorSyncServiceTest {
         stateRepo = Mockito.mock(IdmMirrorStateService.class);
 
         Mockito.when(userRepo.listAll()).thenAnswer(inv -> new ArrayList<>(users.values()));
-        // 🔴 UK 强制（对账单 #23）：模拟真库 uk_customer_number——同号不同 id 的 insert 必炸
+        // 🔴 UK 强制（对账单 #23）：模拟真库 uk_customer_number / uk_user_name——同键不同 id 的 insert 必炸
         Mockito.when(userRepo.insert(Mockito.any(IdmUserMirror.class))).thenAnswer(inv -> {
             IdmUserMirror row = inv.getArgument(0);
             for (IdmUserMirror other : users.values()) {
                 if (row.getCustomerNumber() != null && row.getCustomerNumber().equals(other.getCustomerNumber())
                         && !row.getId().equals(other.getId())) {
                     throw new DuplicateKeyException("uk_customer_number: " + row.getCustomerNumber());
+                }
+                if (row.getUserName() != null && row.getUserName().equals(other.getUserName())
+                        && !row.getId().equals(other.getId())) {
+                    throw new DuplicateKeyException("uk_user_name: " + row.getUserName());
                 }
             }
             users.put(row.getId(), row);
@@ -85,6 +92,34 @@ public class IdentityMirrorSyncServiceTest {
         Mockito.when(userRepo.deleteById(Mockito.any(Serializable.class))).thenAnswer(inv -> {
             Long id = ((Number) inv.getArgument(0)).longValue();
             return users.remove(id) != null;
+        });
+        Mockito.when(userRepo.selectById(Mockito.any(Serializable.class))).thenAnswer(inv -> {
+            Long id = ((Number) inv.getArgument(0)).longValue();
+            return users.get(id);
+        });
+        Mockito.when(userRepo.findByUserName(Mockito.any())).thenAnswer(inv -> {
+            String userName = inv.getArgument(0);
+            if (userName == null || userName.isEmpty()) {
+                return null;
+            }
+            for (IdmUserMirror row : users.values()) {
+                if (userName.equals(row.getUserName())) {
+                    return row;
+                }
+            }
+            return null;
+        });
+        Mockito.when(userRepo.findByCustomerNumber(Mockito.any())).thenAnswer(inv -> {
+            String customerNumber = inv.getArgument(0);
+            if (customerNumber == null || customerNumber.isEmpty()) {
+                return null;
+            }
+            for (IdmUserMirror row : users.values()) {
+                if (customerNumber.equals(row.getCustomerNumber())) {
+                    return row;
+                }
+            }
+            return null;
         });
 
         Mockito.when(tenantRepo.listAll()).thenAnswer(inv -> new ArrayList<>(tenants.values()));
@@ -111,6 +146,19 @@ public class IdentityMirrorSyncServiceTest {
         });
 
         Mockito.when(userTenantRepo.listAll()).thenAnswer(inv -> new ArrayList<>(relations));
+        Mockito.when(userTenantRepo.listByUserId(Mockito.any())).thenAnswer(inv -> {
+            Long userId = inv.getArgument(0);
+            if (userId == null) {
+                return new ArrayList<IdmUserTenantMirror>();
+            }
+            List<IdmUserTenantMirror> hits = new ArrayList<>();
+            for (IdmUserTenantMirror row : relations) {
+                if (userId.equals(row.getUserId())) {
+                    hits.add(row);
+                }
+            }
+            return hits;
+        });
         Mockito.when(userTenantRepo.insert(Mockito.any(IdmUserTenantMirror.class))).thenAnswer(inv -> {
             IdmUserTenantMirror row = inv.getArgument(0);
             row.setId(relationIdSeq.incrementAndGet());
@@ -149,12 +197,32 @@ public class IdentityMirrorSyncServiceTest {
 
     // ======================== 快照夹具 ========================
 
-    private static SnapshotRes.UserItem user(long id, String customerNumber, String name) {
+    private static SnapshotRes.UserItem user(long id, String customerNumber, String userName, String name) {
         SnapshotRes.UserItem item = new SnapshotRes.UserItem();
         item.setId(id);
         item.setCustomerNumber(customerNumber);
+        item.setUserName(userName);
         item.setName(name);
         return item;
+    }
+
+    private static IdmUserMirror userRow(long id, String customerNumber, String userName, String name) {
+        IdmUserMirror row = new IdmUserMirror();
+        row.setId(id);
+        row.setCustomerNumber(customerNumber);
+        row.setUserName(userName);
+        row.setName(name);
+        row.setValid("1");
+        return row;
+    }
+
+    private static IdmTenantMirror tenantRow(long id, String code, String name) {
+        IdmTenantMirror row = new IdmTenantMirror();
+        row.setId(id);
+        row.setTenantCode(code);
+        row.setTenantName(name);
+        row.setValid("1");
+        return row;
     }
 
     private static SnapshotRes.TenantItem tenant(long id, String code, String name) {
@@ -183,8 +251,8 @@ public class IdentityMirrorSyncServiceTest {
     private static SnapshotRes snapshot(long watermark) {
         SnapshotRes snapshot = new SnapshotRes();
         snapshot.setWatermark(watermark);
-        snapshot.getUsers().add(user(1L, "000001", "张三"));
-        snapshot.getUsers().add(user(2L, "000002", "李四"));
+        snapshot.getUsers().add(user(1L, "000001", "bidr", "张三"));
+        snapshot.getUsers().add(user(2L, "000002", "lisi", "李四"));
         snapshot.getTenants().add(tenant(10L, "T01", "租户一"));
         snapshot.getUserTenants().add(relation(1L, 10L));
         snapshot.getUserTenants().add(relation(2L, 10L));
@@ -209,6 +277,7 @@ public class IdentityMirrorSyncServiceTest {
 
         Assert.assertEquals("张三", users.get(1L).getName());
         Assert.assertEquals("000002", users.get(2L).getCustomerNumber());
+        Assert.assertEquals("T2.4a：登录名必须落库", "bidr", users.get(1L).getUserName());
         Assert.assertEquals("租户一", tenants.get(10L).getTenantName());
         Assert.assertEquals(2, relations.size());
         IdmMirrorState state = states.get(IdentityMirrorSyncService.STATE_KEY_SNAPSHOT);
@@ -283,7 +352,7 @@ public class IdentityMirrorSyncServiceTest {
         users.put(5L, stale);
         SnapshotRes snap = new SnapshotRes();
         snap.setWatermark(3000L);
-        snap.getUsers().add(user(9L, "000009", "王五新"));
+        snap.getUsers().add(user(9L, "000009", "wangwu", "王五新"));
         Mockito.when(client.fetchSnapshot()).thenReturn(snap);
 
         IdentityMirrorSyncService.SyncResult result = service.synchronize();
@@ -332,7 +401,7 @@ public class IdentityMirrorSyncServiceTest {
         relations.add(relRow(5L, 10L));
         SnapshotRes snap = new SnapshotRes();
         snap.setWatermark(3000L);
-        snap.getUsers().add(user(9L, "000009", "王五新"));
+        snap.getUsers().add(user(9L, "000009", "wangwu", "王五新"));
         snap.getTenants().add(tenant(10L, "T01", "租户一"));
         snap.getUserTenants().add(relation(9L, 10L));
         Mockito.when(client.fetchSnapshot()).thenReturn(snap);
@@ -346,5 +415,143 @@ public class IdentityMirrorSyncServiceTest {
         Assert.assertEquals(10L, relations.get(0).getTenantId().longValue());
         Assert.assertFalse("旧用户行已让位", users.containsKey(5L));
         Assert.assertTrue("新用户行在位", users.containsKey(9L));
+    }
+
+    /** 腿 7（T2.4a）：用户同 user_name 重建（客户编码同时换了）——uk_user_name 也要跟随新 id */
+    @Test
+    public void userRebuiltWithSameUserNameFollowsNewUpstreamId() {
+        users.put(5L, userRow(5L, "000005", "wangwu", "老王"));
+        SnapshotRes snap = new SnapshotRes();
+        snap.setWatermark(3000L);
+        snap.getUsers().add(user(9L, "000009", "wangwu", "王五新"));
+        Mockito.when(client.fetchSnapshot()).thenReturn(snap);
+
+        IdentityMirrorSyncService.SyncResult result = service.synchronize();
+
+        Assert.assertFalse("旧 id 行必须让位（uk_user_name 撞键前删旧）", users.containsKey(5L));
+        Assert.assertEquals("登录名跟随新 id", "wangwu", users.get(9L).getUserName());
+        Assert.assertEquals(1, result.usersInserted);
+    }
+
+    // ======================== 腿 8~13：applyUserScope 单用户作用域写（T2.4a 登录同步） ========================
+
+    /**
+     * 腿 8：新用户首写——用户行（含 userName）＋传入 tenantItems 时落租户行与本用户关系；
+     * 作用域外的他人关系一行不动。
+     */
+    @Test
+    public void applyUserScopeInsertsNewUserAndOwnRelations() {
+        relations.add(relRow(30L, 10L));
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "newbie", "新人", items);
+
+        Assert.assertEquals("返回生效用户 id＝上游 id", Long.valueOf(20L), mirrorId);
+        IdmUserMirror row = users.get(20L);
+        Assert.assertNotNull("新用户镜像行必须落库", row);
+        Assert.assertEquals("000020", row.getCustomerNumber());
+        Assert.assertEquals("newbie", row.getUserName());
+        Assert.assertEquals("新人", row.getName());
+        Assert.assertNotNull("tenantItems 非空必须落租户行", tenants.get(10L));
+        Assert.assertEquals("本用户关系必须插、他人关系保留", 2, relations.size());
+        boolean ownRelation = false;
+        for (IdmUserTenantMirror relation : relations) {
+            if (Long.valueOf(20L).equals(relation.getUserId())) {
+                ownRelation = true;
+                Assert.assertEquals(Long.valueOf(10L), relation.getTenantId());
+                Assert.assertEquals("1", relation.getValid());
+            }
+        }
+        Assert.assertTrue("本用户 (20,10) 关系缺失", ownRelation);
+        Mockito.verify(userTenantRepo, Mockito.never())
+                .deleteByUserAndTenant(Mockito.eq(Long.valueOf(30L)), Mockito.anyLong());
+    }
+
+    /** 腿 9：老用户改名/换登录名——走 update 不 insert，关系与租户无变化时零关系写 */
+    @Test
+    public void applyUserScopeUpdatesExistingUserWithoutRelationWrites() {
+        users.put(20L, userRow(20L, "000020", "oldname", "旧名"));
+        tenants.put(10L, tenantRow(10L, "T01", "租户一"));
+        relations.add(relRow(20L, 10L));
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "newname", "新名", items);
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Assert.assertEquals("newname", users.get(20L).getUserName());
+        Assert.assertEquals("新名", users.get(20L).getName());
+        Mockito.verify(userRepo, Mockito.never()).insert(Mockito.any(IdmUserMirror.class));
+        Mockito.verify(userRepo, Mockito.times(1)).updateById(Mockito.any(IdmUserMirror.class));
+        Mockito.verify(userTenantRepo, Mockito.never()).insert(Mockito.any(IdmUserTenantMirror.class));
+        Mockito.verify(userTenantRepo, Mockito.never())
+                .deleteByUserAndTenant(Mockito.anyLong(), Mockito.anyLong());
+        Assert.assertEquals("关系无变化零关系写", 1, relations.size());
+    }
+
+    /** 腿 10：tenantItems＝null ⇒ 只写用户行，租户行与关系零写 */
+    @Test
+    public void applyUserScopeWithNullTenantsTouchesOnlyUserRow() {
+        relations.add(relRow(20L, 10L));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "newbie", "新人", null);
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Assert.assertNotNull(users.get(20L));
+        Mockito.verify(tenantRepo, Mockito.never()).insert(Mockito.any(IdmTenantMirror.class));
+        Mockito.verify(tenantRepo, Mockito.never()).updateById(Mockito.any(IdmTenantMirror.class));
+        Mockito.verify(userTenantRepo, Mockito.never()).insert(Mockito.any(IdmUserTenantMirror.class));
+        Mockito.verify(userTenantRepo, Mockito.never())
+                .deleteByUserAndTenant(Mockito.anyLong(), Mockito.anyLong());
+        Mockito.verify(userTenantRepo, Mockito.never()).listByUserId(Mockito.any());
+        Assert.assertEquals("既有关系不碰", 1, relations.size());
+    }
+
+    /** 腿 11：上游同 userName 重建（旧 id 残留）——删旧插新，结果仅新 id 一行 */
+    @Test
+    public void applyUserScopeFollowsRebuiltUserWithSameUserName() {
+        users.put(5L, userRow(5L, "000009", "wangwu", "老王"));
+
+        Long mirrorId = service.applyUserScope(9L, "000009", "wangwu", "王五新", null);
+
+        Assert.assertEquals(Long.valueOf(9L), mirrorId);
+        Assert.assertFalse("旧 id 行必须让位（uk_user_name/uk_customer_number 双键都不撞）", users.containsKey(5L));
+        Assert.assertEquals("结果仅新 id 一行", 1, users.size());
+        Assert.assertEquals("wangwu", users.get(9L).getUserName());
+        Assert.assertEquals("王五新", users.get(9L).getName());
+    }
+
+    /** 腿 12：关系收缩——本用户旧关系不在本轮 tenantItems ⇒ 删；他人关系不动 */
+    @Test
+    public void applyUserScopeShrinksOnlyOwnRelations() {
+        users.put(20L, userRow(20L, "000020", "bidr20", "本人"));
+        tenants.put(10L, tenantRow(10L, "T01", "租户一"));
+        tenants.put(11L, tenantRow(11L, "T02", "租户二"));
+        relations.add(relRow(20L, 10L));
+        relations.add(relRow(20L, 11L));
+        relations.add(relRow(30L, 10L));
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "bidr20", "本人", items);
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Assert.assertEquals("(20,11) 删、他人 (30,10) 保留", 2, relations.size());
+        Mockito.verify(userTenantRepo, Mockito.times(1))
+                .deleteByUserAndTenant(Long.valueOf(20L), Long.valueOf(11L));
+        Mockito.verify(userTenantRepo, Mockito.never()).insert(Mockito.any(IdmUserTenantMirror.class));
+        Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
+    }
+
+    /** 腿 13：id 与两个业务键都定位不到 ⇒ 不写、返回 null（调用方 fail-closed） */
+    @Test
+    public void applyUserScopeReturnsNullWhenNothingLocatable() {
+        Long mirrorId = service.applyUserScope(null, "999999", "ghost", "查无此人", null);
+
+        Assert.assertNull("定位不到必须返回 null（fail-closed）", mirrorId);
+        Assert.assertTrue("不得凭空造行", users.isEmpty());
+        Mockito.verify(userRepo, Mockito.never()).insert(Mockito.any(IdmUserMirror.class));
+        Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
     }
 }

@@ -21,7 +21,7 @@ import java.util.Set;
  * inkhub-common TenantAppSchemaSyncTest 的 DDL↔实体逐列同步闸，core 内自建轻版）——
  * {@code setCreateDDL} 的列集 == 实体 @TableName/@TableId/@TableField 推导列集，
  * 双向相等（漏列＝首条 INSERT 报 Unknown column，多列＝僵尸列没人写）。
- * 另钉各表承诺面键：UK(customer_number)/UK(tenant_code)/UK(user_id,tenant_id)/UK(state_key)。
+ * 另钉各表承诺面键：UK(customer_number)/UK(user_name)/UK(tenant_code)/UK(user_id,tenant_id)/UK(state_key)。
  *
  * @author Sharp
  * @since 2026/11/03
@@ -35,6 +35,8 @@ public class IdentityMirrorSchemaSyncTest {
         assertSync(new IdmUserMirrorSchema(), IdmUserMirror.class, "idm_user_mirror");
         Assert.assertTrue("缺 UK(customer_number)（@BindUser SPI 解析的 matchField 落点）",
                 new IdmUserMirrorSchema().getCreateSql().contains("UNIQUE KEY `uk_customer_number` (`customer_number`)"));
+        Assert.assertTrue("缺 UK(user_name)（T2.4a：子系统登录闸/成员同步按登录名查人）",
+                new IdmUserMirrorSchema().getCreateSql().contains("UNIQUE KEY `uk_user_name` (`user_name`)"));
     }
 
     // ======================== 腿 2：idm_tenant_mirror ========================

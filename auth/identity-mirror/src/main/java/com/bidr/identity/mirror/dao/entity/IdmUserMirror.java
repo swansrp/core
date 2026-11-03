@@ -13,12 +13,12 @@ import java.util.Date;
 /**
  * Title: IdmUserMirror
  * Description: 用户身份镜像表（T2.3d）——上游用户主表的最小身份投影
- * （id＋customer_number＋name），经 {@code /open-api/v1/identity/snapshot} 拉平落库。
+ * （id＋customer_number＋user_name＋name），经 {@code /open-api/v1/identity/snapshot} 拉平落库。
  * <p>🔴 G9 边界：镜像只承载「这是谁」，<b>零角色/菜单/功能码字段</b>（IdentityMirrorConventionTest 钉）——
  * 授权判定一律回 provider（/authz 端点），子系统本地不留授权语义。</p>
  * <p>{@code id} 非自增：恒等于上游用户 id（跨系统 join 键稳定，mirror.id=上游 uid 裁定）；
  * {@code customer_number} 唯一——{@code @BindUser} 经 {@code BindRepoResolver} SPI 解析到本表后的
- * matchField 落点。valid/create_at/update_at 对齐全仓镜像惯例（BindRepoHandler valid='1' 条件追加语义）。</p>
+ * matchField 落点；{@code user_name} 唯一（T2.4a 补料——子系统登录闸与项目成员同步按登录名查人）。valid/create_at/update_at 对齐全仓镜像惯例（BindRepoHandler valid='1' 条件追加语义）。</p>
  *
  * @author Sharp
  * @since 2026/11/03
@@ -41,6 +41,13 @@ public class IdmUserMirror {
     @TableField(value = "customer_number")
     @ApiModelProperty(value = "用户编码")
     private String customerNumber;
+
+    /**
+     * 登录名（上游用户表 user_name；子系统按登录名对齐账号，唯一）
+     */
+    @TableField(value = "user_name")
+    @ApiModelProperty(value = "登录名")
+    private String userName;
 
     /**
      * 用户姓名

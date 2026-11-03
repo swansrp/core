@@ -62,6 +62,7 @@ public class IdentitySnapshotController {
             IdentitySnapshotRes.UserItem item = new IdentitySnapshotRes.UserItem();
             item.setId(user.getUserId());
             item.setCustomerNumber(user.getCustomerNumber());
+            item.setUserName(user.getUserName());
             item.setName(user.getName());
             res.getUsers().add(item);
         }

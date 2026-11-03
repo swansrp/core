@@ -36,6 +36,8 @@ import java.util.Set;
  * 不用于增量裁剪；上游撤销用户/租户行不镜像删除（upsert-only），关系撤销随全量比对删除。
  * 上游同业务键软删重建（停用后再启用＝插新行新 id）时镜像<b>删旧插新跟随新 id</b>
  * （对账单 #23 方案 A，见 {@link #followRebuiltRow}）。
+ * <p>T2.4a 增 {@link #applyUserScope}：子系统登录时只写「当前登录用户自己的镜像行＋自己的租户归属」
+ * （单用户作用域写，不需要运维凭据拉全量快照）——写入面仍唯一在本类，不变量不变。</p>
  *
  * @author Sharp
  * @since 2026/11/03
@@ -82,14 +84,128 @@ public class IdentityMirrorSyncService {
         return result;
     }
 
+    /**
+     * 单用户作用域写（登录同步，T2.4a）：只写本用户的镜像行与（可选）本用户的租户归属。
+     * <ul>
+     *   <li>用户行按 id upsert；id 为空时按 userName → customerNumber 回落定位已有行；
+     *       仍定位不到且 id 也为空 ⇒ 不写，返回 null。</li>
+     *   <li>同 userName / 同 customerNumber 的异 id 残留行 ⇒ 删旧插新（对账单 #23 方案 A）。</li>
+     *   <li>{@code tenantItems == null} ⇒ 只写用户行，不碰租户与关系。</li>
+     *   <li>{@code tenantItems != null} ⇒ 先按 id upsert 这些租户行，再对本用户关系做全量比对增删
+     *       （只动本用户，不碰其他人）。</li>
+     *   <li>不写水位（全量同步才写）、不做作用域外删除。</li>
+     * </ul>
+     * 写入面仍唯一（本类）：子系统登录链不需要运维凭据拉全量快照，只写自己那一行。
+     * 🔴 不加 {@code @Transactional}：与全量同步同语义，逐写幂等，下一周期自愈。
+     *
+     * @param userId         上游用户 id（可空，空则按业务键回落定位）
+     * @param customerNumber 用户编码（可空）
+     * @param userName       登录名（可空；子系统按其查人）
+     * @param name           用户姓名（可空）
+     * @param tenantItems    本用户当前有效租户行（null ⇒ 只写用户行，不碰租户与关系）
+     * @return 生效的用户 id（恒等于上游 id）；无法定位时为 null（调用方按 fail-closed 处理）
+     */
+    public Long applyUserScope(Long userId, String customerNumber, String userName, String name,
+                               List<SnapshotRes.TenantItem> tenantItems) {
+        Date now = new Date();
+        // 业务键命中的既有行（用于「同键异 id 残留行」删旧插新；map 只装定位到的行，供复用 helper）
+        Map<Long, IdmUserMirror> located = new HashMap<>();
+        IdmUserMirror byUserName = userMirrorService.findByUserName(userName);
+        IdmUserMirror byCustomerNumber = userMirrorService.findByCustomerNumber(customerNumber);
+        if (byUserName != null) {
+            located.put(byUserName.getId(), byUserName);
+        }
+        if (byCustomerNumber != null) {
+            located.put(byCustomerNumber.getId(), byCustomerNumber);
+        }
+
+        Long resolvedId = userId;
+        if (resolvedId == null) {
+            IdmUserMirror fallback = byUserName != null ? byUserName : byCustomerNumber;
+            if (fallback == null) {
+                log.warn("[身份镜像]登录作用域写定位失败（id/userName/customerNumber 都落不到镜像行）: userName={} customerNumber={}",
+                        userName, customerNumber);
+                return null;
+            }
+            resolvedId = fallback.getId();
+        }
+        followRebuiltRow(located, byCustomerNumber, resolvedId, customerNumber, "customerNumber",
+                IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
+        followRebuiltRow(located, byUserName, resolvedId, userName, "userName",
+                IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
+
+        IdmUserMirror current = userMirrorService.selectById(resolvedId);
+        if (current == null) {
+            IdmUserMirror row = new IdmUserMirror();
+            row.setId(resolvedId);
+            row.setCustomerNumber(customerNumber);
+            row.setUserName(userName);
+            row.setName(name);
+            row.setValid(CommonConst.YES);
+            row.setCreateAt(now);
+            row.setUpdateAt(now);
+            userMirrorService.insert(row);
+        } else if (userChanged(current, customerNumber, userName, name)) {
+            current.setCustomerNumber(customerNumber);
+            current.setUserName(userName);
+            current.setName(name);
+            current.setUpdateAt(now);
+            userMirrorService.updateById(current);
+        }
+
+        int relationsInserted = 0;
+        int relationsDeleted = 0;
+        int tenantCount = 0;
+        if (tenantItems != null) {
+            tenantCount = tenantItems.size();
+            syncTenants(tenantItems, now);
+            Map<Long, IdmUserTenantMirror> existingRelations = new HashMap<>();
+            for (IdmUserTenantMirror relation : userTenantMirrorService.listByUserId(resolvedId)) {
+                if (relation.getTenantId() != null) {
+                    existingRelations.put(relation.getTenantId(), relation);
+                }
+            }
+            Set<Long> upstreamTenantIds = new HashSet<>();
+            for (SnapshotRes.TenantItem item : tenantItems) {
+                if (item == null || item.getId() == null) {
+                    continue;
+                }
+                upstreamTenantIds.add(item.getId());
+                if (!existingRelations.containsKey(item.getId())) {
+                    IdmUserTenantMirror row = new IdmUserTenantMirror();
+                    row.setUserId(resolvedId);
+                    row.setTenantId(item.getId());
+                    row.setValid(CommonConst.YES);
+                    row.setCreateAt(now);
+                    row.setUpdateAt(now);
+                    userTenantMirrorService.insert(row);
+                    relationsInserted++;
+                }
+            }
+            for (Map.Entry<Long, IdmUserTenantMirror> entry : existingRelations.entrySet()) {
+                if (!upstreamTenantIds.contains(entry.getKey())
+                        && userTenantMirrorService.deleteByUserAndTenant(resolvedId, entry.getKey())) {
+                    relationsDeleted++;
+                }
+            }
+        }
+        log.info("[身份镜像]登录作用域写: user={} userName={} tenants={} relations +{}/-{}",
+                resolvedId, userName, tenantCount, relationsInserted, relationsDeleted);
+        return resolvedId;
+    }
+
     /** 用户按 id upsert：insert miss 行、有差异才 update、无差异跳过（返回 {inserted, updated}） */
     private int[] syncUsers(List<SnapshotRes.UserItem> items, Date now) {
         Map<Long, IdmUserMirror> existing = new HashMap<>();
         Map<String, IdmUserMirror> existingByCustomerNumber = new HashMap<>();
+        Map<String, IdmUserMirror> existingByUserName = new HashMap<>();
         for (IdmUserMirror row : userMirrorService.listAll()) {
             existing.put(row.getId(), row);
             if (row.getCustomerNumber() != null) {
                 existingByCustomerNumber.put(row.getCustomerNumber(), row);
+            }
+            if (row.getUserName() != null) {
+                existingByUserName.put(row.getUserName(), row);
             }
         }
         int inserted = 0;
@@ -104,9 +220,13 @@ public class IdentityMirrorSyncService {
                     followRebuiltRow(existing, existingByCustomerNumber.get(item.getCustomerNumber()),
                             item.getId(), item.getCustomerNumber(), "customerNumber",
                             IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
+                    followRebuiltRow(existing, existingByUserName.get(item.getUserName()),
+                            item.getId(), item.getUserName(), "userName",
+                            IdmUserMirror::getId, staleId -> userMirrorService.deleteById(staleId));
                     IdmUserMirror row = new IdmUserMirror();
                     row.setId(item.getId());
                     row.setCustomerNumber(item.getCustomerNumber());
+                    row.setUserName(item.getUserName());
                     row.setName(item.getName());
                     row.setValid(CommonConst.YES);
                     row.setCreateAt(now);
@@ -116,9 +236,13 @@ public class IdentityMirrorSyncService {
                     if (row.getCustomerNumber() != null) {
                         existingByCustomerNumber.put(row.getCustomerNumber(), row);
                     }
+                    if (row.getUserName() != null) {
+                        existingByUserName.put(row.getUserName(), row);
+                    }
                     inserted++;
                 } else if (userChanged(current, item)) {
                     current.setCustomerNumber(item.getCustomerNumber());
+                    current.setUserName(item.getUserName());
                     current.setName(item.getName());
                     current.setUpdateAt(now);
                     userMirrorService.updateById(current);
@@ -180,9 +304,9 @@ public class IdentityMirrorSyncService {
      * 上游软删重建降级（对账单 #23 方案 A，review 棒3 I-1）：上游生命周期为「停用＝置 valid=0
      * 行还在，再启用同业务键＝<b>插新行（新 id）</b>」（{@code AcTenantSchema}/{@code AcUserSchema}
      * 业务键故意普通 KEY）——镜像 upsert-only 不删行，保留的旧 id 行会占住唯一键
-     * （uk_customer_number/uk_tenant_code）挡住新行，撞键即同步永久失败。
+     * （uk_customer_number/uk_user_name/uk_tenant_code）挡住新行，撞键即同步永久失败。
      * 此处按业务键找到该保留行，<b>删旧插新</b>让镜像跟随上游新 id——恢复不变式
-     * 「镜像行＝上游当前 valid 实体、id 逐字等于上游 id」；绑定键（customer_number）语义不变，
+     * 「镜像行＝上游当前 valid 实体、id 逐字等于上游 id」；绑定键（customer_number/user_name）语义不变，
      * 关系镜像随后续全量比对自愈（删旧 id 关系、插新 id 关系）。
      * 🔴 删旧与插新非原子（同步无事务包裹）：若删后插前崩溃，下一周期全量快照自愈。
      * 上游同业务键出现多个 valid 行属脏数据，按快照序 last-write-wins（每次 warn 留痕）。
@@ -190,10 +314,14 @@ public class IdentityMirrorSyncService {
     private <T> void followRebuiltRow(Map<Long, T> existing, T stale, Long incomingId, String keyValue,
                                       String keyName, java.util.function.Function<T, Long> idGetter,
                                       java.util.function.Consumer<Long> deleter) {
-        if (stale == null || Objects.equals(incomingId, idGetter.apply(stale))) {
+        if (stale == null) {
             return;
         }
         Long staleId = idGetter.apply(stale);
+        // 同一残留行可能同时命中两个业务键（customer_number 与 user_name）：已删过的不重复删
+        if (Objects.equals(incomingId, staleId) || !existing.containsKey(staleId)) {
+            return;
+        }
         log.warn("[身份镜像]上游同 {} 重建：镜像保留行 id={} → 跟随上游新 id={}，删旧插新",
                 keyName, staleId, incomingId);
         deleter.accept(staleId);
@@ -263,8 +391,14 @@ public class IdentityMirrorSyncService {
     }
 
     private static boolean userChanged(IdmUserMirror current, SnapshotRes.UserItem item) {
-        return !Objects.equals(current.getCustomerNumber(), item.getCustomerNumber())
-                || !Objects.equals(current.getName(), item.getName());
+        return userChanged(current, item.getCustomerNumber(), item.getUserName(), item.getName());
+    }
+
+    /** 用户行三业务属性是否有差异（全量同步与单用户作用域写共用判据） */
+    private static boolean userChanged(IdmUserMirror current, String customerNumber, String userName, String name) {
+        return !Objects.equals(current.getCustomerNumber(), customerNumber)
+                || !Objects.equals(current.getUserName(), userName)
+                || !Objects.equals(current.getName(), name);
     }
 
     private static boolean tenantChanged(IdmTenantMirror current, SnapshotRes.TenantItem item) {

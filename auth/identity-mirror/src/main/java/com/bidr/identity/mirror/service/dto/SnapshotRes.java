@@ -31,7 +31,8 @@ public class SnapshotRes {
     private List<UserTenantItem> userTenants = new ArrayList<>();
 
     /**
-     * 用户条目：id（＝上游用户 id）＋customerNumber＋name，仅此三面。
+     * 用户条目：id（＝上游用户 id）＋customerNumber＋userName＋name，仅此四面
+     * （T2.4a 增登录名——子系统按登录名对齐账号）。
      */
     @Data
     public static class UserItem {
@@ -39,6 +40,8 @@ public class SnapshotRes {
         private Long id;
 
         private String customerNumber;
+
+        private String userName;
 
         private String name;
     }
