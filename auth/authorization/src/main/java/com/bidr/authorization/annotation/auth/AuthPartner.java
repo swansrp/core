@@ -44,7 +44,9 @@ public class AuthPartner implements AuthRole {
     public void validate(HttpServletRequest request, String... args) {
         String header = request.getHeader(RequestConst.X_API_KEY);
         Validator.assertNotBlank(header, AccountErrCode.AC_PARTNER_NOT_EXISTED);
-        String[] info = Base64Util.decode(header).split(":");
+        // split(":", 2)：秘钥里带冒号不至于截断失配；空秘钥（"appKey:"）不会越界成 500
+        String[] info = Base64Util.decode(header).split(":", 2);
+        Validator.assertTrue(info.length == 2, AccountErrCode.AC_PARTNER_SECRET_INVALID);
         AcPartner acPartner = acPartnerService.getByAppKey(info[0]);
         Validator.assertNotNull(acPartner, AccountErrCode.AC_PARTNER_NOT_EXISTED);
         Validator.assertEquals(acPartner.getAppSecret(), info[1], AccountErrCode.AC_PARTNER_SECRET_INVALID);
@@ -73,6 +75,11 @@ public class AuthPartner implements AuthRole {
     @Override
     public void completion(HttpServletRequest request, HttpServletResponse response) {
         AcPartnerHistory history = (AcPartnerHistory) request.getAttribute(AcPartnerHistory.class.getName());
+        // 鉴权在 validate 阶段就拒了（校验异常先于 setAttribute）：拒绝路径没有 history 可补记，
+        // 不判空会在 afterCompletion 里抛 NPE（Spring 只记日志，但每次拒绝都刷一条 ERROR）
+        if (history == null) {
+            return;
+        }
         history.setStatus(response.getStatus());
         history.setResponseAt(new Date());
         if (LogFilter.isJsonResponse(response) && response instanceof MultiReadHttpServletResponse) {
