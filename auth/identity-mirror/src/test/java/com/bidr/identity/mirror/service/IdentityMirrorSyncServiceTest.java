@@ -35,6 +35,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *     <li>腿 4~7：上游同业务键软删重建（customer_number／user_name／tenant_code）删旧插新；</li>
  *     <li>腿 8~13（T2.4a）：{@code applyUserScope} 单用户作用域写——新用户首写、老用户改名走 update、
  *         tenantItems=null 只写用户行、同登录名重建跟随、关系收缩只动本用户、定位不到返回 null。</li>
+ *     <li>腿 14~20（修复轮 1／F1）：重建跟随清旧 id 孤儿关系、空列表删本用户关系（与 null 区分）、
+ *         不写水位、并发撞唯一键重读走 update（重读仍空则原样抛）、customerNumber 空⇒零写返回 null、
+ *         腿 11 补「旧行真被 deleteById」、userName=null 按 customerNumber 定位。</li>
  * </ul>
  *
  * @author Sharp
@@ -520,6 +523,8 @@ public class IdentityMirrorSyncServiceTest {
         Assert.assertEquals("结果仅新 id 一行", 1, users.size());
         Assert.assertEquals("wangwu", users.get(9L).getUserName());
         Assert.assertEquals("王五新", users.get(9L).getName());
+        // 判别力：旧行不是「留着没删」而是真删（守卫 !existing.containsKey 的腿）
+        Mockito.verify(userRepo, Mockito.times(1)).deleteById(5L);
     }
 
     /** 腿 12：关系收缩——本用户旧关系不在本轮 tenantItems ⇒ 删；他人关系不动 */
@@ -551,6 +556,130 @@ public class IdentityMirrorSyncServiceTest {
 
         Assert.assertNull("定位不到必须返回 null（fail-closed）", mirrorId);
         Assert.assertTrue("不得凭空造行", users.isEmpty());
+        Mockito.verify(userRepo, Mockito.never()).insert(Mockito.any(IdmUserMirror.class));
+        Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
+    }
+
+    // ======================== 腿 14~20：修复轮 1（F1-1/F1-2/F1-3 的判别腿） ========================
+
+    /**
+     * 腿 14（F1-1）：重建跟随时旧 id 的残留关系必须被清掉——否则旧 id 关系行成永久孤儿
+     * （本形态全量 job 可能不装配，没有兜底）。
+     */
+    @Test
+    public void applyUserScopePurgesStaleRelationsOfRebuiltUser() {
+        users.put(5L, userRow(5L, "000009", "wangwu", "老王"));
+        relations.add(relRow(5L, 10L));
+        relations.add(relRow(5L, 11L));
+        relations.add(relRow(30L, 10L));
+
+        Long mirrorId = service.applyUserScope(9L, "000009", "wangwu", "王五新", null);
+
+        Assert.assertEquals(Long.valueOf(9L), mirrorId);
+        Assert.assertFalse("旧用户行必须让位", users.containsKey(5L));
+        Assert.assertEquals("旧 id 两条孤儿关系必须清掉、他人关系保留", 1, relations.size());
+        Assert.assertEquals("保留的必须是别人的关系", Long.valueOf(30L), relations.get(0).getUserId());
+        Mockito.verify(userTenantRepo, Mockito.times(1)).listByUserId(5L);
+        Mockito.verify(userTenantRepo, Mockito.times(1)).deleteByUserAndTenant(5L, 10L);
+        Mockito.verify(userTenantRepo, Mockito.times(1)).deleteByUserAndTenant(5L, 11L);
+        Mockito.verify(userTenantRepo, Mockito.never())
+                .deleteByUserAndTenant(Mockito.eq(Long.valueOf(30L)), Mockito.anyLong());
+    }
+
+    /** 腿 15（F1-1 对偶）：tenantItems＝空列表（≠ null）⇒ 本用户关系全删、他人关系不动 */
+    @Test
+    public void applyUserScopeWithEmptyTenantListDeletesAllOwnRelations() {
+        users.put(20L, userRow(20L, "000020", "bidr20", "本人"));
+        tenants.put(10L, tenantRow(10L, "T01", "租户一"));
+        relations.add(relRow(20L, 10L));
+        relations.add(relRow(20L, 11L));
+        relations.add(relRow(30L, 10L));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "bidr20", "本人", new ArrayList<>());
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Assert.assertEquals("空列表＝本用户关系全删，他人关系保留", 1, relations.size());
+        Assert.assertEquals("保留的必须是别人的关系", Long.valueOf(30L), relations.get(0).getUserId());
+        Mockito.verify(userTenantRepo, Mockito.times(1)).deleteByUserAndTenant(20L, 10L);
+        Mockito.verify(userTenantRepo, Mockito.times(1)).deleteByUserAndTenant(20L, 11L);
+        Mockito.verify(userTenantRepo, Mockito.never())
+                .deleteByUserAndTenant(Mockito.eq(Long.valueOf(30L)), Mockito.anyLong());
+        Mockito.verify(userTenantRepo, Mockito.never()).insert(Mockito.any(IdmUserTenantMirror.class));
+    }
+
+    /** 腿 16（F1-1）：登录作用域写不写水位——stateRepo 全程零交互（水位只属全量同步） */
+    @Test
+    public void applyUserScopeNeverTouchesWatermark() {
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "newbie", "新人", items);
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Mockito.verifyNoInteractions(stateRepo);
+        Assert.assertTrue("不得写水位行", states.isEmpty());
+    }
+
+    /**
+     * 腿 17（F1-2）：并发首登——insert 撞唯一键但重读拿得到行 ⇒ 走 update 腿、异常不穿出登录链。
+     * 桩：首次 selectById 返回 null（进 insert 腿）、insert 必抛、第二次 selectById 返回「抢先插入」的行。
+     */
+    @Test
+    public void applyUserScopeFallsBackToUpdateOnConcurrentInsertDuplicateKey() {
+        Mockito.when(userRepo.selectById(20L)).thenReturn(null, userRow(20L, "000020", "raced", "抢先者"));
+        Mockito.when(userRepo.insert(Mockito.any(IdmUserMirror.class)))
+                .thenThrow(new DuplicateKeyException("uk_customer_number: 000020"));
+
+        Long mirrorId = service.applyUserScope(20L, "000020", "newbie", "新人", null);
+
+        Assert.assertEquals(Long.valueOf(20L), mirrorId);
+        Mockito.verify(userRepo, Mockito.times(1)).insert(Mockito.any(IdmUserMirror.class));
+        Mockito.verify(userRepo, Mockito.times(1)).updateById(Mockito.any(IdmUserMirror.class));
+        Assert.assertEquals("重读到的行必须按本次入参补齐", "newbie", users.get(20L).getUserName());
+        Assert.assertEquals("新人", users.get(20L).getName());
+    }
+
+    /** 腿 18（F1-2 后半）：撞唯一键且重读仍无行 ⇒ 原样抛出，不吞未知错误 */
+    @Test
+    public void applyUserScopeRethrowsDuplicateKeyWhenRereadStillMissing() {
+        Mockito.when(userRepo.insert(Mockito.any(IdmUserMirror.class)))
+                .thenThrow(new DuplicateKeyException("uk_customer_number: 000020"));
+
+        try {
+            service.applyUserScope(20L, "000020", "newbie", "新人", null);
+            Assert.fail("重读仍无行必须原样抛出 DuplicateKeyException（不得吞未知错误）");
+        } catch (DuplicateKeyException expected) {
+            Assert.assertTrue("必须是原异常原样抛出", expected.getMessage().contains("000020"));
+        }
+        Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
+        Assert.assertTrue("失败腿不得留下半截用户行", users.isEmpty());
+    }
+
+    /** 腿 19（F1-3）：customerNumber 空/纯空白 ⇒ 返回 null 且四仓零交互（fail-closed 零写） */
+    @Test
+    public void applyUserScopeReturnsNullAndWritesNothingWhenCustomerNumberBlank() {
+        List<SnapshotRes.TenantItem> items = new ArrayList<>();
+        items.add(tenant(10L, "T01", "租户一"));
+
+        Assert.assertNull("null customerNumber 必须返回 null", service.applyUserScope(20L, null, "newbie", "新人", items));
+        Assert.assertNull("纯空白 customerNumber 必须返回 null", service.applyUserScope(20L, "   ", "newbie", "新人", items));
+
+        Mockito.verifyNoInteractions(userRepo, tenantRepo, userTenantRepo, stateRepo);
+        Assert.assertTrue("零写：不得造用户行", users.isEmpty());
+        Assert.assertTrue("零写：不得造租户行", tenants.isEmpty());
+        Assert.assertTrue("零写：不得造关系行", relations.isEmpty());
+    }
+
+    /** 腿 20（F1-6）：userName＝null 时仍按 customerNumber 定位到既有行，不得凭空造行 */
+    @Test
+    public void applyUserScopeLocatesByCustomerNumberWhenUserNameNull() {
+        users.put(20L, userRow(20L, "000020", null, "本人"));
+
+        Long mirrorId = service.applyUserScope(null, "000020", null, "本人", null);
+
+        Assert.assertEquals("按 customerNumber 回落定位＝镜像行 id", Long.valueOf(20L), mirrorId);
+        Assert.assertEquals("不得凭空造行", 1, users.size());
+        Mockito.verify(userRepo, Mockito.times(1)).findByUserName(null);
         Mockito.verify(userRepo, Mockito.never()).insert(Mockito.any(IdmUserMirror.class));
         Mockito.verify(userRepo, Mockito.never()).updateById(Mockito.any(IdmUserMirror.class));
     }
