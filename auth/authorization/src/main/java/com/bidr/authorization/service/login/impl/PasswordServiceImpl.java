@@ -92,8 +92,12 @@ public class PasswordServiceImpl implements PasswordService {
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         if (FuncUtil.isNotEmpty(req.getLoginId())) {
-            Validator.assertEquals(user.getCustomerNumber(), AccountContext.getOperator(),
-                    AccountErrCode.AC_PASSWORD_OWNER_MISMATCH);
+            // 未登录（GUEST）只出现在密码过期强制改密链路：token 无身份可越权，本人由下方
+            // oldPassword 强校验（有密码必验）兜住；登录态带 loginId 仍要求本人，防越权改密
+            if (tokenService.isLoginToken()) {
+                Validator.assertEquals(user.getCustomerNumber(), AccountContext.getOperator(),
+                        AccountErrCode.AC_PASSWORD_OWNER_MISMATCH);
+            }
         }
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
                 AccountErrCode.AC_LOCK);
