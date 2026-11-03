@@ -1,7 +1,6 @@
 package com.bidr.authorization.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bidr.authorization.authz.AuthzVersionHolder;
 import com.bidr.authorization.dao.entity.AcUserRole;
 import com.bidr.authorization.dao.mapper.AcUserRoleDao;
 import com.bidr.kernel.utils.ReflectionUtil;
@@ -33,8 +32,9 @@ public class AcUserRoleService extends AuthzVersionedSqlRepo<AcUserRoleDao, AcUs
         boolean removed = super.deleteByMultiId(acUserRole);
         if (removed) {
             // T2.3b：deleteByMultiId 是 IMppService default 方法，不经 AuthzVersionedSqlRepo
-            // 拦截面，此处显式补 bump（用户角色写点，client 缓存失效信号）
-            AuthzVersionHolder.bump();
+            // 拦截面，此处显式补 bump（用户角色写点，client 缓存失效信号）——走两段式时序
+            // 与拦截面一致（对账单 #24）
+            bumpOnWriteCommitted(true);
         }
     }
 

@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.bidr.authorization.authz.AuthzVersionHolder;
 import com.bidr.kernel.mybatis.mapper.MyBaseMapper;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -23,10 +25,15 @@ import java.util.Map;
  * 逐 service/控制器补会在 bind 面漏点。仓储层单一拦截面＝本模块全部写路径
  * （service 直调、kernel 通用端点、种子/初始化）全覆盖，取证 grep 见棒4 报告。</p>
  *
- * <p><b>bump 时机语义</b>：写语句成功即 bump（可能先于外层事务提交）——外层事务回滚时
- * 版本已 +1，效果＝客户端多失效一次重拉同一数据，<b>只会多余失效、绝不产生 stale</b>
- * （失效方向安全）。同一逻辑写经多层方法（updateById→update）可能 bump 多次，版本为
- * 单调递增计数器，多次 +1 无语义影响。</p>
+ * <p><b>bump 时机语义（两段式，2026-11-03 对账单 #24 修复）</b>：写语句成功后<b>立即 bump 一次</b>
+ * （fail-safe：外层事务回滚时版本已 +1，效果＝客户端多失效一次重拉同一数据，只会多余失效、
+ * 方向安全）；若处于 Spring 事务同步中，<b>再注册 afterCommit 同步补一次 bump</b>——闭合
+ * 「[即时 bump, commit] 窗口内 client 拉到新版本＋读到提交前旧数据并按新版本缓存」的竞态
+ * （commit 后无第二次 bump 则该条缓存永驻＝已撤权限继续生效，review 第 2 轮棒4 I-1）。
+ * 版本单调递增，双 bump 无语义副作用；残余风险仅剩「commit 成功但进程恰在 afterCommit
+ * bump 前崩溃」的微秒级镜像窗口（双 bump 已压到最小，如实声明）。无活动事务同步
+ * （autocommit 单语句＝提交即完成，无窗口）退化为单次立即 bump。同一逻辑写经多层方法
+ * （updateById→update）可能 bump 多次，多次 +1 无语义影响。</p>
  *
  * <p><b>🔴 接入纪律（红线）</b>：只允许「授权语义」表仓储继承本类——菜单/角色/资源/
  * 用户角色及菜单绑定链（ac_menu、ac_role、ac_role_menu、ac_user_role、ac_user_menu、
@@ -44,11 +51,29 @@ import java.util.Map;
  */
 public abstract class AuthzVersionedSqlRepo<K extends MyBaseMapper<T>, T> extends BaseSqlRepo<K, T> {
 
+    /**
+     * 写成功后的两段式 bump（对账单 #24）：立即 bump＋事务内注册 afterCommit 补 bump；
+     * 无活动事务同步时退化为单次立即 bump（见类 javadoc「bump 时机语义」）。
+     * 显式补 bump 的调用点（deleteByMultiId 三处）同走本方法保证时序一致。
+     */
+    static void bumpOnWriteCommitted(boolean success) {
+        if (!success) {
+            return;
+        }
+        AuthzVersionHolder.bump();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    AuthzVersionHolder.bump();
+                }
+            });
+        }
+    }
+
     /** 写成功后 bump（fail-safe：回滚只多失效不 stale） */
     private void bumpOnWrite(boolean success) {
-        if (success) {
-            AuthzVersionHolder.bump();
-        }
+        bumpOnWriteCommitted(success);
     }
 
     // ---------------- insert 面 ----------------

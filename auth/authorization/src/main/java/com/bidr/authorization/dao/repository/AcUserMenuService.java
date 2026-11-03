@@ -1,6 +1,5 @@
 package com.bidr.authorization.dao.repository;
 
-import com.bidr.authorization.authz.AuthzVersionHolder;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcUserMenu;
 import com.bidr.authorization.dao.mapper.AcUserMenuDao;
@@ -55,8 +54,9 @@ public class AcUserMenuService extends AuthzVersionedSqlRepo<AcUserMenuDao, AcUs
         boolean removed = super.deleteByMultiId(acUserMenu);
         if (removed) {
             // T2.3b：deleteByMultiId 是 IMppService default 方法，不经 AuthzVersionedSqlRepo
-            // 拦截面，此处显式补 bump（用户菜单写点，client 缓存失效信号）
-            AuthzVersionHolder.bump();
+            // 拦截面，此处显式补 bump（用户菜单写点，client 缓存失效信号）——走两段式时序
+            // 与拦截面一致（对账单 #24）
+            bumpOnWriteCommitted(true);
         }
     }
 
