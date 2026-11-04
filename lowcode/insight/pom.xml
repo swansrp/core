@@ -14,40 +14,14 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
     <artifactId>insight</artifactId>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <admin.version>${jarVersion}</admin.version>
-                <forge.version>${jarVersion}</forge.version>
-                <llm.version>${jarVersion}</llm.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <admin.version>20261101110847-97</admin.version>
-                <forge.version>20261101110847-97</forge.version>
-                <llm.version>20261101110847-97</llm.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <dependency>

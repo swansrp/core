@@ -18,36 +18,11 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <langchain4j.version>0.33.0</langchain4j.version>
-    </properties>
+            <java.version>17</java.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>17</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-                <platform.version>${jarVersion}</platform.version>
-                <redis.version>${jarVersion}</redis.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>17</java.version>
-                <kernel.version>20261101110847-97</kernel.version>
-                <platform.version>20261101110847-97</platform.version>
-                <redis.version>20261101110847-97</redis.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- 系统参数契约（Param/@MetaParam）：LlmParam 据此声明数据库参数 key -->

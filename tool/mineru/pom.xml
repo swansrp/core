@@ -17,30 +17,10 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- 纯客户端库：不依赖 llm / document（依赖方向是 document → mineru，本模块不回依，无环）。

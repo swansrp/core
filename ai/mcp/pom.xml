@@ -8,40 +8,19 @@
         <groupId>com.bidr</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <solon.version>3.3.3-M2</solon.version>
+    </properties>
+
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>mcp</artifactId>
     <version>${jarVersion}</version>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>17</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <solon.version>3.3.3-M2</solon.version>
-                <kernel.version>${jarVersion}</kernel.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>17</java.version>
-                <solon.version>3.3.3-M2</solon.version>
-                <kernel.version>20261101110847-97</kernel.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <dependency>

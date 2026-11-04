@@ -14,47 +14,14 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
     <artifactId>authorization-client</artifactId>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-                <authorization-api.version>${jarVersion}</authorization-api.version>
-                <platform.version>${jarVersion}</platform.version>
-                <redis.version>${jarVersion}</redis.version>
-                <identity-mirror.version>${jarVersion}</identity-mirror.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>20261101110847-97</kernel.version>
-                <authorization-api.version>20261101110847-97</authorization-api.version>
-                <platform.version>20261101110847-97</platform.version>
-                <redis.version>20261101110847-97</redis.version>
-                <!-- identity-mirror 生于 11-03，无 11-01 的 dated 快照；与消费方（epc core.version）
-                     同用 0.0.1-SNAPSHOT 口径，reactor 内亦对齐 -->
-                <identity-mirror.version>0.0.1-SNAPSHOT</identity-mirror.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- 🔴 client 纪律：禁依赖 authorization(server)——dep-direction-check.mjs 断言②（server→client 单向，

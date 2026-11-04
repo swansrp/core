@@ -68,6 +68,29 @@
 
     <properties>
         <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+
+        <!-- ============ 版本开关(双 profile 退役后的唯一机制) ============
+             默认 0.0.1-SNAPSHOT = 本地源码模式(reactor 全量现编,零参数);
+             CI 消费发布包时 -Dcore.dist.version=<发布版时间戳> 锁定整班火车。
+             下列兄弟属性全部由此一根派生,模块 pom 不再各自携带版本。 -->
+        <core.dist.version>0.0.1-SNAPSHOT</core.dist.version>
+        <admin-api.version>${core.dist.version}</admin-api.version>
+        <admin.version>${core.dist.version}</admin.version>
+        <authorization-api.version>${core.dist.version}</authorization-api.version>
+        <authorization-client.version>${core.dist.version}</authorization-client.version>
+        <authorization.version>${core.dist.version}</authorization.version>
+        <base-task.version>${core.dist.version}</base-task.version>
+        <document.version>${core.dist.version}</document.version>
+        <email.version>${core.dist.version}</email.version>
+        <forge.version>${core.dist.version}</forge.version>
+        <identity-mirror.version>${core.dist.version}</identity-mirror.version>
+        <kernel.version>${core.dist.version}</kernel.version>
+        <llm.version>${core.dist.version}</llm.version>
+        <mineru.version>${core.dist.version}</mineru.version>
+        <mongo.version>${core.dist.version}</mongo.version>
+        <oss.version>${core.dist.version}</oss.version>
+        <platform.version>${core.dist.version}</platform.version>
+        <redis.version>${core.dist.version}</redis.version>
     </properties>
 
     <!-- AI 17 区:ai/* 模块独立 reactor,JDK17 工具链构建(默认 reactor 不含,1.8 项目零感知) -->
