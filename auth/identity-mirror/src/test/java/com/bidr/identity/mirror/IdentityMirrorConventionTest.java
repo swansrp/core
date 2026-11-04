@@ -51,9 +51,16 @@ public class IdentityMirrorConventionTest {
     /** 违禁上游表前缀（拼接构造，见类注释②；本守卫自身源码不成串） */
     private static final String FORBIDDEN_UPSTREAM_TABLE_PREFIX = "a" + "c_";
 
-    /** import 面白名单前缀（api 模块内本模块实际消费的包） */
+    /**
+     * import 面白名单前缀（api 模块内本模块实际消费的包）。
+     *
+     * <p>判据区分「provider 实现面」与「api 契约面」：{@code service}/{@code dao}/{@code controller}
+     * 等实现包禁止（镜像与 provider 只许 HTTP 快照面交互）；api 里的纯契约类型允许——{@code envelope}
+     * 于 2026-11-04（对账单 #27）收编了原先 mirror 内联的信封 DTO，属同一档契约件。</p>
+     */
     private static final List<String> ALLOWED_AUTHORIZATION_IMPORT_PREFIXES =
-            Arrays.asList("com.bidr.authorization.bind.", "com.bidr.authorization.constants.");
+            Arrays.asList("com.bidr.authorization.bind.", "com.bidr.authorization.constants.",
+                    "com.bidr.authorization.envelope.");
 
     /** 四个镜像实体（守卫对象清单——加第五张表要同步这里） */
     private static final List<Class<?>> MIRROR_ENTITIES = Arrays.asList(
@@ -243,6 +250,9 @@ public class IdentityMirrorConventionTest {
                 isForbiddenAuthorizationImport("import com.bidr.authorization.bind.annotation.UserRef;"));
         Assert.assertFalse("api constants 白名单针误报",
                 isForbiddenAuthorizationImport("import com.bidr.authorization.constants.common.RequestConst;"));
+        // #27 新增白名单项必须同轮配正向针：只改 ALLOWED_* 不改本组，白名单扩大将无人看守
+        Assert.assertFalse("api envelope 白名单针误报",
+                isForbiddenAuthorizationImport("import com.bidr.authorization.envelope.Envelope;"));
         Assert.assertFalse("非 authorization 包误报",
                 isForbiddenAuthorizationImport("import com.bidr.kernel.mybatis.repository.BaseSqlRepo;"));
     }

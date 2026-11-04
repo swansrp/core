@@ -1,6 +1,7 @@
 package com.bidr.authorization.client;
 
 import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.authorization.envelope.Envelope;
 import com.bidr.kernel.utils.Base64Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -47,8 +48,6 @@ public class HttpAuthzCheckApi implements AuthzCheckApi {
     public static final String CHECK_PATH = "/authz/check";
     public static final String VERSION_PATH = "/authz/version";
     public static final String MENUS_PATH = "/authz/menus";
-    /** kernel Response 信封的成功码（ErrCodeSys.SUCCESS=0） */
-    static final int ENVELOPE_SUCCESS_CODE = 0;
 
     private final AuthzClientProperties properties;
     private final RestTemplate restTemplate;
@@ -128,39 +127,11 @@ public class HttpAuthzCheckApi implements AuthzCheckApi {
         if (envelope == null) {
             throw new IllegalStateException("/authz/" + face + " 响应体为空: " + uri);
         }
-        envelope.assertSuccess(face);
+        envelope.assertSuccess("/authz/" + face);
         return envelope;
     }
 
-    // ---------------- 响应信封 DTO（kernel Response 同构，client 侧自带解包） ----------------
-
-    /** {@code {status:{code,msg,details}, payload:T}} 信封 */
-    @lombok.Data
-    static class Envelope<T> {
-
-        private Status status;
-        private T payload;
-
-        void assertSuccess(String face) {
-            boolean ok = status != null && status.getCode() != null
-                    && ENVELOPE_SUCCESS_CODE == status.getCode();
-            if (!ok) {
-                String detail = status == null ? "无 status"
-                        : (status.getCode() == null ? "无 code" : status.getCode() + "/" + status.getMsg());
-                throw new IllegalStateException("/authz/" + face + " 返回非成功信封: " + detail);
-            }
-            if (payload == null) {
-                throw new IllegalStateException("/authz/" + face + " 信封 payload 为空");
-            }
-        }
-    }
-
-    @lombok.Data
-    static class Status {
-        private Integer code;
-        private String msg;
-        private String details;
-    }
+    // ---------------- 响应 payload DTO（信封本体＝authorization-api 共享 Envelope，见对账单 #27） ----------------
 
     @lombok.Data
     static class CheckPayload {

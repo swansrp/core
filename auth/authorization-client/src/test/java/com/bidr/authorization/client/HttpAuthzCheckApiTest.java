@@ -1,5 +1,6 @@
 package com.bidr.authorization.client;
 
+import com.bidr.authorization.envelope.Envelope;
 import com.bidr.kernel.utils.Base64Util;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,11 +54,11 @@ public class HttpAuthzCheckApiTest {
         api = new HttpAuthzCheckApi(properties, restTemplate);
     }
 
-    private static HttpAuthzCheckApi.Envelope<Object> envelope(int code) {
-        HttpAuthzCheckApi.Status status = new HttpAuthzCheckApi.Status();
+    private static Envelope<Object> envelope(int code) {
+        Envelope.Status status = new Envelope.Status();
         status.setCode(code);
         status.setMsg(code == 0 ? "SUCCESS" : "AC_PARTNER_NOT_EXISTED");
-        HttpAuthzCheckApi.Envelope<Object> envelope = new HttpAuthzCheckApi.Envelope<>();
+        Envelope<Object> envelope = new Envelope<>();
         envelope.setStatus(status);
         envelope.setPayload(new Object());
         return envelope;
@@ -77,9 +78,9 @@ public class HttpAuthzCheckApiTest {
                 .queryParam("userId", 100L).queryParam("scope", "t:7")
                 .queryParam("permission", "kb.search")
                 .build().encode().toUri();
-        HttpAuthzCheckApi.Envelope<HttpAuthzCheckApi.CheckPayload> body =
-                new HttpAuthzCheckApi.Envelope<>();
-        HttpAuthzCheckApi.Status ok = new HttpAuthzCheckApi.Status();
+        Envelope<HttpAuthzCheckApi.CheckPayload> body =
+                new Envelope<>();
+        Envelope.Status ok = new Envelope.Status();
         ok.setCode(0);
         body.setStatus(ok);
         HttpAuthzCheckApi.CheckPayload payload = new HttpAuthzCheckApi.CheckPayload();
@@ -103,9 +104,9 @@ public class HttpAuthzCheckApiTest {
     public void version面_信封解包() {
         URI uri = UriComponentsBuilder.fromHttpUrl(BASE).path("/authz/version")
                 .build().encode().toUri();
-        HttpAuthzCheckApi.Envelope<HttpAuthzCheckApi.VersionPayload> body =
-                new HttpAuthzCheckApi.Envelope<>();
-        HttpAuthzCheckApi.Status ok = new HttpAuthzCheckApi.Status();
+        Envelope<HttpAuthzCheckApi.VersionPayload> body =
+                new Envelope<>();
+        Envelope.Status ok = new Envelope.Status();
         ok.setCode(0);
         body.setStatus(ok);
         HttpAuthzCheckApi.VersionPayload payload = new HttpAuthzCheckApi.VersionPayload();
@@ -120,9 +121,9 @@ public class HttpAuthzCheckApiTest {
     public void menus面_信封解包() {
         URI uri = UriComponentsBuilder.fromHttpUrl(BASE).path("/authz/menus")
                 .queryParam("userId", 100L).build().encode().toUri();
-        HttpAuthzCheckApi.Envelope<HttpAuthzCheckApi.MenusPayload> body =
-                new HttpAuthzCheckApi.Envelope<>();
-        HttpAuthzCheckApi.Status ok = new HttpAuthzCheckApi.Status();
+        Envelope<HttpAuthzCheckApi.MenusPayload> body =
+                new Envelope<>();
+        Envelope.Status ok = new Envelope.Status();
         ok.setCode(0);
         body.setStatus(ok);
         HttpAuthzCheckApi.MenusPayload payload = new HttpAuthzCheckApi.MenusPayload();

@@ -1,6 +1,7 @@
 package com.bidr.identity.mirror.service;
 
 import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.authorization.envelope.Envelope;
 import com.bidr.identity.mirror.IdentityMirrorProperties;
 import com.bidr.identity.mirror.service.dto.SnapshotRes;
 import com.bidr.kernel.utils.Base64Util;
@@ -124,8 +125,9 @@ public class IdentitySnapshotClientEnvelopeContractTest {
     /** 腿④：裸 Jackson（不经 RestTemplate）反序列化信封面——线格式契约双保险 */
     @Test
     public void 信封JSON_裸Jackson反序列化_字段面() throws Exception {
-        IdentitySnapshotClient.Envelope<SnapshotRes> envelope = new ObjectMapper().readValue(
-                OK_ENVELOPE_JSON, new TypeReference<IdentitySnapshotClient.Envelope<SnapshotRes>>() {
+        // 信封本体已收敛到 authorization-api 共享 Envelope（对账单 #27）
+        Envelope<SnapshotRes> envelope = new ObjectMapper().readValue(
+                OK_ENVELOPE_JSON, new TypeReference<Envelope<SnapshotRes>>() {
                 });
 
         assertEquals(0, envelope.getStatus().getCode().intValue());

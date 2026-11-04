@@ -1,10 +1,10 @@
 package com.bidr.identity.mirror.service;
 
 import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.authorization.envelope.Envelope;
 import com.bidr.identity.mirror.IdentityMirrorProperties;
 import com.bidr.identity.mirror.service.dto.SnapshotRes;
 import com.bidr.kernel.utils.Base64Util;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -25,8 +25,7 @@ import org.springframework.web.client.RestTemplate;
  *
  * <p><b>响应信封</b>：hub 宿主对 com.bidr 包内控制器统一包 Response 信封
  * {@code {status:{code,msg,details}, payload:...}}（kernel 全局 ResponseExceptionHandler，
- * {@code @ControllerAdvice + ResponseBodyAdvice}——snapshot 直返 DTO 亦被包裹），本类自带同构
- * DTO 解包：{@code status.code==0} 取 payload 为快照；非 0 code／空 payload 抛
+ * {@code @ControllerAdvice + ResponseBodyAdvice}——snapshot 直返 DTO 亦被包裹），信封由 authorization-api 共享 {@link Envelope} 解包：{@code status.code==0} 取 payload 为快照；非 0 code／空 payload 抛
  * {@link IllegalStateException}（带 status.msg——鉴权失败等业务错误从「静默空快照」变显式异常）。
  * HTTP 层失败（非 2xx／超时／不可达）由 RestTemplate 抛 {@code RestClientException}——
  * 均由 {@link IdentityMirrorSyncJob} 兜住记日志，不炸调度线程。</p>
@@ -38,8 +37,9 @@ import org.springframework.web.client.RestTemplate;
  * <p><b>测试缝</b>：{@link RestTemplate} 经包内可见构造注入可替换（线格式契约测试
  * {@code IdentitySnapshotClientEnvelopeContractTest} 用 MockRestServiceServer 走真 Jackson 反序列化）。</p>
  *
- * <p>🔴 mirror 纪律：本模块禁依赖 authorization-client——信封 DTO 本地自带（与 client 侧
- * HttpAuthzCheckApi 的 Envelope 同构但互不引用，两模块互不依赖）。</p>
+ * <p>🔴 mirror 纪律：本模块禁依赖 authorization-client——信封 DTO 取 <b>authorization-api</b>
+ * 的共享 {@link Envelope}（2026-11-04 对账单 #27：client 与 mirror 的两份内联副本已收敛到 api，
+ * 一处定义两处消费；agent-runtime 的第三份按用户裁定暂留）。</p>
  *
  * @author Sharp
  * @since 2026/11/03
@@ -50,9 +50,6 @@ public class IdentitySnapshotClient {
 
     /** 快照端点固定路径（provider 侧 IdentitySnapshotController 的 mapping） */
     public static final String SNAPSHOT_PATH = "/open-api/v1/identity/snapshot";
-
-    /** kernel Response 信封的成功码（ErrCodeSys.SUCCESS=0） */
-    static final int ENVELOPE_SUCCESS_CODE = 0;
 
     private static final ParameterizedTypeReference<Envelope<SnapshotRes>> ENVELOPE_TYPE =
             new ParameterizedTypeReference<Envelope<SnapshotRes>>() {
@@ -110,37 +107,7 @@ public class IdentitySnapshotClient {
         if (envelope == null) {
             throw new IllegalStateException("快照响应体为空: " + url);
         }
-        envelope.assertSuccess();
+        envelope.assertSuccess("身份快照端点");
         return envelope.getPayload();
-    }
-
-    // ---------------- 响应信封 DTO（kernel Response 同构，mirror 侧本地自带） ----------------
-
-    /** {@code {status:{code,msg,details}, payload:T}} 信封（mirror 本地，勿引 authorization-client 同名类） */
-    @Data
-    static class Envelope<T> {
-
-        private Status status;
-        private T payload;
-
-        void assertSuccess() {
-            boolean ok = status != null && status.getCode() != null
-                    && ENVELOPE_SUCCESS_CODE == status.getCode();
-            if (!ok) {
-                String detail = status == null ? "无 status"
-                        : (status.getCode() == null ? "无 code" : status.getCode() + "/" + status.getMsg());
-                throw new IllegalStateException("身份快照端点返回非成功信封: " + detail);
-            }
-            if (payload == null) {
-                throw new IllegalStateException("身份快照信封 payload 为空");
-            }
-        }
-    }
-
-    @Data
-    static class Status {
-        private Integer code;
-        private String msg;
-        private String details;
     }
 }
