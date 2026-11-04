@@ -78,6 +78,19 @@ public class IdpBearerVerifierTest {
         assertNull("篡改后的裸 token 同样拒", verifier.verifyBearer(tampered));
     }
 
+    /** 断言④：配置了期望接入方 ⇒ 只收票面 app_id 全串相等的票，缺失/不符一律拒 */
+    @Test
+    public void 配置期望接入方后只收签给自己的票() {
+        IdpBearerProperties properties = new IdpBearerProperties();
+        properties.setPublicKeyBase64(publicKeyBase64);
+        properties.setAppId("epc-ai");
+        IdpBearerVerifier verifier = new IdpBearerVerifier(properties);
+
+        assertNotNull("app_id 与期望接入方一致⇒放行", verifier.verifyBearer(signWithAppId("epc-ai")));
+        assertNull("签给其它子系统的票必须拒", verifier.verifyBearer(signWithAppId("another-subsystem")));
+        assertNull("配置了期望接入方而票面无 app_id⇒拒", verifier.verifyBearer(validToken));
+    }
+
     /** 断言③：未配置公钥（空串/null）⇒ 该腿禁用，verify 恒拒（fail-closed） */
     @Test
     public void 未配置公钥时禁用且恒拒() {
@@ -87,6 +100,19 @@ public class IdpBearerVerifierTest {
         IdpBearerVerifier nullProps = new IdpBearerVerifier((IdpBearerProperties) null);
         assertFalse("Properties 缺席 ⇒ 禁用", nullProps.enabled());
         assertNull(nullProps.verifyBearer(validToken));
+    }
+
+    /** 造一张带 app_id 的票（受众校验腿用） */
+    private static String signWithAppId(String appId) {
+        long now = System.currentTimeMillis() / 1000L;
+        Map<String, Object> claims = new LinkedHashMap<>(6);
+        claims.put(IdpJwtUtil.CLAIM_ISS, "inkhub");
+        claims.put(IdpJwtUtil.CLAIM_SUB, "000001");
+        claims.put(IdpJwtUtil.CLAIM_UID, 1);
+        claims.put(IdpJwtUtil.CLAIM_APP_ID, appId);
+        claims.put(IdpJwtUtil.CLAIM_IAT, now);
+        claims.put(IdpJwtUtil.CLAIM_EXP, now + 3600L);
+        return IdpJwtUtil.sign(privateKeyBase64, IdpJwtUtil.computeKid(publicKeyBase64), claims);
     }
 
     /** 换掉 payload 里的 uid claim 值后重编码（签名仍是对原 payload 的 ⇒ 必失配） */

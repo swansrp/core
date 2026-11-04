@@ -16,6 +16,10 @@ import java.util.Map;
  * 刷新 → 上次快照 → 静态兜底（{@code public-key-base64}）」依次取。两者都未配置＝该腿禁用，
  * {@link #verifyBearer(String)} 恒拒（fail-closed）；验签/过期/脏串同样一律 null 绝不抛。</p>
  *
+ * <p><b>受众</b>：配置了期望接入方（{@link IdpBearerProperties#getAppId()}，缺省回退
+ * {@code my.oauth2.client.client-id}）时，票面 {@code app_id} 必须全串相等，缺失同样拒——
+ * 否则同钥下"签给 A 子系统的票"会被 B 子系统接受。</p>
+ *
  * @author coder (棒1, T2.3c 上提 2026-11-03；JWKS 化 2026-11-04)
  * @since 2026-11-03
  */
@@ -23,19 +27,32 @@ public class IdpBearerVerifier {
 
     private final JwksKeyProvider keyProvider;
 
+    /** 期望接入方（票面 app_id）；null＝不做受众校验（仅兼容"未接 OAuth2 client"的老形态） */
+    private final String expectedAppId;
+
     public IdpBearerVerifier(IdpBearerProperties properties) {
         this(properties == null ? null
-                : new JwksKeyProvider(properties.getServerBaseUrl(), properties.getPublicKeyBase64()));
+                        : new JwksKeyProvider(properties.getServerBaseUrl(), properties.getPublicKeyBase64()),
+                properties == null ? null : properties.getAppId());
     }
 
-    /** 直构形态（单测/手工接线用）：只有静态公钥，不拉 JWKS */
+    /** 直构形态（单测/手工接线用）：只有静态公钥，不拉 JWKS，不做受众校验 */
     public IdpBearerVerifier(String publicKeyBase64) {
         this(new JwksKeyProvider(null, publicKeyBase64));
     }
 
-    /** 注入取钥器（JWKS 动态 / 静态 / 测试桩） */
+    /** 注入取钥器（JWKS 动态 / 静态 / 测试桩），不做受众校验 */
     public IdpBearerVerifier(JwksKeyProvider keyProvider) {
+        this(keyProvider, null);
+    }
+
+    /**
+     * @param keyProvider   取钥器（可 null＝恒拒）
+     * @param expectedAppId 期望接入方（{@code ac_partner.app_key}）；空＝不做受众校验
+     */
+    public IdpBearerVerifier(JwksKeyProvider keyProvider, String expectedAppId) {
         this.keyProvider = keyProvider;
+        this.expectedAppId = StringUtils.trimToNull(expectedAppId);
     }
 
     /** 该腿是否启用＝有远端 JWKS 或静态公钥（都无则 verify 恒拒） */
@@ -48,7 +65,8 @@ public class IdpBearerVerifier {
      * 口径同 {@code AuthTokenUtil.resolveToken}）。
      *
      * @param bearerToken Authorization 头值或裸 JWT
-     * @return 验签通过且未过期时的 claims（最小载体）；腿禁用／无可用钥／验签失败／过期／脏串一律 null
+     * @return 验签通过、未过期且受众匹配时的 claims（最小载体）；腿禁用／无可用钥／验签失败／
+     *         过期／脏串／app_id 缺失或不符一律 null
      */
     public Map<String, Object> verifyBearer(String bearerToken) {
         if (!enabled() || StringUtils.isBlank(bearerToken)) {
@@ -66,6 +84,17 @@ public class IdpBearerVerifier {
         if (StringUtils.isBlank(publicKeyBase64)) {
             return null;
         }
-        return IdpJwtUtil.verify(token, publicKeyBase64);
+        Map<String, Object> claims = IdpJwtUtil.verify(token, publicKeyBase64);
+        if (claims == null) {
+            return null;
+        }
+        // 受众：配置了期望值就只收"签给自己"的票；票面缺失同样拒（没有受众≠谁都收）
+        if (expectedAppId != null) {
+            Object appId = claims.get(IdpJwtUtil.CLAIM_APP_ID);
+            if (appId == null || !expectedAppId.equals(String.valueOf(appId))) {
+                return null;
+            }
+        }
+        return claims;
     }
 }

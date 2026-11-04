@@ -129,6 +129,38 @@ public class IdpTokenVerifierTest {
         Assert.assertEquals("E1001", principal.getCustomerNumber());
     }
 
+    @Test
+    public void enforcesAudienceWhenAppIdConfigured() {
+        IdpBearerProperties properties = new IdpBearerProperties();
+        properties.setPublicKeyBase64(publicKeyBase64);
+        properties.setAppId("epc-ai");
+        IdpTokenVerifier verifier = new IdpTokenVerifier(properties);
+
+        Map<String, Object> forSelf = validClaims();
+        forSelf.put(IdpJwtUtil.CLAIM_APP_ID, "epc-ai");
+        Assert.assertNotNull("app_id 与期望接入方一致⇒放行",
+                verifier.verify(sign(privateKeyBase64, forSelf)));
+
+        Map<String, Object> forOther = validClaims();
+        forOther.put(IdpJwtUtil.CLAIM_APP_ID, "another-subsystem");
+        Assert.assertNull("签给其它子系统的票必须拒（跨子系统票混淆）",
+                verifier.verify(sign(privateKeyBase64, forOther)));
+
+        Map<String, Object> noAudience = validClaims();
+        noAudience.remove(IdpJwtUtil.CLAIM_APP_ID);
+        Assert.assertNull("配置了期望接入方而票面无 app_id⇒拒（没有受众≠谁都收）",
+                verifier.verify(sign(privateKeyBase64, noAudience)));
+    }
+
+    @Test
+    public void withoutExpectedAppIdKeepsLegacyBehavior() {
+        Map<String, Object> legacy = validClaims();
+        legacy.remove(IdpJwtUtil.CLAIM_APP_ID);
+
+        Assert.assertNotNull("未配置期望接入方＝兼容老票（票面无 app_id 也放行）",
+                new IdpTokenVerifier(publicKeyBase64).verify(sign(privateKeyBase64, legacy)));
+    }
+
     private static Map<String, Object> validClaims() {
         long now = System.currentTimeMillis() / 1000L;
         Map<String, Object> claims = new LinkedHashMap<>();

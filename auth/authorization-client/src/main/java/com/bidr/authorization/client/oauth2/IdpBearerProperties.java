@@ -13,9 +13,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     bearer:
  *       enabled: true
  *       server-base-url: http://10.3.6.60/inkhub    # 墨枢根地址，公钥运行时从 /web/oauth2/jwks.json 取
+ *       app-id: epc-ai                              # 可选：本子系统的 ac_partner.app_key
  * </pre>
  *
  * <p>静态兜底（可选，冷启动/纯离线场景）：{@code public-key-base64: <X.509 公钥 base64>}。</p>
+ *
+ * <p>🔴 <b>受众校验（app_id）</b>：IdP 用同一把私钥给所有接入方签票，只验签名会让
+ * "签给 A 子系统的票被 B 子系统收下"。因此验票侧必须要求票面 {@code app_id} 等于本宿主的
+ * client_id：显式配 {@link #appId} 优先；未配时自动回退同宿主的
+ * {@code my.oauth2.client.client-id}（两者指向同一 {@code ac_partner.app_key}，不重复配）。
+ * 两者都缺 ⇒ {@link IdpBearerAutoConfiguration} 装配期 fail-fast，不允许静默跳过。</p>
  *
  * <p>🔴 <b>本类不再内置任何公钥常量</b>（2026-11-04 用户裁定）：墨枢已改为**按部署生成密钥对**
  * （每个部署一套），公钥不可能是"标准值"——写死进 starter 会让非标准部署静默验签失败。
@@ -47,6 +54,13 @@ public class IdpBearerProperties {
      */
     private String publicKeyBase64 = "";
 
+    /**
+     * 期望的票面接入方标识（audience）＝本子系统的 {@code ac_partner.app_key}（＝client_id）。
+     * 非空 ⇒ 票面 {@code app_id} 必须与之全串相等，缺失同样拒（跨子系统票混淆防线）。
+     * 空 ⇒ 自动回退 {@code my.oauth2.client.client-id}；两者都空而本腿启用 ⇒ 装配期 fail-fast。
+     */
+    private String appId = "";
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -69,5 +83,13 @@ public class IdpBearerProperties {
 
     public void setPublicKeyBase64(String publicKeyBase64) {
         this.publicKeyBase64 = publicKeyBase64;
+    }
+
+    public String getAppId() {
+        return appId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
     }
 }

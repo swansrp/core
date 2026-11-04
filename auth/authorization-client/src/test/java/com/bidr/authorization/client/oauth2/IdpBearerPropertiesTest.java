@@ -2,6 +2,7 @@ package com.bidr.authorization.client.oauth2;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 /**
  * {@link IdpBearerProperties} 配置语义守卫（2026-11-04 改：**starter 不再内置任何公钥**）。
@@ -26,6 +27,8 @@ public class IdpBearerPropertiesTest {
         Assert.assertFalse("默认不装配：宿主必须显式 enabled=true", properties.isEnabled());
         Assert.assertEquals("不得内置 server-base-url", "", properties.getServerBaseUrl());
         Assert.assertEquals("不得内置任何公钥（按部署生成密钥对）", "", properties.getPublicKeyBase64());
+        Assert.assertEquals("不得内置期望接入方（由宿主配置或回退 OAuth2 client-id）", "",
+                properties.getAppId());
         Assert.assertFalse("未配置时验签器应判不可用（fail-closed）",
                 new IdpBearerVerifier(properties).enabled());
     }
@@ -35,10 +38,52 @@ public class IdpBearerPropertiesTest {
         IdpBearerProperties properties = new IdpBearerProperties();
         properties.setServerBaseUrl("http://inkhub.test/inkhub");
         properties.setPublicKeyBase64("custom-static-key");
+        properties.setAppId("epc-ai");
         Assert.assertEquals("http://inkhub.test/inkhub", properties.getServerBaseUrl());
         Assert.assertEquals("custom-static-key", properties.getPublicKeyBase64());
+        Assert.assertEquals("epc-ai", properties.getAppId());
         // 两种来源任一存在即视为可用（远端优先；静态作兜底）
         Assert.assertTrue(new IdpBearerVerifier(properties).enabled());
+    }
+
+    @Test
+    public void explicitAppIdWinsOverOAuth2ClientId() {
+        IdpBearerProperties properties = new IdpBearerProperties();
+        properties.setAppId("  explicit-app  ");
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("my.oauth2.client.client-id", "client-from-oauth2");
+
+        Assert.assertEquals("显式 app-id 优先（并去空白）", "explicit-app",
+                IdpBearerAutoConfiguration.resolveExpectedAppId(properties, environment));
+    }
+
+    @Test
+    public void expectedAppIdFallsBackToOAuth2ClientId() {
+        IdpBearerProperties properties = new IdpBearerProperties();
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("my.oauth2.client.client-id", "epc-ai");
+
+        Assert.assertEquals("未配 app-id ⇒ 自动采用同宿主的 OAuth2 client-id", "epc-ai",
+                IdpBearerAutoConfiguration.resolveExpectedAppId(properties, environment));
+        Assert.assertNull("两者都缺 ⇒ null（交给 fail-fast）",
+                IdpBearerAutoConfiguration.resolveExpectedAppId(properties, new MockEnvironment()));
+
+        properties.setAppId("   ");
+        Assert.assertEquals("app-id 空白同样走回退", "epc-ai",
+                IdpBearerAutoConfiguration.resolveExpectedAppId(properties, environment));
+    }
+
+    @Test
+    public void failFastWhenAudienceNotResolvable() {
+        try {
+            IdpBearerAutoConfiguration.assertAudienceConfigured(null);
+            Assert.fail("解析不出期望接入方 ⇒ 装配期必须失败（不允许静默跳过受众校验）");
+        } catch (IllegalStateException expected) {
+            Assert.assertTrue("错误信息必须给出两种正确配法",
+                    expected.getMessage().contains("app-id")
+                            && expected.getMessage().contains("my.oauth2.client.client-id"));
+        }
+        IdpBearerAutoConfiguration.assertAudienceConfigured("epc-ai"); // 不抛
     }
 
     @Test

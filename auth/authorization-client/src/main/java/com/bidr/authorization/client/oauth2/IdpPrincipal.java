@@ -21,7 +21,7 @@ public class IdpPrincipal {
     /** 工号（IdP claim sub＝customerNumber） */
     private String customerNumber;
 
-    /** 主系统 ac_user.user_id（IdP claim uid；系统管理级判定=1 用） */
+    /** 主系统 ac_user.user_id（IdP claim uid；平台管理员判定经 /authz/check，不看 uid 数值） */
     private Long uid;
 
     /** 展示名（IdP claim name） */
