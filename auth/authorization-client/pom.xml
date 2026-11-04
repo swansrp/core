@@ -32,6 +32,7 @@
                 <authorization-api.version>${jarVersion}</authorization-api.version>
                 <platform.version>${jarVersion}</platform.version>
                 <redis.version>${jarVersion}</redis.version>
+                <identity-mirror.version>${jarVersion}</identity-mirror.version>
             </properties>
         </profile>
         <profile>
@@ -48,6 +49,9 @@
                 <authorization-api.version>20261101110847-97</authorization-api.version>
                 <platform.version>20261101110847-97</platform.version>
                 <redis.version>20261101110847-97</redis.version>
+                <!-- identity-mirror 生于 11-03，无 11-01 的 dated 快照；与消费方（epc core.version）
+                     同用 0.0.1-SNAPSHOT 口径，reactor 内亦对齐 -->
+                <identity-mirror.version>0.0.1-SNAPSHOT</identity-mirror.version>
             </properties>
         </profile>
     </profiles>
@@ -86,6 +90,16 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
+        </dependency>
+        <!-- 子系统自签会话的身份源（SubsystemSessionService，2026-11-04 合并轮）：
+             🔴 optional——主系统经 authorization→authorization-client 拿到本 jar 但不继承镜像
+             （不建 idm_* 表、会话自动装配退位）；子系统显式依赖 identity-mirror（epc-ai-common
+             已声明），装配才生效。 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>identity-mirror</artifactId>
+            <version>${identity-mirror.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
