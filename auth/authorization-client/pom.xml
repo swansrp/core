@@ -45,13 +45,13 @@
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>20261101110847-97</kernel.version>
-                <authorization-api.version>20261101110847-97</authorization-api.version>
-                <platform.version>20261101110847-97</platform.version>
-                <redis.version>20261101110847-97</redis.version>
+                <kernel.version>20261104135926-98</kernel.version>
+                <authorization-api.version>20261104135926-98</authorization-api.version>
+                <platform.version>20261104135926-98</platform.version>
+                <redis.version>20261104135926-98</redis.version>
                 <!-- identity-mirror 生于 11-03，无 11-01 的 dated 快照；与消费方（epc core.version）
                      同用 0.0.1-SNAPSHOT 口径，reactor 内亦对齐 -->
-                <identity-mirror.version>0.0.1-SNAPSHOT</identity-mirror.version>
+                <identity-mirror.version>20261104135926-98</identity-mirror.version>
             </properties>
         </profile>
     </profiles>
