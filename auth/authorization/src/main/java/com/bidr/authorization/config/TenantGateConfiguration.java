@@ -53,13 +53,31 @@ import java.util.regex.Pattern;
 @Configuration
 public class TenantGateConfiguration {
 
-    /** 把租户数据闸插到框架 MybatisPlusInterceptor 链的最前（数据权限须在分页/动态表名之前改写 WHERE） */
+    /**
+     * 把租户数据闸插到框架 MybatisPlusInterceptor 链的最前（数据权限须在分页/动态表名之前改写 WHERE）。
+     * <p>🔴 项目类型（open 项目 / 租户项目）是<b>部署定型</b>的，不做运行时动态切换：仅当 yml
+     * {@code my.tenant.line-enabled=true}（多租户行级隔离启用）时装配数据闸；未启用＝open 项目，
+     * 原链原样返回、零改写——pan 等非租户项目不因"用户无租户绑定"被恒假过滤。租户项目必配此键，
+     * 其无租户绑定的登录态按 2026-11-01 裁定恒假（1=0）报错。</p>
+     */
     @Bean
-    public static BeanPostProcessor tenantGateInjector(ObjectProvider<RegisterModeService> registerModeProvider) {
+    // 两个装配旁路参数（2026-11-04 合并 gitee 时融合，语义分层、都要保留）：
+    //   environment（gitee 0c7018b4）＝**部署定型**判据：my.tenant.line-enabled=false（open 项目，
+    //     如 pan）⇒ 整条链原样返回、根本不装配闸；
+    //   registerModeProvider（本地 T1.x）＝**装配后**的查询级旁路：租户项目里 open 注册模式仍无
+    //     租户概念，闸介入只会把查询恒假（1=0），故由 openModeBypass 短路。
+    public static BeanPostProcessor tenantGateInjector(org.springframework.core.env.Environment environment,
+                                                       ObjectProvider<RegisterModeService> registerModeProvider) {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
                 if (!(bean instanceof MybatisPlusInterceptor)) {
+                    return bean;
+                }
+                // 部署定型判据：open 项目不装配租户数据闸（与 my.tenant.line-enabled 同一开关，见配置项文档）
+                boolean tenantProject = Boolean.parseBoolean(
+                        environment.getProperty("my.tenant.line-enabled", "false").trim());
+                if (!tenantProject) {
                     return bean;
                 }
                 MybatisPlusInterceptor origin = (MybatisPlusInterceptor) bean;

@@ -92,14 +92,11 @@ public class PasswordServiceImpl implements PasswordService {
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
         if (FuncUtil.isNotEmpty(req.getLoginId())) {
-            // 越界闸按「有无可验凭据」判，不按登录态判（#47）：
+            // 越界闸按「有无可验凭据」判，不按登录态判：
             // 已有密码的账号 → 下方 oldPassword 强校验即身份证明（登录前的密码过期强制改密链路
             //   token 为 GUEST，靠它放行；他人改也需要知道旧密码，等同持有凭据）；
             // 无密码账号（飞书 SSO 建号）→ 没有可验凭据，只有本人登录态可设，否则任何知道工号的人
             //   都能代设密码后用密码登录绕过 SSO 接管账号。SSO 首次设密码走 /login/password/init。
-            // 🔴 反面教材（2026-11-04 曾短暂采用）：判据写成「operator 非空才比对」——无会话时整段
-            //   跳过，而下方 oldPassword 校验只对有密码账号生效 ⇒ 匿名请求可给无密码账号直接设密
-            //   ＝账号接管。按凭据判才能同时满足「过期改密放行」与「不接管」。
             boolean ownAccount = FuncUtil.equals(user.getCustomerNumber(), AccountContext.getOperator());
             Validator.assertTrue(ownAccount || FuncUtil.isNotEmpty(user.getPassword()),
                     AccountErrCode.AC_PASSWORD_OWNER_MISMATCH);
