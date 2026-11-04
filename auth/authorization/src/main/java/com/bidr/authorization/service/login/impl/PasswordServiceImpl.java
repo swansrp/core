@@ -91,12 +91,17 @@ public class PasswordServiceImpl implements PasswordService {
             user = acUserService.getByCustomerNumber(AccountContext.getOperator());
         }
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
-        // 归属校验只在「已登录」时比对 operator：过期改密/首次设密发生在登录页（无会话，operator=null），
-        // 归属证明＝旧密码验签（下方 AC_PASSWORD_OLD_NOT_RIGHT）＋验证码，不做会话比对；
-        // 已登录态传他人 loginId 仍恒拒（#47：原判据不区分有无会话，把过期改密整条路堵死成
-        // 「不能修改他人密码」——6.60 真机 zhang_p 实证，password_last_time 空即触发过期）。
-        if (FuncUtil.isNotEmpty(req.getLoginId()) && FuncUtil.isNotEmpty(AccountContext.getOperator())) {
-            Validator.assertEquals(user.getCustomerNumber(), AccountContext.getOperator(),
+        if (FuncUtil.isNotEmpty(req.getLoginId())) {
+            // 越界闸按「有无可验凭据」判，不按登录态判（#47）：
+            // 已有密码的账号 → 下方 oldPassword 强校验即身份证明（登录前的密码过期强制改密链路
+            //   token 为 GUEST，靠它放行；他人改也需要知道旧密码，等同持有凭据）；
+            // 无密码账号（飞书 SSO 建号）→ 没有可验凭据，只有本人登录态可设，否则任何知道工号的人
+            //   都能代设密码后用密码登录绕过 SSO 接管账号。SSO 首次设密码走 /login/password/init。
+            // 🔴 反面教材（2026-11-04 曾短暂采用）：判据写成「operator 非空才比对」——无会话时整段
+            //   跳过，而下方 oldPassword 校验只对有密码账号生效 ⇒ 匿名请求可给无密码账号直接设密
+            //   ＝账号接管。按凭据判才能同时满足「过期改密放行」与「不接管」。
+            boolean ownAccount = FuncUtil.equals(user.getCustomerNumber(), AccountContext.getOperator());
+            Validator.assertTrue(ownAccount || FuncUtil.isNotEmpty(user.getPassword()),
                     AccountErrCode.AC_PASSWORD_OWNER_MISMATCH);
         }
         Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
