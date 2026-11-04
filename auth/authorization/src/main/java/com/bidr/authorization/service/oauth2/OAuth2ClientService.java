@@ -11,9 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Title: OAuth2ClientService
@@ -29,7 +32,10 @@ import java.util.List;
  *       不给逐字符爆破的时序侧信道；</li>
  *   <li><b>redirect 闸</b>：传入串在该 partner 名下 {@code valid='1'} 登记行中<b>全串精确等值</b>
  *       （trim 后比较；🔴 与 SSO 出票面的 origin 等值判据刻意不同源——授权码回调按 RFC 6749 §3.1.2.3
- *       是全串精确匹配，前缀/origin 匹配都会放大子域绕过面）。</li>
+ *       是全串精确匹配，前缀/origin 匹配都会放大子域绕过面）。
+ *       <b>本地/内网豁免</b>（2026-11-04 用户拍板）：host 为 localhost／127.0.0.0/8／10.0.0.0/8／::1
+ *       且 scheme 为 http(s) ⇒ 跳过登记比对直接放行（端口/路径任意），见
+ *       {@link #isLocalOrIntranetCallback(String)}；登记行兼容保留、不强制清退。</li>
  * </ol>
  * 全部以业务拒绝收敛（{@link Validator} ⇒ ServiceException，文案即根因），authorize/token 两个
  * 端点各自决定向外形态（authorize 对 client/redirect 无效不 302，token 转 400 OAuth2 错误 JSON）。</p>
@@ -74,7 +80,8 @@ public class OAuth2ClientService {
     }
 
     /**
-     * redirect 闸：传入串在该 partner 名下 valid='1' 登记行中全串精确等值（trim 后比较）。
+     * redirect 闸：传入串在该 partner 名下 valid='1' 登记行中全串精确等值（trim 后比较）；
+     * 本地/内网回调（{@link #isLocalOrIntranetCallback(String)}）跳过比对直接放行。
      *
      * @param partner     partner 行（不得为 null）
      * @param redirectUri 传入回调地址
@@ -82,11 +89,79 @@ public class OAuth2ClientService {
     public void checkRedirectUriRegistered(AcPartner partner, String redirectUri) {
         Validator.assertNotBlank(redirectUri, ErrCodeSys.PA_PARAM_FORMAT, "redirect_uri");
         String candidate = redirectUri.trim();
+        if (isLocalOrIntranetCallback(candidate)) {
+            log.info("[OAuth2]回调为本地/内网地址，跳过白名单比对: client={}, redirectUri={}",
+                    partner.getAppKey(), candidate);
+            return;
+        }
         List<AcSsoRedirect> registered = acSsoRedirectService.listValid(partner.getId());
         boolean whitelisted = registered != null && registered.stream()
                 .anyMatch(row -> candidate.equals(row.getRedirectUri() == null
                         ? "" : row.getRedirectUri().trim()));
         Validator.assertTrue(whitelisted, ErrCodeSys.SYS_ERR_MSG,
                 "redirect_uri 未登记（不在该应用的回调白名单），拒绝授权");
+    }
+
+    /**
+     * 本地/内网回调自动放行判据（2026-11-04）：host＝{@code localhost}（大小写不敏感）／
+     * 127.0.0.0/8／10.0.0.0/8（严格点分四段、逐段 0-255、禁前导零）／{@code ::1}，
+     * scheme 仅 http(s)，端口与路径任意 ⇒ 免登记。
+     *
+     * <p>🔴 豁免面收窄防套娃：{@code localhost.evil.com}、{@code 127.0.0.1.evil.com}、
+     * {@code 10.evil.com}、十进制整数形态、八进制前导零（浏览器会解析成别的地址）一律不命中，
+     * 照走白名单比对；解析失败 fail-closed。</p>
+     *
+     * <p>动机：开发联调的 vite/本地端口不固定，逐口登记是纯运维噪音；10/8 为公司内网段，
+     * 回调落在内网机器不构成跨公网外泄面。纯函数、无副作用。</p>
+     */
+    static boolean isLocalOrIntranetCallback(String candidateUri) {
+        if (StringUtils.isBlank(candidateUri)) {
+            return false;
+        }
+        try {
+            URI parsed = new URI(candidateUri.trim());
+            String scheme = parsed.getScheme();
+            String host = parsed.getHost();
+            if (host == null || (!"http".equals(scheme) && !"https".equals(scheme))) {
+                return false;
+            }
+            String lower = host.toLowerCase(Locale.ROOT);
+            if ("localhost".equals(lower)) {
+                return true;
+            }
+            if (lower.startsWith("[") && lower.endsWith("]")) {
+                String v6 = lower.substring(1, lower.length() - 1);
+                return "::1".equals(v6) || "0:0:0:0:0:0:0:1".equals(v6);
+            }
+            return isIPv4WithFirstOctet(lower, "127") || isIPv4WithFirstOctet(lower, "10");
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** 严格点分四段判定：首段等于给定值、逐段 0-255、禁前导零（防八进制形态漂移）。 */
+    private static boolean isIPv4WithFirstOctet(String lowerHost, String firstOctet) {
+        String[] parts = lowerHost.split("\\.", -1);
+        if (parts.length != 4 || !firstOctet.equals(parts[0])) {
+            return false;
+        }
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) {
+                return false;
+            }
+            if (part.length() > 1 && part.charAt(0) == '0') {
+                return false;
+            }
+            for (int i = 0; i < part.length(); i++) {
+                char c = part.charAt(i);
+                if (c < '0' || c > '9') {
+                    return false;
+                }
+            }
+            if (Integer.parseInt(part) > 255) {
+                return false;
+            }
+        }
+        return true;
     }
 }

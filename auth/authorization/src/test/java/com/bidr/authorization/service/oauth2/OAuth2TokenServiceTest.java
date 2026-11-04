@@ -38,7 +38,9 @@ public class OAuth2TokenServiceTest {
 
     private static final String CLIENT_ID = "demo-app";
     private static final String CLIENT_SECRET = "ppkxE7Wxx9tfM9vz";
-    private static final String REDIRECT_URI = "http://127.0.0.1:5174";
+    // 用公网串做白名单腿：localhost/127/10 自 2026-11-04 起免登记（见 OAuth2ClientServiceTest），
+    // 拿本地串测"白名单变动必须拒"会恒过、失去判别力
+    private static final String REDIRECT_URI = "https://sub.example.com/oauth2/callback";
 
     private static String privateKeyBase64;
     private static String publicKeyBase64;
