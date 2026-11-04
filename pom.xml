@@ -6,6 +6,19 @@
     <groupId>com.bidr</groupId>
     <artifactId>core</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <!-- ============================================================
+         兼容性纪律(1.8/17 并存期):
+         1. 除 ai/* 外,本仓库源码必须保持 Java 8 语法/API 兼容——下游 1.8
+            项目在各自 reactor 用 JDK8 工具链现编本仓库,字节码级别由各项目
+            构建决定,本仓库不发布二进制产物,只有源码约束。
+         2. 禁止引入 Java 9+ 语法(records/sealed/switch 表达式)与 API
+            (如 String.isBlank、List.of)。防呆闸=JDK8 工具链编译:违规当场
+            报错;JDK17 工具链反而查不出(会延迟引爆在 1.8 项目构建里)。
+         3. ai/* 四模块(aim 17 区)已移出默认 reactor,仅 -Pai17 激活,
+            其源码可用 17 语法/API,必须用 JDK17 工具链构建。
+         4. 改动验证方式:非 ai 模块用 JDK8 工具链 mvn compile 一次。
+         全 fleet 切 17 或 SB3 分叉时,本注释随纪律一并解除。
+         ============================================================ -->
     <modules>
         <module>base/kernel</module>
         <module>base/platform</module>
@@ -31,19 +44,15 @@
         <module>tool/qichacha</module>
         <module>store/mongo</module>
         <module>comm/socket-io</module>
-        <module>ai/mcp</module>
         <module>store/elasticsearch</module>
         <module>lowcode/forge</module>
         <module>comm/kafka</module>
         <module>store/td</module>
-        <module>ai/llm</module>
         <module>tool/document</module>
         <module>tool/gotenberg</module>
         <module>tool/mineru</module>
         <module>engine/file-parse</module>
         <module>lowcode/insight</module>
-        <module>ai/agent-runtime</module>
-        <module>ai/agent-console</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -60,6 +69,22 @@
     <properties>
         <jarVersion>0.0.1-SNAPSHOT</jarVersion>
     </properties>
+
+    <!-- AI 17 区:ai/* 模块独立 reactor,JDK17 工具链构建(默认 reactor 不含,1.8 项目零感知) -->
+    <profiles>
+        <profile>
+            <id>ai17</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <modules>
+                <module>ai/llm</module>
+                <module>ai/mcp</module>
+                <module>ai/agent-runtime</module>
+                <module>ai/agent-console</module>
+            </modules>
+        </profile>
+    </profiles>
 
     <distributionManagement>
         <repository>
