@@ -48,13 +48,25 @@ import java.util.regex.Pattern;
 @Configuration
 public class TenantGateConfiguration {
 
-    /** 把租户数据闸插到框架 MybatisPlusInterceptor 链的最前（数据权限须在分页/动态表名之前改写 WHERE） */
+    /**
+     * 把租户数据闸插到框架 MybatisPlusInterceptor 链的最前（数据权限须在分页/动态表名之前改写 WHERE）。
+     * <p>🔴 项目类型（open 项目 / 租户项目）是<b>部署定型</b>的，不做运行时动态切换：仅当 yml
+     * {@code my.tenant.line-enabled=true}（多租户行级隔离启用）时装配数据闸；未启用＝open 项目，
+     * 原链原样返回、零改写——pan 等非租户项目不因"用户无租户绑定"被恒假过滤。租户项目必配此键，
+     * 其无租户绑定的登录态按 2026-11-01 裁定恒假（1=0）报错。</p>
+     */
     @Bean
-    public static BeanPostProcessor tenantGateInjector() {
+    public static BeanPostProcessor tenantGateInjector(org.springframework.core.env.Environment environment) {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
                 if (!(bean instanceof MybatisPlusInterceptor)) {
+                    return bean;
+                }
+                // 部署定型判据：open 项目不装配租户数据闸（与 my.tenant.line-enabled 同一开关，见配置项文档）
+                boolean tenantProject = Boolean.parseBoolean(
+                        environment.getProperty("my.tenant.line-enabled", "false").trim());
+                if (!tenantProject) {
                     return bean;
                 }
                 MybatisPlusInterceptor origin = (MybatisPlusInterceptor) bean;
