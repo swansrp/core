@@ -30,11 +30,19 @@ public class LogoffController {
 
     @RequestMapping(value = "", method = RequestMethod.POST)
     public void logoff() {
-        // 语义＝删票即完成。原第二行 verifyToken(null) 在删票之后验 null 必然 assertNotNull 炸
-        // （TokenServiceImpl:78）⇒ 登出永远以「登录信息已过期」异常信封收场、前端不跳登录页
-        // （6.60 真机 #39 实证：日志 LogoffController.java:34 栈）。删票后本无票可验，验票收尾
-        // 无意义——2023 年出生时即如此，T3.1 重构 TokenService 后由潜伏转为必炸。
+        // 🔴 这两行是**刻意设计，不是死代码，勿删勿"优化"**（2026-11-04 曾误判为死代码改成
+        // 200 SUCCESS，当天回滚——见对账单 #39）：
+        //   ① removeToken()：删服务端票（真正让会话失效）；
+        //   ② verifyToken(null)：**故意**验空票，让 Validator.assertNotNull 抛
+        //      {@code SYS_SESSION_TIME_OUT}（401）。这个 401 就是登出的**返回协议**——
+        //      前端多处（framework TopHeader、新 IA InkHubTopNav 等）的 logoff() 是裸调、
+        //      自身不做跳转，全靠 request 拦截器的 SESSION_TIME_OUT 分支跳登录页。
+        //      改成 200 会让这些调用点"点了没反应"（页面停在已注销态）。
+        // 副作用（已知并接受）：异常会走 ResponseExceptionHandler → 日志留栈／通知面留一条
+        // ERROR；且下一行 Resp.notice 因此**不可达**（401 即返回）。降噪归对账单 #46，
+        // 不在此处改动语义。
         tokenService.removeToken();
+        tokenService.verifyToken(null);
         Resp.notice("已退出登录");
     }
 }
