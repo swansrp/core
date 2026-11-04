@@ -203,10 +203,19 @@ public class JwksKeyProvider {
         return StringUtils.isBlank(staticPublicKeyBase64) ? null : staticPublicKeyBase64;
     }
 
-    /** JWKS → kid→公钥base64。只认 kty=RSA 且 n/e/kid 齐的项；单条坏不影响其余 */
+    /**
+     * JWKS → kid→公钥base64。只认 kty=RSA 且 n/e/kid 齐的项；单条坏不影响其余。
+     *
+     * <p>🔴 兼容两种响应形态（2026-11-04 真机实测）：墨枢控制器的响应会被框架统一信封包一层
+     * （{@code {"status":{...},"payload":{"keys":[...]}}}），标准 JWKS 客户端（Spring Security 等）
+     * 只认裸 {@code {"keys":[...]}}。这里两种都收：优先顶层 keys（标准形态），否则下钻 payload.keys。</p>
+     */
     Map<String, String> parseJwks(String body) throws Exception {
         JsonNode root = objectMapper.readTree(body);
         JsonNode keys = root == null ? null : root.get("keys");
+        if ((keys == null || !keys.isArray()) && root != null) {
+            keys = root.path("payload").get("keys");
+        }
         if (keys == null || !keys.isArray()) {
             return Collections.emptyMap();
         }

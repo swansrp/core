@@ -118,6 +118,22 @@ public class JwksKeyProviderTest {
         Assert.assertNotNull("用拉到的钥必须能验通真签的票", IdpJwtUtil.verify(token, resolved));
     }
 
+    /* ---------------- 腿 1b：统一信封响应形态（真机实测 2026-11-04） ---------------- */
+
+    @Test
+    public void parsesUnifiedEnvelopeResponseShape() {
+        // 墨枢控制器的响应被框架信封包一层：{status, payload:{keys}}；标准 JWKS 客户端只认裸 keys
+        String envelope = "{\"status\":{\"code\":0,\"msg\":\"ok\"},\"payload\":" + jwksJson + "}";
+        server.expect(requestTo(JWKS_URL)).andRespond(withSuccess(envelope, MediaType.APPLICATION_JSON));
+
+        JwksKeyProvider provider = new JwksKeyProvider(BASE, "", JwksKeyProvider.DEFAULT_TTL_MILLIS, restTemplate);
+        String token = validToken();
+
+        String resolved = provider.resolveForToken(token);
+        Assert.assertNotNull("信封形态的 JWKS 也必须能解析出公钥", resolved);
+        Assert.assertNotNull("信封形态取到的钥必须能验通真票", IdpJwtUtil.verify(token, resolved));
+    }
+
     /* ---------------- 腿 2：TTL 内不重复拉取 ---------------- */
 
     @Test
