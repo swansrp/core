@@ -43,7 +43,7 @@ import java.util.Map;
  *   <li>{@code GET/POST /web/oauth2/authorize}——授权码签发口：要求已登录（判据＝
  *       原 M15 出票口同款（该口已随 T1.3 棒 8 下线）：{@link AuthTokenUtil#extractToken} +
  *       {@link TokenService#verifyToken}，不依赖线程态）。未登录 ⇒ 302 本地登录页
- *       {@code /#/login?redirect_uri=<原 authorize 地址>}（SPA Login 页约定参数名
+ *       {@code {context-path}/#/login?redirect_uri=<原 authorize 地址>}（SPA Login 页约定参数名
  *       {@code redirect_uri}、值不带前导斜杠，登录后由 Login 页 replace 回跳）；
  *       client/redirect 校验<b>失败不 302</b>（RFC 6749 §4.1.2.1——未核验的 redirect_uri
  *       不得作为跳转目标），就地 400 文案；response_type≠code ⇒ 302 回已核验的
@@ -68,8 +68,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OAuth2IdpController {
 
-    /** SPA 登录页 hash 路由（framework router 本地登录页；redirect_uri 为 Login 页约定回跳参数名） */
-    private static final String LOGIN_PAGE_HASH = "/#/login";
+    /**
+     * SPA 登录页 hash 路由后缀（framework router 本地登录页；redirect_uri 为 Login 页约定回跳参数名）。
+     * 🔴 前缀必须随 context-path：SPA 挂在 {context-path}/ 下（6.60／zz 都是 /inkhub/），
+     * 写死 "/#/login" 会让浏览器落在站根、hash 在 302 里丢失 ⇒ 登录页根本打不开。
+     */
+    private static final String LOGIN_PAGE_HASH_SUFFIX = "/#/login";
 
     private static final String RESPONSE_TYPE_CODE = "code";
 
@@ -216,7 +220,7 @@ public class OAuth2IdpController {
         return null;
     }
 
-    /** SPA 登录页回跳地址：/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）> */
+    /** SPA 登录页回跳地址：{context-path}/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）> */
     private String loginBackUrl(HttpServletRequest request) {
         String back = request.getRequestURI();
         if (back != null && back.startsWith("/")) {
@@ -226,7 +230,7 @@ public class OAuth2IdpController {
         if (StringUtils.isNotBlank(query)) {
             back = back + "?" + query;
         }
-        return LOGIN_PAGE_HASH + "?redirect_uri=" + urlEncode(back);
+        return request.getContextPath() + LOGIN_PAGE_HASH_SUFFIX + "?redirect_uri=" + urlEncode(back);
     }
 
     /** state 可选回传（RFC 6749 §4.1.1 原值透传，encodeURIComponent 等价物） */
