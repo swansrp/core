@@ -44,13 +44,13 @@
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
                 <java.version>1.8</java.version>
-                <kernel.version>20261101110847-97</kernel.version>
-                <platform.version>20261101110847-97</platform.version>
-                <redis.version>20261101110847-97</redis.version>
-                <authorization.version>20261101110847-97</authorization.version>
+                <kernel.version>20261104135926-98</kernel.version>
+                <platform.version>20261104135926-98</platform.version>
+                <redis.version>20261104135926-98</redis.version>
+                <authorization.version>20261104135926-98</authorization.version>
                 <!-- T2.3a 拆分：admin-api 自 96 批起 CI 发版；此前用 ${jarVersion}（root 兜底 SNAPSHOT）
                      致 public-snapshots 世界解析炸（2026-11-01 CI forge 构建失败修复） -->
-                <admin-api.version>20261101110847-97</admin-api.version>
+                <admin-api.version>20261104135926-98</admin-api.version>
             </properties>
         </profile>
     </profiles>
