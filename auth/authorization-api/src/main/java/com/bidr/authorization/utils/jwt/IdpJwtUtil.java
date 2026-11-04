@@ -195,6 +195,37 @@ public class IdpJwtUtil {
     }
 
     /**
+     * 读票头 {@code kid}（不验签，纯解析；供 JWKS 选钥用）。
+     *
+     * <p>🔴 刻意不校验签名：选钥发生在验签之前，这里只取"候选钥标识"，拿到钥后仍由
+     * {@link #verify(String, String)} 做完整验签。任何解析失败一律回 null（拒票语义由调用方
+     * 按"无可用钥"处理，不在这里抛）。</p>
+     *
+     * @param token 三段点分票串
+     * @return header 的 kid；无 kid/畸形票/解析失败 ⇒ null
+     */
+    public static String readKid(String token) {
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            String[] parts = token.split("\\.", -1);
+            if (parts.length != 3 || StringUtils.isBlank(parts[0])) {
+                return null;
+            }
+            Map<String, Object> header = parseJsonSegment(parts[0]);
+            if (header == null) {
+                return null;
+            }
+            Object kid = header.get(HEADER_KID);
+            String value = kid == null ? null : String.valueOf(kid).trim();
+            return StringUtils.isBlank(value) ? null : value;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
      * kid＝公钥指纹：公钥 X.509 DER 编码的 SHA-256 摘要前 8 字节 hex（16 字符）。
      * 确定性函数：同一公钥任意两次计算同值（JWKS 与票头共用单一真相）。
      *

@@ -7,38 +7,40 @@ import java.util.Map;
 
 /**
  * Title: IdpBearerVerifier
- * Description: client 侧 IdP Bearer JWT 解析腿（T2.3c 棒1 新增）——与"本地 Redis 票"
- * （{@code AuthTokenUtil}/{@code TokenServiceImpl}）并立的第二条令牌解析腿：
+ * Description: client 侧 IdP Bearer JWT 解析腿（T2.3c 棒1 新增；2026-11-04 接 JWKS 动态取钥）——
+ * 与"本地 Redis 票"（{@code AuthTokenUtil}/{@code TokenServiceImpl}）并立的第二条令牌解析腿：
  * 用 api {@link IdpJwtUtil}（与 IdP 签发侧同一工具，RS256 同源口径）对 Bearer JWT 验签，
  * 产出最小 claims 载体（{@code Map<String, Object>} 原样 claims）。
  *
- * <p><b>禁用语义（fail-closed）</b>：公钥未配置（{@link #enabled()} false）时
- * {@link #verifyBearer(String)} 恒拒（null）；验签/过期/脏串同样一律 null 绝不抛
- * （IdpJwtUtil 契约），调用方以 null 判拒。公钥来源＝
- * {@link IdpBearerProperties#getPublicKeyBase64()}（可配置属性，默认未配置）。</p>
+ * <p><b>取钥</b>＝{@link JwksKeyProvider}：按票头 kid 从「JWKS 缓存（{@code server-base-url}）→
+ * 刷新 → 上次快照 → 静态兜底（{@code public-key-base64}）」依次取。两者都未配置＝该腿禁用，
+ * {@link #verifyBearer(String)} 恒拒（fail-closed）；验签/过期/脏串同样一律 null 绝不抛。</p>
  *
- * <p>消费方：棒4 RemoteAuthzChecker/登录链接 client 运行时的宿主；本棒只交付组件
- * ＋同源单测（测试钥对签的票验过／篡改 payload 拒／未配置公钥禁用）。</p>
- *
- * @author coder (棒1, T2.3c 上提 2026-11-03)
+ * @author coder (棒1, T2.3c 上提 2026-11-03；JWKS 化 2026-11-04)
  * @since 2026-11-03
  */
 public class IdpBearerVerifier {
 
-    private final String publicKeyBase64;
+    private final JwksKeyProvider keyProvider;
 
     public IdpBearerVerifier(IdpBearerProperties properties) {
-        this(properties == null ? null : properties.getPublicKeyBase64());
+        this(properties == null ? null
+                : new JwksKeyProvider(properties.getServerBaseUrl(), properties.getPublicKeyBase64()));
     }
 
-    /** 直构形态（单测/手工接线用）：公钥空白即禁用腿 */
+    /** 直构形态（单测/手工接线用）：只有静态公钥，不拉 JWKS */
     public IdpBearerVerifier(String publicKeyBase64) {
-        this.publicKeyBase64 = publicKeyBase64;
+        this(new JwksKeyProvider(null, publicKeyBase64));
     }
 
-    /** 该腿是否启用＝公钥已配置（未配置则 verify 恒拒） */
+    /** 注入取钥器（JWKS 动态 / 静态 / 测试桩） */
+    public IdpBearerVerifier(JwksKeyProvider keyProvider) {
+        this.keyProvider = keyProvider;
+    }
+
+    /** 该腿是否启用＝有远端 JWKS 或静态公钥（都无则 verify 恒拒） */
     public boolean enabled() {
-        return StringUtils.isNotBlank(publicKeyBase64);
+        return keyProvider != null && keyProvider.enabled();
     }
 
     /**
@@ -46,7 +48,7 @@ public class IdpBearerVerifier {
      * 口径同 {@code AuthTokenUtil.resolveToken}）。
      *
      * @param bearerToken Authorization 头值或裸 JWT
-     * @return 验签通过且未过期时的 claims（最小载体）；腿禁用／验签失败／过期／脏串一律 null
+     * @return 验签通过且未过期时的 claims（最小载体）；腿禁用／无可用钥／验签失败／过期／脏串一律 null
      */
     public Map<String, Object> verifyBearer(String bearerToken) {
         if (!enabled() || StringUtils.isBlank(bearerToken)) {
@@ -58,6 +60,10 @@ public class IdpBearerVerifier {
             token = token.substring(space + 1).trim();
         }
         if (token.isEmpty()) {
+            return null;
+        }
+        String publicKeyBase64 = keyProvider.resolveForToken(token);
+        if (StringUtils.isBlank(publicKeyBase64)) {
             return null;
         }
         return IdpJwtUtil.verify(token, publicKeyBase64);

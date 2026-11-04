@@ -34,26 +34,38 @@ public class IdpTokenVerifier {
     /** IdP 固定签发方标识（与 IdpJwtUtil.CLAIM_ISS 的签发值同源） */
     public static final String EXPECTED_ISS = "inkhub";
 
-    /** 验签公钥（X.509 base64，容忍 PEM 头尾/空白）；空＝未配置，验票一律拒 */
-    private final String publicKeyBase64;
+    /** 取钥器（JWKS 动态优先，静态兜底）；null＝未配置，验票恒拒 */
+    private final JwksKeyProvider keyProvider;
 
     public IdpTokenVerifier(IdpBearerProperties properties) {
-        this(properties == null ? null : properties.getPublicKeyBase64());
+        this(properties == null ? null
+                : new JwksKeyProvider(properties.getServerBaseUrl(), properties.getPublicKeyBase64()));
     }
 
-    /** 直构形态（单测/手工接线用）：公钥空白即恒拒 */
+    /** 直构形态（单测/手工接线用）：只有静态公钥，不拉 JWKS */
     public IdpTokenVerifier(String publicKeyBase64) {
-        this.publicKeyBase64 = publicKeyBase64 == null ? "" : publicKeyBase64.trim();
+        this(new JwksKeyProvider(null, publicKeyBase64));
+    }
+
+    /** 注入取钥器（JWKS 动态 / 静态 / 测试桩） */
+    public IdpTokenVerifier(JwksKeyProvider keyProvider) {
+        this.keyProvider = keyProvider;
     }
 
     /**
      * 验签 IdP access_token 并解析身份 claims。
      *
      * @param token 三段 base64url 点分 JWT（IdP /web/oauth2/token 的 access_token）
-     * @return 身份 principal；验签失败/过期/username 缺失/iss 不符/未配钥时一律 {@code null}（不抛）
+     * @return 身份 principal；验签失败/过期/username 缺失/iss 不符/无可用钥时一律 {@code null}（不抛）
      */
     public IdpPrincipal verify(String token) {
-        if (StringUtils.isBlank(token) || StringUtils.isBlank(publicKeyBase64)) {
+        if (StringUtils.isBlank(token) || keyProvider == null) {
+            return null;
+        }
+        // 取钥：按票头 kid（JWKS 缓存 → 刷新 → 快照 → 静态兜底）；无可用钥即拒（fail-closed）
+        String publicKeyBase64 = keyProvider.resolveForToken(token);
+        if (StringUtils.isBlank(publicKeyBase64)) {
+            log.warn("[IdP验签]无可用公钥（JWKS 未拉到且无静态兜底），按拒票处理");
             return null;
         }
         Map<String, Object> claims;
