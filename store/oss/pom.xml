@@ -11,8 +11,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -26,7 +26,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
+                <java.version>17</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <platform.version>${jarVersion}</platform.version>
@@ -41,7 +41,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
+                <java.version>17</java.version>
                 <kernel.version>20261104135926-98</kernel.version>
                 <platform.version>20261104135926-98</platform.version>
                 <authorization.version>20261104135926-98</authorization.version>

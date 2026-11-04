@@ -20,7 +20,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
+                <java.version>17</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <kernel.version>${jarVersion}</kernel.version>
                 <authorization-api.version>${jarVersion}</authorization-api.version>
@@ -38,7 +38,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
+                <java.version>17</java.version>
                 <kernel.version>20261104135926-98</kernel.version>
                 <!-- t23 线 authorization-api 拆分：随 CI 发布同步 bump 全套 pin（2026-11-04 对齐 -98=SSO 批次）；⚠️ 切片构建（-rf 或 -pl 不带 -am）按本 profile 从仓库解析依赖，pin 落后源码会混装旧件缺类炸启动 -->
                 <authorization-api.version>20261104135926-98</authorization-api.version>

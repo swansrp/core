@@ -11,8 +11,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <langchain4j.version>0.33.0</langchain4j.version>
     </properties>
@@ -27,7 +27,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
+                <java.version>17</java.version>
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>
                 <llm.version>${jarVersion}</llm.version>
                 <mineru.version>${jarVersion}</mineru.version>
@@ -41,7 +41,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
+                <java.version>17</java.version>
                 <!-- 新模块首版未发布过 nexus 时间戳件：先按本地/仓内 0.0.1-SNAPSHOT 解析，
                      随批发布后改钉时间戳版（照 mineru 的 llm.version 钉版形状） -->
                 <jarVersion>0.0.1-SNAPSHOT</jarVersion>

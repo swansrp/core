@@ -59,7 +59,37 @@
 
     <properties>
         <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+        <!-- 测试 JVM 的模块 opens：JDK9+ 激活（spring-cglib 生成代理需 opens java.lang 的
+             ClassLoader.defineClass，MyBatis 深反射需 java.lang.reflect/util/invoke）；
+             JDK8 构建时保持空，surefire argLine 不带任何 JDK9+ 参数 -->
+        <jdk.module.opens></jdk.module.opens>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>jdk9plus-module-opens</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <jdk.module.opens>--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.invoke=ALL-UNNAMED</jdk.module.opens>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>${jdk.module.opens}</argLine>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
     <distributionManagement>
         <repository>
