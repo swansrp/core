@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.apache.ibatis.executor.Executor;
@@ -12,12 +13,14 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 
 /**
@@ -40,6 +43,8 @@ import java.util.regex.Pattern;
  * ac_user_dept 族空转解析、防解析炸面）；启动期多语句（含分号）不碰；交解析器前压连续空行
  * （JSqlParser 4.6 对 MP 动态 SQL 相邻空行必炸，照先例 collapseBlankLines）；
  * 解析/改写期任何 RuntimeException（含嵌套 UNION 支的 ClassCastException，修3）保守旁路<b>不改写</b>——绝不把老项目查询炸挂。</p>
+ * <p>🔴 2026-11-02 用户裁定：open 注册模式＝全局账号形态，<b>数据闸整体旁路</b>（不赋租户自然也无隔离可依）——
+ * 装配时经 {@link ObjectProvider} 惰性取 {@link RegisterModeService#isOpen()}，判档失败方向为"原行为"（继续走租户档）。</p>
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -48,18 +53,38 @@ import java.util.regex.Pattern;
 @Configuration
 public class TenantGateConfiguration {
 
-    /** 把租户数据闸插到框架 MybatisPlusInterceptor 链的最前（数据权限须在分页/动态表名之前改写 WHERE） */
+    /**
+     * 把租户数据闸插到框架 MybatisPlusInterceptor 链的最前（数据权限须在分页/动态表名之前改写 WHERE）。
+     * <p>🔴 项目类型（open 项目 / 租户项目）是<b>部署定型</b>的，不做运行时动态切换：仅当 yml
+     * {@code my.tenant.line-enabled=true}（多租户行级隔离启用）时装配数据闸；未启用＝open 项目，
+     * 原链原样返回、零改写——pan 等非租户项目不因"用户无租户绑定"被恒假过滤。租户项目必配此键，
+     * 其无租户绑定的登录态按 2026-11-01 裁定恒假（1=0）报错。</p>
+     */
     @Bean
-    public static BeanPostProcessor tenantGateInjector() {
+    // 两个装配旁路参数（2026-11-04 合并 gitee 时融合，语义分层、都要保留）：
+    //   environment（gitee 0c7018b4）＝**部署定型**判据：my.tenant.line-enabled=false（open 项目，
+    //     如 pan）⇒ 整条链原样返回、根本不装配闸；
+    //   registerModeProvider（本地 T1.x）＝**装配后**的查询级旁路：租户项目里 open 注册模式仍无
+    //     租户概念，闸介入只会把查询恒假（1=0），故由 openModeBypass 短路。
+    public static BeanPostProcessor tenantGateInjector(org.springframework.core.env.Environment environment,
+                                                       ObjectProvider<RegisterModeService> registerModeProvider) {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
                 if (!(bean instanceof MybatisPlusInterceptor)) {
                     return bean;
                 }
+                // 部署定型判据：open 项目不装配租户数据闸（与 my.tenant.line-enabled 同一开关，见配置项文档）
+                boolean tenantProject = Boolean.parseBoolean(
+                        environment.getProperty("my.tenant.line-enabled", "false").trim());
+                if (!tenantProject) {
+                    return bean;
+                }
                 MybatisPlusInterceptor origin = (MybatisPlusInterceptor) bean;
                 MybatisPlusInterceptor rebuilt = new MybatisPlusInterceptor();
-                rebuilt.addInnerInterceptor(new TenantGateInnerInterceptor(new TenantDataGate()));
+                // ObjectProvider 惰性取（闸只在真实查询时判档），不让 BPP 在容器早期强拉业务 bean
+                rebuilt.addInnerInterceptor(new TenantGateInnerInterceptor(new TenantDataGate(),
+                        () -> registerModeProvider.getObject().isOpen()));
                 List<InnerInterceptor> originInterceptors = origin.getInterceptors();
                 for (InnerInterceptor inner : originInterceptors) {
                     rebuilt.addInnerInterceptor(inner);
@@ -84,8 +109,16 @@ public class TenantGateConfiguration {
         private static final Pattern FROM_JOIN_ANCHOR = Pattern.compile(
                 "(?i)\\b(?:from|join)\\s+[`\"]?(?:[A-Za-z_][A-Za-z0-9_]*[`\"]?\\s*\\.\\s*)?[`\"]?ac_user\\b");
 
+        /** open 注册模式旁路（装配期由 {@link RegisterModeService#isOpen()} 惰性喂入；离线单测默认 false） */
+        private final BooleanSupplier openModeBypass;
+
         public TenantGateInnerInterceptor(TenantDataGate handler) {
+            this(handler, () -> false);
+        }
+
+        public TenantGateInnerInterceptor(TenantDataGate handler, BooleanSupplier openModeBypass) {
             super(handler);
+            this.openModeBypass = openModeBypass == null ? () -> false : openModeBypass;
         }
 
         /** SQL 文本预判：null/含分号多语句直接不碰；FROM/JOIN 段词边界命中 ac_user 才考虑改写 */
@@ -105,8 +138,8 @@ public class TenantGateConfiguration {
         public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds,
                                 ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
             String sql = boundSql.getSql();
-            // 预判不命中 ⇒ 原文零抖动；闸不活跃（无档/空集/平台档）⇒ 同样跳过（旁路终裁口径）
-            if (!shouldRewrite(sql) || !TenantDataGate.gateActive()) {
+            // 预判不命中 ⇒ 原文零抖动；闸不活跃（无档/空集/平台档）或 open 注册模式 ⇒ 同样跳过（旁路终裁口径）
+            if (!shouldRewrite(sql) || !TenantDataGate.gateActive() || isOpenModeBypassed()) {
                 return;
             }
             // 挂了 @InterceptorIgnore 且 dataPermission="true" 的 mapper 方法在此短路
@@ -127,6 +160,19 @@ public class TenantGateConfiguration {
                 // 重载 ⇒ 异常拼进消息，闸静默旁路时能靠日志直接判出是 CCE 还是畸形 SQL。
                 logger.warn("TenantGate: JSqlParser failed, gate bypassed (sql kept unwrapped). ms="
                         + ms.getId() + " cause=" + gateFailure);
+            }
+        }
+
+        /**
+         * open 注册模式判定（装配期惰性喂入）。判档失败一律按"非 open"处理——保留租户闸是把查询
+         * 置空的方向，比抛穿 beforeQuery 更安全（与"绝不把老项目查询炸挂"契约同向）。
+         */
+        private boolean isOpenModeBypassed() {
+            try {
+                return openModeBypass.getAsBoolean();
+            } catch (RuntimeException modeFailure) {
+                logger.warn("TenantGate: register mode lookup failed, keep tenant gate (cause=" + modeFailure);
+                return false;
             }
         }
 

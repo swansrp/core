@@ -9,7 +9,8 @@ import org.springframework.stereotype.Service;
  * <p>🔴 索引＝普通 KEY（非唯一键）：valid 是软删位，唯一键会让"撤销后再登记同一地址"撞键——已定案。</p>
  * <p>🔴 表级不写 CHARSET/COLLATE 子句（项目纪律），但 `redirect_uri` 必须带**列级**
  * {@code COLLATE utf8mb4_bin}：这一列的判定是"全串等值"的承重件——跟随库默认（通常 *_ci）时
- * MySQL 的 {@code =} 会把大小写变体判成相等，而出票口回填的是**请求原串**（{@code SsoTicketService}），
+ * MySQL 的 {@code =} 会把大小写变体判成相等，而登记面回填的是**请求原串**（原 M15 出票口口径，
+ * 该口已随 T1.3 棒 8 下线；本表白名单闸由 OAuth2 authorize 继续使用），
  * 于是"只登记过 /sso/cb"能放票给 /SSO/CB 这类从未登记的路径。列级 bin 的 core 正先例＝
  * {@code AcPartnerHistorySchema} 的 app_key/remote_ip（同为安全判定用列）。
  * 🔴 本表若已在某库存在，{@code CREATE TABLE IF NOT EXISTS} 是 no-op ⇒ 列级 collation 不会追溯生效，

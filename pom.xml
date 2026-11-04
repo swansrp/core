@@ -19,6 +19,7 @@
         <module>auth/authorization-api</module>
         <module>auth/admin-api</module>
         <module>auth/authorization-client</module>
+        <module>auth/identity-mirror</module>
         <module>comm/sms</module>
         <module>comm/mqtt</module>
         <module>store/neo4j</module>

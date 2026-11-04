@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/xsd/maven-4.0.0.xsd http://maven.apache.org/POM/4.0.0">
+    <parent>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <groupId>com.bidr</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <artifactId>identity-mirror</artifactId>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+
+    <profiles>
+        <profile>
+            <id>development</id>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>${jarVersion}</kernel.version>
+                <authorization-api.version>${jarVersion}</authorization-api.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>public-snapshots</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                <java.version>1.8</java.version>
+                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
+                <kernel.version>20261101110847-97</kernel.version>
+                <authorization-api.version>20261101110847-97</authorization-api.version>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <!-- 🔴 mirror 纪律（T2.3d，dep-direction-check.mjs rule3 断言）：只依赖 kernel＋authorization-api，
+             禁依赖 authorization(server)/authorization-client/admin/admin-api——本模块是"消费侧镜像件"，
+             拿到的数据只经 /open-api/v1/identity/snapshot HTTP 端点，绝不进程内引用 provider 的 dao/service
+             （G9 边界：镜像零角色/菜单/功能码字段，IdentityMirrorConventionTest 钉）。 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization-api</artifactId>
+            <version>${authorization-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <!-- IdentitySnapshotClient 的 HTTP 通道（RestTemplate 直连构造，宿主必带 web 栈） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

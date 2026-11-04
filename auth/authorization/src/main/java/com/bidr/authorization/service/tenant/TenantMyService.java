@@ -35,8 +35,10 @@ import java.util.stream.Collectors;
  * <ol>
  *   <li><b>系统管理级</b>＝登录烤的租户集为空（{@code TenantContext.getTenantIds()} null/空）；</li>
  *   <li><b>平台管理员</b>＝{@link PermitService#isAdmin()}（2026-11-01 统一后全平台唯一 isAdmin 实现；
- *       🔴 不读 {@code TenantContext.isPlatform()}——那只由
- *       {@code @Auth(AuthAdmin)} 切面置位，本端点挂 {@code AuthLogin} 档下恒 false，10-20 撤回的正是这条死路）。</li>
+ *       本处直判同一静态比对，不新增第二份。🔴 仍不读 {@code TenantContext.isPlatform()}——平台档在
+ *       2026-11-01 前只由 {@code @Auth(AuthAdmin)} 切面置位，本端点挂 {@code AuthLogin} 档下恒 false，
+ *       10-20 撤回的正是那条死路；现虽已由 {@code AuthLogin.buildContext} 每请求置位，本类判据仍
+ *       保持在 {@link PermitService} 单源上）。</li>
  * </ol>
  * ⇒ 只有"既没绑租户、又是超管"的平台账号（种子 bidrAdmin 形态）可代言任意租户；
  * JIT 新号（无绑定但非超管）与绑了租户的超管一律不可。

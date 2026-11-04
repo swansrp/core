@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 /**
@@ -41,7 +42,8 @@ import java.util.stream.Collectors;
  * <ul>
  * <li>腿 1 空 TenantContext ⇒ 同实例返回（老项目零感知机制核·null 态）；</li>
  * <li>腿 2 空集合档 ⇒ 无请求上下文（内部任务）时同实例返回；
- * 🔴 11-01 起登录态空集＝恒假 1=0（腿 2b/2c：与原 where 合并，保留 ? 占位）；</li>
+ * 🔴 11-01 起登录态空集＝恒假 1=0（腿 2b/2c：与原 where 合并，保留 ? 占位）；
+ * 顶层 OR 必须整体加括号后再 AND（腿 2d/5b，JSqlParser 的 AND 优先级不得让闸穿透）；</li>
  * <li>腿 3 清单外表 ⇒ 同实例返回，含负对照针 ac_user_tenant；库名前缀 bidr.ac_user 必须命中；
  * 🔴 新增 Blocker 回归针：喂 {@code MappedStatement.getId()} 的"方法名形态"
  * （…AcUserDao.selectById）不得误命中锚点——修1 之前的载体错就错在该参数不是表名（M-23）；</li>
@@ -53,7 +55,8 @@ import java.util.stream.Collectors;
  * {@link BoundSql} 直接调 {@code beforeQuery}，断言改写后的终串——
  * 腿 7 ac_user 查询终串含 EXISTS（ms id 喂方法名形态仍必须命中，证明判据来自解析出的真实表）；
  * 腿 8 ac_user_role/ac_user_dept 族不改写；腿 9 带别名 SQL 用别名列限定（解除旧限制的证据）；
- * 腿 10 无档/平台档旁路＋负对照；腿 11 {@code @InterceptorIgnore(dataPermission)} 旁路口
+ * 腿 10 无档/平台档旁路＋负对照；腿 10b open 注册模式整体旁路＋负对照；腿 10c 判档失败保留租户闸；
+ * 腿 11 {@code @InterceptorIgnore(dataPermission)} 旁路口
  * 真实链生效（M-24 的离线等价腿）＋负对照；腿 12 解析失败保守旁路不抛穿；
  * 腿 13 resolveAnchor 单元形态（库名限定/反引号/子查询 FROM）；
  * 腿 17 kernel 侧翻译读旁路位（{@code @BindRepo} 族展示值批查）在真实链生效＋帧外负对照。</p>
@@ -134,6 +137,26 @@ public class TenantGateConventionTest {
         }
     }
 
+    /** 腿 2d：登录态无租户 + 顶层 OR 的 where ⇒ 恒假必须 AND 在整个 OR 之外。
+     *  🔴 负向锚：JSqlParser 4.6 实测裸合并会输出 {@code a = ? OR b = ? AND 1 = 0}
+     *  （AND 优先级高于 OR，左支照常出行）——本腿钉死原 where 必须被 Parenthesis 包住。 */
+    @Test
+    public void denyAllWrapsTopLevelOrWhereInParenthesis() throws Exception {
+        Expression original = where("customer_number = ? OR name = ?");
+        TenantContext.set(Collections.<Long>emptyList());
+        AccountContext.set(new AccountInfo());
+        try {
+            String sql = gate.getSqlSegment(original, "ac_user").toString();
+            Assert.assertTrue("原 where 必须整体加括号: " + sql, sql.startsWith("("));
+            int or = sql.indexOf(" OR ");
+            int close = sql.indexOf(") AND 1 = 0");
+            Assert.assertTrue("恒假必须在括号外与整个 OR 合并: " + sql, close > 0);
+            Assert.assertTrue("OR 必须落在括号内（否则 1=0 只落在最后一个分支）: " + sql, or > 0 && or < close);
+        } finally {
+            AccountContext.remove();
+        }
+    }
+
     /** 腿 3：清单外表原样返回；负对照针 ac_user_tenant；bidr.ac_user 前缀命中；
      *  🔴 Blocker 回归针：MP 传入的方法名形态（MappedStatement.getId()）不得误命中锚点 */
     @Test
@@ -189,6 +212,20 @@ public class TenantGateConventionTest {
                 gate.getSqlSegment(original, "ac_user").toString().contains("EXISTS"));
     }
 
+    /** 腿 5b：有档非空 + 顶层 OR 的 where ⇒ EXISTS 必须 AND 在整个 OR 之外（同腿 2d 的括号纪律，
+     *  覆盖非空租户合并路径；裸合并时 OR 左支绕过租户闸） */
+    @Test
+    public void existsGateWrapsTopLevelOrWhereInParenthesis() throws Exception {
+        TenantContext.set(Arrays.asList(7L, 9L));
+        Expression original = where("status = '1' OR dept_id = 3");
+        String sql = gate.getSqlSegment(original, "ac_user").toString();
+        Assert.assertTrue("原 where 必须整体加括号: " + sql, sql.startsWith("("));
+        int or = sql.indexOf(" OR ");
+        int close = sql.indexOf(") AND EXISTS");
+        Assert.assertTrue("EXISTS 必须在括号外与整个 OR 合并: " + sql, close > 0);
+        Assert.assertTrue("OR 必须落在括号内（否则租户闸只约束最后一个分支）: " + sql, or > 0 && or < close);
+    }
+
     /** 腿 6a：文本预判收紧——FROM/JOIN 段词边界命中才进改写候选；族表与字面量不碰；多语句/null 不碰 */
     @Test
     public void textPrecheckIsWordBoundedAndFromJoinScoped() {
@@ -241,11 +278,16 @@ public class TenantGateConventionTest {
 
     /** 走 MP 同款真实对象构造（不起 Spring）：BoundSql 可变 sql，MappedStatement 的 id 是方法名形态 */
     private static BoundSql runChain(String msId, String sql) throws Exception {
+        return runChain(msId, sql, () -> false);
+    }
+
+    /** 同链形态＋open 注册模式旁路位（false＝按租户档改写，true＝open 形态整体旁路） */
+    private static BoundSql runChain(String msId, String sql, BooleanSupplier openModeBypass) throws Exception {
         Configuration configuration = new Configuration();
         BoundSql boundSql = new BoundSql(configuration, sql, new ArrayList<>(), null);
         MappedStatement ms = new MappedStatement.Builder(configuration, msId,
                 parameterObject -> boundSql, SqlCommandType.SELECT).build();
-        new TenantGateConfiguration.TenantGateInnerInterceptor(new TenantDataGate())
+        new TenantGateConfiguration.TenantGateInnerInterceptor(new TenantDataGate(), openModeBypass)
                 .beforeQuery(null, ms, null, null, null, boundSql);
         return boundSql;
     }
@@ -305,6 +347,35 @@ public class TenantGateConventionTest {
         TenantContext.set(Arrays.asList(1L), false);
         Assert.assertTrue("负对照失效：有档同输入未改写",
                 runChain(DAO_ID_PREFIX + "selectList", sql).getSql().contains("EXISTS"));
+    }
+
+    /**
+     * 腿 10b（2026-11-02 用户裁定）：open 注册模式＝全局账号形态，数据闸整体旁路——
+     * 即便 TenantContext 有档非空，文本也必须逐字不动；负对照＝同 SQL 换非 open（旁路位 false）
+     * 必须改写，证明本腿不是恒"不动"。
+     */
+    @Test
+    public void realChainBypassesInOpenRegisterMode() throws Exception {
+        TenantContext.set(Arrays.asList(1L));
+        String sql = "SELECT user_id FROM ac_user WHERE valid = ?";
+        Assert.assertEquals("open 形态不得挂租户闸（全局账号无租户可依）", sql,
+                runChain(DAO_ID_PREFIX + "selectList", sql, () -> true).getSql());
+        Assert.assertTrue("负对照失效：非 open 同 SQL 未改写",
+                runChain(DAO_ID_PREFIX + "selectList", sql, () -> false).getSql().contains("EXISTS"));
+    }
+
+    /**
+     * 腿 10c：open 判档自身失败（异常）⇒ 不得抛穿 beforeQuery，
+     * 方向是"按非 open 保留租户闸"（fail-close 到隔离侧，不得静默变成全放）。
+     */
+    @Test
+    public void registerModeLookupFailureKeepsTenantGateWithoutThrowing() throws Exception {
+        TenantContext.set(Arrays.asList(1L));
+        String sql = "SELECT user_id FROM ac_user WHERE valid = ?";
+        String out = runChain(DAO_ID_PREFIX + "selectList", sql, () -> {
+            throw new IllegalStateException("sys_config unavailable");
+        }).getSql();
+        Assert.assertTrue("判档失败必须保留租户闸，实际: " + out, out.contains("EXISTS"));
     }
 
     /**

@@ -11,7 +11,7 @@ import java.awt.image.BufferedImage;
  * @author Sharp
  * @since 2023/04/27 09:38
  */
-public interface CaptchaService {
+public interface CaptchaService extends CaptchaVerifier {
 
     BufferedImage generateCaptcha(String token, String type);
 

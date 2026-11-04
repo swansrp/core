@@ -12,9 +12,11 @@ import com.bidr.agent.console.dto.SkillAssetView;
 import com.bidr.agent.console.selection.AgentDefinitionAdminService;
 import com.bidr.agent.console.skill.SystemSkillAdminService;
 import com.bidr.authorization.bind.annotation.BindUser;
+import com.bidr.authorization.bind.annotation.UserRef;
 import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.config.response.BindRepoHandler;
+import com.bidr.kernel.config.response.BindRepoResolver;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.agent.OperatorResolver;
@@ -32,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,7 +44,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * ① 每个把视图还给页面的端点都翻姓名（清单／单条／保存三腿同形），且 <b>工号列一律原样保留</b>——装配单的 asked_by 是原文展开权限的比对依据，
  * 换成姓名就等于把闸拆了；勾选行的 update_by 是审计列，同理不许动；② 查不到的工号与空工号都留空，
  * 页面按"姓名∨工号"回落，不许编造；③ 行 → 视图（{@code of}）不查库，派生列只由端点回填；
- * ④ {@code @BindUser} 的靶子钉死（工号列 → ac_user.customer_number，取 name），改注解必先过这条腿。
+ * ④ {@code @BindUser} 的靶子钉死：T2.3c 起 {@code entity()} 声明占位实体 {@link UserRef}（不再直耦合
+ * AcUser），运行时经 {@code BindRepoResolver} SPI 解析——server 侧 {@code DefaultBindRepoResolver}
+ * 默认解析为 {@code AcUser}（工号列 customer_number，取 name）。本测试按同语义注册桩解析器
+ * UserRef→(桩 repo, AcUser)，行为腿走真实 SPI 兜底通道；元数据腿钉占位声明本身。改注解必先过这条腿。
  * 全程 mock Spring 上下文与 BaseSqlRepo，不连库。
  *
  * @author Sharp
@@ -55,6 +61,9 @@ class AgentConsoleUserNameBindTest {
     /**
      * 🔴 {@code RespConvert} 的 BindRepoHandler 是进程内双检锁缓存，故上下文只在全部腿之前种一次、
      * 全程共用一份桩——每条腿各换 ctx 会让后跑的腿吃到先跑那条的索引。
+     * <p>T2.3c 后 @BindUser 声明占位实体 UserRef（repoIndex 无命中），必须再种一个
+     * {@link BindRepoResolver} 桩走 SPI 兜底通道——与 server 侧 DefaultBindRepoResolver
+     * （UserRef→AcUser）同语义，行为腿因此仍验证「工号→ac_user.customer_number→name」全链。</p>
      */
     @BeforeAll
     @SuppressWarnings("rawtypes")
@@ -64,11 +73,17 @@ class AgentConsoleUserNameBindTest {
         Mockito.when(acUserRepo.select(Mockito.any(Wrapper.class)))
                 .thenReturn(Arrays.asList(acUser(ADMIN_NUMBER, ADMIN_NAME), acUser("000002", "张三")));
 
+        BindRepoResolver userRefResolver = entityClass -> UserRef.class.equals(entityClass)
+                ? Optional.of(new BindRepoResolver.BindTarget(acUserRepo, AcUser.class))
+                : Optional.empty();
+
         WebApplicationContext ctx = Mockito.mock(WebApplicationContext.class);
         Mockito.when(ctx.getBeanNamesForType(BindRepoHandler.class)).thenReturn(new String[]{"bindRepoHandler"});
         Mockito.when(ctx.getBean("bindRepoHandler")).thenReturn(new BindRepoHandler());
         Mockito.when(ctx.getBeanNamesForType(BaseSqlRepo.class)).thenReturn(new String[]{"acUserRepo"});
         Mockito.when(ctx.getBean("acUserRepo")).thenReturn(acUserRepo);
+        Mockito.when(ctx.getBeanNamesForType(BindRepoResolver.class)).thenReturn(new String[]{"userRefBindResolver"});
+        Mockito.when(ctx.getBean("userRefBindResolver")).thenReturn(userRefResolver);
         BeanUtil.setContext(ctx);
     }
 
@@ -136,14 +151,16 @@ class AgentConsoleUserNameBindTest {
     }
 
     @Test
-    @DisplayName("@BindUser 靶子钉死：asked_by → ac_user.customer_number，取 name")
+    @DisplayName("@BindUser 靶子钉死：asked_by → UserRef 占位（SPI 解析 AcUser.customer_number），取 name")
     void bindAnnotationPointsAtAcUserName() throws Exception {
         Field field = AgentManifestView.class.getDeclaredField("askedByName");
         assertNotNull(field.getAnnotation(BindUser.class));
 
         BindRepo merged = AnnotatedElementUtils.findMergedAnnotation(field, BindRepo.class);
         assertNotNull(merged);
-        assertEquals(AcUser.class, merged.entity());
+        // T2.3c 起 entity() 声明占位实体 UserRef（解绑 AcUser）；有效实体由 SPI 运行时解析（本测试
+        // 桩＝server 侧 DefaultBindRepoResolver 语义：UserRef→AcUser，行为腿覆盖该链路）
+        assertEquals(UserRef.class, merged.entity());
         assertEquals("customerNumber", merged.matchField());
         assertEquals("askedBy", merged.sourceField());
         assertEquals("name", merged.extractField());
@@ -194,14 +211,15 @@ class AgentConsoleUserNameBindTest {
     }
 
     @Test
-    @DisplayName("@BindUser 靶子钉死（勾选行）：update_by → ac_user.customer_number，取 name")
+    @DisplayName("@BindUser 靶子钉死（勾选行）：update_by → UserRef 占位（SPI 解析 AcUser），取 name")
     void definitionBindAnnotationPointsAtAcUserName() throws Exception {
         Field field = AgentDefinitionView.class.getDeclaredField("updateByName");
         assertNotNull(field.getAnnotation(BindUser.class));
 
         BindRepo merged = AnnotatedElementUtils.findMergedAnnotation(field, BindRepo.class);
         assertNotNull(merged);
-        assertEquals(AcUser.class, merged.entity());
+        // T2.3c 占位语义（同 askedByName 腿注释）
+        assertEquals(UserRef.class, merged.entity());
         assertEquals("customerNumber", merged.matchField());
         assertEquals("updateBy", merged.sourceField());
         assertEquals("name", merged.extractField());
@@ -244,14 +262,15 @@ class AgentConsoleUserNameBindTest {
     }
 
     @Test
-    @DisplayName("@BindUser 靶子钉死（台账行）：create_by → ac_user.customer_number，取 name")
+    @DisplayName("@BindUser 靶子钉死（台账行）：create_by → UserRef 占位（SPI 解析 AcUser），取 name")
     void skillBindAnnotationPointsAtAcUserName() throws Exception {
         Field field = SkillAssetView.class.getDeclaredField("createByName");
         assertNotNull(field.getAnnotation(BindUser.class));
 
         BindRepo merged = AnnotatedElementUtils.findMergedAnnotation(field, BindRepo.class);
         assertNotNull(merged);
-        assertEquals(AcUser.class, merged.entity());
+        // T2.3c 占位语义（同 askedByName 腿注释）
+        assertEquals(UserRef.class, merged.entity());
         assertEquals("customerNumber", merged.matchField());
         assertEquals("createBy", merged.sourceField());
         assertEquals("name", merged.extractField());

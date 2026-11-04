@@ -1,6 +1,5 @@
 package com.bidr.authorization.service.login.impl;
 
-import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUserTenant;
 import com.bidr.authorization.dao.repository.AcTenantService;
@@ -10,22 +9,21 @@ import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.kernel.exception.ServiceException;
-import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
 
 /**
  * Title: LoginRegisterModeTest
- * Description: 自助注册三态闸的离线守卫——ACCOUNT_REGISTER_MODE（open/tenant/closed）归一逻辑
- * 纯 static 直断、闸行为与租户绑定腿走 Mockito 直穿 {@code assertRegisterAllowed}/{@code bindRegisterTenant}
- * （包可见离线口），不起 Spring、不连库。钉两条口径：①未知/缺省必须回落 open＝共享兼容
- * （参数写错不得把存量开放注册项目突然锁死）；②闸五态（closed 拒/tenant 缺码拒/错码拒/命中放行/open 放行）
- * 与 is_admin 恒 false 的裁定针。
+ * Description: 自助注册三态闸的离线守卫——注册模式（open/tenant/closed）只读 yml
+ * {@code my.auth.register-mode}（2026-11-02 起不入 sys_config、不热改）。归一逻辑纯 static 直断，
+ * 闸行为与租户绑定腿走 Mockito 直穿 {@code assertRegisterAllowed}/{@code bindRegisterTenant}
+ * （包可见离线口），不起 Spring、不连库。钉两条口径：①缺省/未知必须回落 open＝共享兼容
+ * （未配置不得把存量开放注册项目突然锁死）；②闸五态（closed 拒/tenant 缺码拒/错码拒/命中放行/open 放行）
+ * 与 is_admin 恒 false 的裁定针，外加「模式读取绝不碰 sys_config」的通道针。
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -33,17 +31,11 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class LoginRegisterModeTest {
 
-    private static LoginServiceImpl service(String mode, AcTenantService tenantRepo) {
-        return service(mode, "", tenantRepo);
+    private static LoginServiceImpl service(String yml, AcTenantService tenantRepo) {
+        return service(Mockito.mock(SysConfigCacheService.class), yml, tenantRepo);
     }
 
-    /** 三级链全形：mode＝sys_config 库值（null＝参数行缺失）、yml＝my.auth.register-mode 兜底（库值未表态才轮到）。 */
-    private static LoginServiceImpl service(String mode, String yml, AcTenantService tenantRepo) {
-        SysConfigCacheService cache = Mockito.mock(SysConfigCacheService.class);
-        stubDbRow(cache, mode);
-        return service(cache, yml, tenantRepo);
-    }
-
+    /** yml＝my.auth.register-mode（唯一来源；null/空白/未知由 normalize 归一为 open）。 */
     private static LoginServiceImpl service(SysConfigCacheService cache, String yml, AcTenantService tenantRepo) {
         LoginServiceImpl impl = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
@@ -53,20 +45,11 @@ public class LoginRegisterModeTest {
                 Mockito.mock(TokenService.class),
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
-                Mockito.mock(HttpServletRequest.class));
+                Mockito.mock(HttpServletRequest.class),
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
+                new RegisterModeService());
         impl.setRegisterModeYml(yml);
         return impl;
-    }
-
-    private static void stubDbRow(SysConfigCacheService cache, String mode) {
-        if (mode == null) {
-            // 参数行缺失：getCache 返回 null（旧实现此处 getParamValueAvail 会直接抛错）
-            return;
-        }
-        SysConfig row = new SysConfig();
-        row.setConfigKey(AccountParam.ACCOUNT_REGISTER_MODE.name());
-        row.setConfigValue(mode);
-        Mockito.when(cache.getCache(AccountParam.ACCOUNT_REGISTER_MODE.name())).thenReturn(row);
     }
 
     private static AcTenant tenant(long id) {
@@ -93,7 +76,7 @@ public class LoginRegisterModeTest {
 
     @Test
     public void unknownOrMissingFallsBackToOpen() {
-        // 共享兼容口径：参数缺行/写错回落开放注册，绝不静默锁死存量项目
+        // 共享兼容口径：未配置/写错回落开放注册，绝不静默锁死存量项目
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode(null));
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode(""));
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode("  "));
@@ -102,14 +85,13 @@ public class LoginRegisterModeTest {
         Assert.assertEquals("open", LoginServiceImpl.normalizeRegisterMode("TENANT_ONLY"));
     }
 
-    // ==================== 三级链（库值 → yml my.auth.register-mode → open；2026-10-21 部署定型键改造） ====================
+    // ==================== 来源腿（yml 唯一来源；2026-11-02 移出 sys_config） ====================
 
     @Test
-    public void ymlLegAppliesWhenDbEmpty() {
-        // 库值未表态（种子留空）→ yml tenant 生效：新项目 setup 向导写 yml 即定型
+    public void ymlTenantModeGatesRegistration() {
         AcTenantService repo = Mockito.mock(AcTenantService.class);
         Mockito.when(repo.getByCode("GOODCODE")).thenReturn(tenant(3L));
-        LoginServiceImpl service = service("", "tenant", repo);
+        LoginServiceImpl service = service("tenant", repo);
         try {
             service.assertRegisterAllowed(null);
             Assert.fail("yml=tenant 时空码必须拒绝");
@@ -120,28 +102,19 @@ public class LoginRegisterModeTest {
     }
 
     @Test
-    public void dbValueBeatsYml() {
-        // 存量项目参数页改过的库值仍压过 yml——三级链不许翻转存量表态
-        LoginServiceImpl service = service("closed", "open", Mockito.mock(AcTenantService.class));
-        try {
-            service.assertRegisterAllowed(null);
-            Assert.fail("库值 closed 必须压过 yml open");
-        } catch (ServiceException e) {
-            Assert.assertTrue(String.valueOf(e.getMessage()).contains("已关闭"));
-        }
+    public void emptyYmlFallsBackToOpen() {
+        // 未配置＝open（共享兼容：不锁死存量开放注册项目）
+        Assert.assertEquals("open", service(null, Mockito.mock(AcTenantService.class)).getRegisterMode());
+        LoginServiceImpl service = service("  ", Mockito.mock(AcTenantService.class));
+        Assert.assertNull("空白 yml＝open，无码注册全局账号", service.assertRegisterAllowed(null));
     }
 
+    /**
+     * 通道针：模式读取不得再碰 sys_config（用户裁定本键只许 yml 定义、不可运行期变更）。
+     * 生效值、注册闸、SSO 建号闸三条消费腿都跑一遍后，缓存服务的任何读取入口都不许被调用。
+     */
     @Test
-    public void bothLegsEmptyFallsBackToOpen() {
-        // 双腿未表态＝open（共享兼容：不锁死存量开放注册项目）
-        LoginServiceImpl service = service("", "", Mockito.mock(AcTenantService.class));
-        Assert.assertNull("open 态无码＝注册全局账号", service.assertRegisterAllowed(null));
-    }
-
-    @Test
-    public void missingDbRowFallsBackToYmlAndNeverUsesAssertingRead() {
-        // 回归针：旧实现调 getParamValueAvail，参数行缺失/值为空即抛 ServiceException，yml 兜底永远到不了。
-        // 现实现必须走不抛断言的 getCache 读取，且对外暴露的生效模式与闸同源。
+    public void modeReadsOnlyYmlNeverSysConfig() {
         SysConfigCacheService cache = Mockito.mock(SysConfigCacheService.class);
         LoginServiceImpl service = service(cache, "tenant", Mockito.mock(AcTenantService.class));
         Assert.assertEquals("tenant", service.getRegisterMode());
@@ -151,40 +124,15 @@ public class LoginRegisterModeTest {
         } catch (ServiceException e) {
             Assert.assertTrue(String.valueOf(e.getMessage()).contains("租户注册链接"));
         }
+        try {
+            service.assertSsoAutoCreateAllowed();
+            Assert.fail("yml=tenant 时 SSO 自动建号必须拒绝");
+        } catch (ServiceException expected) {
+            // 预期拒绝
+        }
+        Mockito.verify(cache, Mockito.never()).getCache(Mockito.anyString());
         Mockito.verify(cache, Mockito.never()).getParamValueAvail(Mockito.anyString());
         Mockito.verify(cache, Mockito.never()).getSysConfigValue(Mockito.anyString());
-    }
-
-    @Test
-    public void blankDbValueFallsBackToYml() {
-        // 种子留空＝未表态（row 存在但 config_value 为空白）：仍轮到 yml
-        LoginServiceImpl service = service("   ", "closed", Mockito.mock(AcTenantService.class));
-        Assert.assertEquals("closed", service.getRegisterMode());
-        try {
-            service.assertRegisterAllowed(null);
-            Assert.fail("库值空白时 yml=closed 必须生效");
-        } catch (ServiceException e) {
-            Assert.assertTrue(String.valueOf(e.getMessage()).contains("已关闭"));
-        }
-    }
-
-    @Test
-    public void nullDbValueFallsBackToYml() {
-        SysConfigCacheService cache = Mockito.mock(SysConfigCacheService.class);
-        SysConfig row = new SysConfig();
-        row.setConfigKey(AccountParam.ACCOUNT_REGISTER_MODE.name());
-        row.setConfigValue(null);
-        Mockito.when(cache.getCache(AccountParam.ACCOUNT_REGISTER_MODE.name())).thenReturn(row);
-        LoginServiceImpl service = service(cache, "closed", Mockito.mock(AcTenantService.class));
-        Assert.assertEquals("closed", service.getRegisterMode());
-    }
-
-    @Test
-    public void dbGarbageDoesNotUnlockYml() {
-        // 库值非空即表态：写错回落 open，不再读 yml（三级链只按"是否表态"分档，不按"是否合法"跳档）
-        LoginServiceImpl service = service("yes", "closed", Mockito.mock(AcTenantService.class));
-        Assert.assertEquals("open", service.getRegisterMode());
-        Assert.assertNull(service.assertRegisterAllowed(null));
     }
 
     // ==================== 闸行为五腿（reviewer C 轴补：闸本体零覆盖的修复） ====================
@@ -258,7 +206,10 @@ public class LoginRegisterModeTest {
     // ==================== 绑定腿（is_admin 恒 false 的裁定针） ====================
 
     @Test
-    public void bindRegisterTenantInsertsPlainMembership() {
+    public void bindRegisterTenantUsesIdempotentUpsert() {
+        // 6.60 真机 #44：createUser 建号点已按 TenantResolver insertIfAbsent 落籍一次（T1.1 建号必绑），
+        // 注册腿再裸 insert 即撞 ac_user_tenant PRIMARY（Duplicate '2548-1'，注册整体 500）。
+        // 注册腿必须与建号点同走幂等收口；is_admin 恒 false 裁定针不变。
         AcUserTenantService relationRepo = Mockito.mock(AcUserTenantService.class);
         LoginServiceImpl service = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
@@ -268,13 +219,11 @@ public class LoginRegisterModeTest {
                 Mockito.mock(TokenService.class),
                 Mockito.mock(AcUserRoleMenuService.class),
                 Mockito.mock(CreateUserService.class),
-                Mockito.mock(HttpServletRequest.class));
+                Mockito.mock(HttpServletRequest.class),
+                Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
+                new RegisterModeService());
         service.bindRegisterTenant(100L, tenant(7L));
-        ArgumentCaptor<AcUserTenant> captor = ArgumentCaptor.forClass(AcUserTenant.class);
-        Mockito.verify(relationRepo).insert(captor.capture());
-        Assert.assertEquals("挂关系必须指向命中租户", 7L, captor.getValue().getTenantId().longValue());
-        Assert.assertEquals("绑定用户", 100L, captor.getValue().getUserId().longValue());
-        Assert.assertEquals("is_admin 恒 false（注册入口不得自授管理员）", Boolean.FALSE, captor.getValue().getIsAdmin());
+        Mockito.verify(relationRepo).insertIfAbsent(100L, 7L, Boolean.FALSE);
+        Mockito.verify(relationRepo, Mockito.never()).insert(Mockito.any(AcUserTenant.class));
     }
 }
-

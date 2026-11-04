@@ -5,7 +5,6 @@ import com.bidr.authorization.constants.dict.MenuTypeDict;
 import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.mapper.AcMenuDao;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
 import org.springframework.stereotype.Service;
 
@@ -13,13 +12,13 @@ import java.util.List;
 
 /**
  * Title: AcMenuService
- * Description: Copyright: Copyright (c) 2022 Company: Sharp Ltd.
+ * Description: Copyright (c) 2022 Company: Sharp Ltd.
  *
  * @author Sharp
  * @since 2023/03/17 10:11
  */
 @Service
-public class AcMenuService extends BaseSqlRepo<AcMenuDao, AcMenu> {
+public class AcMenuService extends AuthzVersionedSqlRepo<AcMenuDao, AcMenu> {
 
     public List<AcMenu> getMainMenu() {
         LambdaQueryWrapper<AcMenu> wrapper = super.getQueryWrapper()

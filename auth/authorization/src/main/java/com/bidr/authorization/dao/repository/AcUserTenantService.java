@@ -100,6 +100,32 @@ public class AcUserTenantService extends BaseSqlRepo<AcUserTenantMapper, AcUserT
     }
 
     /**
+     * 幂等插入成员关系（T1.1 棒3 加法——建号漏斗/登录补绑两处共用的落籍收口）。
+     * <p>已存在同 (user_id, tenant_id) 关系时跳过插入返回 false（幂等：注册链显式绑租户与
+     * 漏斗自动赋籍指向同一租户时不得插重）；is_admin 语义由调用方裁定（自动赋籍恒 false，
+     * 租户管理员只能由成员管理面另行授予）。</p>
+     *
+     * @param userId   用户id（任一入参 null ⇒ false，不插不抛）
+     * @param tenantId 租户id
+     * @param isAdmin  是否租户内管理员
+     * @return 是否新插了行（已存在/空参 ⇒ false）
+     */
+    public boolean insertIfAbsent(Long userId, Long tenantId, Boolean isAdmin) {
+        if (userId == null || tenantId == null) {
+            return false;
+        }
+        if (getRelation(userId, tenantId) != null) {
+            return false;
+        }
+        AcUserTenant relation = new AcUserTenant();
+        relation.setUserId(userId);
+        relation.setTenantId(tenantId);
+        relation.setIsAdmin(isAdmin);
+        insert(relation);
+        return true;
+    }
+
+    /**
      * 物理删关系行（批乙棒4 加法——移成员）。本表无软删位，形态照 AcUserDept。
      *
      * @param userId   用户id（任一入参 null ⇒ false，不抛）

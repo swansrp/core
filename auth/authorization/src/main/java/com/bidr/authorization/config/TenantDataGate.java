@@ -8,6 +8,7 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -30,12 +31,15 @@ import java.util.stream.Collectors;
  * <li>锚点清单外 ⇒ 原样返回 where（同一实例）——清单唯一成员 {@code ac_user}；
  * 表名按「最后一个点分段等值」匹配，兼容库名前缀（{@code bidr.ac_user} 命中）而不误吞
  * 后缀词表（{@code ac_user_tenant}/{@code xx_ac_user} 均不命中；contains/endsWith 都会误伤）；</li>
- * <li>{@link TenantContext} 无档（null）<b>或空集合</b> ⇒ 原样返回（用户弹卡终裁：空集/无档
- * ＝旁路全量可见，兼容优先——租户隔离只对"至少挂一个租户"的人生效；老项目/老 token/
- * 内部任务/单测零感知的机制核）；</li>
- * <li>平台档 {@link TenantContext#isPlatform()} ⇒ 原样返回（AuthAdmin 通过路径置位）；</li>
+ * <li>{@link TenantContext} 无档（null）<b>或空集合</b>——🔴 2026-11-01 && 口径分层：无请求上下文
+ * （{@code AccountContext} 缺席＝内部任务/异步/初始化）⇒ 原样返回（老项目/老 token/单测零感知的
+ * 机制核）；已登录但无租户绑定 ⇒ 拼恒假 {@code 1 = 0}（不再 fail-open 把"没填"当超级权限）；</li>
+ * <li>平台档 {@link TenantContext#isPlatform()} ⇒ 原样返回（2026-11-01 起由
+ * {@code AuthLogin.buildContext} 按 ACCOUNT_ADMIN_ROLE_ID 每请求置位，{@code @Auth(AuthAdmin)}
+ * 切面同样置位）；</li>
  * <li>有档且非空 ⇒ 拼 {@code EXISTS (SELECT 1 FROM ac_user_tenant aut WHERE aut.user_id =
- * <表引用>.user_id AND aut.tenant_id IN (…))} 与既有 where 用 AND 合并（无 where 直接返回新表达式）。
+ * <表引用>.user_id AND aut.tenant_id IN (…))} 与既有 where 用 AND 合并（原 where 整体加括号，
+ * 防顶层 OR 穿透；无 where 直接返回新表达式）。
  * IN 值全部来自服务端 {@link TenantContext}（Long），非用户输入，无注入面。</li>
  * </ol>
  * <p>运行时真实表路径：{@link #resolveAnchor(PlainSelect)} 从 {@code getFromItem()/getJoins()}
@@ -104,13 +108,16 @@ public class TenantDataGate implements DataPermissionHandler {
             // 🔴 必须与原 where 合并而不是替换：原 where 里的 ? 占位符仍由 MyBatis 参数表绑定，
             // 直接返回 1=0 会让占位符与参数数量错位（Parameter index out of range → 500），
             // "空结果"只能是 SQL 语义，不能靠参数越界来终止查询。
-            return where == null ? deny : new AndExpression(where, deny);
+            // 🔴 原 where 必须整体加括号：AND 优先级高于 OR，裸合并会把 1=0 只落到最后一个 OR 分支
+            // （a = ? OR b = ? AND 1 = 0 ⇒ 左支照常出行），JSqlParser 4.6 实测。
+            return where == null ? deny : new AndExpression(new Parenthesis(where), deny);
         }
         Expression gate = buildTenantExists(columnQualifier, tenantIds);
         if (gate == null) {
             return where;
         }
-        return where == null ? gate : new AndExpression(where, gate);
+        // 同上层：EXISTS 闸只能 AND 在整个原 where 之外，顶层 OR 不得穿透
+        return where == null ? gate : new AndExpression(new Parenthesis(where), gate);
     }
 
     /** 恒假表达式（1 = 0）：无租户绑定的登录态对锚点表一条也查不到 */
@@ -119,7 +126,8 @@ public class TenantDataGate implements DataPermissionHandler {
     }
 
     /**
-     * 闸是否处于"会改写"的活跃档（判序②③的短路形态）：无档/空集/平台档 ⇒ false——
+     * 闸是否处于"会改写"的活跃档（判序②③的短路形态）：无档 ⇒ false；空集 ⇒ 内部任务
+     * （无请求上下文）false、登录态 true；平台档 ⇒ false——
      * {@code beforeQuery} 据此在解析之前就跳过，老项目连"压缩+重序列化"的文本抖动都不发生，
      * 是比"改写后原样"更强的零感知。仅短路，不新增语义。
      * <p>翻译读旁路（{@link TenantGateSuppressor}）同样落在这里：BindRepo 族的展示值批查

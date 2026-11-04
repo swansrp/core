@@ -22,6 +22,31 @@ public class AuthzClientProperties {
     /** fail 策略：shell 不可达时 closed=拒绝（默认，安全）／open-to-cache=回落缓存最近值 */
     private FailMode failMode = FailMode.CLOSED;
 
+    /**
+     * T2.3b 扩展：机器凭证 appKey（server 侧 ac_partner 注册面发放）——
+     * 请求头 {@code x-api-key: Base64(appKey:appSecret)}（与 AuthPartner 验签口径对称）。
+     */
+    private String appKey = "";
+
+    /** T2.3b 扩展：机器凭证 appSecret */
+    private String appSecret = "";
+
+    /**
+     * T2.3b 扩展：授权版本拉取节流周期（毫秒）——RemoteAuthzChecker 在本周期内不重复拉
+     * /authz/version；周期到点拉一次，版本变化即整缓存失效（bump 后收回上限＝本值）。
+     */
+    private long versionRefreshMs = 5000L;
+
+    /**
+     * 修复轮（review 棒4 I-2）：HTTP 连接超时（毫秒），缺省 3000——
+     * hub 挂起防护：failMode 对「挂起」不可达（不拒连不回包的假死既不抛 RestClientException
+     * 也不返回），<b>超时是第一道闸</b>。
+     */
+    private int connectTimeoutMs = 3000;
+
+    /** 修复轮（review 棒4 I-2）：HTTP 读超时（毫秒），缺省 5000（同上挂起防护） */
+    private int readTimeoutMs = 5000;
+
     public enum FailMode { CLOSED, OPEN_TO_CACHE }
 
     public boolean isEnabled() { return enabled; }
@@ -35,4 +60,24 @@ public class AuthzClientProperties {
     public FailMode getFailMode() { return failMode; }
 
     public void setFailMode(FailMode failMode) { this.failMode = failMode; }
+
+    public String getAppKey() { return appKey; }
+
+    public void setAppKey(String appKey) { this.appKey = appKey; }
+
+    public String getAppSecret() { return appSecret; }
+
+    public void setAppSecret(String appSecret) { this.appSecret = appSecret; }
+
+    public long getVersionRefreshMs() { return versionRefreshMs; }
+
+    public void setVersionRefreshMs(long versionRefreshMs) { this.versionRefreshMs = versionRefreshMs; }
+
+    public int getConnectTimeoutMs() { return connectTimeoutMs; }
+
+    public void setConnectTimeoutMs(int connectTimeoutMs) { this.connectTimeoutMs = connectTimeoutMs; }
+
+    public int getReadTimeoutMs() { return readTimeoutMs; }
+
+    public void setReadTimeoutMs(int readTimeoutMs) { this.readTimeoutMs = readTimeoutMs; }
 }

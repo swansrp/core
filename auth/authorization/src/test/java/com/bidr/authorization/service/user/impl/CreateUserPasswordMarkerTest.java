@@ -1,9 +1,13 @@
 package com.bidr.authorization.service.user.impl;
 
 import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserDeptService;
+import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.service.login.RoleBindService;
+import com.bidr.authorization.service.login.impl.RegisterModeService;
+import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
@@ -23,7 +27,11 @@ public class CreateUserPasswordMarkerTest {
                 Mockito.mock(AcUserService.class),
                 Mockito.mock(SysConfigCacheService.class),
                 Mockito.mock(RoleBindService.class),
-                Mockito.mock(AcUserDeptService.class));
+                Mockito.mock(AcUserDeptService.class),
+                Mockito.mock(TenantResolver.class),
+                Mockito.mock(AcTenantService.class),
+                Mockito.mock(AcUserTenantService.class),
+                Mockito.mock(RegisterModeService.class));
     }
 
     @Test

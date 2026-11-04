@@ -13,6 +13,23 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class AcUserSchema extends BaseMybatisSchema<AcUser> {
+
+    /**
+     * 工厂态管理员密码 hash（user_id=1 'BidrAdmin' 初始密码的 48 位盐化 MD5，Md5Util.generate 形态）。
+     *
+     * <p>唯一用途＝{@link #setInitData} 的种子行字面量。🔴 <b>纪律（2026-11-02 定稿，勿再长出第二个种子器）</b>：
+     * 该 hash 只标识"这个号从没被人工设过密码"，<b>任何启动过程都不许据此改写口令</b>。
+     * 历史教训＝T1.0 的 AdminUserSeeder 曾以"hash 等于本常量"为 pristine 判据：只要库里处于工厂态，
+     * <b>下一次重启就随机重置口令并把明文打进日志</b>；联调环境里把口令故意设回工厂值后，一次部署就把
+     * 在场的人全部锁在门外（2026-11-02 6.60 实锤）。该 seeder 已退役，配置项 {@code identity.admin.*}
+     * 一并删除。交付需要指定初始口令时走运维 SQL 或框架既有首登设密链（{@code /web/login/password/init}）。</p>
+     *
+     * <p>空库引导链路（清库后自动成立，与本常量有关的部分）：{@code ac_user} 建表即插
+     * user_id=1/'000001'/'BidrAdmin'/工厂 hash（本类 setInitData）→ {@code ac_role} 插角色 1/2
+     * （AcRoleSchema）→ {@code ac_user_role} 插 (1,1) 角色绑定（AcUserRoleSchema）。</p>
+     */
+    public static final String FACTORY_ADMIN_PASSWORD_HASH = "a49a1ea1612f58a29968025b73ba2653274711c198c79465";
+
     static {
         setCreateDDL("CREATE TABLE IF NOT EXISTS `ac_user` (\n" +
                 "  `user_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID',\n" +
@@ -51,6 +68,6 @@ public class AcUserSchema extends BaseMybatisSchema<AcUser> {
         setInitData("INSERT INTO `ac_user` (`user_id`, `customer_number`, `wechat_id`, `id_number`, `name`, `dept_id`, `user_name`, `nick_name`, `user_type`," +
                 " `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, " +
                 "`create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', " +
-                "'a49a1ea1612f58a29968025b73ba2653274711c198c79465', 0, NOW(), 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
+                "'" + FACTORY_ADMIN_PASSWORD_HASH + "', 0, NOW(), 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
     }
 }

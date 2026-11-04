@@ -31,19 +31,6 @@ public enum AccountParam implements Param {
     PHONE_NUMBER_REGISTER("通过手机号码注册", "0",
             "【按需调整】注册是否必填手机号：0 不必填、1 必填。只影响之后的新注册"),
 
-    ACCOUNT_REGISTER_MODE("自助注册模式", "",
-            "【部署定型；库值非空优先、否则 yml 兜底】自助注册闸门三态（只管辖 /web/login/register 与 /web/login/register/msg 两个注册端点）："
-                    + "open＝开放注册，不带租户码也能注册全局账号（历史默认，共享项目兼容）；"
-                    + "tenant＝仅租户码注册，登录页不再出现注册入口，只有租户注册链接（前端 /register/租户码）可注册"
-                    + "且账号自动归属该租户，码缺省或无效一律拒绝；closed＝两个注册端点整体关闭，账号只能由管理员进系统后创建"
-                    + "（管理员账号为内置）。改后立即生效，登录页读生效值（/web/login/register-mode，与闸同源）决定入口形态。"
-                    + "🔴 取值三级链（2026-10-21 起种子留空＝未表态）：本参数库值非空→以库值为准（存量项目在参数页改过的仍生效）；"
-                    + "否则读 yml `my.auth.register-mode`（新项目 setup 向导在此定型）；仍空＝open。"
-                    + "选型该放 yml 不放参数页——上线后要切也该伴随发布/公告走 yml+重启，不是日常热调参。"
-                    + "⚠ 豁免通道：短信登录、微信登录、SSO 首登的\"缺号即建\"属登录面不受此闸管辖"
-                    + "（自动建的号无租户归属＝数据旁路形态，可在成员管理由管理员事后拉入租户）；"
-                    + "账号租户流向子系统走 POST /web/sso/introspect 的 tenantIds 字段"),
-
     LOGIN_SINGLETON("渠道单一用户登录控制", "1",
             "【按需调整】1＝同一账号同渠道只允许一处在线，重复登录会顶掉旧会话（多人共用账号调试时会被互相踢下线，届时可置 0）；改后立即生效"),
 
@@ -90,7 +77,10 @@ public enum AccountParam implements Param {
             "【现场必配·启用邮件时】邮件内跳转的改密页地址，出厂是占位星号——必须改成实际访问域名，且保留 userId/token 两个 %s 参数"),
 
     PASSWORD_EXPIRED("密码有效期", "365",
-            "【按需调整】密码多少天未改强制过期（天），默认 365；有等保/合规要求时按其数值设置");
+            "【按需调整】密码多少天未改强制过期（天），默认 365；有等保/合规要求时按其数值设置"),
+
+    AC_PARTNER_HISTORY_RETENTION_DAYS("对接访问记录保留天数", "90",
+            "【按需调整】ac_partner_history 保留多少天，默认 90 天；等保要求留痕更久时调大（表会持续变大）");
 
     private final String title;
     private final String defaultValue;

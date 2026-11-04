@@ -6,6 +6,7 @@ import com.bidr.authorization.bo.account.UserRolePermitInfo;
 import com.bidr.authorization.bo.role.RoleInfo;
 import com.bidr.authorization.bo.token.TokenInfo;
 import com.bidr.authorization.constants.common.ClientType;
+import com.bidr.authorization.constants.dict.UserTypeDict;
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
@@ -22,6 +23,7 @@ import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.service.tenant.TenantBindOnLoginService;
 import com.bidr.authorization.service.user.CreateUserService;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.authorization.vo.login.LoginRes;
@@ -32,11 +34,9 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.kernel.utils.*;
 import com.bidr.kernel.validate.Validator;
-import com.bidr.platform.dao.entity.SysConfig;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,20 +64,15 @@ public class LoginServiceImpl implements LoginService {
     private final AcUserRoleMenuService acUserRoleMenuService;
     private final CreateUserService creatUserService;
     private final HttpServletRequest request;
+    private final TenantBindOnLoginService tenantBindOnLoginService;
+    private final RegisterModeService registerModeService;
 
     @Autowired(required = false)
     private CustomerNumberHandler customerNumberHandler;
 
-    /**
-     * 注册模式 yml 兜底（{@code my.auth.register-mode}）：仅当 sys_config 库值未表态（空）时轮到。
-     * 缺省空＝未表态，normalizeRegisterMode 归一为 open（共享兼容）。
-     */
-    @Value("${my.auth.register-mode:}")
-    private String registerModeYml;
-
     /** 测试注入用（离线单测不起 Spring）；包可见不构成对外入口，风格同 AcTenantPortalService#isPlatformTier 的测试口。 */
     void setRegisterModeYml(String registerModeYml) {
-        this.registerModeYml = registerModeYml;
+        registerModeService.setRegisterMode(registerModeYml);
     }
 
     @Override
@@ -273,18 +268,15 @@ public class LoginServiceImpl implements LoginService {
         return buildLoginRes(user);
     }
 
-    /** 自助注册三态取值 */
-    private static final String REGISTER_MODE_OPEN = "open";
-    private static final String REGISTER_MODE_TENANT = "tenant";
-    private static final String REGISTER_MODE_CLOSED = "closed";
+    /** 自助注册三态取值（唯一读取点 {@link RegisterModeService}，本类别名只为少改调用点）。 */
+    private static final String REGISTER_MODE_TENANT = RegisterModeService.MODE_TENANT;
+    private static final String REGISTER_MODE_CLOSED = RegisterModeService.MODE_CLOSED;
 
     /**
-     * 三态归一（离线可测）：tenant/closed 之外的一切取值（含空、未知、大小写、空白）回落 open
-     * ——共享兼容口径：参数缺行或写错不得把存量开放注册项目突然锁死。
+     * 三态归一（离线可测）：委托 {@link RegisterModeService#normalize(String)}，口径只此一份。
      */
     static String normalizeRegisterMode(String raw) {
-        String v = raw == null ? "" : raw.trim().toLowerCase();
-        return REGISTER_MODE_TENANT.equals(v) || REGISTER_MODE_CLOSED.equals(v) ? v : REGISTER_MODE_OPEN;
+        return RegisterModeService.normalize(raw);
     }
 
     /**
@@ -296,22 +288,50 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * 注册模式三级链（2026-10-21 起）：① sys_config 库值（{@link AccountParam#ACCOUNT_REGISTER_MODE}，
-     * 种子已改留空＝未表态，存量项目在参数页改过的仍生效）→ ② yml {@code my.auth.register-mode}
-     * （部署定型键：新项目 setup 向导在此写定，上线后要切伴随发布/公告走 yml+重启，不是日常热调参）
-     * → ③ 仍空＝open（共享兼容：参数写错不得把存量开放注册项目突然锁死）。
-     * 🔴 库值必须走不抛断言的 getCache 读取：getParamValueAvail 在库值为空时抛 ServiceException，
-     * 会让 yml 兜底腿永远到不了、新项目首次启动就拒绝注册。
-     * 🔴 读取点只允许本方法一处——注册闸与前端形态按两种模式走＝同一注册请求两种命运。
+     * 租户模式闸·SSO 首登建号前（口径见接口注释）：tenant/closed 一律拒绝自动建号，
+     * 避免产生「零租户归属＝数据旁路」账号。open 保持历史行为。
+     */
+    @Override
+    public void assertSsoAutoCreateAllowed() {
+        String mode = resolveRegisterMode();
+        if (REGISTER_MODE_TENANT.equals(mode)) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "当前为租户模式，账号需由管理员/主系统创建并分配租户后使用");
+        }
+        if (REGISTER_MODE_CLOSED.equals(mode)) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "自助注册已关闭，账号请联系管理员创建");
+        }
+    }
+
+    /**
+     * 租户模式闸·SSO 已有账号登录前：tenant 模式下 SSO/REGISTER 类型必须至少有一个租户归属。
+     * 🔴 只拦自动创建类型（SSO/REGISTER）——SYSTEM/ACCOUNT 的系统管理级旁路语义不动。
+     */
+    @Override
+    public void assertSsoTenantReady(AcUser user) {
+        if (user == null || !REGISTER_MODE_TENANT.equals(resolveRegisterMode())) {
+            return;
+        }
+        String userType = user.getUserType();
+        boolean autoCreatedType = UserTypeDict.SSO.getValue().equals(userType)
+                || UserTypeDict.REGISTER.getValue().equals(userType);
+        if (!autoCreatedType) {
+            return;
+        }
+        List<AcUserTenant> relations = acUserTenantService.listByUserId(user.getUserId());
+        if (relations == null || relations.isEmpty()) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "该账号尚未分配租户，请联系管理员分配后重新登录");
+        }
+    }
+
+    /**
+     * 生效注册模式：委托 {@link RegisterModeService#current()}（yml {@code my.auth.register-mode} → open，
+     * 不读 sys_config），与租户绑定漏斗、ac_user 数据闸共用同一读取点，注册闸与前端形态不得各读一份。
      */
     String resolveRegisterMode() {
-        SysConfig row = frameCacheService.getCache(AccountParam.ACCOUNT_REGISTER_MODE.name());
-        String configured = row == null ? null : row.getConfigValue();
-        // 空白也按"未表态"处理：FuncUtil.isEmpty 只判 null/长度 0，空白串会跳过 yml 腿
-        if (configured == null || configured.trim().isEmpty()) {
-            configured = registerModeYml;
-        }
-        return normalizeRegisterMode(configured);
+        return registerModeService.current();
     }
 
     /**
@@ -343,17 +363,16 @@ public class LoginServiceImpl implements LoginService {
 
     /**
      * 注册即挂租户：is_admin 恒 false（租户管理员由成员管理面另行授予，注册入口不得自授管理员）。
-     * 包可见＝离线单测直断 is_admin 针（不构成对外入口）。
+     * 落籍走幂等收口 insertIfAbsent（对齐建号点 bindCreateUserTenant）：createUser 内部已按
+     * TenantResolver 归属落籍一次（T1.1 建号必绑），Fixed 形态下两源同码，裸 insert 必撞
+     * ac_user_tenant PRIMARY（6.60 真机注册实证 Duplicate entry '2548-1'，注册整体 500）。
+     * 包可见＝离线单测直断落籍腿（不构成对外入口）。
      */
     void bindRegisterTenant(Long userId, AcTenant tenant) {
         if (tenant == null) {
             return;
         }
-        AcUserTenant relation = new AcUserTenant();
-        relation.setUserId(userId);
-        relation.setTenantId(tenant.getId());
-        relation.setIsAdmin(Boolean.FALSE);
-        acUserTenantService.insert(relation);
+        acUserTenantService.insertIfAbsent(userId, tenant.getId(), Boolean.FALSE);
     }
 
     @Override
@@ -428,8 +447,12 @@ public class LoginServiceImpl implements LoginService {
         String clientType = ClientTypeHolder.get();
         UserRolePermitInfo info = acUserRoleMenuService.getByCustomerNumberAndClientType(acUser.getCustomerNumber(),
                 clientType);
+        Map<Long, RoleInfo> roleMap = ReflectionUtil.reflectToMap(info.getRoleInfoList(), RoleInfo::getRoleId);
         buildPermitTree(info, accessToken);
-        buildAccountInfo(info, accessToken);
+        buildAccountInfo(info, accessToken, roleMap);
+        // 登录补绑钩子（T1.1 棒3）：存量零绑定老号在此补籍/拒登，必须在 buildTenantIds 之前——
+        // 补绑结果随即被同请求的现查烤进 token；fillToken 是全部登录链的公共装配点，一处挂接全链生效
+        tenantBindOnLoginService.bindOnLogin(acUser.getUserId(), acUser.getUserName(), roleMap);
         buildTenantIds(acUser.getUserId(), accessToken);
         TokenHolder.set(accessToken);
     }
@@ -485,9 +508,8 @@ public class LoginServiceImpl implements LoginService {
         }
     }
 
-    private void buildAccountInfo(UserRolePermitInfo info, TokenInfo accessToken) {
-        Map<Long, RoleInfo> role = ReflectionUtil.reflectToMap(info.getRoleInfoList(), RoleInfo::getRoleId);
+    private void buildAccountInfo(UserRolePermitInfo info, TokenInfo accessToken, Map<Long, RoleInfo> roleMap) {
         tokenService.putItem(accessToken, TokenItem.USER_INFO.name(), ReflectionUtil.copy(info, UserInfo.class));
-        tokenService.putItem(accessToken, TokenItem.ROLE_MAP.name(), role);
+        tokenService.putItem(accessToken, TokenItem.ROLE_MAP.name(), roleMap);
     }
 }

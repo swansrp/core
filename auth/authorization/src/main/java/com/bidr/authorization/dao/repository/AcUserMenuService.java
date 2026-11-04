@@ -4,7 +4,6 @@ import com.bidr.authorization.dao.entity.AcMenu;
 import com.bidr.authorization.dao.entity.AcUserMenu;
 import com.bidr.authorization.dao.mapper.AcUserMenuDao;
 import com.bidr.kernel.constant.CommonConst;
-import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +15,7 @@ import java.util.List;
  * @author sharp
  */
 @Service
-public class AcUserMenuService extends BaseSqlRepo<AcUserMenuDao, AcUserMenu> {
+public class AcUserMenuService extends AuthzVersionedSqlRepo<AcUserMenuDao, AcUserMenu> {
 
     /**
      * 绑定菜单给用户
@@ -52,7 +51,13 @@ public class AcUserMenuService extends BaseSqlRepo<AcUserMenuDao, AcUserMenu> {
         AcUserMenu acUserMenu = new AcUserMenu();
         acUserMenu.setCustomerNumber(customerNumber);
         acUserMenu.setMenuId(menuId);
-        super.deleteByMultiId(acUserMenu);
+        boolean removed = super.deleteByMultiId(acUserMenu);
+        if (removed) {
+            // T2.3b：deleteByMultiId 是 IMppService default 方法，不经 AuthzVersionedSqlRepo
+            // 拦截面，此处显式补 bump（用户菜单写点，client 缓存失效信号）——走两段式时序
+            // 与拦截面一致（对账单 #24）
+            bumpOnWriteCommitted(true);
+        }
     }
 
     public List<AcMenu> getAllMenu(String customerNumber, String clientType) {

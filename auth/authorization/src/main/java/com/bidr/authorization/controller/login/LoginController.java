@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import com.bidr.authorization.controller.oauth2.OAuth2IdpController;
+import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 
@@ -56,9 +58,19 @@ public class LoginController {
     @Auth(AuthToken.class)
     @RequestMapping(value = "", method = RequestMethod.POST)
     @CaptchaVerify("LOGIN_CAPTCHA")
-    public LoginRes login(@Validated LoginReq req) {
+    public LoginRes login(@Validated LoginReq req, HttpServletResponse response) {
         LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
         afterLogin(res);
+        // 会话 cookie（T1.3 浏览器腿）：SSO 授权入口 /web/oauth2/authorize 是**整页导航**，
+        // 浏览器带不上 localStorage 里的 Authorization 头 ⇒ 该端点按 cookie 回退取票，
+        // 否则一律 302 回登录页、登录后再跳 authorize 仍无头＝死循环。
+        // 只种给登录成功路径；口径见 OAuth2IdpController#SESSION_COOKIE。
+        if (FuncUtil.isNotEmpty(res.getAccessToken())) {
+            // 手写 Set-Cookie 而不用 Cookie#setAttribute：javax Cookie 的 SameSite 属性需 Servlet 4.0，
+            // 本 reactor 编译期仍是老 servlet-api，直接拼头最稳（值＝Base64 信封，无 ; / , 风险）。
+            response.addHeader("Set-Cookie", OAuth2IdpController.SESSION_COOKIE + "="
+                    + res.getAccessToken() + "; Path=/; HttpOnly; SameSite=Lax");
+        }
         return res;
     }
 
@@ -123,7 +135,7 @@ public class LoginController {
     }
 
     @Auth(AuthNone.class)
-    @ApiOperation(value = "获取生效的自助注册模式", notes = "open/tenant/closed，三级链与注册闸同一读取点")
+    @ApiOperation(value = "获取生效的自助注册模式", notes = "open/tenant/closed，只读 yml my.auth.register-mode，与注册闸同一读取点")
     @RequestMapping(value = "/register-mode", method = RequestMethod.GET)
     public String registerMode() {
         return loginService.getRegisterMode();
