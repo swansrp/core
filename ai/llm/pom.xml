@@ -14,40 +14,15 @@
     <version>${jarVersion}</version>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <langchain4j.version>0.33.0</langchain4j.version>
-    </properties>
+            <java.version>17</java.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-                <platform.version>${jarVersion}</platform.version>
-                <redis.version>${jarVersion}</redis.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <kernel.version>20261101110847-97</kernel.version>
-                <platform.version>20261101110847-97</platform.version>
-                <redis.version>20261101110847-97</redis.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- 系统参数契约（Param/@MetaParam）：LlmParam 据此声明数据库参数 key -->
@@ -56,7 +31,14 @@
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
-        <!-- 🔴 本模块＝纯模型层（M16 修复轮定案）：不依赖 tool/document、不依赖 tool/mineru。
+        <!-- 文档 SPI 桥接：VisionConfigProvider 默认适配器（LLM 视觉配置 → document 视觉腿）。
+             2026-11-05 SPI 反转后依赖方向＝llm → document 单向；document 已零本模块依赖 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>document</artifactId>
+            <version>${document.version}</version>
+        </dependency>
+        <!-- 🔴 本模块＝纯模型层（M16 修复轮定案，2026-11-05 修订为「仅 MinerU 外」）：不依赖 tool/mineru。
              文件 → Markdown 入口（FileMarkdownService／VisionModelConfig／read_file 工具）
              已整体搬进 core tool/document，由那边单向依赖本模块取 ModelConfigProvider（purpose=VISION）；
              依赖方向＝document → llm，反向有守卫测试 LlmLayeringGuardTest 守着 -->

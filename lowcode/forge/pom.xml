@@ -14,44 +14,14 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
     <artifactId>forge</artifactId>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-                <platform.version>${jarVersion}</platform.version>
-                <redis.version>${jarVersion}</redis.version>
-                <authorization.version>${jarVersion}</authorization.version>
-                <admin.version>${jarVersion}</admin.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <kernel.version>20261101110847-97</kernel.version>
-                <platform.version>20261101110847-97</platform.version>
-                <redis.version>20261101110847-97</redis.version>
-                <authorization.version>20261101110847-97</authorization.version>
-                <admin.version>20261101110847-97</admin.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <dependency>

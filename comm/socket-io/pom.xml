@@ -8,40 +8,18 @@
         <groupId>com.bidr</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>socket-io</artifactId>
 
     <version>${jarVersion}</version>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <authorization.version>${jarVersion}</authorization.version>
-                <mongo.version>${jarVersion}</mongo.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <authorization.version>20261101110847-97</authorization.version>
-                <mongo.version>20261101110847-97</mongo.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <dependency>

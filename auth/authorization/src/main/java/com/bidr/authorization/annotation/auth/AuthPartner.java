@@ -72,8 +72,10 @@ public class AuthPartner implements AuthRole {
     }
 
     private void buildContext(AcPartner acPartner) {
-        Map<String, Object> map = new HashMap<>(1);
+        Map<String, Object> map = new HashMap<>(2);
         map.put(TokenItem.PLATFORM.name(), acPartner.getPlatform());
+        // appKey 烤入上下文：IdP 账密换票端点取它作签发 claim 的 app_id（票的受众接入方）
+        map.put(TokenItem.APP_KEY.name(), acPartner.getAppKey());
         AccountInfo accountInfo = new AccountInfo();
         accountInfo.setExtraData(map);
         AccountContext.set(accountInfo);

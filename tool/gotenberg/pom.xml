@@ -14,38 +14,14 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
     <artifactId>gotenberg</artifactId>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <document.version>${jarVersion}</document.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <!-- 新模块首版未发布过 nexus 时间戳件：先按本地/仓内 0.0.1-SNAPSHOT 解析，
-                     随批发布后改钉时间戳版（照 mineru 的 llm.version 钉版形状） -->
-                <document.version>20261101110847-97</document.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- 腿→口（D10/§7.3 定形）：本模块实现 tool/document 的 ConvertStep，

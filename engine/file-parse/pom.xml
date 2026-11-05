@@ -14,42 +14,14 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
     <artifactId>engine-file-parse</artifactId>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-                <platform.version>${jarVersion}</platform.version>
-                <authorization.version>${jarVersion}</authorization.version>
-                <oss.version>${jarVersion}</oss.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <kernel.version>20261019011254-82</kernel.version>
-                <platform.version>20261019011254-82</platform.version>
-                <authorization.version>20261019011254-82</authorization.version>
-                <oss.version>20261019011254-82</oss.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- 编排车床（@AsyncTaskType/@AsyncStage 三态阶段 + sa_async_task 台账） -->

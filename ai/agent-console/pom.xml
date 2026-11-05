@@ -17,43 +17,14 @@
         运行时仍在 core/llm，本模块只出机制（登记、聚合、只读端点），不含业务语义、不自持空间概念。</description>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+            <java.version>17</java.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
 
-    <profiles>
-        <profile>
-            <id>development</id>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <jarVersion>0.0.1-SNAPSHOT</jarVersion>
-                <kernel.version>${jarVersion}</kernel.version>
-                <llm.version>${jarVersion}</llm.version>
-                <oss.version>${jarVersion}</oss.version>
-                <platform.version>${jarVersion}</platform.version>
-                <authorization.version>${jarVersion}</authorization.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>public-snapshots</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-                <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-                <java.version>1.8</java.version>
-                <kernel.version>20261101110847-97</kernel.version>
-                <llm.version>20261101110847-97</llm.version>
-                <oss.version>20261101110847-97</oss.version>
-                <platform.version>20261101110847-97</platform.version>
-                <authorization.version>20261101110847-97</authorization.version>
-            </properties>
-        </profile>
-    </profiles>
+    
 
     <dependencies>
         <!-- kernel：web 基座（@RestController / jackson） -->

@@ -12,6 +12,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import java.net.URLEncoder;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -143,6 +144,44 @@ public class OAuth2ClientTest {
         } catch (OAuth2ExchangeException e) {
             Assert.assertTrue("错误消息须点名缺 access_token: " + e.getMessage(),
                     e.getMessage().contains("access_token"));
+        }
+    }
+
+    @Test
+    public void exchangePasswordCarriesApiKeyHeaderAndParsesEnvelope() {
+        server.expect(requestTo(BASE_URL + "/open-api/v1/idp/password-login"))
+                .andExpect(method(HttpMethod.POST))
+                // 机器凭证头＝Base64(appKey:appSecret)（trim 后），与 server 侧 AuthPartner 验签口径对称
+                .andExpect(header("x-api-key",
+                        com.bidr.kernel.utils.Base64Util.encode("epc-ai:s3cret")))
+                .andExpect(content().string(Matchers.containsString("loginId=bidrAdmin")))
+                .andExpect(content().string(Matchers.containsString("password=md5str")))
+                .andRespond(withSuccess("{\"status\":{\"code\":0},\"payload\":"
+                        + "{\"access_token\":\"tok-pwd\",\"token_type\":\"Bearer\",\"expires_in\":3600}}",
+                        MediaType.APPLICATION_JSON));
+
+        OAuth2TokenRes res = client.exchangePassword("bidrAdmin", "md5str");
+
+        server.verify();
+        Assert.assertEquals("tok-pwd", res.getAccessToken());
+        Assert.assertEquals("Bearer", res.getTokenType());
+        Assert.assertEquals(Long.valueOf(3600L), res.getExpiresIn());
+    }
+
+    @Test
+    public void exchangePasswordSurfacesBusinessEnvelopeMessage() {
+        // 账密腿业务拒绝走框架全局异常信封（HTTP 200 + status.code!=0）：文案在 status.message
+        server.expect(requestTo(BASE_URL + "/open-api/v1/idp/password-login"))
+                .andRespond(withSuccess("{\"status\":{\"code\":30001,\"message\":\"密码不正确，剩余2次\"},\"payload\":null}",
+                        MediaType.APPLICATION_JSON));
+
+        try {
+            client.exchangePassword("bidrAdmin", "wrong");
+            Assert.fail("信封错误必须抛 OAuth2ExchangeException");
+        } catch (OAuth2ExchangeException e) {
+            Assert.assertTrue("错误消息须含信封错误码: " + e.getMessage(), e.getMessage().contains("30001"));
+            Assert.assertTrue("错误消息须含业务文案（且 UTF-8 未乱码）: " + e.getMessage(),
+                    e.getMessage().contains("密码不正确，剩余2次"));
         }
     }
 }
