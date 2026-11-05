@@ -101,7 +101,9 @@ public class OAuth2TokenServiceTest {
         });
         codeService = new OAuth2AuthorizationCodeService(redisService, properties);
 
-        tokenService = new OAuth2TokenService(clientService, codeService, properties);
+        // acUserTenantService 只被账密换票腿（issueForUser）消费，授权码腿不触：空实现占位
+        tokenService = new OAuth2TokenService(clientService, codeService, properties,
+                Mockito.mock(com.bidr.authorization.dao.repository.AcUserTenantService.class));
     }
 
     /** 走真实签发链落一个合法 code（绑定本测试的 client/redirect/用户） */

@@ -85,6 +85,12 @@ public class LoginServiceImpl implements LoginService {
     @Override
     @Transactional(rollbackFor = Exception.class, noRollbackFor = ServiceException.class)
     public LoginRes login(String loginId, String password) {
+        return login(authenticate(loginId, password));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = ServiceException.class)
+    public AcUser authenticate(String loginId, String password) {
         AcUser user = acUserService.getUserByUserName(loginId);
         if (user == null) {
             user = acUserService.getUserByPhoneNumber(loginId);
@@ -113,7 +119,7 @@ public class LoginServiceImpl implements LoginService {
             Date expiredTime = new Date(user.getPasswordLastTime().getTime() + expiredDays * 24 * 60 * 60 * 1000L);
             Validator.assertTrue(DateUtil.dayDiff(expiredTime, new Date()) > 0, AccountErrCode.AC_PASSWORD_EXPIRED);
         }
-        return login(user);
+        return user;
     }
 
     private void verifyPassword(AcUser user, String passwordMd5, String password) {

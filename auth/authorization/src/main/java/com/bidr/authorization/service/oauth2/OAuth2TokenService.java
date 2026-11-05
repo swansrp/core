@@ -2,6 +2,8 @@ package com.bidr.authorization.service.oauth2;
 
 import com.bidr.authorization.config.IdentityIdpProperties;
 import com.bidr.authorization.dao.entity.AcPartner;
+import com.bidr.authorization.dao.entity.AcUser;
+import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.utils.jwt.IdpJwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,32 @@ public class OAuth2TokenService {
     private final OAuth2ClientService clientService;
     private final OAuth2AuthorizationCodeService codeService;
     private final IdentityIdpProperties idpProperties;
+    private final AcUserTenantService acUserTenantService;
+
+    /**
+     * open-api 账密换票腿（子系统密码透传）：按已验身用户签发 IdP access_token ＋
+     * 标准响应体。与授权码腿共用 {@link #buildTokenResponse} 签发口（同一把私钥、
+     * 同一 claim 形态），子系统侧 {@code IdpTokenVerifier} 验签零特殊化。
+     *
+     * <p>上下文构造与 authorize 端同源：工号→登录名/展示名/租户绑定；app_id＝
+     * 调用方接入方标识（x-api-key 解出的 appKey，AuthPartner 已烤入上下文）。</p>
+     *
+     * @param user     已验身用户（{@code LoginService#authenticate} 出参）
+     * @param clientId 接入方 appKey（票的受众）
+     * @param scope    scope（账密腿无 scope 流程，传 null＝响应不带 scope）
+     * @return 标准响应体 {access_token, token_type:"Bearer", expires_in}
+     */
+    public Map<String, Object> issueForUser(AcUser user, String clientId, String scope) {
+        OAuth2AuthorizationCode context = new OAuth2AuthorizationCode();
+        context.setClientId(clientId);
+        context.setUserId(user.getUserId());
+        context.setCustomerNumber(user.getCustomerNumber());
+        context.setUserName(user.getUserName());
+        context.setName(StringUtils.isNotBlank(user.getNickName()) ? user.getNickName() : user.getName());
+        context.setTenantIds(acUserTenantService.listTenantIdsByUserId(user.getUserId()));
+        context.setScope(scope);
+        return buildTokenResponse(context);
+    }
 
     /**
      * grant_type=authorization_code 全编排：校验全过 ⇒ 签发并返回标准响应体；
