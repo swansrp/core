@@ -1,6 +1,9 @@
-# 指定 JDK 版本
-jdk: openjdk8
+# 指定 JDK 版本(2026-11-05 起升 17:34 个 8 模块由 javac17 编出 target 1.8 字节码,
+# ai 四模块 java 17 可编;旧 tag 已在 JitPack 缓存,不受本文件影响)
+jdk: openjdk17
 
 # 自定义 Maven 构建命令
+# 第一条:默认 reactor(34 模块);第二条:ai17 波(默认 reactor 不含 ai/*,单独激活)
 install:
-  - mvn clean install -Pdevelopment -DskipTests
+  - mvn clean install -DskipTests
+  - mvn clean install -DskipTests -Pai17 -pl ai/llm,ai/mcp,ai/agent-runtime,ai/agent-console
