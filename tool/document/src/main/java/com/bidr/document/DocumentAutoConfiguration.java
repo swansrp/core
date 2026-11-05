@@ -79,7 +79,8 @@ public class DocumentAutoConfiguration {
             @org.springframework.beans.factory.annotation.Value("${llm.proxy.enable:false}") boolean proxyEnable,
             @org.springframework.beans.factory.annotation.Value("${llm.proxy.host:}") String proxyHost,
             @org.springframework.beans.factory.annotation.Value("${llm.proxy.port:0}") int proxyPort) {
-        return new FileMarkdownService(configProvider.getIfAvailable(),
+        // 同槽多候选取 null＝容器不炸，缺配置到扫描页才抛带指引的异常（与上面的 documentProcessor 同口径）
+        return new FileMarkdownService(configProvider.getIfUnique(),
                 buildProxy(proxyEnable, proxyHost, proxyPort),
                 processor.getIfAvailable());
     }
