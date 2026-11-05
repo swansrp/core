@@ -32,6 +32,17 @@ public interface LoginService {
     LoginRes login(String loginId, String password);
 
     /**
+     * 账密验身（不签会话）——校验链与 {@link #login(String, String)} 完全同源
+     * （查用户→状态闸→无密码处理→密码校验含失败计数与锁定→过期检查），
+     * 供 open-api 账密换票等「只验身份不发会话」的通道复用（子系统密码透传腿）。
+     *
+     * @param loginId  用户标识(用户名或者手机号或者邮箱)
+     * @param password 密码（前端已 MD5 的形态，与 login 同口径）
+     * @return 验身通过的用户实体
+     */
+    AcUser authenticate(String loginId, String password);
+
+    /**
      * 短信验证码登录.
      *
      * @param phoneNumber 手机号码

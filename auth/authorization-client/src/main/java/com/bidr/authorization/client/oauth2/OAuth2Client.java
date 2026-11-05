@@ -1,5 +1,7 @@
 package com.bidr.authorization.client.oauth2;
 
+import com.bidr.authorization.constants.common.RequestConst;
+import com.bidr.kernel.utils.Base64Util;
 import com.bidr.kernel.utils.JsonUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
@@ -99,10 +101,45 @@ public class OAuth2Client {
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
         form.add("redirect_uri", redirectUri);
+        return postForToken(url, form, null);
+    }
 
+    /**
+     * 账密换 access_token（POST {base}/open-api/v1/idp/password-login，form 形态）——
+     * 子系统密码透传腿：登录页收到的用户账密由子系统后端凭机器凭证代问主系统验身。
+     *
+     * <p>与 {@link #exchangeCode} 的鉴权形态不同：凭据是用户账密（loginId/password 走 body），
+     * 调用方身份走机器凭证头 {@code x-api-key: Base64(appKey:appSecret)}（server 侧
+     * {@code AuthPartner} 验签口径），不走 OAuth2 body 的 client_id/client_secret。
+     * 成功响应与授权码腿同形（{access_token(RS256 JWT), token_type, expires_in}，统一信封
+     * 或裸形态都兼容）；验身失败＝业务错误信封（message 取自主系统登录链原文案）。</p>
+     *
+     * @param loginId  用户标识（用户名/手机号/邮箱）
+     * @param password 密码（前端已 MD5 形态，与主系统登录同口径）
+     * @return token 响应（access_token/token_type/expires_in）
+     * @throws OAuth2ExchangeException HTTP 非 2xx、信封错误或形状异常
+     */
+    public OAuth2TokenRes exchangePassword(String loginId, String password) {
+        String url = baseUrl + "/open-api/v1/idp/password-login";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("loginId", loginId);
+        form.add("password", password);
+        return postForToken(url, form,
+                Base64Util.encode(clientId + ":" + clientSecret));
+    }
+
+    /**
+     * token 端点公共请求/解析段（授权码腿与账密腿共用）：form POST ＋ 统一信封/裸形态
+     * 双兼容解析 ＋ 错误文案多候选提取（OAuth2 {error,error_description} 与业务信封
+     * {status:{message}} 都能出人话）。apiKey 非空＝带机器凭证头（账密腿）。
+     */
+    private OAuth2TokenRes postForToken(String url, MultiValueMap<String, String> form, String apiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        if (apiKey != null && !apiKey.isEmpty()) {
+            headers.set(RequestConst.X_API_KEY, apiKey);
+        }
 
         ResponseEntity<byte[]> resp;
         try {
@@ -120,6 +157,13 @@ public class OAuth2Client {
             String description = textField(payload, "error_description");
             if (description.isEmpty()) {
                 description = textField(err, "error_description");
+            }
+            if (error.isEmpty() && description.isEmpty()) {
+                // open-api 业务信封形态（账密腿业务拒绝走框架全局异常）：文案在 status.message / message
+                description = firstText(err == null ? null : err.get("status"), err, "message");
+                if (!description.isEmpty()) {
+                    error = "business_error";
+                }
             }
             throw new OAuth2ExchangeException("IdP token 端点拒绝: " + error
                     + (description.isEmpty() ? "" : " - " + description));
@@ -139,7 +183,10 @@ public class OAuth2Client {
         JsonNode payload = root.has("payload") && root.get("payload").isObject() ? root.get("payload") : root;
         if (root.get("status") != null && root.get("status").has("code")
                 && root.get("status").get("code").asInt() != 0) {
-            throw new OAuth2ExchangeException("IdP token 端点信封错误码: " + root.get("status").get("code").asInt());
+            String message = firstText(root.get("status"), root, "message");
+            throw new OAuth2ExchangeException("IdP token 端点信封错误码: "
+                    + root.get("status").get("code").asInt()
+                    + (message.isEmpty() ? "" : " - " + message));
         }
         String accessToken = textField(payload, "access_token");
         if (accessToken.isEmpty()) {
@@ -170,6 +217,21 @@ public class OAuth2Client {
             return "";
         }
         return node.get(field).asText();
+    }
+
+    /** 多候选文本取值：依次从各节点×字段名找第一个非空文本（OAuth2 错误形态与业务信封混合解析用） */
+    private static String firstText(JsonNode node, JsonNode fallback, String... fields) {
+        for (String field : fields) {
+            String value = textField(node, field);
+            if (!value.isEmpty()) {
+                return value;
+            }
+            value = textField(fallback, field);
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     /** JSON 串 → JsonNode（坏串 ⇒ null 不抛） */

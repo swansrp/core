@@ -48,6 +48,9 @@ public enum TokenItem {
     SESSION_ID,
     // 对接平台PLATFORM
     PLATFORM,
+    // 对接方应用标识（AuthPartner 机器凭证验过后烤入上下文：x-api-key 解出的 appKey，
+    // IdP 账密换票端点取它作签发 claim 的 app_id——票的受众接入方）
+    APP_KEY,
     /*
      * 权限列表
      */
