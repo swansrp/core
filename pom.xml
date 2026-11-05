@@ -99,7 +99,9 @@
         <profile>
             <id>ai17</id>
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <!-- JDK≥17 工具链自动激活:17 世界四模块进 reactor;JDK8 工具链自动排除(旧 33 模块形态)。
+                     显式 -P!ai17 可强制排除 -->
+                <jdk>[17,)</jdk>
             </activation>
             <modules>
                 <module>ai/llm</module>
