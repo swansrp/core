@@ -1,6 +1,5 @@
 package com.bidr.document;
 
-import com.bidr.llm.provider.ModelConfigProvider;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -22,8 +21,8 @@ import java.nio.file.Path;
  * 入口重载、远程下载、显式视觉配置到 {@link VisionEndpoint} 的转换。
  * <p>
  * 多模态模型配置解析顺序：调用时显式传入的 {@link VisionModelConfig} →
- * {@link VisionConfigProvider}（默认适配器＝llm 的 {@link ModelConfigProvider}，
- * purpose = {@link #PURPOSE_VISION}，数据库 sys_config 优先、{@code llm.vision.*} 回落）。
+ * {@link VisionConfigProvider} SPI（装配缺省由 ai/llm 侧注册适配器接 sys_config/{@code llm.vision.*}；
+ * 本模块零 llm 编译依赖——离线/Java 8 场景自传实现或显式配置即可）。
  * <p>
  * 增强转写腿（如 {@link com.bidr.document.builtin.MineruTranscribeLeg}）由装配按
  * {@code tool.document.transcriber} 选型挂进 {@link DocumentProcessor}，挂不挂对本类调用方不可见；
@@ -42,7 +41,7 @@ public class FileMarkdownService {
     /**
      * 模型配置提供者，可为 null（为 null 时多模态配置只能调用时显式传入）
      */
-    private final ModelConfigProvider configProvider;
+    private final VisionConfigProvider configProvider;
 
     /**
      * 多模态调用 HTTP 代理：复用 core {@code llm.proxy.*} 口径（与文本模型同一份配置），
@@ -55,11 +54,11 @@ public class FileMarkdownService {
      */
     private final DocumentProcessor processor;
 
-    public FileMarkdownService(ModelConfigProvider configProvider) {
+    public FileMarkdownService(VisionConfigProvider configProvider) {
         this(configProvider, null, null);
     }
 
-    public FileMarkdownService(ModelConfigProvider configProvider, Proxy proxy) {
+    public FileMarkdownService(VisionConfigProvider configProvider, Proxy proxy) {
         this(configProvider, proxy, null);
     }
 
@@ -67,11 +66,11 @@ public class FileMarkdownService {
      * 委托构造（自动装配走这档）：显式传入 {@link DocumentProcessor}
      * （缺席传 null＝纯内置档默认门面，视觉配置经 {@link LlmVisionConfigProvider} 适配 llm 模型机制）
      */
-    public FileMarkdownService(ModelConfigProvider configProvider, Proxy proxy, DocumentProcessor processor) {
+    public FileMarkdownService(VisionConfigProvider configProvider, Proxy proxy, DocumentProcessor processor) {
         this.configProvider = configProvider;
         this.proxy = proxy;
         this.processor = processor != null ? processor
-                : DocumentProcessor.defaults(new LlmVisionConfigProvider(configProvider, proxy));
+                : DocumentProcessor.defaults(configProvider);
     }
 
     // ---------------- 对外入口：url / File / Path / InputStream ----------------

@@ -7,8 +7,6 @@ import com.bidr.document.spi.ConvertStep;
 import com.bidr.document.spi.EnrichStep;
 import com.bidr.document.spi.IntakeStep;
 import com.bidr.document.spi.TranscribeStep;
-import com.bidr.llm.config.LlmDefaultAutoConfiguration;
-import com.bidr.llm.provider.ModelConfigProvider;
 import com.bidr.mineru.MineruCloudClient;
 import com.bidr.mineru.MineruLocalClient;
 import com.bidr.mineru.MineruProperties;
@@ -33,9 +31,9 @@ import java.util.stream.Collectors;
  *       三态语义：没配→内置；配了包没引→WARN 走内置；配了且在→增强腿）；
  *       <b>MinerU 腿本模块自带</b>（{@link MineruTranscribeLeg}，键点名 mineru 才装），
  *       业务引 document 即可用，无需另装配；</li>
- *   <li>视觉配置默认适配器＝{@link LlmVisionConfigProvider}（接 core llm 的
- *       {@link ModelConfigProvider}，purpose=VISION：数据库系统参数优先、{@code llm.vision.*} 回落），
- *       业务注册自己的 {@link VisionConfigProvider} 即覆盖；</li>
+ *   <li>视觉配置＝{@link VisionConfigProvider} SPI（默认适配器由 ai/llm 侧注册，
+ *       接 sys_config/{@code llm.vision.*}；本模块零 llm 编译依赖，可独立 Java 8 构建），
+ *       业务注册自己的 Bean 即覆盖；</li>
  *   <li>入口三件（{@link DocumentProcessor}／{@link FileMarkdownService}／
  *       {@code agent.FileMarkdownTool}）缺席时才装，业务自建以 {@code @ConditionalOnMissingBean} 让位。</li>
  * </ul>
@@ -70,33 +68,31 @@ public class DocumentAutoConfiguration {
     }
 
     /**
-     * 视觉配置默认适配器：{@code llm.proxy.*} 口径与文本模型同源（代理构造复用
-     * {@link LlmDefaultAutoConfiguration#buildProxy}），容器无 {@link ModelConfigProvider} 时
-     * 适配器解析返回 null＝多模态只能调用时显式传入，不抛
-     */
-    @Bean
-    @ConditionalOnMissingBean(VisionConfigProvider.class)
-    public VisionConfigProvider documentVisionConfigProvider(ObjectProvider<ModelConfigProvider> configProvider,
-            @org.springframework.beans.factory.annotation.Value("${llm.proxy.enable:false}") boolean proxyEnable,
-            @org.springframework.beans.factory.annotation.Value("${llm.proxy.host:}") String proxyHost,
-            @org.springframework.beans.factory.annotation.Value("${llm.proxy.port:0}") int proxyPort) {
-        return new LlmVisionConfigProvider(configProvider.getIfAvailable(),
-                LlmDefaultAutoConfiguration.buildProxy(proxyEnable, proxyHost, proxyPort));
-    }
-
-    /**
-     * 文件 → Markdown 入口：加工本体走上面的 {@link DocumentProcessor}（业务自建门面时本 Bean 仍可用）
+     * 文件 → Markdown 入口：加工本体走上面的 {@link DocumentProcessor}（业务自建门面时本 Bean 仍可用）。
+     * 视觉配置 {@code VisionConfigProvider} 由 ai/llm 侧注册默认适配器（本模块零 llm 依赖）；
+     * 下载代理键 {@code llm.proxy.*} 与 llm 保持同源口径
      */
     @Bean
     @ConditionalOnMissingBean(FileMarkdownService.class)
-    public FileMarkdownService fileMarkdownService(ObjectProvider<ModelConfigProvider> configProvider,
+    public FileMarkdownService fileMarkdownService(ObjectProvider<VisionConfigProvider> configProvider,
             ObjectProvider<DocumentProcessor> processor,
             @org.springframework.beans.factory.annotation.Value("${llm.proxy.enable:false}") boolean proxyEnable,
             @org.springframework.beans.factory.annotation.Value("${llm.proxy.host:}") String proxyHost,
             @org.springframework.beans.factory.annotation.Value("${llm.proxy.port:0}") int proxyPort) {
         return new FileMarkdownService(configProvider.getIfAvailable(),
-                LlmDefaultAutoConfiguration.buildProxy(proxyEnable, proxyHost, proxyPort),
+                buildProxy(proxyEnable, proxyHost, proxyPort),
                 processor.getIfAvailable());
+    }
+
+    /**
+     * 构建大模型调用 HTTP 代理（未启用或配置不全返回 null）；键 {@code llm.proxy.*} 与 ai/llm
+     * 同源口径（本装配类自身零 llm 依赖，纯 Environment 读取）
+     */
+    private static java.net.Proxy buildProxy(boolean proxyEnable, String proxyHost, int proxyPort) {
+        if (!proxyEnable || !StringUtils.hasText(proxyHost) || proxyPort <= 0) {
+            return null;
+        }
+        return new java.net.Proxy(java.net.Proxy.Type.HTTP, new java.net.InetSocketAddress(proxyHost, proxyPort));
     }
 
     /**

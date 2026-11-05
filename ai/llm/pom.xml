@@ -31,7 +31,14 @@
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
-        <!-- 🔴 本模块＝纯模型层（M16 修复轮定案）：不依赖 tool/document、不依赖 tool/mineru。
+        <!-- 文档 SPI 桥接：VisionConfigProvider 默认适配器（LLM 视觉配置 → document 视觉腿）。
+             2026-11-05 SPI 反转后依赖方向＝llm → document 单向；document 已零本模块依赖 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>document</artifactId>
+            <version>${document.version}</version>
+        </dependency>
+        <!-- 🔴 本模块＝纯模型层（M16 修复轮定案，2026-11-05 修订为「仅 MinerU 外」）：不依赖 tool/mineru。
              文件 → Markdown 入口（FileMarkdownService／VisionModelConfig／read_file 工具）
              已整体搬进 core tool/document，由那边单向依赖本模块取 ModelConfigProvider（purpose=VISION）；
              依赖方向＝document → llm，反向有守卫测试 LlmLayeringGuardTest 守着 -->

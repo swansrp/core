@@ -1,5 +1,8 @@
-package com.bidr.document;
+package com.bidr.llm.document;
 
+import com.bidr.document.FileMarkdownService;
+import com.bidr.document.VisionConfigProvider;
+import com.bidr.document.VisionEndpoint;
 import com.bidr.llm.provider.ModelConfigProvider;
 
 import java.net.Proxy;

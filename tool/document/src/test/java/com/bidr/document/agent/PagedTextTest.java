@@ -1,4 +1,4 @@
-package com.bidr.llm.agent;
+package com.bidr.document.agent;
 
 import org.junit.Assert;
 import org.junit.Test;

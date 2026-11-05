@@ -1,5 +1,7 @@
 package com.bidr.llm.config;
 
+import com.bidr.document.VisionConfigProvider;
+import com.bidr.llm.document.LlmVisionConfigProvider;
 import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.RefreshableChatModel;
 import com.bidr.llm.model.RefreshableStreamingChatModel;
@@ -42,10 +44,11 @@ import java.net.Proxy;
  * 另装配 {@link LiveModelFactory}：流式进度模型（自建 SSE 客户端+同步回落）装配工厂，
  * 长链路业务（问数/资产生成/AI 补全等）经它统一取流式模型，代理/重试口径随 Bean 固化。
  * <p>
- * 🔴 <b>本装配类只管模型层</b>（M16 修复轮）：文件 → Markdown 入口、视觉配置适配器与
- * read_file 工具都在 core {@code tool/document}（见该包 {@code DocumentAutoConfiguration}），
- * 依赖方向＝document → llm，llm 不回依 document/mineru。多模态端点配置仍由本包的
- * {@link ModelConfigProvider}（purpose=VISION）供给，document 侧经适配器取用。
+ * 🟢 <b>依赖方向（2026-11-05 SPI 反转后）</b>：llm → document 单向——本装配类为
+ * {@code tool/document} 的 {@code VisionConfigProvider} SPI 注册默认适配器（桥接 sys_config/
+ * {@code llm.vision.*}），document 已零 llm 编译依赖、可独立以 Java 8 工具链构建。
+ * 文件 → Markdown 入口与 read_file 工具仍在 {@code tool/document}；多模态端点配置仍由本包
+ * {@link ModelConfigProvider}（purpose=VISION）供给。
  * </p>
  *
  * @author Sharp
@@ -144,6 +147,18 @@ public class LlmDefaultAutoConfiguration {
      * 构建大模型调用的 HTTP 代理（未启用或配置不全时返回 null）；
      * 静态版供业务自建模型实例（如 Agent 长任务用途流式模型）复用同口径代理配置
      */
+    /**
+     * document 视觉配置默认适配器：桥接 {@code tool/document} 的 {@code VisionConfigProvider} SPI
+     * （purpose=VISION：数据库系统参数优先、{@code llm.vision.*} yaml 回落），容器无
+     * {@code ModelConfigProvider} 时解析返回 null＝多模态只能调用时显式传入，不抛。
+     * 业务注册自己的 {@code VisionConfigProvider} Bean 即覆盖（本装配让位）。
+     */
+    @Bean
+    @ConditionalOnMissingBean(VisionConfigProvider.class)
+    public VisionConfigProvider llmVisionConfigProvider(ObjectProvider<ModelConfigProvider> configProvider) {
+        return new LlmVisionConfigProvider(configProvider.getIfAvailable(), buildProxy());
+    }
+
     public static Proxy buildProxy(boolean proxyEnable, String proxyHost, int proxyPort) {
         if (!proxyEnable || !StringUtils.hasText(proxyHost) || proxyPort <= 0) {
             return null;

@@ -25,14 +25,6 @@
     
 
     <dependencies>
-        <!-- 模型配置机制（视觉腿默认适配器接 ModelConfigProvider，见 LlmVisionConfigProvider）：
-             依赖方向＝document → llm，llm 不反向依赖本模块（M16 定案：llm 只当模型层，
-             文件 → Markdown 入口在 document） -->
-        <dependency>
-            <groupId>com.bidr</groupId>
-            <artifactId>llm</artifactId>
-            <version>${llm.version}</version>
-        </dependency>
         <!-- MinerU 客户端：本模块内置增强转写腿 MineruTranscribeLeg 的实现件，
              处理路径自带（依赖方向＝document → mineru，mineru 不反向依赖本模块） -->
         <dependency>

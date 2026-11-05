@@ -1,7 +1,7 @@
 package com.bidr.document.agent;
 
 import com.bidr.document.FileMarkdownService;
-import com.bidr.llm.agent.PagedText;
+import com.bidr.document.agent.PagedText;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
