@@ -92,6 +92,11 @@
         <oss.version>${core.dist.version}</oss.version>
         <platform.version>${core.dist.version}</platform.version>
         <redis.version>${core.dist.version}</redis.version>
+
+        <!-- 测试 JVM 的模块 opens：JDK9+ 由下方 jdk9plus-module-opens profile 填值（spring-cglib
+             生成代理需 opens java.lang 的 ClassLoader.defineClass，MyBatis 深反射需
+             java.lang.reflect/util/invoke）；JDK8 构建保持空，surefire argLine 不带 JDK9+ 参数 -->
+        <jdk.module.opens></jdk.module.opens>
     </properties>
 
     <!-- AI 17 区:ai/* 模块独立 reactor,JDK17 工具链构建(默认 reactor 不含,1.8 项目零感知) -->
@@ -110,7 +115,36 @@
                 <module>ai/agent-console</module>
             </modules>
         </profile>
+
+        <!-- JDK9+ 工具链给 surefire 注入模块 opens（经 ${jdk.module.opens}），JDK8 下不激活保持空。
+             笔画自 gitee/jdk17 b9b44ad2 同名机制，修正其 java.base/java.invoke 笔误为
+             java.lang.invoke（运行时四条 opens 的第四条，java.base 无 java.invoke 包） -->
+        <profile>
+            <id>jdk9plus-module-opens</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <jdk.module.opens>--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED</jdk.module.opens>
+            </properties>
+        </profile>
     </profiles>
+
+    <!-- surefire 统一吃 ${jdk.module.opens}（JDK8 空 / JDK9+ 四包 opens）；pluginManagement
+         下放——模块未自配 surefire 即继承，自配了 argLine 的模块须自行拼接该属性 -->
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>${jdk.module.opens}</argLine>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
     <distributionManagement>
         <repository>
