@@ -8,6 +8,7 @@ import com.bidr.oss.vo.UploadRes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +140,20 @@ public interface ObjectStorageService {
     }
 
     /**
+     * 同 {@link #getReadUrl(String, String)}，但由调用方指定签名有效期（秒）：
+     * 大文件下载/导出产物这类「生成后要放一段时间」的地址需要比默认 1 小时更长的窗口。
+     * 不支持自定义有效期的实现退化为默认有效期。
+     *
+     * @param url            存储访问地址
+     * @param fileName       原始文件名（空则退化为不带下载名的访问url）
+     * @param expiresSeconds 有效期（秒）
+     * @return 预签名访问url
+     */
+    default String getReadUrl(String url, String fileName, long expiresSeconds) {
+        return getReadUrl(url, fileName);
+    }
+
+    /**
      * 根据url获取在线预览url（签名覆盖 response-content-type 与
      * response-content-disposition=inline，对象元数据缺失或为 octet-stream
      * 的存量文件也能内联展示而非触发下载，保存名=原文件名）
@@ -177,6 +192,17 @@ public interface ObjectStorageService {
      */
     default byte[] readBytes(String objectName) {
         throw new ServiceException("当前对象存储不支持按对象名读回字节：" + objectName);
+    }
+
+    /**
+     * 按对象名打开读取流（大文件流式消费用，调用方负责关闭；对象不存在应抛出并带对象名）。
+     * 默认退化为整块读回字节——实现具备流式能力时覆写，避免大对象进内存。
+     *
+     * @param objectName 对象名
+     * @return 对象内容流（调用方关闭）
+     */
+    default InputStream openStream(String objectName) {
+        return new ByteArrayInputStream(readBytes(objectName));
     }
 
     // ===================== 分片上传（断点续传） SPI =====================

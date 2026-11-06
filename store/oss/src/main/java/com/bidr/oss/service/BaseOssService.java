@@ -193,6 +193,7 @@ public abstract class BaseOssService implements ObjectStorageService {
             case "ogg": return "audio/ogg";
             case "m4a": return "audio/mp4";
             case "pdf": return "application/pdf";
+            case "zip": return "application/zip";
             case "json": return "application/json";
             case "xml": return "application/xml";
             case "html": return "text/html";

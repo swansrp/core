@@ -11,7 +11,9 @@ import com.volcengine.tos.TOSV2ClientBuilder;
 import com.volcengine.tos.model.object.*;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,22 +42,57 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     private static final int PRESIGN_EXPIRE_SECONDS = 7 * 24 * 3600;
     /** 读取预签名有效期：1 小时（每次访问实时签发，避免长期签名过期/泄露风险） */
     private static final int READ_EXPIRE_SECONDS = 3600;
-    private static final Pattern REGION_PATTERN = Pattern.compile("tos-([a-z0-9-]+)\\.volces\\.com");
+    /**
+     * 地域解析：公网 {@code tos-cn-shanghai.volces.com} 与内网 {@code tos-cn-shanghai.ivolces.com} 同形
+     */
+    private static final Pattern REGION_PATTERN =
+            Pattern.compile("tos-([a-z0-9-]+)\\.(?:ivolces|volces)\\.com");
 
-    /** TOS 客户端持有连接池，懒加载单例复用 */
+    /**
+     * 服务器侧读写的内网端点（可空）：配置后上传/读取/分片都走内网，预签名仍用
+     * {@code oss.endpoint}（用户从外网下载，签名地址必须是外网可达的域名）
+     */
+    @Value("${oss.internal-endpoint:}")
+    private String internalEndpoint;
+
+    /** TOS 客户端持有连接池，懒加载单例复用：服务器侧 I/O（内网端点优先） */
     private volatile TOSV2 tosClient;
+
+    /** 签名客户端：用户侧预签名地址必须指向公网端点 */
+    private volatile TOSV2 signClient;
 
     private TOSV2 client() {
         if (tosClient == null) {
             synchronized (this) {
                 if (tosClient == null) {
                     // build(region, endpoint, ak, sk)：TOS 仅支持虚拟主机式访问，SDK 自动拼 bucket.endpoint
+                    String ioEndpoint = ioEndpoint();
                     tosClient = new TOSV2ClientBuilder()
-                            .build(resolveRegion(endpoint), endpoint, appKey, appSecret);
+                            .build(resolveRegion(ioEndpoint), ioEndpoint, appKey, appSecret);
                 }
             }
         }
         return tosClient;
+    }
+
+    /** 预签名专用客户端；未配内网端点时与 I/O 客户端同一实例 */
+    private TOSV2 signingClient() {
+        if (!StringUtils.hasText(internalEndpoint)) {
+            return client();
+        }
+        if (signClient == null) {
+            synchronized (this) {
+                if (signClient == null) {
+                    signClient = new TOSV2ClientBuilder()
+                            .build(resolveRegion(endpoint), endpoint, appKey, appSecret);
+                }
+            }
+        }
+        return signClient;
+    }
+
+    private String ioEndpoint() {
+        return StringUtils.hasText(internalEndpoint) ? internalEndpoint : endpoint;
     }
 
     /** 从端点解析地域：https://tos-cn-shanghai.volces.com -> cn-shanghai */
@@ -125,6 +162,20 @@ public class OssVolcanoServiceImpl extends BaseOssService {
         }
     }
 
+    /**
+     * 流式读取：返回对象体流，调用方关闭即释放连接；
+     * GetObjectV2Output 自身不再持有额外资源（SDK 的连接释放挂在流关闭上）
+     */
+    @Override
+    public InputStream openStream(String objectName) {
+        try {
+            return client().getObject(
+                    new GetObjectV2Input().setBucket(bucketName).setKey(objectName)).getContent();
+        } catch (Exception e) {
+            throw new ServiceException("打开对象流失败: " + objectName, e);
+        }
+    }
+
     @Override
     public String getReadUrl(String url) {
         return getReadUrl(url, null);
@@ -135,6 +186,13 @@ public class OssVolcanoServiceImpl extends BaseOssService {
         String key = getKey(url);
         log.info("getReadUrl == {}", key);
         return presign(key, READ_EXPIRE_SECONDS, fileName);
+    }
+
+    @Override
+    public String getReadUrl(String url, String fileName, long expiresSeconds) {
+        String key = getKey(url);
+        log.info("getReadUrl(expires={}) == {}", expiresSeconds, key);
+        return presign(key, expiresSeconds, fileName);
     }
 
     /**
@@ -158,7 +216,7 @@ public class OssVolcanoServiceImpl extends BaseOssService {
             query.put("response-content-type", mime);
         }
         input.setQuery(query);
-        return client().preSignedURL(input).getSignedUrl();
+        return signingClient().preSignedURL(input).getSignedUrl();
     }
 
     /** 上传响应地址：7 天有效期 */
@@ -167,16 +225,16 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     }
 
     /** 生成 GET 预签名地址（私有桶可匿名访问，有效期由调用方指定；带文件名时浏览器下载保存名与原文件名一致） */
-    private String presign(String objectName, int expiresSeconds, String downloadName) {
+    private String presign(String objectName, long expiresSeconds, String downloadName) {
         PreSignedURLInput input = new PreSignedURLInput()
                 .setBucket(bucketName)
                 .setKey(objectName)
                 .setHttpMethod("GET")
-                .setExpires(expiresSeconds);
+                .setExpires((int) Math.min(expiresSeconds, Integer.MAX_VALUE));
         if (downloadName != null && !downloadName.isEmpty()) {
             input.setQuery(Collections.singletonMap("response-content-disposition", contentDisposition(downloadName)));
         }
-        return client().preSignedURL(input).getSignedUrl();
+        return signingClient().preSignedURL(input).getSignedUrl();
     }
 
     // ===================== 分片上传（断点续传，TOS V2 接口） =====================
