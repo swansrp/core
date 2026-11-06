@@ -159,8 +159,11 @@ public class OAuth2Client {
                 description = textField(err, "error_description");
             }
             if (error.isEmpty() && description.isEmpty()) {
-                // open-api 业务信封形态（账密腿业务拒绝走框架全局异常）：文案在 status.message / message
-                description = firstText(err == null ? null : err.get("status"), err, "message");
+                // open-api 业务信封形态（账密腿业务拒绝走框架全局异常）：文案候选按墨枢信封字段族
+                // details/errMsg/msg/message（2026-11-06 上线实证——墨枢回 {status:{msg,details},
+                // payload:{errMsg}}，只认 "message" 会漏成人话尽失的裸错误码）
+                description = firstText(err == null ? null : err.get("status"), err,
+                        "details", "errMsg", "msg", "message");
                 if (!description.isEmpty()) {
                     error = "business_error";
                 }
@@ -183,7 +186,9 @@ public class OAuth2Client {
         JsonNode payload = root.has("payload") && root.get("payload").isObject() ? root.get("payload") : root;
         if (root.get("status") != null && root.get("status").has("code")
                 && root.get("status").get("code").asInt() != 0) {
-            String message = firstText(root.get("status"), root, "message");
+            // 文案候选同业务信封族（墨枢 status.msg=枚举名、details=人话、payload.errMsg=人话）
+            String message = firstText(root.get("status"), root,
+                    "details", "errMsg", "msg", "message");
             throw new OAuth2ExchangeException("IdP token 端点信封错误码: "
                     + root.get("status").get("code").asInt()
                     + (message.isEmpty() ? "" : " - " + message));
