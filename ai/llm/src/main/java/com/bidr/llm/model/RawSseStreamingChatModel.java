@@ -171,15 +171,22 @@ public class RawSseStreamingChatModel {
     /**
      * 统一错误转译：读超时（空闲护栏触发，okhttp 把 SocketTimeoutException 包成通用
      * IOException("Read timed out")，按异常链类型 + 消息双重识别）给可定位文案，
-     * 其余保持原始异常链（connect/callTimeout/解析异常等）
+     * 其余保持原始异常链（connect/callTimeout/解析异常等）。
+     * 🔴 识别走全链（类型与消息逐环看）：OkHttp 4.9.3 的 AsyncTimeout 会把底层
+     * SocketTimeoutException 包成 InterruptedIOException("timeout")——只看首环消息或只认
+     * SocketTimeoutException 类型都会漏判成泛化文案（JDK17 轮实测踩中）
      */
     private RuntimeException toError(Throwable e) {
-        Throwable root = e;
-        while (root.getCause() != null && root.getCause() != root) {
-            root = root.getCause();
+        boolean readTimeout = false;
+        for (Throwable t = e; t != null && t != t.getCause(); ) {
+            readTimeout = t instanceof java.net.SocketTimeoutException
+                    || "timeout".equals(t.getMessage())
+                    || String.valueOf(t.getMessage()).contains("Read timed out");
+            if (readTimeout) {
+                break;
+            }
+            t = t.getCause();
         }
-        boolean readTimeout = root instanceof java.net.SocketTimeoutException
-                || String.valueOf(e.getMessage()).contains("Read timed out");
         String msg = readTimeout
                 ? "LLM SSE 空闲读超时（" + idleSeconds + "s 无新数据）：疑似网关挂起或模型停止响应"
                 : "LLM SSE 调用异常: " + e.getMessage();
