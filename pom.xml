@@ -121,7 +121,9 @@
 
         <!-- JDK9+ 工具链给 surefire 注入模块 opens（经 ${jdk.module.opens}），JDK8 下不激活保持空。
              笔画自 gitee/jdk17 b9b44ad2 同名机制，修正其 java.base/java.invoke 笔误为
-             java.lang.invoke（运行时四条 opens 的第四条，java.base 无 java.invoke 包） -->
+             java.lang.invoke（运行时四条 opens 的第四条，java.base 无 java.invoke 包）。
+             终局＝MP 3.5.3+ spring-boot3-starter 反射归零后本段整删；
+             当前锁 3.5.2＋老 kernel，四包 opens 为硬需求（运行时同款四条），勿因名字或清理误删。 -->
         <profile>
             <id>jdk9plus-module-opens</id>
             <activation>
