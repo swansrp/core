@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.bidr.authorization.constants.err.AccountErrCode;
+import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcTenantApp;
 import com.bidr.authorization.dao.mapper.AcTenantAppMapper;
 import com.bidr.kernel.constant.CommonConst;
@@ -55,10 +56,10 @@ public class AcTenantAppServiceTest {
         return subsystemService;
     }
 
-    /** 租户守卫放行的 mock。 */
+    /** 租户守卫放行的 mock（2026-11-08 收紧后=「存在且有效」wrapper 判定，桩 existed(Wrapper)）。 */
     private AcTenantService passTenant() {
         AcTenantService tenantService = Mockito.mock(AcTenantService.class);
-        Mockito.when(tenantService.existedById(TENANT_ID)).thenReturn(true);
+        Mockito.when(tenantService.existed(Mockito.<Wrapper<AcTenant>>any())).thenReturn(true);
         return tenantService;
     }
 
@@ -85,12 +86,29 @@ public class AcTenantAppServiceTest {
     public void bindRejectsWhenTenantMissing() {
         AcSubsystemService subsystemService = Mockito.mock(AcSubsystemService.class);
         Mockito.when(subsystemService.existedById(APP_CODE)).thenReturn(true);
-        AcTenantService tenantService = Mockito.mock(AcTenantService.class); // existedById 默认 false
+        AcTenantService tenantService = Mockito.mock(AcTenantService.class); // existed(Wrapper) 默认 false
         AcTenantAppService underTest = service(subsystemService, tenantService);
 
         try {
             underTest.bind(TENANT_ID, APP_CODE, null);
             Assert.fail("租户不存在必须拒绑");
+        } catch (ServiceException e) {
+            Assert.assertEquals(AccountErrCode.AC_TENANT_NOT_AVAILABLE, e.getErrCode());
+        }
+    }
+
+    /** 停用租户（valid='0' 被 wrapper 过滤 ⇒ existed=false）同走 1039 拒绑——2026-11-08 用户拍板
+     *  关闭 review M-1 挂账；与「不存在」在离线层同型（wrapper 判定一票），真值差异由 DB 兜。 */
+    @Test
+    public void bindRejectsWhenTenantDisabled() {
+        AcSubsystemService subsystemService = Mockito.mock(AcSubsystemService.class);
+        Mockito.when(subsystemService.existedById(APP_CODE)).thenReturn(true);
+        AcTenantService tenantService = Mockito.mock(AcTenantService.class); // 停用=valid 过滤后不存在
+        AcTenantAppService underTest = service(subsystemService, tenantService);
+
+        try {
+            underTest.bind(TENANT_ID, APP_CODE, null);
+            Assert.fail("停用租户必须拒绑");
         } catch (ServiceException e) {
             Assert.assertEquals(AccountErrCode.AC_TENANT_NOT_AVAILABLE, e.getErrCode());
         }

@@ -3,6 +3,7 @@ package com.bidr.authorization.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcTenantApp;
 import com.bidr.authorization.dao.mapper.AcTenantAppMapper;
 import com.bidr.authorization.vo.tenantapp.QueryTenantAppReq;
@@ -49,12 +50,16 @@ public class AcTenantAppService extends BaseSqlRepo<AcTenantAppMapper, AcTenantA
     private final AcTenantService acTenantService;
 
     /**
-     * 绑定守卫：app_code 必须注册于 ac_subsystem、tenant_id 必须存在于 ac_tenant
+     * 绑定守卫：app_code 必须注册于 ac_subsystem、tenant_id 必须<b>存在且有效</b>（valid='1'——
+     * 停用租户不可 bind，2026-11-08 用户拍板关闭 review M-1 挂账；1039 人话「不存在或已停用」
+     * 一码覆盖两态，离线层同走 existed=false）
      * （弱引用无 FK，引用完整性在仓储层兜；app 先查，未注册即拒、不触租户查询）。
      */
     public void validateBindable(Long tenantId, String appCode) {
         Validator.assertTrue(acSubsystemService.existedById(appCode), AcTenantAppErr.AC_APP_NOT_EXISTED);
-        Validator.assertTrue(acTenantService.existedById(tenantId), AC_TENANT_NOT_AVAILABLE);
+        LambdaQueryWrapper<AcTenant> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AcTenant::getId, tenantId).eq(AcTenant::getValid, CommonConst.YES);
+        Validator.assertTrue(acTenantService.existed(wrapper), AC_TENANT_NOT_AVAILABLE);
     }
 
     /**
