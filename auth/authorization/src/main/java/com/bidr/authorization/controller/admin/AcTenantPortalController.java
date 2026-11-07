@@ -41,10 +41,10 @@ public class AcTenantPortalController {
 
     // ==================== 平台档面（类级 AuthAdmin） ====================
 
-    @ApiOperation(value = "租户目录列表(有效租户)")
+    @ApiOperation(value = "租户目录列表（默认仅有效租户；includeDisabled=true 含停用行——管理面回看/启用入口）")
     @RequestMapping(value = "/list", method = RequestMethod.GET)
-    public List<AcTenant> list() {
-        return acTenantPortalService.listTenants();
+    public List<AcTenant> list(@RequestParam(value = "includeDisabled", required = false, defaultValue = "false") boolean includeDisabled) {
+        return acTenantPortalService.listTenants(includeDisabled);
     }
 
     @ApiOperation(value = "租户详情")
@@ -73,6 +73,13 @@ public class AcTenantPortalController {
     public void disable(@RequestParam Long id) {
         acTenantPortalService.disableTenant(id);
         Resp.notice("租户已停用");
+    }
+
+    @ApiOperation(value = "启用租户（恢复停用行 valid='1'，对称 disable）")
+    @RequestMapping(value = "/enable", method = RequestMethod.POST)
+    public void enable(@RequestParam Long id) {
+        acTenantPortalService.enableTenant(id);
+        Resp.notice("租户已启用");
     }
 
     /**

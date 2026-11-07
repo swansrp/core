@@ -1,6 +1,7 @@
 package com.bidr.authorization.service.tenant;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -50,10 +51,36 @@ public class AcTenantPortalService {
     // ==================== 平台档面（调用方已由类级 AuthAdmin 挂闸） ====================
 
     /**
-     * 租户目录列表（有效租户全量）。
+     * 租户目录列表（默认仅有效租户；includeDisabled=true 含停用行——管理面回看/启用入口，
+     * 2026-11-08 enable 对称补齐）。
      */
-    public List<AcTenant> listTenants() {
-        return acTenantService.listValid();
+    public List<AcTenant> listTenants(boolean includeDisabled) {
+        List<AcTenant> tenants = acTenantService.listValid();
+        if (includeDisabled) {
+            // 全量补齐停用行（valid='0'；ac_tenant 量级小，一条 wrapper 反查即得）
+            LambdaQueryWrapper<AcTenant> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(AcTenant::getValid, CommonConst.NO);
+            tenants.addAll(acTenantService.list(wrapper));
+        }
+        return tenants;
+    }
+
+    /**
+     * 启用租户（恢复停用行 valid='1'，对称 {@link #disableTenant}）；不存在即拒，
+     * 已有效行幂等（再启一次无害）。
+     * <p>🔴 kernel {@code SqlDeleteRepo} 只有 disableById 无反演件（kernel 一字不改纪律），
+     * 恢复走 wrapper 显式 set valid（照 {@code AcTenantAppService.bind} 复活腿形态）。</p>
+     */
+    public void enableTenant(Long id) {
+        AcTenant tenant = getTenantDetail(id);
+        if (CommonConst.YES.equals(tenant.getValid())) {
+            return;
+        }
+        // 照 AcTenantAppService.bind 复活腿形态：LambdaUpdateWrapper 显式 set valid（BaseSqlRepo
+        // update(entity, UpdateWrapper) 的 wrapper 形态匹配；update_at 列 DDL ON UPDATE 兜底）
+        LambdaUpdateWrapper<AcTenant> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(AcTenant::getId, id).set(AcTenant::getValid, CommonConst.YES);
+        acTenantService.update(wrapper);
     }
 
     /**
