@@ -1,5 +1,6 @@
 package com.bidr.authorization.service.tenant;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -9,6 +10,7 @@ import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.service.permit.PermitService;
+import com.bidr.authorization.vo.tenant.TenantUserLookupVO;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
@@ -22,7 +24,7 @@ import java.util.*;
 
 /**
  * Title: AcTenantPortalService
- * Description: 租户管理面服务（批乙棒4）——平台档面（目录/建/改/停用）＋本租户面（成员清单/加/移/切管理员）。
+ * Description: 租户管理面服务（批乙棒4）——平台档面（目录/建/改/停用/加成员前按人精确查）＋本租户面（成员清单/加/移/切管理员）。
  * <p>🔴 判权唯一收口在本类（§4a 裁定 2）：租户管理员动作＝AuthAdmin 语义（平台档角色比对，腿见
  * {@link #isPlatformTier()}）或<b>现查</b> ac_user_tenant 关系行的 is_admin（{@link #guardTenantAdmin(Long)}）。
  * M-11 时效纪律：成员/管理员身份每次动作都现查关系表，绝不消费登录时烤进 token 的租户 claims 做判定。</p>
@@ -230,14 +232,74 @@ public class AcTenantPortalService {
         acUserTenantService.updateById(relation);
     }
 
+    /**
+     * 加成员前按人精确查（「工号/手机号/登录名/姓名」四路<b>等值</b>，任一命中；
+     * 家规照 {@code SpaceMemberAdminService.lookupUser}——不做模糊、不做候选列表，说得出准确
+     * 关键字才查得到人）：恰 1 条 ⇒ {@link TenantUserLookupVO}（userId/工号/姓名/手机号四字段
+     * 最小面，无 password 等敏感列——VO 不给字段，实现想多给都没有）；0 条 ⇒ 人话「查无此人」；
+     * 多条 ⇒ 歧义拒「匹配到多条账号，请用更精确的工号」（姓名重名由歧义拒兜住）。
+     *
+     * <p>判权＝控制器类级 AuthAdmin（平台档面形态，同 /list /detail——本方法<b>不挂</b>
+     * {@code guardTenantAdmin}：AuthAdminGateConventionTest 针1/针2 把反向豁免端点数与
+     * guard 调用点钉死＝4，keyword-only 契约也无 tenantId 供其收口；平台档已是
+     * /my/member/add 判权矩阵的放行超集，不放大）。平台档下租户数据闸对 ac_user 恒不活跃
+     * （TenantDataGate 判序③），四路等值查询直走 dao。</p>
+     */
+    public TenantUserLookupVO lookupUser(String keyword) {
+        String kw = requireValidLookupKeyword(keyword);
+        List<AcUser> hits = acUserDao.selectList(
+                new LambdaQueryWrapper<AcUser>()
+                        .select(AcUser::getUserId, AcUser::getCustomerNumber, AcUser::getName,
+                                AcUser::getPhoneNumber)
+                        .and(w -> w.eq(AcUser::getCustomerNumber, kw)
+                                .or().eq(AcUser::getPhoneNumber, kw)
+                                .or().eq(AcUser::getUserName, kw)
+                                .or().eq(AcUser::getName, kw))
+                        .eq(AcUser::getValid, CommonConst.YES));
+        if (FuncUtil.isEmpty(hits)) {
+            // 关键字回显＝输入者即管理员本人，不额外扩散（SpaceAdmin lookup 同已接受残余）
+            Validator.assertException(ErrCodeSys.SYS_ERR_MSG, "查无此人：" + kw);
+        }
+        if (hits.size() > 1) {
+            Validator.assertException(ErrCodeSys.SYS_ERR_MSG, "匹配到多条账号，请用更精确的工号");
+        }
+        AcUser hit = hits.get(0);
+        TenantUserLookupVO vo = new TenantUserLookupVO();
+        vo.setUserId(hit.getUserId());
+        vo.setCustomerNumber(hit.getCustomerNumber());
+        vo.setName(hit.getName());
+        vo.setPhoneNumber(hit.getPhoneNumber());
+        return vo;
+    }
+
+    /** 查人关键字长度上限＝四列等值上界（customer_number/name varchar(50)；phone/user_name 更短），
+     * 超长不可能等值命中，先拒不进查询（照 SpaceMemberAdminService.EMPLOYEE_NO_MAX 同形态） */
+    static final int LOOKUP_KEYWORD_MAX = 50;
+
+    /**
+     * 查人关键字入参闸（包可见 static，脱离 Spring 可直测）：空串/纯空白 ⇒ 拒；
+     * 超长（&gt;{@value LOOKUP_KEYWORD_MAX} 位）⇒ 拒。返回 trim 后的串（等值查询与文案回显共用）。
+     */
+    static String requireValidLookupKeyword(String keyword) {
+        Validator.assertNotBlank(keyword, ErrCodeSys.PA_PARAM_NULL, "工号/手机号/姓名");
+        String trimmed = keyword.trim();
+        if (trimmed.length() > LOOKUP_KEYWORD_MAX) {
+            Validator.assertException(ErrCodeSys.SYS_ERR_MSG,
+                    "关键字超长（最多 " + LOOKUP_KEYWORD_MAX + " 位，请输入完整的工号/手机号/姓名）");
+        }
+        return trimmed;
+    }
+
     // ==================== 判权收口（§4a 裁定 2） ====================
 
     /**
-     * 本租户面四条动作（list/add/remove/授admin）的统一闸门：租户存在且有效（R-C M-1：
-     * 停用租户对四条 /my 行为一致关闸，不再只卡 addMember）→ operator 工号经
+     * 本租户面四条动作（清单/加/移/授admin）的统一闸门：租户存在且有效（R-C M-1：
+     * 停用租户对 /my 行为一致关闸，不再只卡 addMember）→ operator 工号经
      * {@code acUserDao.selectTenantPortalUser} 专用旁路口解析为 userId（🔴 不读 claims 里的
      * 身份数据判权，取数也不走被租户闸改写的通用路径，M-24）→ {@link #assertTenantAdminGranted}
      * 两腿判权；成员身份与 is_admin <b>每次动作现查</b>关系表，变更即时生效。
+     * <p>查人（{@link #lookupUser}）<b>不过本闸</b>：其走控制器类级 AuthAdmin 平台档闸
+     * （AuthAdminGateConventionTest 两针钉死本闸调用=4，lookup 未计入）。</p>
      */
     void guardTenantAdmin(Long tenantId) {
         Validator.assertNotNull(tenantId, ErrCodeSys.PA_PARAM_NULL, "租户id");
