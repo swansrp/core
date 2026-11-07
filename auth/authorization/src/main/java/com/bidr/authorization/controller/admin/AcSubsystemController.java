@@ -56,8 +56,9 @@ public class AcSubsystemController extends BaseAdminController<AcSubsystem, Quer
 
     @Override
     public void beforeUpdate(AcSubsystem entity) {
-        // app_code 是 PK/业务主键，不可改（置 null＝非严格更新不下发该列）
-        entity.setAppCode(null);
+        // app_code 是 PK/业务主键，不可改——但绝不能在此置 null：updateById 的 WHERE 依赖主键字段，
+        // 置 null ⇒ WHERE 失配 ⇒ Updates:0「更新失败」（2026-11-07 e2e② 实锤；前端 appCode 输入框
+        // disabled 仍回传原值，SET 无害）。表单层不可改已足够。
         // 更新腿换绑 partner 同样过绑定校验（插腿在仓储 insert 内）
         acSubsystemService.validatePartnerBound(entity.getPartnerId());
     }
