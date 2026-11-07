@@ -1,30 +1,39 @@
-package com.bidr.document.builtin;
+package com.bidr.llm.document;
 
 import com.bidr.document.VisionConfigProvider;
 import com.bidr.document.VisionEndpoint;
-import dev.langchain4j.data.message.AiMessage;
+import com.bidr.document.VisionTranscriber;
+import com.bidr.llm.config.LlmDefaultAutoConfiguration;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.output.Response;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.util.Base64;
 
 /**
- * Title: VisionTranscriber
- * Description: 内置视觉腿＝历史 {@code FileMarkdownService.visionTranscribe}/{@code resolveVisionConfig}
- * 逐字迁入：图片交 OpenAI 协议多模态模型转录为 Markdown。配置解析：显式传入 →
+ * Title: LlmVisionTranscriber
+ * Description: <b>多模态（视觉）转录口真实现</b>——原 {@code tool/document} 内置腿
+ * {@code builtin.VisionTranscriber} 的 lc4j 逻辑整体迁入（C′ 方案，2026-11-07）：图片交
+ * OpenAI 协议多模态模型转录为 Markdown。配置解析优先级不变：显式传入 →
  * {@link VisionConfigProvider}（llm 侧适配器：数据库系统参数优先、{@code llm.vision.*} 回落），
  * 均不可用时抛带操作指引的 {@link IllegalStateException}（🔴 不许改成静默出空 md）。
+ * <p>
+ * lc4j 1.23 适配（迁入即翻新，与 {@code RefreshableChatModel} 同口径）：builder 无
+ * {@code proxy(Proxy)}——代理经 JDK HttpClient（{@link JdkHttpClientBuilder}）挂
+ * {@code httpClientBuilder}；{@code generate} 收敛为 {@link ChatModel#chat}。
+ * document 侧只留接口＋占位实现（lc4j 1.x 全家 Java17 字节码，document 留 JDK8 零 lc4j 依赖）。
  *
  * @author Sharp
- * @since 2026/10/20
+ * @since 2026/11/7
  */
 @Slf4j
-public class VisionTranscriber {
+public class LlmVisionTranscriber implements VisionTranscriber {
 
     /** 多模态转录提示词：约束输出为 Markdown 且不增删内容（历史原句，一字不动） */
     private static final String VISION_PROMPT = "请把图片中的内容完整转录为 Markdown 格式："
@@ -33,7 +42,7 @@ public class VisionTranscriber {
 
     private final VisionConfigProvider configProvider;
 
-    public VisionTranscriber(VisionConfigProvider configProvider) {
+    public LlmVisionTranscriber(VisionConfigProvider configProvider) {
         this.configProvider = configProvider;
     }
 
@@ -44,24 +53,29 @@ public class VisionTranscriber {
      * @param mimeType   图片 MIME 类型
      * @param explicit   调用方显式传入的端点配置（可空）
      */
+    @Override
     public String transcribe(byte[] imageBytes, String mimeType, VisionEndpoint explicit) {
         VisionEndpoint config = resolve(explicit);
-        OpenAiChatModel model = OpenAiChatModel.builder()
+        OpenAiChatModel.OpenAiChatModelBuilder builder = OpenAiChatModel.builder()
                 .baseUrl(config.getBaseUrl())
                 .apiKey(config.getApiKey())
                 .modelName(config.getModelName())
                 .timeout(Duration.ofSeconds(config.getTimeoutSeconds() > 0 ? config.getTimeoutSeconds() : 180L))
                 .maxRetries(1)
-                .proxy(config.getProxy())
                 .logRequests(false)
-                .logResponses(false)
-                .build();
+                .logResponses(false);
+        // 1.23 起 builder 无 proxy(Proxy)：代理腿经 JDK HttpClient（与 RefreshableChatModel 同源）
+        JdkHttpClientBuilder httpClient = LlmDefaultAutoConfiguration.buildLc4jHttpClientBuilder(config.getProxy());
+        if (httpClient != null) {
+            builder.httpClientBuilder(httpClient);
+        }
+        ChatModel model = builder.build();
         UserMessage message = UserMessage.from(
                 TextContent.from(VISION_PROMPT),
                 ImageContent.from(Base64.getEncoder().encodeToString(imageBytes), mimeType));
         log.info("多模态模型转录扫描内容：model={}, imageSize={}KB", config.getModelName(), imageBytes.length / 1024);
-        Response<AiMessage> response = model.generate(message);
-        return response.content().text();
+        ChatResponse response = model.chat(message);
+        return response.aiMessage().text();
     }
 
     /**

@@ -39,7 +39,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -83,7 +83,7 @@ public class SmartQueryMaintainService {
     private final InsightAgentEscapeLogService escapeLogService;
     private final ProposalService proposalService;
     private final DataSourceCacheService dataSourceCacheService;
-    private final ObjectProvider<ChatLanguageModel> chatModelProvider;
+    private final ObjectProvider<ChatModel> chatModelProvider;
     /** 流式进度模型工厂（llm 框架 Bean：自建 SSE 客户端+同步回落，代理/重试口径随 Bean 固化） */
     private final LiveModelFactory liveModelFactory;
     private final StatisticResConverter statisticConverter;
@@ -596,7 +596,7 @@ public class SmartQueryMaintainService {
         }
         SemanticLayer layer = SemanticLayer.fromContent(assets);
         String index = buildCatalogIndex(layer);
-        ChatLanguageModel model = buildLiveModel(live, agent.getThinkingBudget());
+        ChatModel model = buildLiveModel(live, agent.getThinkingBudget());
 
         // 第一步：自然语言 → semantic_query（工具循环：索引定位 + 目录工具核实后组装）
         progress.accept("已加载发布资产，正在 LLM 解析自然语言问题…");
@@ -747,7 +747,7 @@ public class SmartQueryMaintainService {
      *  回给 LLM（小工具循环，可用目录工具核实正确名称）改写 semantic_query，重校验后重试，
      *  最多 MAX_EXEC_REPAIRS 次；校验类失败（!isValid）不走修复（应经维护链路），仍收口错误清单。
      *  layer 为校验所用语义层（直接命中传发布层，临时层调用点传 tempLayer），目录工具看到同一套资产 */
-    private SmartQueryAskRes finishAnswerWithRepair(ChatLanguageModel model, SemanticLayer layer,
+    private SmartQueryAskRes finishAnswerWithRepair(ChatModel model, SemanticLayer layer,
                                                     String agentCode, String index, String question,
                                                     String chartMode, boolean usedProposals,
                                                     JsonNode sqNode, Consumer<String> progress,
@@ -897,7 +897,7 @@ public class SmartQueryMaintainService {
      *  progress 逐条透出工具循环过程日志（LLM 轮次/工具调用/返回摘要），流式版即前端思考过程时间线，
      *  避免 1-2 分钟探索期用户傻等；同步版传空实现无副作用；
      *  promptTrail 记录本阶段发出提示词全文（前端调试区展示/复制） */
-    private String maintainWithTools(ChatLanguageModel model, AgentExploreTools.ConnSupplier connSupplier, String agentCode,
+    private String maintainWithTools(ChatModel model, AgentExploreTools.ConnSupplier connSupplier, String agentCode,
                                     SemanticLayer layer, String prompt, Consumer<String> progress,
                                     List<String> facts, Map<String, String> promptTrail) {
         AgentExploreTools tools = new AgentExploreTools(connSupplier, agentCode, layer.entities(),
@@ -927,7 +927,7 @@ public class SmartQueryMaintainService {
      *  （只读校验/表白名单/强制限行），应答 notes 标注「未经语义层认证」；产出或执行失败重试一次，
      *  仍失败返回 null 由调用方回落原失败应答（逃生失败不掩盖原始错误）；
      *  promptTrail 记录本阶段发出提示词全文（前端调试区展示/复制） */
-    private SmartQueryAskRes tryEscape(ChatLanguageModel model, AgentExploreTools.ConnSupplier connSupplier, String agentCode,
+    private SmartQueryAskRes tryEscape(ChatModel model, AgentExploreTools.ConnSupplier connSupplier, String agentCode,
                                        SemanticLayer layer, String question, List<String> facts,
                                        String reason, Consumer<String> progress,
                                        Map<String, String> promptTrail) {
@@ -1102,8 +1102,8 @@ public class SmartQueryMaintainService {
         return one.length() > FACT_LINE_MAX_LEN ? one.substring(0, FACT_LINE_MAX_LEN) + "…" : one;
     }
 
-    private ChatLanguageModel requireModel() {
-        ChatLanguageModel model = chatModelProvider.getIfUnique();
+    private ChatModel requireModel() {
+        ChatModel model = chatModelProvider.getIfUnique();
         if (model == null) {
             throw new NoticeException("未配置 LLM 模型（llm.* 或系统参数），无法维护问数");
         }
@@ -1116,7 +1116,7 @@ public class SmartQueryMaintainService {
      *  live 行推「思考中·已思 N 字」（reasoning_content 实时上屏）与「应答中·已收 N 字」；
      *  流式/同步回落/降级语义详见 LiveModelFactory；无 Provider 时回落同步模型（无 live 进度）。
      *  思考强度按 Agent 配置传值（thinking_budget：空=最强不限制） */
-    private ChatLanguageModel buildLiveModel(Consumer<String> live, Integer thinkingBudget) {
+    private ChatModel buildLiveModel(Consumer<String> live, Integer thinkingBudget) {
         return liveModelFactory.build(DbAwareModelConfigProvider.PURPOSE_AGENT, live, this::requireModel,
                 thinkingBudget);
     }
@@ -1167,7 +1167,7 @@ public class SmartQueryMaintainService {
         ctx.stageStart(MS_STAGE_PREPARE, null);
         SemanticLayer layer = SemanticLayer.fromContent(assets);
         String index = buildCatalogIndex(layer);
-        ChatLanguageModel model = requireModel();
+        ChatModel model = requireModel();
         String batchNo = agentCode + "-agent-" + System.currentTimeMillis();
         ctx.stageDone(MS_STAGE_PREPARE, "实体 " + layer.entities().size()
                 + " / 指标 " + layer.metricMap().size()

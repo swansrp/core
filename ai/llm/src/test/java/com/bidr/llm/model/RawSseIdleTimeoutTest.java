@@ -2,10 +2,9 @@ package com.bidr.llm.model;
 
 import com.bidr.llm.provider.ModelConfigProvider;
 import com.sun.net.httpserver.HttpServer;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -85,7 +84,7 @@ public class RawSseIdleTimeoutTest {
         final CountDownLatch error = new CountDownLatch(1);
         final CountDownLatch complete = new CountDownLatch(1);
         final AtomicReference<Throwable> err = new AtomicReference<>();
-        final AtomicReference<Response<AiMessage>> resp = new AtomicReference<>();
+        final AtomicReference<ChatResponse> resp = new AtomicReference<>();
         final StringBuilder tokens = new StringBuilder();
 
         @Override
@@ -98,7 +97,7 @@ public class RawSseIdleTimeoutTest {
         }
 
         @Override
-        public void onComplete(Response<AiMessage> response) {
+        public void onComplete(ChatResponse response) {
             resp.set(response);
             complete.countDown();
         }

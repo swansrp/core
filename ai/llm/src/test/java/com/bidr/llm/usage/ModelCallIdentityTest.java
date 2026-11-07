@@ -5,11 +5,10 @@ import com.bidr.llm.agent.AgentLoopOptions;
 import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.agent.session.AgentSessionState;
 import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
-import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -166,8 +165,9 @@ public class ModelCallIdentityTest {
         return new AgentSessionContext(state, store, new HashMap<String, Object>());
     }
 
-    /** 假模型：在"它被调用的线程"上现读身份，然后一次收口成纯文本答案；fail=true 时改为抛错 */
-    private static final class RecordingModel implements ChatLanguageModel {
+    /** 假模型：在"它被调用的线程"上现读身份，然后一次收口成纯文本答案；fail=true 时改为抛错；
+     *  doChat 在 1.23 为 default 方法，fake 须显式覆写防静默假绿 */
+    private static final class RecordingModel implements ChatModel {
 
         private final AtomicReference<ModelCallContext> captured;
         private final AtomicReference<String> capturedThread;
@@ -181,22 +181,11 @@ public class ModelCallIdentityTest {
         }
 
         @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages) {
+        public ChatResponse doChat(ChatRequest request) {
             return answer();
         }
 
-        @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages,
-                                            List<ToolSpecification> toolSpecifications) {
-            return answer();
-        }
-
-        @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification toolSpecification) {
-            return answer();
-        }
-
-        private Response<AiMessage> answer() {
+        private ChatResponse answer() {
             if (fail) {
                 throw new IllegalStateException("网关炸了");
             }
@@ -204,16 +193,16 @@ public class ModelCallIdentityTest {
                 captured.set(ModelCallContexts.current());
                 capturedThread.set(Thread.currentThread().getName());
             }
-            return Response.from(AiMessage.from("结论：已完成"));
+            return ChatResponse.builder().aiMessage(AiMessage.from("结论：已完成")).build();
         }
     }
 
     /** 最小工具循环 agent：四要素给最省事的值，只为止住 start 的身份接线 */
     private static final class ProbeAgent extends AbstractToolLoopAgent<String> {
 
-        private final ChatLanguageModel model;
+        private final ChatModel model;
 
-        ProbeAgent(ChatLanguageModel model) {
+        ProbeAgent(ChatModel model) {
             this.model = model;
         }
 
@@ -233,8 +222,8 @@ public class ModelCallIdentityTest {
         }
 
         @Override
-        protected dev.langchain4j.model.chat.ChatLanguageModel model(String state, AgentSessionContext ctx,
-                                                                     java.util.Map<String, Object> payload) {
+        protected dev.langchain4j.model.chat.ChatModel model(String state, AgentSessionContext ctx,
+                                                             java.util.Map<String, Object> payload) {
             return model;
         }
 

@@ -17,7 +17,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <langchain4j.version>0.33.0</langchain4j.version>
+        <langchain4j.version>1.23.0</langchain4j.version>
             <java.version>17</java.version>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 </properties>
@@ -75,6 +75,21 @@
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-open-ai</artifactId>
             <version>${langchain4j.version}</version>
+        </dependency>
+        <!-- JDK HttpClient 适配（1.23 代理腿）：open-ai 只以 runtime 传递本件，代理腿代码
+             直接引用 JdkHttpClientBuilder 类，须显式 compile 依赖 -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-http-client-jdk</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <!-- OkHttp 自建客户端（RawSse/RawSync/RawVision）：0.33 时代经 openai4j 传递提供，
+             1.23 起 open-ai 换自建 http-client 不再传递，须显式声明；版本不写死＝
+             spring-boot-starter-parent 2.7.3 的 dependencyManagement 管到 4.9.3，
+             与 0.33 实际解析结果一致（运行时行为不变） -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

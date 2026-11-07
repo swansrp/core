@@ -4,7 +4,7 @@ import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.StreamingProgressChatModel;
 import com.bidr.llm.provider.DbAwareModelConfigProvider;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 
 import java.util.function.Supplier;
 
@@ -31,8 +31,8 @@ public final class AgentLiveModels {
      * @param noProviderFallback 工厂/Provider 缺席时的同步模型回落（懒求值，通常是原 chatModel——
      *                           回落侧可能带「未配置模型即抛」语义，不能在已接线时被提前触发）
      */
-    public static ChatLanguageModel forSession(LiveModelFactory factory, AgentSessionContext ctx,
-            Supplier<ChatLanguageModel> noProviderFallback) {
+    public static ChatModel forSession(LiveModelFactory factory, AgentSessionContext ctx,
+            Supplier<ChatModel> noProviderFallback) {
         if (factory == null) {
             return noProviderFallback.get();
         }

@@ -39,7 +39,8 @@ public class FileMarkdownService {
     public static final String PURPOSE_VISION = "VISION";
 
     /**
-     * 模型配置提供者，可为 null（为 null 时多模态配置只能调用时显式传入）
+     * 模型配置提供者（历史参数位，C′ 迁移后解析逻辑随多模态真实现体迁 ai/llm，
+     * 本类不再直接消费；构造签名保留＝装配层与既有调用方零改动）
      */
     private final VisionConfigProvider configProvider;
 
@@ -64,13 +65,14 @@ public class FileMarkdownService {
 
     /**
      * 委托构造（自动装配走这档）：显式传入 {@link DocumentProcessor}
-     * （缺席传 null＝纯内置档默认门面，视觉配置经 {@link LlmVisionConfigProvider} 适配 llm 模型机制）
+     * （缺席传 null＝纯内置档默认门面，多模态转录口归占位实现——真身在 ai/llm，经装配层
+     * 注入门面构造，本类不再直接消费视觉配置）
      */
     public FileMarkdownService(VisionConfigProvider configProvider, Proxy proxy, DocumentProcessor processor) {
         this.configProvider = configProvider;
         this.proxy = proxy;
         this.processor = processor != null ? processor
-                : DocumentProcessor.defaults(configProvider);
+                : DocumentProcessor.defaults(null);
     }
 
     // ---------------- 对外入口：url / File / Path / InputStream ----------------

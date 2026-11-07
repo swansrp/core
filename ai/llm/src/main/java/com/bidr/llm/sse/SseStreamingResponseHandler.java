@@ -1,8 +1,8 @@
 package com.bidr.llm.sse;
 
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.StreamingResponseHandler;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  * 典型用法（Controller 中）：
  * <pre>{@code
  * SseEmitter emitter = new SseEmitter(0L);
- * streamingModel.generate(prompt, new SseStreamingResponseHandler(emitter));
+ * streamingModel.chat(prompt, new SseStreamingResponseHandler(emitter));
  * return emitter;
  * }</pre>
  * </p>
@@ -33,7 +33,7 @@ import java.util.function.Consumer;
  * @author Sharp
  */
 @Slf4j
-public class SseStreamingResponseHandler implements StreamingResponseHandler<AiMessage> {
+public class SseStreamingResponseHandler implements StreamingChatResponseHandler {
 
     /**
      * token 增量事件名
@@ -80,8 +80,12 @@ public class SseStreamingResponseHandler implements StreamingResponseHandler<AiM
         emitter.onError(error -> clientGone.set(true));
     }
 
+    /**
+     * token 增量回调（1.23：0.33 的 onNext 更名 onPartialResponse；接口里它也是 default，
+     * 显式 @Override 防漏写导致增量静默丢失）
+     */
     @Override
-    public void onNext(String token) {
+    public void onPartialResponse(String token) {
         if (token == null || clientGone.get()) {
             return;
         }
@@ -93,9 +97,9 @@ public class SseStreamingResponseHandler implements StreamingResponseHandler<AiM
     }
 
     @Override
-    public void onComplete(Response<AiMessage> response) {
+    public void onCompleteResponse(ChatResponse response) {
         // 优先取模型返回的完整文本，缺失时用累积内容兜底
-        AiMessage message = response == null ? null : response.content();
+        AiMessage message = response == null ? null : response.aiMessage();
         String finalText = message == null ? null : message.text();
         String fullContent;
         synchronized (builder) {

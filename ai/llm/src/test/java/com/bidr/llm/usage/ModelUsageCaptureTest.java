@@ -9,10 +9,10 @@ import com.bidr.llm.provider.ModelConfigProvider;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,10 +72,13 @@ public class ModelUsageCaptureTest {
         ModelCallContexts.set(new ModelCallContext("s-sync", "inkhub-check", "bidrAdmin"));
 
         List<ToolSpecification> specs = ToolSpecifications.toolSpecificationsFrom(new ProbeTools());
-        Response<AiMessage> resp = new RawSyncChatModel(stubProvider(baseUrl, PLAIN_KEY), "AGENT", null,
+        ChatResponse resp = new RawSyncChatModel(stubProvider(baseUrl, PLAIN_KEY), "AGENT", null,
                 null, null, 1, null)
-                .generate(Collections.<ChatMessage>singletonList(UserMessage.from("当前范围？")), specs);
-        Assert.assertTrue("假网关的调用应正常返回", resp.content().hasToolExecutionRequests());
+                .chat(ChatRequest.builder()
+                        .messages(Collections.<ChatMessage>singletonList(UserMessage.from("当前范围？")))
+                        .toolSpecifications(specs)
+                        .build());
+        Assert.assertTrue("假网关的调用应正常返回", resp.aiMessage().hasToolExecutionRequests());
 
         ModelUsageFacts facts = sink.only();
         Assert.assertEquals(ModelUsageFacts.VIA_SYNC, facts.getVia());
@@ -101,7 +104,7 @@ public class ModelUsageCaptureTest {
         String baseUrl = startStatusServer(500, "{\"error\":\"upstream busy\"}");
         try {
             new RawSyncChatModel(stubProvider(baseUrl, PLAIN_KEY), "AGENT", null, null, null, 1, null)
-                    .generate(Collections.<ChatMessage>singletonList(UserMessage.from("hi")));
+                    .chat(Collections.<ChatMessage>singletonList(UserMessage.from("hi")));
             Assert.fail("5xx 应抛错");
         } catch (RuntimeException expected) {
             Assert.assertTrue(expected.getMessage().contains("HTTP 500"));
@@ -268,7 +271,7 @@ public class ModelUsageCaptureTest {
         }
 
         @Override
-        public void onComplete(Response<AiMessage> response) {
+        public void onComplete(ChatResponse response) {
             done.countDown();
         }
 

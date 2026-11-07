@@ -2,6 +2,7 @@ package com.bidr.document;
 
 import com.bidr.document.builtin.MineruAsyncTranscribeLeg;
 import com.bidr.document.builtin.MineruTranscribeLeg;
+import com.bidr.document.builtin.NoopVisionTranscriber;
 import com.bidr.document.spi.ArtifactStep;
 import com.bidr.document.spi.ConvertStep;
 import com.bidr.document.spi.EnrichStep;
@@ -33,9 +34,12 @@ import java.util.stream.Collectors;
  *       业务引 document 即可用，无需另装配；</li>
  *   <li>视觉配置＝{@link VisionConfigProvider} SPI（默认适配器由 ai/llm 侧注册，
  *       接 sys_config/{@code llm.vision.*}；本模块零 llm 编译依赖，可独立 Java 8 构建），
- *       业务注册自己的 Bean 即覆盖；</li>
- *   <li>入口三件（{@link DocumentProcessor}／{@link FileMarkdownService}／
- *       {@code agent.FileMarkdownTool}）缺席时才装，业务自建以 {@code @ConditionalOnMissingBean} 让位。</li>
+ *       业务注册自己的 Bean 即覆盖；多模态转录口 {@link VisionTranscriber} 同为 SPI——
+ *       真实现体（lc4j 1.23）在 ai/llm，本装配只出 {@link NoopVisionTranscriber} 占位
+ *       （被调即抛操作指引），llm/业务在场即让位；</li>
+ *   <li>入口两件（{@link DocumentProcessor}／{@link FileMarkdownService}）缺席时才装，
+ *       业务自建以 {@code @ConditionalOnMissingBean} 让位（read_file 工具
+ *       {@code FileMarkdownTool} 已随 lc4j 触点迁 ai/llm，其默认 Bean 也在那边装配）。</li>
  * </ul>
  * 配置面只读 Spring Environment（{@code tool.document.*}／{@code mineru.*}），零 sys_config；
  * 视觉模型配置经上面的适配器才触达 sys_config，本装配类自身不读库。
@@ -52,7 +56,7 @@ public class DocumentAutoConfiguration {
     public DocumentProcessor documentProcessor(DocumentProperties properties,
             ObjectProvider<ConvertStep> convertSteps,
             ObjectProvider<TranscribeStep> transcribeSteps,
-            ObjectProvider<VisionConfigProvider> visionConfigProvider,
+            ObjectProvider<VisionTranscriber> visionTranscriber,
             ObjectProvider<EnrichStep> enrichSteps,
             ObjectProvider<ArtifactStep> artifactStep,
             ObjectProvider<IntakeStep> intakeStep) {
@@ -61,10 +65,24 @@ public class DocumentAutoConfiguration {
                 TranscribeLegSelector.select(
                         transcribeSteps.orderedStream().collect(Collectors.toList()),
                         properties.getTranscriber()),
-                visionConfigProvider.getIfUnique(),
+                visionTranscriber.getIfUnique(),
                 enrichSteps.orderedStream().collect(Collectors.toList()),
                 artifactStep.getIfUnique(),
                 intakeStep.getIfUnique());
+    }
+
+    /**
+     * 多模态转录口<b>占位 Bean</b>（C′ 迁移，2026-11-07）：lc4j 1.x 全家 Java17 字节码，本模块
+     * 留 JDK8 故零 langchain4j 依赖——真实现体在 ai/llm（{@code LlmVisionTranscriber}，
+     * 同 SPI 经 {@code @ConditionalOnMissingBean} 注册）。llm 在场时其自动配置先评估
+     * （llm 侧 {@code @AutoConfigureBefore(本类)}）、真身先装，本占位让位；缺席时本占位兜底
+     * ＝扫描页/图片被调即抛带操作指引的 {@link IllegalStateException}（🔴 不许静默出空 md）。
+     * 业务注册自己的 {@link VisionTranscriber} Bean 同样让位本占位。
+     */
+    @Bean
+    @ConditionalOnMissingBean(VisionTranscriber.class)
+    public VisionTranscriber noopVisionTranscriber() {
+        return new NoopVisionTranscriber();
     }
 
     /**
@@ -94,16 +112,6 @@ public class DocumentAutoConfiguration {
             return null;
         }
         return new java.net.Proxy(java.net.Proxy.Type.HTTP, new java.net.InetSocketAddress(proxyHost, proxyPort));
-    }
-
-    /**
-     * 通用「读文件」agent 工具（read_file）：包 {@link FileMarkdownService}，挂进 agent 工具清单即用；
-     * 默认 2 万字截断防大文档灌爆上下文，失败回文本不抛（模型可自纠）
-     */
-    @Bean
-    @ConditionalOnMissingBean(com.bidr.document.agent.FileMarkdownTool.class)
-    public com.bidr.document.agent.FileMarkdownTool fileMarkdownTool(FileMarkdownService fileMarkdownService) {
-        return new com.bidr.document.agent.FileMarkdownTool(fileMarkdownService);
     }
 
     /**

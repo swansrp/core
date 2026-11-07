@@ -1,4 +1,4 @@
-package com.bidr.document.agent;
+package com.bidr.llm.document;
 
 import com.bidr.document.FileMarkdownService;
 import com.bidr.document.agent.PagedText;
@@ -24,7 +24,9 @@ import java.lang.ref.SoftReference;
  * 的成本，也保证分页期间各段来自同一版正文（中途重解析可能在文件变更后让 offset 错位）。
  * 工具语义照 llm 的 AgentAskUserTool：失败<b>回文本</b>不抛（模型可自纠重试）。
  * 业务侧只认自己句柄（fileId 等）的场景＝自己写薄壳把句柄解成地址/字节，本工具不管。
- * 装配见 {@code DocumentAutoConfiguration#fileMarkdownTool}，挂进 agent 工具清单即用。
+ * 装配见 {@code LlmDocumentToolsAutoConfiguration#fileMarkdownTool}，挂进 agent 工具清单即用
+ * （C′ 迁移 2026-11-07：@Tool/@P 触点在 lc4j，本类自 tool/document 整体迁入 ai/llm，
+ * 方法面一字不动；{@code FileMarkdownService}/{@code PagedText} 仍取自 document）。
  *
  * @author Sharp
  * @since 2026-10-18

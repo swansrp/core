@@ -14,7 +14,6 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <langchain4j.version>0.33.0</langchain4j.version>
             <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 </properties>
 
@@ -61,17 +60,10 @@
             <artifactId>jsoup</artifactId>
             <version>1.17.2</version>
         </dependency>
-        <!-- 内置腿：扫描页/图片交 OpenAI 协议多模态模型转录（与 llm 同版） -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
+        <!-- lc4j 触点已整体迁 ai/llm（C′ 迁移 2026-11-07，langchain4j 1.x 全家 Java17 字节码，
+             本模块留 JDK8 必须 zero-lc4j）：多模态真实现＝com.bidr.llm.document.LlmVisionTranscriber、
+             read_file 工具＝com.bidr.llm.document.FileMarkdownTool；本模块只留
+             VisionTranscriber 接口＋NoopVisionTranscriber 占位（被调即抛操作指引） -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

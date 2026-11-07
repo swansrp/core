@@ -60,7 +60,7 @@ public class TeamRunner {
             "你是团队主持人。请汇总各成员意见：指出共识与分歧，给出最终结论（裁决）。";
 
     /**
-     * 成员执行接缝（生产=ChatLanguageModel 驱动，单测=lambda mock）
+     * 成员执行接缝（生产=ChatModel 驱动，单测=lambda mock）
      */
     private final TeamMemberExecutor executor;
 

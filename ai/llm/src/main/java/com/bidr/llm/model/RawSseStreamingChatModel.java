@@ -10,10 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
-import dev.langchain4j.agent.tool.ToolParameters;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
+import dev.langchain4j.model.chat.request.json.JsonSchemaElement;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -61,7 +62,7 @@ public class RawSseStreamingChatModel {
         void onToken(String delta);
 
         /** 流式正常收口（[DONE] 或流结束，响应含拼装后的工具调用/正文） */
-        void onComplete(Response<AiMessage> response);
+        void onComplete(ChatResponse response);
 
         /** HTTP 失败 / 非 SSE 响应 / 网络与解析异常（必带可读原因，绝不静默） */
         void onError(Throwable error);
@@ -307,12 +308,13 @@ public class RawSseStreamingChatModel {
             }
             // 工具轮同样落一行：一次模型调用一行是计量的粒度，按形态分流的只有 token 栏
             reportUsage(usageScope, usage, reqs.size(), finish);
-            sink.onComplete(Response.from(AiMessage.from(reqs), tokenUsage));
+            sink.onComplete(ChatResponse.builder().aiMessage(AiMessage.from(reqs)).tokenUsage(tokenUsage).build());
             return;
         }
         if (content.length() > 0 || doneSeen) {
             reportUsage(usageScope, usage, 0, finish);
-            sink.onComplete(Response.from(AiMessage.from(content.toString()), tokenUsage));
+            sink.onComplete(ChatResponse.builder().aiMessage(AiMessage.from(content.toString()))
+                    .tokenUsage(tokenUsage).build());
             return;
         }
         sink.onError(new RuntimeException("LLM SSE 流提前结束（未见 [DONE] 且无任何产出），思考 "
@@ -402,14 +404,60 @@ public class RawSseStreamingChatModel {
         return n;
     }
 
-    /** langchain4j 0.33 ToolParameters → JSON Schema 节点（properties 本身即 schema 片段，直接序列化） */
-    private ObjectNode parametersNode(ToolParameters params) {
+    /**
+     * langchain4j 1.23 JsonObjectSchema → JSON Schema 节点（type/properties/required 三键结构不变）：
+     * 0.33 的 ToolParameters.properties() 本身即裸 map schema 片段可直接序列化；1.23 换成强类型
+     * JsonSchemaElement 树，须逐元素映射回 OpenAI 兼容片段（string/integer/number/boolean/enum/
+     * array/object 嵌套），网关侧看到的 schema 形状与 0.33 等价
+     */
+    private ObjectNode parametersNode(JsonObjectSchema params) {
         ObjectNode n = om.createObjectNode();
-        n.put("type", params.type() == null ? "object" : params.type());
-        n.set("properties", om.valueToTree(params.properties()));
+        n.put("type", "object");
+        ObjectNode props = n.putObject("properties");
+        if (params.properties() != null) {
+            for (Map.Entry<String, JsonSchemaElement> e : params.properties().entrySet()) {
+                props.set(e.getKey(), schemaNode(e.getValue()));
+            }
+        }
         if (params.required() != null && !params.required().isEmpty()) {
             ArrayNode req = n.putArray("required");
             params.required().forEach(req::add);
+        }
+        return n;
+    }
+
+    /** 单个 JsonSchemaElement → OpenAI 兼容 schema 片段（description 有值才携带，与裸 map 时代形状一致） */
+    private JsonNode schemaNode(JsonSchemaElement el) {
+        ObjectNode n = om.createObjectNode();
+        if (el instanceof dev.langchain4j.model.chat.request.json.JsonStringSchema) {
+            n.put("type", "string");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonIntegerSchema) {
+            n.put("type", "integer");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonNumberSchema) {
+            n.put("type", "number");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonBooleanSchema) {
+            n.put("type", "boolean");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonEnumSchema) {
+            n.put("type", "string");
+            ArrayNode values = n.putArray("enum");
+            for (String v : ((dev.langchain4j.model.chat.request.json.JsonEnumSchema) el).enumValues()) {
+                values.add(v);
+            }
+        } else if (el instanceof JsonObjectSchema) {
+            n.setAll(parametersNode((JsonObjectSchema) el));
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonArraySchema) {
+            n.put("type", "array");
+            JsonSchemaElement items =
+                    ((dev.langchain4j.model.chat.request.json.JsonArraySchema) el).items();
+            if (items != null) {
+                n.set("items", schemaNode(items));
+            }
+        } else {
+            // 未知元素类型（后续版本新增）：toString 兜底不击穿请求体组装
+            n.put("type", "string");
+        }
+        if (el.description() != null) {
+            n.put("description", el.description());
         }
         return n;
     }

@@ -3,7 +3,9 @@ package com.bidr.llm.agent;
 import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.model.LiveModelFactory;
 import com.bidr.llm.model.StreamingProgressChatModel;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -23,7 +25,19 @@ public class AgentLiveModelsTest {
 
     private final LiveModelFactory factory = Mockito.mock(LiveModelFactory.class);
     private final AgentSessionContext ctx = Mockito.mock(AgentSessionContext.class);
-    private final ChatLanguageModel fallback = Mockito.mock(ChatLanguageModel.class);
+    private final ChatModel fallback = new SentinelModel();
+
+    /**
+     * 哨兵假模型（Mock 纪律：lc4j 接口 fake 不 mock——default 方法走默认实现会假绿）：
+     * 只作身份透传断言的占位件，被真正调用即失败。
+     */
+    private static final class SentinelModel implements ChatModel {
+
+        @Override
+        public ChatResponse doChat(ChatRequest request) {
+            throw new IllegalStateException("哨兵模型不应被真正调用");
+        }
+    }
 
     /** 从 build(...) 参数里捕出 forSession 传入的 live 回调，逐行喂给它验分流 */
     @SuppressWarnings("unchecked")
@@ -39,7 +53,7 @@ public class AgentLiveModelsTest {
         Mockito.when(factory.build(Mockito.anyString(), Mockito.any(),
                 Mockito.any(), Mockito.isNull())).thenReturn(fallback);
 
-        ChatLanguageModel model = AgentLiveModels.forSession(factory, ctx, () -> fallback);
+        ChatModel model = AgentLiveModels.forSession(factory, ctx, () -> fallback);
 
         Assert.assertSame("返回值透传 build 产物", fallback, model);
         capturedSink().accept("思考中·已思 12 字\n部分思考");
@@ -66,7 +80,7 @@ public class AgentLiveModelsTest {
 
     @Test
     public void nullFactoryFallsBackWithoutTouchingSession() {
-        ChatLanguageModel model = AgentLiveModels.forSession(null, ctx, () -> fallback);
+        ChatModel model = AgentLiveModels.forSession(null, ctx, () -> fallback);
 
         Assert.assertSame("工厂缺席＝原同步模型", fallback, model);
         Mockito.verify(ctx, Mockito.never()).pushLive(Mockito.anyString());

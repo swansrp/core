@@ -413,11 +413,11 @@ governed.setToolResultOffloadChars(4000);   // 超过 4000 字的工具结果入
 | `com.bidr.llm.parse.FileMarkdownService` | `com.bidr.document.FileMarkdownService` |
 | `com.bidr.llm.parse.VisionModelConfig` | `com.bidr.document.VisionModelConfig` |
 | `com.bidr.llm.parse.DocumentTranscriber`（老口） | **已撤**——转录腿一律实现 `com.bidr.document.spi.TranscribeStep`，选型键 `tool.document.transcriber` |
-| `com.bidr.llm.agent.FileMarkdownTool` | `com.bidr.document.agent.FileMarkdownTool` |
+| `com.bidr.llm.agent.FileMarkdownTool` | 2026-11-05 曾迁 `com.bidr.document.agent.FileMarkdownTool`；**2026-11-07 C′ 已回迁**本模块 `com.bidr.llm.document.FileMarkdownTool` |
 
-依赖方向是**单向的 document → llm**：document 取本模块的 `ModelConfigProvider`
-（purpose=`VISION`）当多模态端点来源，本模块不引 document、也不引 mineru
-（有 `LlmLayeringGuardTest` 钉着，import 与 pom 两个面都扫）。所以：
+依赖方向沿革：M16 时为单向 `document → llm`；**2026-11-05 SPI 反转后为单向 `llm → document`**（本模块取
+document 的 `VisionConfigProvider` / `FileMarkdownService` 等供给面；反向有 `LlmLayeringGuardTest`
+钉着，import 与 pom 两个面都扫）。所以：
 
 - **只要模型层** → 引 `com.bidr:llm` 即可，不会被拖进 POI/PDFBox/MinerU；
 - **要文件解析** → 另引 `com.bidr:document`（自动装配把入口 Bean、视觉适配器、read_file 工具一次装齐）；
@@ -446,11 +446,10 @@ core/llm 的 agent 包自带一组**纯通用工具**（业务零绑定），业
 | `ExternalRuntimeTools` | `submitExternalTask` / `waitExternalTask` / `queryExternalTask` / `readExternalTaskResult` / `cancelExternalTask` | 沙箱/外部 agent runtime 的派发与终态（有界等待，不在 @Tool 里同步挂分钟级） | 混合 |
 | `RunFlowTools` | `runFlow` | 调一条已编排流程（仅同步链；深度 1 防递归、30s 超时） | 否 |
 
-🔴 `readFile`（read_file）那只**不在本模块**：它包的是文件解析能力，随 M16 修复轮一起搬到
-core `tool/document`（`com.bidr.document.agent.FileMarkdownTool`，分页语义仍复用本模块的 `PagedText`——
-document → llm 单向）。能力目录登记仍在 agent-console 的 `file-read` 包（字面量 `readFile`），
-真名对账腿因族界（ai 不依 tool）拆在两处：llm 侧反射对账 11 只，document 侧
-`FileMarkdownToolTest#工具注册名与登记件对账`钉住那只。
+🔴 `readFile`（read_file）那只**已回迁本模块**（2026-11-07 C′，`com.bidr.llm.document.FileMarkdownTool`，
+分页语义仍复用本模块的 `PagedText`；langchain4j 随升级用 1.23，document 侧已零 lc4j 永留 JDK8）。
+能力目录登记仍在 agent-console 的 `file-read` 包（字面量 `readFile`），
+真名对账腿在本模块 `com/bidr/llm/document/FileMarkdownToolTest#工具注册名与登记件对账`（随迁 JUnit4 形态）。
 
 不算数的两档：`FunctionalTool`（lambda→工具的机制件）；insight 的 smartquery 工具是智能问数**域级**
 （在 core 仓但不是通用面）。业务只认自己句柄（fileId 等）的场景＝业务写薄壳解句柄再交给这些工具。

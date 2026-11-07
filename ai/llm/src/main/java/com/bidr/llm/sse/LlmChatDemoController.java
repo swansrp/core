@@ -4,9 +4,9 @@ import com.bidr.kernel.config.anno.IgnoreAuth;
 import com.bidr.llm.store.StreamAnswerState;
 import com.bidr.llm.store.StreamAnswerStore;
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.StreamingResponseHandler;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -40,7 +40,7 @@ import java.util.UUID;
  * </ul>
  * 装配条件：类路径存在 langchain4j 与 spring-webmvc（排除了 langchain4j 的模块自动跳过），
  * 且未配置 {@code llm.chat-sse.enabled=false}。模型取应用中唯一的
- * {@link StreamingChatLanguageModel} Bean，缺失或不唯一时报错提示。
+ * {@link StreamingChatModel} Bean，缺失或不唯一时报错提示。
  * </p>
  *
  * @author Sharp
@@ -49,7 +49,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/web/api/llm")
 @ConditionalOnClass(name = {
-        "dev.langchain4j.model.chat.StreamingChatLanguageModel",
+        "dev.langchain4j.model.chat.StreamingChatModel",
         "org.springframework.web.servlet.mvc.method.annotation.SseEmitter"})
 @ConditionalOnProperty(prefix = "llm.chat-sse", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class LlmChatDemoController {
@@ -57,14 +57,14 @@ public class LlmChatDemoController {
     /**
      * 惰性解析流式模型：装配 Controller 时不强求模型 Bean 存在，调用时再取
      */
-    private final ObjectProvider<StreamingChatLanguageModel> streamingModelProvider;
+    private final ObjectProvider<StreamingChatModel> streamingModelProvider;
 
     /**
      * 流式回答状态存储：内存/Redis 按类路径自动二选一，方式二/三共用
      */
     private final ObjectProvider<StreamAnswerStore> streamAnswerStoreProvider;
 
-    public LlmChatDemoController(ObjectProvider<StreamingChatLanguageModel> streamingModelProvider,
+    public LlmChatDemoController(ObjectProvider<StreamingChatModel> streamingModelProvider,
                                  ObjectProvider<StreamAnswerStore> streamAnswerStoreProvider) {
         this.streamingModelProvider = streamingModelProvider;
         this.streamAnswerStoreProvider = streamAnswerStoreProvider;
@@ -104,7 +104,7 @@ public class LlmChatDemoController {
         SseEmitter emitter = new SseEmitter(0L);
         SseStreamingResponseHandler handler = new SseStreamingResponseHandler(emitter);
         try {
-            requireStreamingModel().generate(prompt, handler);
+            requireStreamingModel().chat(prompt, handler);
         } catch (Exception e) {
             // 发起调用即失败（如模型 Bean 缺失、配置缺失）时，以 error 事件结束连接
             log.warn("SSE 聊天发起失败", e);
@@ -128,8 +128,8 @@ public class LlmChatDemoController {
         StreamAnswerStore store = requireStore();
         // 先写一条空的运行中状态，避免前端首次轮询读到 null 误判为流不存在
         store.updateContent(streamId, "", false);
-        // generate 立即返回，token 在回调线程中持续写 store（Redis 实现自带写入节流）
-        requireStreamingModel().generate(request.getPrompt(), new StoreWritingHandler(store, streamId));
+        // chat 立即返回，token 在回调线程中持续写 store（Redis 实现自带写入节流）
+        requireStreamingModel().chat(request.getPrompt(), new StoreWritingHandler(store, streamId));
         return streamId;
     }
 
@@ -166,10 +166,10 @@ public class LlmChatDemoController {
     /**
      * 取应用中唯一的流式模型 Bean；有多个时业务应标注 @Primary 指定
      */
-    private StreamingChatLanguageModel requireStreamingModel() {
-        StreamingChatLanguageModel model = streamingModelProvider.getIfUnique();
+    private StreamingChatModel requireStreamingModel() {
+        StreamingChatModel model = streamingModelProvider.getIfUnique();
         if (model == null) {
-            throw new IllegalStateException("未找到唯一的 StreamingChatLanguageModel Bean，请装配模型或用 @Primary 指定");
+            throw new IllegalStateException("未找到唯一的 StreamingChatModel Bean，请装配模型或用 @Primary 指定");
         }
         return model;
     }
@@ -186,9 +186,10 @@ public class LlmChatDemoController {
     }
 
     /**
-     * 方式二/三共用的生产端回调：把流式输出持续写入 store（覆盖式全量内容）
+     * 方式二/三共用的生产端回调：把流式输出持续写入 store（覆盖式全量内容）。
+     * langchain4j 1.23：onNext/onComplete 更名 onPartialResponse/onCompleteResponse
      */
-    private static class StoreWritingHandler implements StreamingResponseHandler<AiMessage> {
+    private static class StoreWritingHandler implements StreamingChatResponseHandler {
 
         private final StreamAnswerStore store;
         private final String streamId;
@@ -204,7 +205,7 @@ public class LlmChatDemoController {
         }
 
         @Override
-        public void onNext(String token) {
+        public void onPartialResponse(String token) {
             if (token == null) {
                 return;
             }
@@ -216,8 +217,8 @@ public class LlmChatDemoController {
         }
 
         @Override
-        public void onComplete(Response<AiMessage> response) {
-            AiMessage message = response == null ? null : response.content();
+        public void onCompleteResponse(ChatResponse response) {
+            AiMessage message = response == null ? null : response.aiMessage();
             String finalText = message == null ? null : message.text();
             synchronized (builder) {
                 // 终态写入永不被节流跳过

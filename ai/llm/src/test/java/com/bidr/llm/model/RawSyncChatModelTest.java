@@ -8,7 +8,8 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -169,7 +170,7 @@ public class RawSyncChatModelTest {
 
         RawSyncChatModel model = new RawSyncChatModel(
                 stubProvider("http://127.0.0.1:" + port + "/v1", "k"), "AGENT", null, null, 4096, 1, trace::add);
-        Response<AiMessage> resp = model.generate(Collections.singletonList(UserMessage.from("hi")));
+        ChatResponse resp = model.chat(UserMessage.from("hi"));
 
         Assert.assertEquals("截断须映射为 LENGTH 透出", dev.langchain4j.model.output.FinishReason.LENGTH,
                 resp.finishReason());
@@ -212,11 +213,13 @@ public class RawSyncChatModelTest {
                 stubProvider("http://127.0.0.1:" + port + "/v1", "test-key"), "AGENT", null,
                 Collections.singletonMap("enable_thinking", Boolean.FALSE), 512, 1, trace::add);
         List<ToolSpecification> specs = ToolSpecifications.toolSpecificationsFrom(new ScopeTools());
-        Response<AiMessage> resp = model.generate(
-                Collections.singletonList(UserMessage.from("当前范围？")), specs);
+        ChatResponse resp = model.chat(ChatRequest.builder()
+                .messages(Collections.singletonList(UserMessage.from("当前范围？")))
+                .toolSpecifications(specs)
+                .build());
 
-        Assert.assertTrue("模型须返回工具调用", resp.content().hasToolExecutionRequests());
-        ToolExecutionRequest req = resp.content().toolExecutionRequests().get(0);
+        Assert.assertTrue("模型须返回工具调用", resp.aiMessage().hasToolExecutionRequests());
+        ToolExecutionRequest req = resp.aiMessage().toolExecutionRequests().get(0);
         Assert.assertEquals("currentScope", req.name());
         Assert.assertTrue("工具参数中文须完好", req.arguments().contains("IT空间"));
         Assert.assertNotNull("token 用量须透出", resp.tokenUsage());
@@ -240,7 +243,7 @@ public class RawSyncChatModelTest {
         RawSyncChatModel model = new RawSyncChatModel(
                 stubProvider("http://127.0.0.1:" + port + "/v1", "k"), "AGENT", null, null, null, 2, null);
         try {
-            model.generate(Collections.singletonList(UserMessage.from("hi")));
+            model.chat(UserMessage.from("hi"));
             Assert.fail("5xx 重试耗尽后须抛异常");
         } catch (RuntimeException e) {
             Assert.assertTrue("错误文案须含 HTTP 码，实际: " + e.getMessage(), e.getMessage().contains("HTTP 500"));
@@ -258,7 +261,7 @@ public class RawSyncChatModelTest {
         RawSyncChatModel model = new RawSyncChatModel(
                 stubProvider("http://127.0.0.1:" + port + "/v1", "k"), "AGENT", null, null, null, 3, null);
         try {
-            model.generate(Collections.singletonList(UserMessage.from("hi")));
+            model.chat(UserMessage.from("hi"));
             Assert.fail("4xx 须立即抛异常");
         } catch (RuntimeException e) {
             Assert.assertTrue(e.getMessage().contains("请求侧错误，不重试"));
@@ -276,7 +279,7 @@ public class RawSyncChatModelTest {
         RawSyncChatModel model = new RawSyncChatModel(
                 stubProvider("http://127.0.0.1:" + port + "/v1", "k"), "AGENT", null, null, null, 1, null);
         try {
-            model.generate(Collections.singletonList(UserMessage.from("hi")));
+            model.chat(UserMessage.from("hi"));
             Assert.fail("空产出须报错");
         } catch (IllegalStateException e) {
             Assert.assertTrue("错误文案须给出排查线索，实际: " + e.getMessage(),

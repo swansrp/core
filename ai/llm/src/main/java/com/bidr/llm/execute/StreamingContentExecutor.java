@@ -1,10 +1,10 @@
 package com.bidr.llm.execute;
 
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.StreamingResponseHandler;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -53,8 +53,8 @@ public class StreamingContentExecutor {
      * @param contentId       内容标识（如章节ID），仅用于日志输出
      * @param contentLabel    内容名称（如章节标题），仅用于日志输出
      * @param prompt          提示词，用于指导模型生成
-     * @param streamingModel  流式聊天语言模型
-     * @param fallbackModel   降级使用的普通聊天语言模型
+     * @param streamingModel  流式聊天模型
+     * @param fallbackModel   降级使用的普通聊天模型
      * @param cancelChecker   取消检查回调，返回 true 表示任务已被取消
      * @param draftUpdater    草稿更新回调函数，用于实时推送生成的内容片段
      * @param finalNormalizer 最终内容标准化函数，用于清理和格式化生成的内容
@@ -64,8 +64,8 @@ public class StreamingContentExecutor {
     public String generateContent(String contentId,
                                   String contentLabel,
                                   String prompt,
-                                  StreamingChatLanguageModel streamingModel,
-                                  ChatLanguageModel fallbackModel,
+                                  StreamingChatModel streamingModel,
+                                  ChatModel fallbackModel,
                                   Supplier<Boolean> cancelChecker,
                                   Consumer<String> draftUpdater,
                                   Function<String, String> finalNormalizer) throws InterruptedException {
@@ -81,7 +81,7 @@ public class StreamingContentExecutor {
             // 记录流式生成失败的警告日志
             log.warn("流式生成失败，回退普通生成: [{}] {}", contentId, contentLabel, streamError);
             // 使用降级模型进行普通生成，并对结果进行 sanitization 和标准化处理
-            String fallback = finalNormalizer.apply(ModelOutputSanitizer.sanitize(fallbackModel.generate(prompt)));
+            String fallback = finalNormalizer.apply(ModelOutputSanitizer.sanitize(fallbackModel.chat(prompt)));
             // 再次检查任务是否被取消
             checkCanceled(cancelChecker);
             // 将降级生成的内容推送到草稿更新器
@@ -101,7 +101,7 @@ public class StreamingContentExecutor {
      * @param contentId       内容标识，仅用于日志输出
      * @param contentLabel    内容名称，仅用于日志输出
      * @param prompt          提示词
-     * @param streamingModel  流式聊天语言模型
+     * @param streamingModel  流式聊天模型
      * @param cancelChecker   取消检查回调
      * @param draftUpdater    草稿更新回调函数
      * @param finalNormalizer 最终内容标准化函数
@@ -111,7 +111,7 @@ public class StreamingContentExecutor {
     private String generateStreamingContent(String contentId,
                                             String contentLabel,
                                             String prompt,
-                                            StreamingChatLanguageModel streamingModel,
+                                            StreamingChatModel streamingModel,
                                             Supplier<Boolean> cancelChecker,
                                             Consumer<String> draftUpdater,
                                             Function<String, String> finalNormalizer) throws InterruptedException {
@@ -126,15 +126,16 @@ public class StreamingContentExecutor {
         // 创建AtomicLong用于记录最后一个token到达的时间，用于空闲检测
         AtomicLong lastTokenAt = new AtomicLong(System.currentTimeMillis());
 
-        // 调用流式模型的generate方法，传入自定义的StreamingResponseHandler
-        streamingModel.generate(prompt, new StreamingResponseHandler<AiMessage>() {
+        // 调用流式模型的 chat 方法，传入自定义的 StreamingChatResponseHandler
+        // （1.23：0.33 的 generate/onNext/onComplete 更名为 chat/onPartialResponse/onCompleteResponse）
+        streamingModel.chat(prompt, new StreamingChatResponseHandler() {
             /**
              * 当接收到新的token片段时调用。
              *
              * @param token 新生成的文本片段
              */
             @Override
-            public void onNext(String token) {
+            public void onPartialResponse(String token) {
                 // 检查线程是否被中断或任务是否被取消
                 if (Thread.currentThread().isInterrupted() || Boolean.TRUE.equals(cancelChecker.get())) {
                     // 设置中断异常并释放锁
@@ -161,9 +162,9 @@ public class StreamingContentExecutor {
              * @param response 模型响应对象，包含生成的完整消息
              */
             @Override
-            public void onComplete(Response<AiMessage> response) {
+            public void onCompleteResponse(ChatResponse response) {
                 // 从响应中提取AI消息
-                AiMessage message = response == null ? null : response.content();
+                AiMessage message = response == null ? null : response.aiMessage();
                 // 获取消息文本内容
                 String finalText = message == null ? null : message.text();
                 // 同步块中处理最终内容

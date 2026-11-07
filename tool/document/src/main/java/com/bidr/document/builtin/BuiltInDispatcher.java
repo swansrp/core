@@ -2,6 +2,7 @@ package com.bidr.document.builtin;
 
 import com.bidr.document.DocumentProperties;
 import com.bidr.document.VisionEndpoint;
+import com.bidr.document.VisionTranscriber;
 import com.bidr.document.converter.DocxMarkdownConverter;
 import com.bidr.document.converter.ExcelMarkdownConverter;
 import com.bidr.document.converter.HtmlMarkdownConverter;
