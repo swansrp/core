@@ -24,10 +24,13 @@
     
 
     <dependencies>
-        <!-- 🔴 mirror 纪律（T2.3d，dep-direction-check.mjs rule3 断言）：只依赖 kernel＋authorization-api，
+        <!-- 🔴 mirror 纪律（T2.3d，dep-direction-check.mjs rule3 断言）：只依赖 kernel＋authorization-api＋platform，
              禁依赖 authorization(server)/authorization-client/admin/admin-api——本模块是"消费侧镜像件"，
-             拿到的数据只经 /open-api/v1/identity/snapshot HTTP 端点，绝不进程内引用 provider 的 dao/service
-             （G9 边界：镜像零角色/菜单/功能码字段，IdentityMirrorConventionTest 钉）。 -->
+             拿到的数据只经 /open-api/v1/* HTTP 端点，绝不进程内引用 provider 的 dao/service
+             （G9 边界：四个身份镜像实体零角色/菜单/权限/功能码字段，IdentityMirrorConventionTest 钉——
+             menu 语义只在 openapi 场景客户端的线 DTO（MenuNodeRes）出现、永不落镜像实体；方案B 棒4 起
+             platform 是授权的底层传输件——依赖方向 platform←authorization-client←场景客户端，
+             mirror 取传输/信封不取凭据实现，authorization-client 仍禁）。 -->
         <dependency>
             <groupId>com.bidr</groupId>
             <artifactId>authorization-api</artifactId>
@@ -37,6 +40,13 @@
             <groupId>com.bidr</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
+        </dependency>
+        <!-- 开放口传输层（方案B 棒4）：IdentitySnapshotClient/OpenApiMenuClient 的
+             OpenApiDataClient（HTTP＋统一信封解包）与 OpenApiAuthProvider 凭据注入面 -->
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
         </dependency>
         <!-- IdentitySnapshotClient 的 HTTP 通道（RestTemplate 直连构造，宿主必带 web 栈） -->
         <dependency>

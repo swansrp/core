@@ -267,12 +267,18 @@ public class MenuDeclarationTest {
         Assert.assertNotNull("租户管理页（棒4 交付）", findNode(sysNav, "TenantManage"));
         Assert.assertNotNull("权限管理七页之首：菜单管理", findNode(sysNav, "MenuMaintenance"));
         Assert.assertNotNull("账号管理", findNode(sysNav, "account"));
+        // 应用管理页（方案B 棒2 交付，ac_subsystem 维护面）——component 逐字钉死（前端路由自然键）
+        Node subsystem = findNode(sysNav, "SubsystemMaintenance");
+        Assert.assertNotNull("应用管理页（棒2 交付）", subsystem);
+        Assert.assertEquals("应用管理 title", "应用管理", subsystem.title);
+        Assert.assertEquals("应用管理 component（逐字）",
+                "/framework/views/MainContent/SystemManage/SubsystemMaintenance/index.vue", subsystem.component);
     }
 
     @Test
     public void fullDistributionMergesToCompleteTree() throws IOException {
         // 拆分回归针：框架九份按归属模块分布（2026-10-17 目录分组后 owners 带组前缀）后，磁盘全集合并
-        // 必须仍是"一棵系统管理"（现库 26 行＋4 补缺挂＋2 点名入册（MCP配置、智能问数）＝32）；缺任一宿主模块即 assume 跳过（core 独立构建形态不判死）。
+        // 必须仍是"一棵系统管理"（现库 26 行＋4 补缺挂＋2 点名入册（MCP配置、智能问数）＋1 应用管理（方案B 棒2，库无基线行）＝33）；缺任一宿主模块即 assume 跳过（core 独立构建形态不判死）。
         String[] owners = {"base/authorization", "base/platform", "store/redis", "lowcode/forge", "auth/admin",
                 "ai/agent-console", "lowcode/insight", "store/oss", "ai/mcp"};
         List<List<Node>> framework = new ArrayList<>();
@@ -288,8 +294,10 @@ public class MenuDeclarationTest {
         Assert.assertEquals("prune 不应误删任何补全骨架", 0, MenuDeclaration.pruneAnchorSkeletons(merged).size());
         validate(merged);
         Node sysNav = merged.get(0);
-        // 现库系统管理子树 26 行全部在册＋4 补缺挂＋2 点名入册（MCP配置、智能问数，库均无基线行）＝32
-        Assert.assertEquals(32, MenuDeclaration.flatten(Collections.singletonList(sysNav)).size());
+        // 现库系统管理子树 26 行全部在册＋4 补缺挂＋2 点名入册（MCP配置、智能问数，库均无基线行）
+        // ＋1 应用管理（方案B 棒2 交付，库无基线行）＝33
+        Assert.assertEquals(33, MenuDeclaration.flatten(Collections.singletonList(sysNav)).size());
+        Assert.assertNotNull("authorization：应用管理（棒2 交付页）", findNode(sysNav, "SubsystemMaintenance"));
         // 跨模块归属逐一定位（每处都是"骨架在 auth、内容在宿主"的接缝）
         Node agent = findNode(sysNav, "agent");
         Assert.assertEquals("Agent 目录四页（agent-console 三页＋insight 一页）", 4, agent.children.size());

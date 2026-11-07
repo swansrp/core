@@ -39,10 +39,18 @@ public class MenuService {
     private final AcUserService acUserService;
 
     public List<MenuTreeRes> getMenuTree() {
-        return getMenuTree(AccountContext.getOperator());
+        return getMenuTree(AccountContext.getOperator(), null);
     }
 
     public List<MenuTreeRes> getMenuTree(String customerNumber) {
+        return getMenuTree(customerNumber, null);
+    }
+
+    /**
+     * 归属应用收窄版（方案B 棒3 §4.1）：门户腿不传 appCode＝平台自身（app_code IS NULL 存量行为），
+     * 开放口传 partner 解析出的子系统 app_code。user 不存在沿用既有业务拒绝（同口径）。
+     */
+    public List<MenuTreeRes> getMenuTree(String customerNumber, String appCode) {
         AcUser acUser = acUserService.getByCustomerNumber(customerNumber);
         // 防御（2026-10-27 联调）：数据闸按当前租户过滤 ac_user 时，零归属账号连自己也查不到，
         // 原实现直接 acUser.getUserId() ⇒ NPE 500。改为明确业务拒绝，前端可提示重新登录/分配租户。
@@ -57,7 +65,8 @@ public class MenuService {
         List<AcMenu> deptMenuList = acDeptMenuService.getAllMenu(userId, clientType);
         List<AcMenu> groupMenuList = acGroupMenuService.getAllMenu(userId, clientType);
         List<AcMenu> userMenuList = acUserMenuService.getAllMenu(customerNumber, clientType);
-        List<AcMenu> menuList = merge(roleMenuList, deptMenuList, groupMenuList, userMenuList);
+        // 四路查出的 menu 行统一按 appCode 谓词收窄后再 buildTree（聚合前行级过滤，非树后剪枝）
+        List<AcMenu> menuList = narrowByAppCode(merge(roleMenuList, deptMenuList, groupMenuList, userMenuList), appCode);
         // 前端已经不需要必须配置菜单了
         // Validator.assertNotEmpty(menuList, AccountErrCode.AC_PERMIT_NOT_EXISTED);
         for (AcMenu acMenu : menuList) {
@@ -66,6 +75,23 @@ public class MenuService {
             }
         }
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
+    }
+
+    /**
+     * 菜单行按归属应用收窄（方案B 棒3 §4.1 防漏闸）：appCode 空＝平台自身（只留 app_code 为 NULL 的行，
+     * 门户存量行为），非空＝只留等值行。行级谓词、聚合前过滤；绑定树控制器与门户缺省腿共用本口。
+     */
+    public static List<AcMenu> narrowByAppCode(List<AcMenu> menuList, String appCode) {
+        if (FuncUtil.isEmpty(menuList)) {
+            return menuList;
+        }
+        List<AcMenu> narrowed = new ArrayList<>();
+        for (AcMenu menu : menuList) {
+            if (FuncUtil.isEmpty(appCode) ? menu.getAppCode() == null : appCode.equals(menu.getAppCode())) {
+                narrowed.add(menu);
+            }
+        }
+        return narrowed;
     }
 
     /**
@@ -102,7 +128,9 @@ public class MenuService {
     public List<MenuTreeItem> getMenuList() {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> allPermit = acUserRoleMenuService.getAllMenu(customerNumber, clientType);
+        // 门户缺省＝平台自身（app_code IS NULL，方案B 棒3 §4.1）
+        List<AcMenu> allPermit = narrowByAppCode(
+                acUserRoleMenuService.getAllMenu(customerNumber, clientType), null);
         Validator.assertNotEmpty(allPermit, AccountErrCode.AC_PERMIT_NOT_EXISTED);
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }
@@ -110,7 +138,8 @@ public class MenuService {
     public List<MenuTreeRes> getMainMenuTree() {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> menuList = acUserRoleMenuService.getMainMenu(customerNumber, clientType);
+        List<AcMenu> menuList = narrowByAppCode(
+                acUserRoleMenuService.getMainMenu(customerNumber, clientType), null);
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }
@@ -118,14 +147,16 @@ public class MenuService {
     public List<MenuTreeItem> getMainMenuList() {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> menuList = acUserRoleMenuService.getMainMenu(customerNumber, clientType);
+        List<AcMenu> menuList = narrowByAppCode(
+                acUserRoleMenuService.getMainMenu(customerNumber, clientType), null);
         return ReflectionUtil.copyList(menuList, MenuTreeItem.class);
     }
 
     public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> menuList = acUserRoleMenuService.getSubMenu(customerNumber, clientType, req.getMenuId());
+        List<AcMenu> menuList = narrowByAppCode(
+                acUserRoleMenuService.getSubMenu(customerNumber, clientType, req.getMenuId()), null);
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }
@@ -133,14 +164,16 @@ public class MenuService {
     public List<MenuTreeItem> getSubMenuList(MenuTreeReq req) {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> allPermit = acUserRoleMenuService.getSubMenu(customerNumber, clientType, req.getMenuId());
+        List<AcMenu> allPermit = narrowByAppCode(
+                acUserRoleMenuService.getSubMenu(customerNumber, clientType, req.getMenuId()), null);
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }
 
     public List<MenuTreeRes> getContentTree(MenuTreeReq req) {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> menuList = acUserRoleMenuService.getContent(customerNumber, clientType, req.getMenuId());
+        List<AcMenu> menuList = narrowByAppCode(
+                acUserRoleMenuService.getContent(customerNumber, clientType, req.getMenuId()), null);
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }
@@ -148,7 +181,8 @@ public class MenuService {
     public List<MenuTreeItem> getContentList(MenuTreeReq req) {
         String customerNumber = AccountContext.getOperator();
         String clientType = ClientTypeHolder.get();
-        List<AcMenu> allPermit = acUserRoleMenuService.getContent(customerNumber, clientType, req.getMenuId());
+        List<AcMenu> allPermit = narrowByAppCode(
+                acUserRoleMenuService.getContent(customerNumber, clientType, req.getMenuId()), null);
         return ReflectionUtil.copyList(allPermit, MenuTreeItem.class);
     }
 }

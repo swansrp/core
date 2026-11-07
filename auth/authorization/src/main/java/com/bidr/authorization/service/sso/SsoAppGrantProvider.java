@@ -19,7 +19,7 @@ public interface SsoAppGrantProvider {
     /**
      * 解析用户在某应用/租户下的有效组与功能码。
      *
-     * @param appCode    应用编码（inkhub_subsystem.app_code）
+     * @param appCode    应用编码（ac_subsystem.app_code）
      * @param tenantCode 租户 code（可空：空则宿主自行决定口径）
      * @param user       已验票的 InkHub 用户
      * @return 组码/功能码；无授权时返回空集对象，不返回 null（null 按空集处理）

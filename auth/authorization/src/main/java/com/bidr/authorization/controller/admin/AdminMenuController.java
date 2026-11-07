@@ -20,6 +20,9 @@ import com.bidr.kernel.vo.common.IdReqVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -44,27 +47,40 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
     @Resource
     private PermitSourceService permitSourceService;
 
-    @ApiOperation(value = "获取菜单树", notes = "全部")
+    @ApiOperation(value = "获取菜单树", notes = "全部；appCode 缺省/空＝平台自身")
     @RequestMapping(value = "/tree", method = RequestMethod.GET)
-    public List<MenuTreeRes> getMenuTree() {
-        return adminMenuService.getMenuTree();
+    public List<MenuTreeRes> getMenuTree(@RequestParam(required = false) String appCode) {
+        return adminMenuService.getMenuTree(appCode);
     }
 
+    /**
+     * 基类 {@code GET /tree/data} 覆写点（方案B 棒3 §4.4）：基类端点无参签名不能加映射参数
+     * （同路径双映射会 ambiguous），可选 {@code appCode} 经当前请求读参透传——缺省/空＝平台自身。
+     */
     @Override
     protected List<AcMenu> getAllData() {
-        return adminMenuService.getAllData();
+        return adminMenuService.getAllData(currentAppCode());
     }
 
-    @ApiOperation(value = "获取主菜单树", notes = "全部")
+    /** 当前请求的可选 appCode 参数（仅 /tree/data 覆写点用；无请求上下文＝缺省平台自身） */
+    private static String currentAppCode() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes) {
+            return ((ServletRequestAttributes) attributes).getRequest().getParameter("appCode");
+        }
+        return null;
+    }
+
+    @ApiOperation(value = "获取主菜单树", notes = "全部；appCode 缺省/空＝平台自身")
     @RequestMapping(value = "/main/tree", method = RequestMethod.GET)
-    public List<MenuTreeRes> getMainMenuTree() {
-        return adminMenuService.getMainMenuTree();
+    public List<MenuTreeRes> getMainMenuTree(@RequestParam(required = false) String appCode) {
+        return adminMenuService.getMainMenuTree(appCode);
     }
 
-    @ApiOperation(value = "获取子菜单树", notes = "全部")
+    @ApiOperation(value = "获取子菜单树", notes = "全部；appCode 缺省/空＝平台自身")
     @RequestMapping(value = "/sub/tree", method = RequestMethod.GET)
-    public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
-        return adminMenuService.getSubMenuTree(req);
+    public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req, @RequestParam(required = false) String appCode) {
+        return adminMenuService.getSubMenuTree(req, appCode);
     }
 
     @ApiOperation(value = "添加顶部菜单")
@@ -128,10 +144,10 @@ public class AdminMenuController extends BaseAdminTreeController<AcMenu, AcMenu>
         return permitSourceService.getMenuPermitTargets(menuId);
     }
 
-    @ApiOperation(value = "获取用户权限")
+    @ApiOperation(value = "获取用户权限", notes = "appCode 缺省/空＝平台自身")
     @RequestMapping(value = "/user/permit", method = RequestMethod.GET)
-    public List<MenuTreeRes> getUserPermit(String customerNumber) {
-        return menuService.getMenuTree(customerNumber);
+    public List<MenuTreeRes> getUserPermit(String customerNumber, @RequestParam(required = false) String appCode) {
+        return menuService.getMenuTree(customerNumber, appCode);
     }
 
     @Override
