@@ -55,6 +55,15 @@ public class IdentityIdpProperties {
     private long codeTtlSeconds = 300L;
 
     /**
+     * authorize 未登录回跳的 SPA 登录页基地址（如 {@code http://127.0.0.1:8082}）。
+     * 空（默认）＝现行为：302 到 {context-path}/#/login?...（相对——pre/生产 nginx 把 SPA
+     * 同源挂在 {ctx}/ 下即落登录页）；配了值＝302 到 {base}/#/login?...（绝对）——供「SPA 不与
+     * 后端同源」的本地 dev 拓扑用（run-local dev 形态自动注入，env MY_IDP_LOGIN_PAGE_BASE）。
+     * 只影响 authorize 未登录腿的 302 目标，不碰签发/token/jwks。
+     */
+    private String loginPageBase = "";
+
+    /**
      * 启动期自检：钥匙缺席只 warn 不阻断上下文——IdP 是纯加法腿（SSO 出票、普通登录链不受影响），
      * 阻断启动会把"未对接形态"误升成"整站起不来"。
      */
