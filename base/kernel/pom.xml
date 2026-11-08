@@ -80,6 +80,10 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
+            <!-- 🔴 SB 2.7.18 的 dependencyManagement 已不再托管旧坐标 mysql:mysql-connector-java
+                 （官方迁移 com.mysql:mysql-connector-j），必须显式钉版本——8.0.30＝原 2.7.3
+                 托管版本（运行时零变化，2026-11-08 升级实锤）。 -->
+            <version>8.0.30</version>
             <scope>runtime</scope>
         </dependency>
 
