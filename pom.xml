@@ -70,6 +70,10 @@
     <properties>
         <jarVersion>0.0.1-SNAPSHOT</jarVersion>
 
+        <!-- JDK17 全量统一（2026-11-08 拍板）：编译目标 17；surefire 的 jdk9plus-module-opens
+             profile 按 JDK≥9 自动激活注入四包 opens，测试期零额外配置 -->
+        <java.version>17</java.version>
+
         <!-- ============ 版本开关(双 profile 退役后的唯一机制) ============
              默认 0.0.1-SNAPSHOT = 本地源码模式(reactor 全量现编,零参数);
              发布火车:-DjarVersion=<戳> 一根旗子——模块版本与兄弟互 pin 全部对齐该戳
