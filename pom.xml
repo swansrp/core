@@ -41,6 +41,7 @@
         <module>store/oss</module>
         <module>store/blob</module>
         <module>comm/wechat</module>
+        <module>comm/feishu</module>
         <module>tool/ocr</module>
         <module>tool/qichacha</module>
         <module>store/mongo</module>
