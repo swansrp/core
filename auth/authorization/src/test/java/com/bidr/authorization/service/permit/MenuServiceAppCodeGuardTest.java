@@ -10,7 +10,6 @@ import com.bidr.authorization.dao.repository.AcUserService;
 import com.bidr.authorization.dao.repository.join.AcUserRoleMenuService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
-import com.bidr.kernel.exception.ServiceException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -165,18 +164,19 @@ public class MenuServiceAppCodeGuardTest {
         }
     }
 
-    // ==================== user 不存在：沿用既有业务拒绝（同口径回归） ====================
+    // ==================== user 不存在：空菜单兜底（erp 线 11-03 裁定，2026-11-08 合并裁决） ====================
 
-    /** 用户不存在 ⇒ 同一条 ServiceException（防御文案不变），且不触四路查询。 */
+    /**
+     * 用户不存在 ⇒ 空菜单而非异常，且不触四路查询。
+     * <p>与 origin 框架仓「守卫 A＝沿用既有业务拒绝」的分歧裁决：erp 线数据闸对「登录态但无租户绑定」
+     * 的用户恒假（ac_user 查不到），该态是无权限不是系统错误，抛异常＝合法登录态吃 500（2026-11-03
+     * 用户裁定，11-05 合并已确认保留防再撞）。单测层「真不存在」与「被闸遮蔽」同形（getByCustomerNumber
+     * 均返 null），服务只取一种行为——按较新裁定走空集合；上游化时随 core push 拍板再与守卫 A 对齐。</p>
+     */
     @Test
-    public void unknownUserKeepsExistingBusinessRejection() {
-        try {
-            menuService.getMenuTree("nobody", APP);
-            Assert.fail("用户不存在必须业务拒绝");
-        } catch (ServiceException e) {
-            Assert.assertTrue("拒绝文案与既有口径一致：" + e.getMessage(),
-                    e.getMessage().contains("当前账号不存在或不在当前租户内"));
-        }
+    public void unknownUserGetsEmptyMenuWithoutQueries() {
+        List<MenuTreeRes> tree = menuService.getMenuTree("nobody", APP);
+        Assert.assertTrue("用户不存在必须空菜单而非异常", tree == null || tree.isEmpty());
         Mockito.verifyNoInteractions(acUserRoleMenuService, acDeptMenuService, acGroupMenuService,
                 acUserMenuService);
     }
