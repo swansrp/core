@@ -20,7 +20,8 @@ import java.util.List;
  * Description: 菜单声明纯函数离线单测（纯 JUnit4、不起 Spring、不碰库）——
  * 覆盖：校验负/正对照（component 全局唯一、同父 title 唯一，针自证纪律：每个负例配一个正对照，
  * 证明校验器不是"逢配置必抛"）；嵌套树归并腿（同 topnav 按 title∨path 合并、子树并集、
- * 字段不一致 fail-fast）；跨模块锚点骨架的在场剪枝腿（宿主缺席整支移除、在场不误删）；
+ * 字段不一致 fail-fast）；appCode 可选键腿（解析/clone 透传/同锚点判定含 app_code——
+ * 异 appCode 同 path 分流不复用锚点、列宽 64 校验）；跨模块锚点骨架的在场剪枝腿（宿主缺席整支移除、在场不误删）；
  * menu-seed.yml 分布正对照腿（按模块拆十份：authorization 份走 classpath 必读，
  * platform/redis/forge/admin/agent-console/insight/oss/mcp 与 inkhub-common 九份按磁盘路径在场判定——
  * 独立构建 core 仓时缺模块的腿 assume 跳过并在报告注明）。
@@ -202,6 +203,190 @@ public class MenuDeclarationTest {
         List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
         Assert.assertEquals(1, merged.size());
         validate(merged);
+    }
+
+    // ==================== appCode 可选键：解析/clone 透传/锚点判定含 app_code ====================
+
+    @Test
+    public void appCodeParsesFromDeclaration() {
+        List<Node> roots = one(""
+                + "menus:\n"
+                + "  - title: 应用导航\n"
+                + "    path: appNav\n"
+                + "    appCode: app-x\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: app-x}\n");
+        Node nav = roots.get(0);
+        Assert.assertTrue("topnav 声明 appCode ⇒ hasAppCode", nav.hasAppCode());
+        Assert.assertEquals("app-x", nav.appCode);
+        Assert.assertTrue("子节点声明 appCode 同样解析", nav.children.get(0).hasAppCode());
+        Assert.assertEquals("app-x", nav.children.get(0).appCode);
+    }
+
+    @Test
+    public void missingAppCodeStaysNull() {
+        // 兼容前提：既有全部 yml 无 appCode 键 ⇒ 解析结果保持 null（播种落 NULL＝平台自身）
+        List<Node> roots = one(""
+                + "menus:\n"
+                + "  - title: 导航甲\n"
+                + "    path: navA\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue}\n");
+        Assert.assertFalse("未声明 appCode ⇒ hasAppCode 为假", roots.get(0).hasAppCode());
+        Assert.assertNull("未声明 appCode ⇒ 保持 null", roots.get(0).appCode);
+        Assert.assertNull(roots.get(0).children.get(0).appCode);
+        validate(roots);
+    }
+
+    @Test
+    public void cloneTreeCarriesAppCode() {
+        List<Node> unmatched = one(""
+                + "menus:\n"
+                + "  - title: 应用导航\n"
+                + "    path: appNav\n"
+                + "    appCode: app-x\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: app-x}\n");
+        // 与任何既有 topnav 都不同名 ⇒ 走 cloneTree 整棵拷贝
+        List<Node> other = one(""
+                + "menus:\n"
+                + "  - {title: 别处导航, path: otherNav, children: []}\n");
+        List<Node> merged = MenuDeclaration.mergeAll(wrap(other, unmatched));
+        Assert.assertEquals(2, merged.size());
+        Node clonedNav = findRootByPath(merged, "appNav");
+        Assert.assertEquals("整棵 clone 透传 appCode", "app-x", clonedNav.appCode);
+        // 子节点并入同名 topnav 时也走 cloneTree——appCode 同样透传
+        List<Node> host = one(""
+                + "menus:\n"
+                + "  - title: 应用导航\n"
+                + "    path: appNav\n"
+                + "    appCode: app-x\n"
+                + "    children:\n"
+                + "      - {title: 页二, path: p2, component: /views/two/index.vue, appCode: app-x}\n");
+        List<Node> mergedTwice = MenuDeclaration.mergeAll(wrap(host, unmatched));
+        Node nav = findRootByPath(mergedTwice, "appNav");
+        Assert.assertEquals("页一", findNode(nav, "p1").title);
+        Assert.assertEquals("并入子节点 clone 透传 appCode", "app-x", findNode(nav, "p1").appCode);
+    }
+
+    @Test
+    public void topNavsWithDifferentAppCodeAreDistinctAnchors() {
+        // 同 title/path、一方带 appCode 一方不带 ⇒ 不同锚点不合并（跨 app 同 path 不复用锚点）
+        List<Node> a = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    appCode: app-x\n"
+                + "    children:\n"
+                + "      - {title: 应用页, path: p1, component: /views/app/index.vue}\n");
+        List<Node> b = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    children:\n"
+                + "      - {title: 平台页, path: p1, component: /views/plat/index.vue}\n");
+        List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
+        Assert.assertEquals("异 appCode ⇒ 两棵独立 topnav", 2, merged.size());
+        validate(merged);
+    }
+
+    @Test
+    public void topNavsWithSameAppCodeStillMerge() {
+        // 正对照：appCode 相同才算同一锚点——归并行为与旧语义一致
+        List<Node> a = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    appCode: app-x\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: app-x}\n");
+        List<Node> b = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    appCode: app-x\n"
+                + "    children:\n"
+                + "      - {title: 页二, path: p2, component: /views/two/index.vue, appCode: app-x}\n");
+        List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
+        Assert.assertEquals("同 appCode 同锚点 ⇒ 并成一棵", 1, merged.size());
+        Assert.assertEquals("子树并集", 2, merged.get(0).children.size());
+        validate(merged);
+    }
+
+    @Test
+    public void childrenWithDifferentAppCodeAreDistinctNodes() {
+        // 同父下同 path 子节点、appCode 不同 ⇒ 不合并成同一节点
+        List<Node> a = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    children:\n"
+                + "      - {title: 平台页, path: p1, component: /views/plat/index.vue}\n");
+        List<Node> b = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    children:\n"
+                + "      - {title: 应用页, path: p1, component: /views/app/index.vue, appCode: app-x}\n");
+        List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
+        Assert.assertEquals("topnav 仍是一棵", 1, merged.size());
+        Assert.assertEquals("异 appCode 子节点分流", 2, merged.get(0).children.size());
+        validate(merged);
+    }
+
+    @Test
+    public void childrenWithSameAppCodeStillMerge() {
+        // 正对照：同 path 同 appCode 子节点照旧并集（一方缺省 component/icon 不算冲突）
+        List<Node> a = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: app-x}\n");
+        List<Node> b = one(""
+                + "menus:\n"
+                + "  - title: 共享导航\n"
+                + "    path: shared\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, icon: SettingOutlined, appCode: app-x}\n");
+        List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
+        Assert.assertEquals(1, merged.size());
+        Assert.assertEquals("同 appCode 同 path ⇒ 同一子节点", 1, merged.get(0).children.size());
+        validate(merged);
+    }
+
+    @Test
+    public void oversizedAppCodeMustThrow() {
+        StringBuilder wide = new StringBuilder();
+        for (int i = 0; i < 65; i++) {
+            wide.append('x');
+        }
+        List<Node> roots = one(""
+                + "menus:\n"
+                + "  - title: 导航甲\n"
+                + "    path: navA\n"
+                + "    appCode: " + wide + "\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue}\n");
+        assertThrowsContains(() -> validate(roots), "appCode 超宽");
+    }
+
+    @Test
+    public void appCodeAtColumnLimitPassesValidation() {
+        // 正对照：恰在列宽 64（对齐 ac_subsystem.app_code）上必须放行
+        StringBuilder full = new StringBuilder();
+        for (int i = 0; i < 64; i++) {
+            full.append('x');
+        }
+        List<Node> roots = one(""
+                + "menus:\n"
+                + "  - title: 导航甲\n"
+                + "    path: navA\n"
+                + "    appCode: " + full + "\n"
+                + "    children:\n"
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue}\n");
+        Assert.assertEquals(64, roots.get(0).appCode.length());
+        validate(roots);
     }
 
     // ==================== 锚点骨架：在场剪枝（宿主缺席整支移除＝薄装机不炸） ====================

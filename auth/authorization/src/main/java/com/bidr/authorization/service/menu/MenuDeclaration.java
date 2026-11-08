@@ -18,7 +18,9 @@ import java.util.regex.Pattern;
  * 多模块同名 topnav 按结构并集合并，同节点字段不一致 fail-fast；跨模块锚点骨架
  * （无 component 无 children 的同名占位节点）由宿主模块声明补全，宿主缺席时
  * pruneAnchorSkeletons 整支剪除（不因他人模块未打包而炸）；
- * 校验＝component 全局唯一（非空者）＋同父 title 唯一＋path 单段合法——冲突即抛，配置错误开发期炸。
+ * 可选 appCode 键＝归属子系统（ac_subsystem.app_code，声明即随船种列；缺省 null＝平台自身），
+ * 判重/合并维度含 app_code——跨 app 同 path 不复用锚点（同 appCode 才算同一锚点）；
+ * 校验＝component 全局唯一（非空者）＋同父 title 唯一＋path 单段合法＋appCode 列宽——冲突即抛，配置错误开发期炸。
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
  * @author Sharp
@@ -37,6 +39,8 @@ public final class MenuDeclaration {
     static final int PATH_MAX = 200;
     static final int COMPONENT_MAX = 255;
     static final int ICON_MAX = 100;
+    /** app_code 列宽（与 ac_subsystem.app_code DDL 对齐，声明超宽在解析期即拦） */
+    static final int APP_CODE_MAX = 64;
 
     private MenuDeclaration() {
     }
@@ -51,6 +55,11 @@ public final class MenuDeclaration {
         public String path;
         public String component;
         public String icon;
+        /** 归属应用（ac_subsystem.app_code；缺省 null＝平台自身）；判重/合并按此维度隔离。
+         * 🔴 逐节点声明、<b>不从父节点继承</b>：父声明而子缺省 ⇒ 子落 NULL 平台自身行、且挂在
+         * app 父行下 ⇒ 读侧两侧皆不可见（平台 IS NULL 不命中其 grand_id 链、app 等值不命中 NULL）
+         * ——静默劈树无报错。整树归属必须每节点显式声明（跨模块骨架同）。 */
+        public String appCode;
         public final List<Node> children = new ArrayList<>();
 
         Node(boolean nav, String source) {
@@ -60,6 +69,11 @@ public final class MenuDeclaration {
 
         public boolean hasComponent() {
             return component != null && !component.isEmpty();
+        }
+
+        /** 声明了 appCode＝子系统中央菜单随船种列；false＝平台自身（库侧落 NULL） */
+        public boolean hasAppCode() {
+            return appCode != null;
         }
 
         /** 目录＝无 component 且有 children（ac_menu 里 component 空、按结构判重的行） */
@@ -122,6 +136,7 @@ public final class MenuDeclaration {
         node.path = trimToNull(map.get("path"));
         node.component = trimToNull(map.get("component"));
         node.icon = trimToNull(map.get("icon"));
+        node.appCode = trimToNull(map.get("appCode"));
         if (node.title == null) {
             throw declError(source, "菜单节点缺 title");
         }
@@ -163,14 +178,17 @@ public final class MenuDeclaration {
         mergedRoots.add(cloneTree(incoming));
     }
 
-    /** 顶级 topnav 同一性（声明集内）：title 或 path 命中即同一棵 */
+    /**
+     * 顶级 topnav 同一性（声明集内）：title 或 path 命中 **且 appCode 相同** 才是同一棵
+     * （null-null 视为相等＝平台自身；跨 app 同 path 不复用锚点）。
+     */
     static boolean sameTopNav(Node a, Node b) {
-        return eq(a.title, b.title) || eq(a.path, b.path);
+        return (eq(a.title, b.title) || eq(a.path, b.path)) && Objects.equals(a.appCode, b.appCode);
     }
 
-    /** 子节点同一性：同父下 path 命中即同一节点（下钻判重的声明侧镜像） */
+    /** 子节点同一性：同父下 path 命中 **且 appCode 相同** 即同一节点（下钻判重的声明侧镜像，null-null 相等） */
     private static boolean sameChild(Node a, Node b) {
-        return eq(a.path, b.path);
+        return eq(a.path, b.path) && Objects.equals(a.appCode, b.appCode);
     }
 
     /** 把 incoming 并入 existing（就地）：标量字段一致性校验，children 按 path 并集。 */
@@ -182,6 +200,7 @@ public final class MenuDeclaration {
         checkFieldConsistent(existing, "path", existing.path, incoming.path);
         checkFieldConsistent(existing, "component", existing.component, incoming.component);
         checkFieldConsistent(existing, "icon", existing.icon, incoming.icon);
+        checkFieldConsistent(existing, "appCode", existing.appCode, incoming.appCode);
         for (Node child : incoming.children) {
             boolean hit = false;
             for (Node existChild : existing.children) {
@@ -236,6 +255,9 @@ public final class MenuDeclaration {
         if (node.icon != null && node.icon.length() > ICON_MAX) {
             throw declError(node.source, "icon 超宽 " + ICON_MAX + "：" + node);
         }
+        if (node.appCode != null && node.appCode.length() > APP_CODE_MAX) {
+            throw declError(node.source, "appCode 超宽 " + APP_CODE_MAX + "：" + node);
+        }
         if (node.hasComponent()) {
             if (node.component.length() > COMPONENT_MAX) {
                 throw declError(node.source, "component 超宽 " + COMPONENT_MAX + "：" + node);
@@ -266,6 +288,7 @@ public final class MenuDeclaration {
         copy.path = src.path;
         copy.component = src.component;
         copy.icon = src.icon;
+        copy.appCode = src.appCode;
         for (Node child : src.children) {
             copy.children.add(cloneTree(child));
         }
