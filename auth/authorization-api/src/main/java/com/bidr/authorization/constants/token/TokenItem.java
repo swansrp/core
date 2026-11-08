@@ -51,6 +51,9 @@ public enum TokenItem {
     // 对接方应用标识（AuthPartner 机器凭证验过后烤入上下文：x-api-key 解出的 appKey，
     // IdP 账密换票端点取它作签发 claim 的 app_id——票的受众接入方）
     APP_KEY,
+    // 渠道账号id（AuthPartner 机器凭证验过后烤入 ac_partner.id，供开放口控制器解析子系统
+    // 归属：ac_subsystem.partner_id → app_code，菜单按归属应用过滤）
+    PARTNER_ID,
     /*
      * 权限列表
      */

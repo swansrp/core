@@ -9,8 +9,9 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,7 +58,7 @@ public class ToolAgentRunner {
      * @param listener     业务钩子（null 视为 NONE：无日志、永不停止）
      * @return 会话结果（见 AgentLoopResult）
      */
-    public AgentLoopResult run(ChatLanguageModel model, String systemPrompt, String userPrompt,
+    public AgentLoopResult run(ChatModel model, String systemPrompt, String userPrompt,
                                List<Object> toolObjects, AgentLoopOptions options, AgentLoopListener listener) {
         // 反射面重载＝既有调用点一律走这里：功能式清单为空，specs 采集与执行路由与改造前一字不差
         return run(model, systemPrompt, userPrompt, toolObjects,
@@ -71,13 +72,13 @@ public class ToolAgentRunner {
      *                        与反射面合并成<b>同一份</b> specs 后才进收窄，所以勾选、装配单、准入名单对两条通道同源；
      *                        🔴 与反射面同名的声明整份失效（代码优先），冲突显形为一条 warn
      */
-    public AgentLoopResult run(ChatLanguageModel model, String systemPrompt, String userPrompt,
+    public AgentLoopResult run(ChatModel model, String systemPrompt, String userPrompt,
                                List<Object> toolObjects, List<FunctionalTool> functionalTools,
                                AgentLoopOptions options, AgentLoopListener listener) {
         AgentLoopListener sink = listener == null ? AgentLoopListener.NONE : listener;
         AgentLoopOptions opt = options == null ? new AgentLoopOptions() : options;
         // 停止检查透传至 LLM 等待层：等待期间轮询停止键，跨实例停止键也能快速收口（不只靠线程中断）
-        ChatLanguageModel logged = new LoggingModel(model, sink::log, sink::shouldStop);
+        ChatModel logged = new LoggingModel(model, sink::log, sink::shouldStop);
         // ---- L1 上下文预算治理：阈值三级取值（option 正值 > sys_config > 默认全关，I9 关闭态零行为变化）----
         int offloadChars = AgentContextBudget.offloadChars(opt.getToolResultOffloadChars());
         int tokenBudget = AgentContextBudget.tokenBudget(opt.getContextTokenBudget());
@@ -162,8 +163,9 @@ public class ToolAgentRunner {
                 }
                 trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
-                Response<AiMessage> resp = logged.generate(messages, specs);
-                AiMessage ai = resp.content();
+                ChatResponse resp = logged.chat(ChatRequest.builder()
+                        .messages(messages).toolSpecifications(specs).build());
+                AiMessage ai = resp.aiMessage();
                 messages.add(ai);
                 if (!ai.hasToolExecutionRequests()) {
                     log.info("工具循环第 {} 轮给出结论，会话结束", round);
@@ -250,12 +252,13 @@ public class ToolAgentRunner {
                     closingSpecs.add(s);
                 }
             }
-            Response<AiMessage> last = closingSpecs.isEmpty()
-                    ? logged.generate(messages) : logged.generate(messages, closingSpecs);
-            if (last.content().hasToolExecutionRequests()) {
+            ChatResponse last = logged.chat(closingSpecs.isEmpty()
+                    ? ChatRequest.builder().messages(messages).build()
+                    : ChatRequest.builder().messages(messages).toolSpecifications(closingSpecs).build());
+            if (last.aiMessage().hasToolExecutionRequests()) {
                 // 收口例外命中（模型坚持 askUser=真歧义）：执行拿到用户口径后无工具直出
-                messages.add(last.content());
-                for (ToolExecutionRequest req : last.content().toolExecutionRequests()) {
+                messages.add(last.aiMessage());
+                for (ToolExecutionRequest req : last.aiMessage().toolExecutionRequests()) {
                     sink.log("收口例外：执行 " + req.name() + " 后无工具直出");
                     sink.onToolCall(req.id(), req.name(), req.arguments());
                     String closingResult = executeTool(req, effectiveTools, admittedToolNames, functionalByName);
@@ -266,15 +269,15 @@ public class ToolAgentRunner {
                             offloadChars, previewChars, false, stats);
                 }
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
-                last = logged.generate(messages);
+                last = logged.chat(ChatRequest.builder().messages(messages).build());
             }
             log.info("工具循环收口完成（上限 {} 轮 / 预算 {}s，超预算={}）",
                     opt.getMaxRounds(), opt.getBudgetSeconds(), budgetHit);
-            return AgentLoopResult.toolLoop(last.content().text(), opt.getMaxRounds());
+            return AgentLoopResult.toolLoop(last.aiMessage().text(), opt.getMaxRounds());
         } catch (UnsupportedOperationException e) {
             log.warn("模型委托不支持工具调用，回落直连生成: {}", e.getMessage());
             sink.log("模型不支持工具调用，回落直连生成");
-            return AgentLoopResult.directFallback(logged.generate(userPrompt));
+            return AgentLoopResult.directFallback(logged.chat(userPrompt));
         } catch (RuntimeException e) {
             if (isInterrupted(e) || Thread.currentThread().isInterrupted()) {
                 log.info("工具循环被线程中断（停止请求），收口返回 STOPPED");
@@ -283,12 +286,12 @@ public class ToolAgentRunner {
             if (isToolUnsupported(e)) {
                 log.warn("模型端点不支持 function calling（{}），回落直连生成", e.getMessage());
                 sink.log("模型端点不支持 function calling，回落直连生成");
-                return AgentLoopResult.directFallback(logged.generate(userPrompt));
+                return AgentLoopResult.directFallback(logged.chat(userPrompt));
             }
             if (isToolLoopExceeded(e)) {
                 log.warn("工具探索轮次超限（{}），回落直连生成", e.getMessage());
                 sink.log("工具探索轮次超限，回落直连生成（基于已有上下文直接产出）");
-                return AgentLoopResult.directFallback(logged.generate(userPrompt));
+                return AgentLoopResult.directFallback(logged.chat(userPrompt));
             }
             throw e;
         }
@@ -296,13 +299,13 @@ public class ToolAgentRunner {
 
     /** 日志包装工厂：非循环链路（如逐表小请求直连）复用同口径的逐轮日志与可中断等待；
      *  stopCheck 传 null 时仅响应线程中断（无停止键轮询） */
-    public static ChatLanguageModel loggingModel(ChatLanguageModel delegate, Consumer<String> logSink) {
+    public static ChatModel loggingModel(ChatModel delegate, Consumer<String> logSink) {
         return new LoggingModel(delegate, logSink, null);
     }
 
     /** 日志包装工厂（带停止键轮询）：等待 LLM 期间周期性检查停止信号，命中即弃子线程收口 */
-    public static ChatLanguageModel loggingModel(ChatLanguageModel delegate, Consumer<String> logSink,
-                                                 BooleanSupplier stopCheck) {
+    public static ChatModel loggingModel(ChatModel delegate, Consumer<String> logSink,
+                                         BooleanSupplier stopCheck) {
         return new LoggingModel(delegate, logSink, stopCheck);
     }
 
@@ -895,8 +898,8 @@ public class ToolAgentRunner {
      * 停止键（跨实例场景线程中断不可达）由等待轮询感知，同样快速收口；
      * 代价是被弃子线程的 HTTP 调用自然跑完（结果丢弃）
      */
-    private static class LoggingModel implements ChatLanguageModel {
-        private final ChatLanguageModel delegate;
+    private static class LoggingModel implements ChatModel {
+        private final ChatModel delegate;
         private final Consumer<String> logSink;
         private final BooleanSupplier stopCheck;
         private final java.util.concurrent.atomic.AtomicInteger round = new java.util.concurrent.atomic.AtomicInteger();
@@ -911,35 +914,29 @@ public class ToolAgentRunner {
             return t;
         });
 
-        LoggingModel(ChatLanguageModel delegate, Consumer<String> logSink, BooleanSupplier stopCheck) {
+        LoggingModel(ChatModel delegate, Consumer<String> logSink, BooleanSupplier stopCheck) {
             this.delegate = delegate;
             this.logSink = logSink;
             this.stopCheck = stopCheck;
         }
 
+        /**
+         * 装饰器收敛为 doChat 单方法（1.23：0.33 的 3 个 generate 重载不再存在；接口方法全为
+         * default，显式 @Override 防漏写静默失效）。String 直连重载走 default 最终路由至此
+         */
         @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages) {
-            return logRound(messages, () -> delegate.generate(messages));
+        public ChatResponse doChat(ChatRequest request) {
+            return logRound(request.messages(), () -> delegate.chat(request));
         }
 
-        @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> specs) {
-            return logRound(messages, () -> delegate.generate(messages, specs));
-        }
-
-        @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification spec) {
-            return logRound(messages, () -> delegate.generate(messages, spec));
-        }
-
-        private Response<AiMessage> logRound(List<ChatMessage> messages, Supplier<Response<AiMessage>> call) {
+        private ChatResponse logRound(List<ChatMessage> messages, Supplier<ChatResponse> call) {
             report("LLM 第 " + round.incrementAndGet() + " 轮请求已发出（携带 " + messages.size() + " 条上下文消息）");
             try {
-                Response<AiMessage> resp = interruptibly(call, stopCheck);
+                ChatResponse resp = interruptibly(call, stopCheck);
                 TokenUsage usage = resp.tokenUsage();
                 String tokens = usage == null ? ""
                         : "（tokens：输入 " + usage.inputTokenCount() + " / 输出 " + usage.outputTokenCount() + "）";
-                AiMessage ai = resp.content();
+                AiMessage ai = resp.aiMessage();
                 if (ai != null && ai.hasToolExecutionRequests()) {
                     // 工具调用轮：把 LLM 决定调的工具与参数摘要透出（工具返回另有工具侧上报）
                     report("LLM 响应已收到，决定调用工具" + tokens);
@@ -972,12 +969,12 @@ public class ToolAgentRunner {
          *  ② 每片间隙查停止键（跨实例/会话键路径，中断不可达时也能收口）；
          *  被停止时恢复中断标记并抛 RuntimeException（上层 isInterrupted 收口为 STOPPED），
          *  子线程的调用不强行取消（OkHttp 无法即时切断），跑完自然回收、结果丢弃 */
-        private static Response<AiMessage> interruptibly(Supplier<Response<AiMessage>> call, BooleanSupplier stopCheck) {
+        private static ChatResponse interruptibly(Supplier<ChatResponse> call, BooleanSupplier stopCheck) {
             // 会话身份显式带进子线程（M14 棒5）：实际 HTTP 调用与用量收口都发生在池线程，
             // 那一层读不到发起线程的上下文——不传，计量行就永远没有会话归属
             // （同装配单把身份当参数交出去的口径，不指望 ThreadLocal 跨线程）
             ModelCallContext identity = ModelCallContexts.current();
-            java.util.concurrent.Future<Response<AiMessage>> future = LLM_CALLS.submit(() -> {
+            java.util.concurrent.Future<ChatResponse> future = LLM_CALLS.submit(() -> {
                 ModelCallContexts.set(identity);
                 try {
                     return call.get();

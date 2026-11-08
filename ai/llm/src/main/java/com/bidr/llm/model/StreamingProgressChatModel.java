@@ -3,11 +3,11 @@ package com.bidr.llm.model;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 
 /**
  * Title: StreamingProgressChatModel
- * Description: 流式模型转同步门面 + 实时进度上报：对外暴露同步 ChatLanguageModel API，
+ * Description: 流式模型转同步门面 + 实时进度上报：对外暴露同步 ChatModel API，
  * 内部走 {@link RawSseStreamingChatModel} 自建 SSE 客户端（reasoning_content 与 content
  * 分离上抛），事件到达期间按节流向 sink 推「思考中·已思 N 字」+ 完整
  * 思考文本（思考阶段，模型 reasoning_content 全文实时上屏）或「应答中·已收 N 字」+
@@ -43,7 +43,7 @@ import java.util.function.Supplier;
  * @since 2026/8/21
  */
 @Slf4j
-public class StreamingProgressChatModel implements ChatLanguageModel {
+public class StreamingProgressChatModel implements ChatModel {
 
     /** live 进度推流节流默认间隔（ms）：轮询间隔 2s 的历史口径（每秒至多一条，每次轮询都能看到变化）；
      *  SSE 链路经全参构造器注入更短间隔 */
@@ -73,7 +73,7 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
     private final Consumer<String> liveSink;
     private final long timeoutSeconds;
     /** 流式首个应答 token 前失败的回落（如网关不支持 stream/stream+tools）；null 表示不回落 */
-    private final ChatLanguageModel fallback;
+    private final ChatModel fallback;
     /** live 推送形态：true=状态行+累积全文（替换式展示链路）；false=仅状态行，全文靠轮末归档（追加式事件流链路） */
     private final boolean liveVerbose;
     /** live 推流节流间隔（ms）：SSE 链路 300ms 级，轮询链路缺省 1000ms */
@@ -87,18 +87,18 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
     }
 
     public StreamingProgressChatModel(RawSseStreamingChatModel delegate, Consumer<String> liveSink,
-                                      long timeoutSeconds, ChatLanguageModel fallback) {
+                                      long timeoutSeconds, ChatModel fallback) {
         this(delegate, liveSink, timeoutSeconds, fallback, true);
     }
 
     public StreamingProgressChatModel(RawSseStreamingChatModel delegate, Consumer<String> liveSink,
-                                      long timeoutSeconds, ChatLanguageModel fallback, boolean liveVerbose) {
+                                      long timeoutSeconds, ChatModel fallback, boolean liveVerbose) {
         this(delegate, liveSink, timeoutSeconds, fallback, liveVerbose, DEFAULT_LIVE_INTERVAL_MS);
     }
 
     /** 全参构造器（M18 棒2 帧率参数化）：liveIntervalMillis 非正回落缺省 1000ms */
     public StreamingProgressChatModel(RawSseStreamingChatModel delegate, Consumer<String> liveSink,
-                                      long timeoutSeconds, ChatLanguageModel fallback, boolean liveVerbose,
+                                      long timeoutSeconds, ChatModel fallback, boolean liveVerbose,
                                       long liveIntervalMillis) {
         this.delegate = delegate;
         this.liveSink = liveSink;
@@ -126,34 +126,24 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
         return fallback != null && streamBroken.get();
     }
 
+    /**
+     * 执行消息生成请求（langchain4j 1.23：0.33 的 3 个 generate 重载收敛为 doChat 单方法，
+     * 消息与工具清单随 {@link ChatRequest} 携带；接口方法全为 default，显式 @Override 防漏写静默失效）
+     */
     @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages) {
+    public ChatResponse doChat(ChatRequest request) {
+        List<ChatMessage> messages = request.messages();
+        List<ToolSpecification> specs = request.toolSpecifications();
         if (syncOnly()) {
-            return fallback.generate(messages);
+            return fallback.chat(request);
         }
-        return call(messages, null, () -> fallback.generate(messages));
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> specs) {
-        if (syncOnly()) {
-            return fallback.generate(messages, specs);
-        }
-        return call(messages, specs, () -> fallback.generate(messages, specs));
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification spec) {
-        if (syncOnly()) {
-            return fallback.generate(messages, spec);
-        }
-        return call(messages, Collections.singletonList(spec), () -> fallback.generate(messages, spec));
+        return call(messages, specs, () -> fallback.chat(request));
     }
 
     /** 流式发起 + 阻塞收口：首个事件前按心跳推「已等 Ns」；思考阶段推思考内容预览，
      *  应答阶段推应答内容预览（均按节流）；自建客户端保证 onError 必达，无需库层缺陷桥接 */
-    private Response<AiMessage> call(List<ChatMessage> messages, List<ToolSpecification> specs,
-                                     Supplier<Response<AiMessage>> syncRetry) {
+    private ChatResponse call(List<ChatMessage> messages, List<ToolSpecification> specs,
+                              Supplier<ChatResponse> syncRetry) {
         long startMs = System.currentTimeMillis();
         int promptChars = 0;
         for (ChatMessage m : messages) {
@@ -168,7 +158,7 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
         AtomicInteger contentChars = new AtomicInteger();
         AtomicLong lastPush = new AtomicLong();
         AtomicBoolean firstEvent = new AtomicBoolean();
-        AtomicReference<Response<AiMessage>> respRef = new AtomicReference<>();
+        AtomicReference<ChatResponse> respRef = new AtomicReference<>();
         AtomicReference<Throwable> errRef = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
         push("等待 LLM 流式响应…");
@@ -226,7 +216,7 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
             }
 
             @Override
-            public void onComplete(Response<AiMessage> response) {
+            public void onComplete(ChatResponse response) {
                 log.info("LLM 流式完成：总 {}s·思考 {} 字·应答 {} 字",
                         (System.currentTimeMillis() - startMs) / 1000, reasoningChars.get(), contentChars.get());
                 // 最终应答全文帧（仅 verbose）：补齐最后一次节流后的尾部应答——1s 节流下末段
@@ -273,8 +263,8 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
             throw new RuntimeException("LLM 流式响应 " + timeoutSeconds + "s 未收口（首事件"
                     + (firstEvent.get() ? "已到" : "未到") + "），请检查 LLM 网关/模型服务状态");
         }
-        Response<AiMessage> resp = respRef.get();
-        if (resp != null && resp.content() != null) {
+        ChatResponse resp = respRef.get();
+        if (resp != null && resp.aiMessage() != null) {
             return resp;
         }
         Throwable err = errRef.get();
@@ -290,7 +280,7 @@ public class StreamingProgressChatModel implements ChatLanguageModel {
             throw new RuntimeException("LLM 流式生成失败: " + err.getMessage(), err);
         }
         // onComplete 未带响应体时以累积片段兜底
-        return Response.from(AiMessage.from(contentBuf.toString()));
+        return ChatResponse.builder().aiMessage(AiMessage.from(contentBuf.toString())).build();
     }
 
     /** 当前节流间隔：累积文本超 16k 自动降频（≥500ms），防超长全文逐帧重发打爆通道 */

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <groupId>com.bidr</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>feishu</artifactId>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+
+    <!-- 飞书身份源适配（原独立仓三模块：base 共享层＋桥接形态＋直连形态，合一收编）：
+         共享服务层（SDK Client＋redis token 缓存＋通讯录拉取＋消息发送）＋桥接形态
+         （IdentityBridge/NotifyChannel SPI 实现＋桥版 SSO/同步控制器）＋直连形态
+         （SSO/同步服务＋直连控制器＋定时任务＋异常告警监听，过渡形态）。
+         装配纪律：模块全 bean 统一挂 @ConditionalOnProperty(prefix="feishu", name="app-id")——
+         宿主不配 feishu.app-id ⇒ 全模块零 bean 激活（模块纯在 classpath 不产生任何副作用，
+         @MetaParam 的 FeishuParam 行随宿主 my.base-package 扫描注册，不属 bean 范畴）；
+         桥接/直连两形态同 FQN 控制器对与同路由（/web/feishu/**），以 feishu.direct 严格互斥
+         （缺省＝桥接；feishu.direct=true＝直连，判别器 config/OnFeishuBridgeForm|OnFeishuDirectForm），
+         互斥由扫描期条件求值保证，永不同时注册。 -->
+    <description>feishu</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>kernel</artifactId>
+            <version>${kernel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>platform</artifactId>
+            <version>${platform.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization</artifactId>
+            <version>${authorization.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>authorization-api</artifactId>
+            <version>${authorization-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bidr</groupId>
+            <artifactId>base-notification</artifactId>
+            <version>${jarVersion}</version>
+        </dependency>
+        <!-- 飞书官方开放平台 SDK（Client 全自动 token 管理＋redis ICache 缓存对接） -->
+        <dependency>
+            <groupId>com.larksuite.oapi</groupId>
+            <artifactId>oapi-sdk</artifactId>
+            <version>2.2.8</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 测试域：jupiter＋mockito 离线单测（桥 login/syncOrg 映射、渠道 enabled/send） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 本模块测试为 JUnit 5（jupiter，迁自独立仓 feishu 模块原形态）：强制 junit-platform
+                 provider——classpath 经 kernel/authorization 传递带入 JUnit4 时，不强制 provider 会
+                 表现为 jupiter 测试被静默跳过（Tests run: 0 假绿面；独立仓同款防呆，棒4 教训入库）。
+                 argLine 由根 pom pluginManagement（${jdk.module.opens}）合并注入，此处不重复声明。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*IT.java</include>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>2.22.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

@@ -9,12 +9,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
-import dev.langchain4j.agent.tool.ToolParameters;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.FinishReason;
-import dev.langchain4j.model.output.Response;
 import dev.langchain4j.model.output.TokenUsage;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -67,7 +68,7 @@ import java.util.function.Consumer;
  * @since 2026/9/17
  */
 @Slf4j
-public class RawSyncChatModel implements ChatLanguageModel {
+public class RawSyncChatModel implements ChatModel {
 
     private static final MediaType JSON_TYPE = MediaType.get("application/json; charset=utf-8");
 
@@ -119,25 +120,17 @@ public class RawSyncChatModel implements ChatLanguageModel {
         this.traceSink = traceSink;
     }
 
+    /**
+     * 执行消息生成请求（langchain4j 1.23：0.33 的 3 个 generate 重载收敛为 doChat 单方法，
+     * 消息与工具清单随 {@link ChatRequest} 携带；接口方法全为 default，显式 @Override 防漏写静默失效）
+     */
     @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages) {
-        return doGenerate(messages, null);
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
-        return doGenerate(messages, toolSpecifications);
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification toolSpecification) {
-        List<ToolSpecification> specs = new ArrayList<>();
-        specs.add(toolSpecification);
-        return doGenerate(messages, specs);
+    public ChatResponse doChat(ChatRequest request) {
+        return doGenerate(request.messages(), request.toolSpecifications());
     }
 
     /** 带重试的生成：服务端错误/网络异常退避重试，4xx 与业务性失败（空产出等）立即抛出 */
-    private Response<AiMessage> doGenerate(List<ChatMessage> messages, List<ToolSpecification> specs) {
+    private ChatResponse doGenerate(List<ChatMessage> messages, List<ToolSpecification> specs) {
         RetryableFailure last = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
@@ -159,7 +152,7 @@ public class RawSyncChatModel implements ChatLanguageModel {
         throw last;
     }
 
-    private Response<AiMessage> callOnce(List<ChatMessage> messages, List<ToolSpecification> specs) {
+    private ChatResponse callOnce(List<ChatMessage> messages, List<ToolSpecification> specs) {
         String baseUrl = provider.getBaseUrl(purposeType);
         String apiKey = provider.getApiKey(purposeType, null);
         String modelName = provider.getModelName(purposeType);
@@ -223,10 +216,14 @@ public class RawSyncChatModel implements ChatLanguageModel {
         if (toolCalls.isEmpty() && !hasText(text)) {
             throw new IllegalStateException("LLM 返回空 content（思考型模型可能被思考耗尽 token）: " + usage);
         }
-        // 0.33 的 AiMessage 不允许同时携带正文与工具调用（构造器直接抛），工具轮取工具调用，
-        // 模型前言文本经 trace 留存（循环协议要求 ai 消息携带 tool_calls 才能回填结果）
+        // 工具轮取工具调用，模型前言文本经 trace 留存（循环协议要求 ai 消息携带 tool_calls 才能回填结果；
+        // 正文与工具调用分离产出，与 0.33 时代的 AiMessage 构造约束保持同一行为）
         AiMessage ai = toolCalls.isEmpty() ? AiMessage.from(text) : AiMessage.from(toolCalls);
-        return Response.from(ai, tokenUsageOf(usage), finishReasonOf(finish));
+        return ChatResponse.builder()
+                .aiMessage(ai)
+                .tokenUsage(tokenUsageOf(usage))
+                .finishReason(finishReasonOf(finish))
+                .build();
     }
 
     /** 连接参数签名（含 Key）：变化即重建客户端，配置改了下次调用生效 */
@@ -338,14 +335,61 @@ public class RawSyncChatModel implements ChatLanguageModel {
         return n;
     }
 
-    /** langchain4j 0.33 ToolParameters → JSON Schema 节点（properties 本身即 schema 片段，直接序列化） */
-    private ObjectNode parametersNode(ToolParameters params) {
+    /**
+     * langchain4j 1.23 JsonObjectSchema → JSON Schema 节点（type/properties/required 三键结构不变）：
+     * 0.33 的 ToolParameters.properties() 本身即裸 map schema 片段可直接序列化；1.23 换成强类型
+     * JsonSchemaElement 树，须逐元素映射回 OpenAI 兼容片段（string/integer/number/boolean/enum/
+     * array/object 嵌套），网关侧看到的 schema 形状与 0.33 等价
+     */
+    private ObjectNode parametersNode(JsonObjectSchema params) {
         ObjectNode n = om.createObjectNode();
-        n.put("type", params.type() == null ? "object" : params.type());
-        n.set("properties", om.valueToTree(params.properties()));
+        n.put("type", "object");
+        ObjectNode props = n.putObject("properties");
+        if (params.properties() != null) {
+            for (Map.Entry<String, dev.langchain4j.model.chat.request.json.JsonSchemaElement> e
+                    : params.properties().entrySet()) {
+                props.set(e.getKey(), schemaNode(e.getValue()));
+            }
+        }
         if (params.required() != null && !params.required().isEmpty()) {
             ArrayNode req = n.putArray("required");
             params.required().forEach(req::add);
+        }
+        return n;
+    }
+
+    /** 单个 JsonSchemaElement → OpenAI 兼容 schema 片段（description 有值才携带，与裸 map 时代形状一致） */
+    private JsonNode schemaNode(dev.langchain4j.model.chat.request.json.JsonSchemaElement el) {
+        ObjectNode n = om.createObjectNode();
+        if (el instanceof dev.langchain4j.model.chat.request.json.JsonStringSchema) {
+            n.put("type", "string");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonIntegerSchema) {
+            n.put("type", "integer");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonNumberSchema) {
+            n.put("type", "number");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonBooleanSchema) {
+            n.put("type", "boolean");
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonEnumSchema) {
+            n.put("type", "string");
+            ArrayNode values = n.putArray("enum");
+            for (String v : ((dev.langchain4j.model.chat.request.json.JsonEnumSchema) el).enumValues()) {
+                values.add(v);
+            }
+        } else if (el instanceof JsonObjectSchema) {
+            n.setAll(parametersNode((JsonObjectSchema) el));
+        } else if (el instanceof dev.langchain4j.model.chat.request.json.JsonArraySchema) {
+            n.put("type", "array");
+            dev.langchain4j.model.chat.request.json.JsonSchemaElement items =
+                    ((dev.langchain4j.model.chat.request.json.JsonArraySchema) el).items();
+            if (items != null) {
+                n.set("items", schemaNode(items));
+            }
+        } else {
+            // 未知元素类型（后续版本新增）：toString 兜底不击穿请求体组装
+            n.put("type", "string");
+        }
+        if (el.description() != null) {
+            n.put("description", el.description());
         }
         return n;
     }

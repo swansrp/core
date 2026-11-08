@@ -118,6 +118,19 @@ public class OssLocalServiceImpl extends BaseOssService {
         }
     }
 
+    @Override
+    public InputStream openStream(String objectName) {
+        Path target = requireInRoot(objectName);
+        if (!Files.exists(target)) {
+            throw new ServiceException("本地对象不存在: " + objectName);
+        }
+        try {
+            return Files.newInputStream(target);
+        } catch (IOException e) {
+            throw new ServiceException("打开本地对象流失败: " + objectName, e);
+        }
+    }
+
     /** 写/读侧用：逃逸直接拒（对象名来自调用方，本机实现等于本地文件系统读写权限） */
     private Path requireInRoot(String objectName) {
         Path target = inRoot(objectName);

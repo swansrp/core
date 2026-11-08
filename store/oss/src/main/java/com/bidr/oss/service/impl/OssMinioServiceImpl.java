@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -78,7 +79,13 @@ public class OssMinioServiceImpl extends BaseOssService {
     @Override
     public String getReadUrl(String url, String fileName) {
         log.info("getReadUrl == {}", getKey(url));
-        return presign(getKey(url), fileName, false);
+        return presign(getKey(url), fileName, false, READ_EXPIRE_SECONDS);
+    }
+
+    @Override
+    public String getReadUrl(String url, String fileName, long expiresSeconds) {
+        log.info("getReadUrl(expires={}) == {}", expiresSeconds, getKey(url));
+        return presign(getKey(url), fileName, false, expiresSeconds);
     }
 
     /**
@@ -90,7 +97,7 @@ public class OssMinioServiceImpl extends BaseOssService {
     public String getPreviewUrl(String url, String fileName) {
         String key = getKey(url);
         log.info("getPreviewUrl == {}", key);
-        return presign(key, fileName, true);
+        return presign(key, fileName, true, READ_EXPIRE_SECONDS);
     }
 
     @Override
@@ -110,8 +117,14 @@ public class OssMinioServiceImpl extends BaseOssService {
         return minioTemplate.getObjectData(bucketName, objectName);
     }
 
+    @Override
+    public InputStream openStream(String objectName) {
+        return minioTemplate.getObject(bucketName, objectName);
+    }
+
     /** 生成 GET 预签名地址（私有桶可匿名访问；inline 时覆盖响应 Content-Type 与内联下载头） */
-    private String presign(String key, String fileName, boolean inline) {
+    private String presign(String key, String fileName, boolean inline, long expiresSeconds) {
+        int expires = (int) Math.min(expiresSeconds, Integer.MAX_VALUE);
         Map<String, String> query = new HashMap<>();
         if (inline) {
             String mime = contentTypeOf(key);
@@ -123,7 +136,7 @@ public class OssMinioServiceImpl extends BaseOssService {
             query.put("response-content-disposition", inline ? inlineDisposition(fileName) : contentDisposition(fileName));
         }
         return query.isEmpty()
-                ? minioTemplate.getObjectLink(bucketName, key, READ_EXPIRE_SECONDS, TimeUnit.SECONDS)
-                : minioTemplate.getObjectLink(bucketName, key, READ_EXPIRE_SECONDS, TimeUnit.SECONDS, query);
+                ? minioTemplate.getObjectLink(bucketName, key, expires, TimeUnit.SECONDS)
+                : minioTemplate.getObjectLink(bucketName, key, expires, TimeUnit.SECONDS, query);
     }
 }

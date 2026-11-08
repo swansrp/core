@@ -72,3 +72,9 @@ menus:
         path: TenantManage
         component: /framework/views/MainContent/SystemManage/TenantManage
         icon: TeamOutlined
+      # ——应用管理（方案B 棒2 交付页 views/MainContent/SystemManage/SubsystemMaintenance/index.vue，
+      #   端点 AcSubsystemController 住 auth（/web/admin/subsystem），子系统注册表维护面）——
+      - title: 应用管理
+        path: SubsystemMaintenance
+        component: /framework/views/MainContent/SystemManage/SubsystemMaintenance/index.vue
+        icon: AppstoreOutlined

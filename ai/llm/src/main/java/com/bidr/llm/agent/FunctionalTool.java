@@ -1,7 +1,7 @@
 package com.bidr.llm.agent;
 
-import dev.langchain4j.agent.tool.ToolParameters;
 import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -37,8 +37,12 @@ public interface FunctionalTool {
     /** 给模型看的说明，等价于 {@code @Tool} 的 value */
     String description();
 
-    /** 参数 JSON schema，等价于反射从方法签名倒推出来的那份（可直接由数据反序列化） */
-    ToolParameters parameters();
+    /**
+     * 参数 JSON schema，等价于反射从方法签名倒推出来的那份（可直接由数据反序列化）。
+     * langchain4j 1.23：0.33 的 {@code ToolParameters}（裸 map）换成强类型
+     * {@link JsonObjectSchema}（builder 构属性/必填），与反射腿 spec 产出同一类型
+     */
+    JsonObjectSchema parameters();
 
     /**
      * 执行：入参是模型给出的 arguments JSON 解析后的扁平 Map（键＝schema 里的属性名，值＝JSON 原值，
@@ -60,7 +64,7 @@ public interface FunctionalTool {
     }
 
     /** 轻量工厂：把现成的 service 方法用一个 lambda 声明成工具（处理器即那次调用） */
-    static FunctionalTool of(String name, String description, ToolParameters parameters,
+    static FunctionalTool of(String name, String description, JsonObjectSchema parameters,
                              Function<Map<String, Object>, String> handler) {
         return new Declared(name, description, parameters, handler);
     }
@@ -70,10 +74,10 @@ public interface FunctionalTool {
 
         private final String name;
         private final String description;
-        private final ToolParameters parameters;
+        private final JsonObjectSchema parameters;
         private final Function<Map<String, Object>, String> handler;
 
-        public Declared(String name, String description, ToolParameters parameters,
+        public Declared(String name, String description, JsonObjectSchema parameters,
                         Function<Map<String, Object>, String> handler) {
             this.name = name;
             this.description = description;
@@ -92,7 +96,7 @@ public interface FunctionalTool {
         }
 
         @Override
-        public ToolParameters parameters() {
+        public JsonObjectSchema parameters() {
             return parameters;
         }
 

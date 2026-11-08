@@ -17,8 +17,8 @@ import java.util.Set;
 
 /**
  * Title: IdentityMirrorSchemaSyncTest
- * Description: 镜像四表建表面守卫（T2.3d，离线反射，不起 Spring 不连库；精神照主仓
- * inkhub-common TenantAppSchemaSyncTest 的 DDL↔实体逐列同步闸，core 内自建轻版）——
+ * Description: 镜像四表建表面守卫（T2.3d，离线反射，不起 Spring 不连库；精神源自主仓旧
+ * TenantAppSchemaSyncTest（2026-11-07 已随 tenant_app 下沉 core 删除）的 DDL↔实体逐列同步闸，core 内自建轻版）——
  * {@code setCreateDDL} 的列集 == 实体 @TableName/@TableId/@TableField 推导列集，
  * 双向相等（漏列＝首条 INSERT 报 Unknown column，多列＝僵尸列没人写）。
  * 另钉各表承诺面键：UK(customer_number)/UK(user_name)/UK(tenant_code)/UK(user_id,tenant_id)/UK(state_key)。
@@ -66,7 +66,7 @@ public class IdentityMirrorSchemaSyncTest {
                 new IdmMirrorStateSchema().getCreateSql().contains("UNIQUE KEY `uk_state_key` (`state_key`)"));
     }
 
-    // ======================== 反射脚手架（形态随主仓 TenantAppSchemaSyncTest，轻版） ========================
+    // ======================== 反射脚手架（形态源自主仓旧 TenantAppSchemaSyncTest——已删，此处自持） ========================
 
     /** 双向列集相等＋表名一致＋惯例列在位（valid/create_at/update_at 按 per-table 预期） */
     private static void assertSync(BaseMybatisSchema<?> schema, Class<?> entityClass, String expectedTable) {

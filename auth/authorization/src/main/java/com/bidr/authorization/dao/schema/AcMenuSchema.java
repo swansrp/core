@@ -33,6 +33,7 @@ public class AcMenuSchema extends BaseMybatisSchema<AcMenu> {
                 "  `status` char(1) DEFAULT '0' COMMENT '菜单状态（0正常 1停用）',\n" +
                 "  `perms` varchar(100) DEFAULT NULL COMMENT '权限标识',\n" +
                 "  `icon` varchar(100) DEFAULT '#' COMMENT '菜单图标',\n" +
+                "  `app_code` varchar(64) DEFAULT NULL COMMENT '归属应用（ac_subsystem.app_code；NULL=平台自身）',\n" +
                 "  `create_by` varchar(50) DEFAULT NULL COMMENT '创建者',\n" +
                 "  `create_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',\n" +
                 "  `update_by` varchar(50) DEFAULT NULL COMMENT '更新者',\n" +
@@ -41,8 +42,15 @@ public class AcMenuSchema extends BaseMybatisSchema<AcMenu> {
                 "  PRIMARY KEY (`menu_id`) USING BTREE,\n" +
                 "  KEY `pid` (`pid`),\n" +
                 "  KEY `grand_id` (`grand_id`),\n" +
-                "  KEY `key` (`key`)\n" +
+                "  KEY `key` (`key`),\n" +
+                "  KEY `app_code` (`app_code`)\n" +
                 ") COMMENT='菜单权限表';");
+
+        // v1（主系统开放口·方案B）：存量库补归属应用列——setCreateDDL 对已存在表 no-op，
+        // 加列只走本升级腿；shouldSkip 按「app_code 列已存在」幂等跳过（M-1）。
+        setUpgradeDDL(1, "ALTER TABLE `ac_menu` " +
+                "ADD COLUMN `app_code` varchar(64) DEFAULT NULL COMMENT '归属应用（ac_subsystem.app_code；NULL=平台自身）', " +
+                "ADD KEY `app_code` (`app_code`);");
 
         // 默认菜单行已迁至本模块 resources/menu-seed.yml（MenuSeeder 启动期幂等播种）；
         // initData 只在建表当次执行，已上线库不受影响——新装机出默认菜单只走 yml 一条正源。

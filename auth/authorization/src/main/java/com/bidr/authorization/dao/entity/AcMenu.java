@@ -170,6 +170,14 @@ public class AcMenu {
     private String icon;
 
     /**
+     * 归属应用（ac_subsystem.app_code；NULL=平台自身）
+     */
+    @TableField(value = "app_code")
+    @ApiModelProperty(value = "归属应用（ac_subsystem.app_code；NULL=平台自身）")
+    @Size(max = 64, message = "归属应用最大长度要小于 64")
+    private String appCode;
+
+    /**
      * 创建者
      */
     @TableField(value = "create_by", fill = FieldFill.INSERT)

@@ -3,7 +3,7 @@ package com.bidr.document;
 import com.bidr.document.builtin.BuiltInDispatcher;
 import com.bidr.document.builtin.CappedIntakeStep;
 import com.bidr.document.builtin.DefaultArtifactStep;
-import com.bidr.document.builtin.VisionTranscriber;
+import com.bidr.document.builtin.NoopVisionTranscriber;
 import com.bidr.document.spi.ArtifactStep;
 import com.bidr.document.spi.ConvertStep;
 import com.bidr.document.spi.EnrichStep;
@@ -66,13 +66,14 @@ public class DocumentProcessor {
      * @param properties          硬参数（null＝{@link DocumentProperties#defaults()}）
      * @param convertSteps        convert 外挂腿（装配序；convert 槽无内置实现）
      * @param transcribeStep      选型后的增强转写腿（null＝走内置）
-     * @param visionConfigProvider 视觉配置口（null＝多模态只能调用时显式传入）
+     * @param visionTranscriber   多模态转录口（null＝占位实现，扫描页/图片被调即抛操作指引；
+     *                            真身在 ai/llm，装配层注入）
      * @param enrichSteps         后处理增强（空＝直通）
      * @param artifactStep        产物落形（null＝默认直包装）
      * @param intakeStep          受理（null＝大小闸读全）
      */
     public DocumentProcessor(DocumentProperties properties, List<ConvertStep> convertSteps,
-            TranscribeStep transcribeStep, VisionConfigProvider visionConfigProvider,
+            TranscribeStep transcribeStep, VisionTranscriber visionTranscriber,
             List<EnrichStep> enrichSteps, ArtifactStep artifactStep, IntakeStep intakeStep) {
         this.properties = properties == null ? DocumentProperties.defaults() : properties;
         this.convertSteps = convertSteps == null ? Collections.<ConvertStep>emptyList() : convertSteps;
@@ -80,16 +81,17 @@ public class DocumentProcessor {
         this.enrichSteps = enrichSteps == null ? Collections.<EnrichStep>emptyList() : enrichSteps;
         this.artifactStep = artifactStep == null ? new DefaultArtifactStep() : artifactStep;
         this.intakeStep = intakeStep == null ? new CappedIntakeStep(this.properties) : intakeStep;
-        VisionTranscriber visionTranscriber = new VisionTranscriber(visionConfigProvider);
-        this.builtIn = new BuiltInDispatcher(this.properties, visionTranscriber);
+        this.builtIn = new BuiltInDispatcher(this.properties,
+                visionTranscriber != null ? visionTranscriber : new NoopVisionTranscriber());
         this.router = new FileRouter(this.convertSteps, transcribeStep, this.builtIn);
     }
 
     /**
-     * 纯内置档（无 convert 腿、无增强转写腿）——历史 FileMarkdownService 无外部腿时的等价形态。
+     * 纯内置档（无 convert 腿、无增强转写腿）——历史 FileMarkdownService 无外部腿时的等价形态
+     * （多模态转录口传 null＝占位实现，llm 在场的真实现由装配层注入门面构造）。
      */
-    public static DocumentProcessor defaults(VisionConfigProvider visionConfigProvider) {
-        return new DocumentProcessor(null, null, null, visionConfigProvider, null, null, null);
+    public static DocumentProcessor defaults(VisionTranscriber visionTranscriber) {
+        return new DocumentProcessor(null, null, null, visionTranscriber, null, null, null);
     }
 
     /**

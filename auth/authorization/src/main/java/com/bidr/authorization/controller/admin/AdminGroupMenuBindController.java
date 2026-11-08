@@ -6,6 +6,7 @@ import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.dao.entity.AcGroup;
 import com.bidr.authorization.dao.entity.AcGroupMenu;
 import com.bidr.authorization.dao.entity.AcMenu;
+import com.bidr.authorization.service.permit.MenuService;
 import com.bidr.authorization.vo.menu.MenuTreeRes;
 import com.bidr.kernel.controller.BaseBindController;
 import com.bidr.kernel.utils.FuncUtil;
@@ -15,6 +16,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -31,10 +33,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminGroupMenuBindController extends BaseBindController<AcGroup, AcGroupMenu, AcMenu, AcGroup, AcMenu> {
 
-    @ApiOperation(value = "获取用户组对应菜单树", notes = "全部")
+    @ApiOperation(value = "获取用户组对应菜单树", notes = "全部；appCode 缺省/空＝平台自身（方案B 棒3）")
     @RequestMapping(value = "/menu/tree", method = RequestMethod.GET)
-    public List<MenuTreeRes> getMenuTree(String entityId) {
-        List<AcMenu> bindList = super.getBindList(entityId);
+    public List<MenuTreeRes> getMenuTree(String entityId, @RequestParam(required = false) String appCode) {
+        // this. 而非 super.：虚派发到同一实现（本类无覆写，生产行为不变），留出测试拦截缝
+        List<AcMenu> bindList = MenuService.narrowByAppCode(getBindList(entityId), appCode);
         for (AcMenu acMenu : bindList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());

@@ -1,5 +1,8 @@
 package com.bidr.authorization.service.tenant;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.bidr.authorization.bo.account.AccountInfo;
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.dao.entity.AcTenant;
@@ -9,8 +12,11 @@ import com.bidr.authorization.dao.mapper.AcUserDao;
 import com.bidr.authorization.dao.repository.AcTenantService;
 import com.bidr.authorization.dao.repository.AcUserTenantService;
 import com.bidr.authorization.holder.AccountContext;
+import com.bidr.authorization.vo.tenant.TenantUserLookupVO;
 import com.bidr.kernel.constant.CommonConst;
+import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,6 +43,9 @@ import java.nio.file.Paths;
  * <li>负对照源码针（腿 10）：service 源码文本禁止出现 TenantContext／getTenantIds 消费，
  * 判定函数自身用合成样本自证能抓（照 AuthAdminGateConventionTest 腿 3 的针自证纪律），
  * 并断正针 getRelation 现查口确在源码里（防把现查删了后 grep 反而"干净"的假绿）。</li>
+ * <li>加成员前按人精确查（腿 L1~L6）：工号/手机号恰 1 条命中回 {@link TenantUserLookupVO}
+ * 四字段、查无/多条歧义人话业务错、关键字入参闸（空白/超长/trim）、源码针钉四列精确等值＋
+ * 无模糊面＋VO 最小面（判权在控制器类级闸，本组不触判权）。</li>
  * </ul>
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
@@ -49,6 +58,12 @@ public class AcTenantPortalServiceTest {
     private static final Long OTHER_TENANT_ID = 9L;
     private static final Long USER_ID = 100L;
     private static final String OPERATOR = "E001";
+
+    static {
+        // 离线建 TableInfo 缓存：lookupUser 的 LambdaQueryWrapper 解析 lambda 列名要用它
+        // （AcSubsystemServiceTest 同款）
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), AcUser.class);
+    }
 
     @Before
     public void setUp() {
@@ -96,6 +111,17 @@ public class AcTenantPortalServiceTest {
                     e.getErrCode() instanceof AccountErrCode);
             return (AccountErrCode) e.getErrCode();
         }
+    }
+
+    /** 计数判定函数（腿 L6 源码针用）：返回 content 中 needle 出现次数 */
+    private static int countOccurrences(String content, String needle) {
+        int count = 0;
+        int idx = content.indexOf(needle);
+        while (idx >= 0) {
+            count++;
+            idx = content.indexOf(needle, idx + needle.length());
+        }
+        return count;
     }
 
     // ==================== 判权矩阵（腿 1~4） ====================
@@ -395,5 +421,143 @@ public class AcTenantPortalServiceTest {
         } finally {
             AccountContext.remove();
         }
+    }
+
+    // ==================== 加成员前按人精确查（腿 L1~L6） ====================
+
+    /** lookup 命中夹具：四字段齐装的有效用户 */
+    private static AcUser hitUser(Long userId, String customerNumber, String name, String phoneNumber) {
+        AcUser user = new AcUser();
+        user.setUserId(userId);
+        user.setCustomerNumber(customerNumber);
+        user.setName(name);
+        user.setPhoneNumber(phoneNumber);
+        user.setValid(CommonConst.YES);
+        return user;
+    }
+
+    /** lookup 取数 stub：四路等值查询喂固定命中集（查人本体不触判权——判权在控制器类级闸） */
+    private static AcUserDao lookupDao(java.util.List<AcUser> hits) {
+        AcUserDao dao = Mockito.mock(AcUserDao.class);
+        Mockito.when(dao.selectList(Mockito.<Wrapper<AcUser>>any())).thenReturn(hits);
+        return dao;
+    }
+
+    private static AcTenantPortalService lookupService(AcUserDao dao) {
+        return new AcTenantPortalService(
+                Mockito.mock(AcTenantService.class), Mockito.mock(AcUserTenantService.class), null, dao);
+    }
+
+    /** 腿 L1：按工号精确命中 ⇒ 恰 1 条，VO 四字段逐列映射（确认添加即以 userId 调既有 add 契约） */
+    @Test
+    public void lookupByCustomerNumberReturnsSingleHitVo() {
+        AcUserDao dao = lookupDao(java.util.Collections.singletonList(
+                hitUser(777L, "E1024", "张三", "13800001234")));
+        TenantUserLookupVO vo = lookupService(dao).lookupUser("E1024");
+        Assert.assertEquals("命中必须回 userId（add 契约零变化的前提）", Long.valueOf(777L), vo.getUserId());
+        Assert.assertEquals("工号列", "E1024", vo.getCustomerNumber());
+        Assert.assertEquals("姓名列", "张三", vo.getName());
+        Assert.assertEquals("手机号列", "13800001234", vo.getPhoneNumber());
+    }
+
+    /** 腿 L2：按手机号精确命中 ⇒ 同一恰 1 条出口（四路等值的第二路，真机主验路径之一） */
+    @Test
+    public void lookupByPhoneNumberReturnsSingleHitVo() {
+        AcUserDao dao = lookupDao(java.util.Collections.singletonList(
+                hitUser(888L, "E2048", "李四", "13900005678")));
+        TenantUserLookupVO vo = lookupService(dao).lookupUser("13900005678");
+        Assert.assertEquals(Long.valueOf(888L), vo.getUserId());
+        Assert.assertEquals("手机号命中也必须回齐核对四字段", "13900005678", vo.getPhoneNumber());
+        Assert.assertEquals("E2048", vo.getCustomerNumber());
+        Assert.assertEquals("李四", vo.getName());
+    }
+
+    /** 腿 L3：查无 ⇒ 人话「查无此人：〈关键字〉」业务错（前端 showErr=false 红字的来源） */
+    @Test
+    public void lookupMissDeniesWithHumanMessage() {
+        AcUserDao dao = lookupDao(new java.util.ArrayList<>());
+        try {
+            lookupService(dao).lookupUser("E9999");
+            Assert.fail("查无必须业务错拒绝，不得返回 null/空 VO");
+        } catch (ServiceException e) {
+            Assert.assertEquals("查无腿错误码", ErrCodeSys.SYS_ERR_MSG, e.getErrCode());
+            Assert.assertTrue("文案必须是人话「查无此人」并回显关键字，实际：" + e.getMessage(),
+                    String.valueOf(e.getMessage()).contains("查无此人")
+                            && String.valueOf(e.getMessage()).contains("E9999"));
+        }
+    }
+
+    /** 腿 L4：多条命中 ⇒ 歧义拒「匹配到多条账号」（姓名重名场景的兜底，绝不静默选一条） */
+    @Test
+    public void lookupAmbiguousDeniesWithHumanMessage() {
+        java.util.List<AcUser> twoZhangSan = new java.util.ArrayList<>();
+        twoZhangSan.add(hitUser(777L, "E1024", "张三", "13800001234"));
+        twoZhangSan.add(hitUser(888L, "E2048", "张三", "13900005678"));
+        AcUserDao dao = lookupDao(twoZhangSan);
+        try {
+            lookupService(dao).lookupUser("张三");
+            Assert.fail("多条命中必须歧义拒，不得静默取第一条");
+        } catch (ServiceException e) {
+            Assert.assertEquals("歧义腿错误码", ErrCodeSys.SYS_ERR_MSG, e.getErrCode());
+            Assert.assertTrue("文案必须指向歧义并给出更精确的出路，实际：" + e.getMessage(),
+                    String.valueOf(e.getMessage()).contains("匹配到多条账号"));
+        }
+    }
+
+    /** 腿 L5：关键字入参闸——空白拒（PA_PARAM_NULL）、超 50 位拒（人话超长文案）、trim 后返回 */
+    @Test
+    public void lookupKeywordGateRejectsBlankAndOverlong() {
+        try {
+            AcTenantPortalService.requireValidLookupKeyword("   ");
+            Assert.fail("空白关键字必须拒");
+        } catch (ServiceException e) {
+            Assert.assertEquals(ErrCodeSys.PA_PARAM_NULL, e.getErrCode());
+        }
+        StringBuilder overlong = new StringBuilder("E");
+        for (int i = 0; i < 50; i++) {
+            overlong.append('1');
+        }
+        try {
+            AcTenantPortalService.requireValidLookupKeyword(overlong.toString());
+            Assert.fail("超长关键字必须拒（51 位 > 四列等值上界 50）");
+        } catch (ServiceException e) {
+            Assert.assertEquals(ErrCodeSys.SYS_ERR_MSG, e.getErrCode());
+            Assert.assertTrue("文案必须指向超长，实际：" + e.getMessage(),
+                    String.valueOf(e.getMessage()).contains("超长"));
+        }
+        Assert.assertEquals("trim 后串供查询与文案回显共用", "E1",
+                AcTenantPortalService.requireValidLookupKeyword(" E1 "));
+    }
+
+    /**
+     * 腿 L6（源码针，腿 10 同纪律）：lookup 的四路等值四列必须全在（工号/手机号/登录名/姓名——
+     * 防悄悄砍列收窄家规）、全文件无模糊查询面（.like( 不得出现——M-1 精确等值不模糊）、
+     * 入参闸在查询之前（空白/超长先拒不进查询）；VO 最小面钉四字段（防敏感列爬入）。
+     */
+    @Test
+    public void lookupSourcePinsFourColumnExactEqualityAndMinimalVo() throws IOException {
+        Path moduleRoot = Paths.get(System.getProperty("basedir", System.getProperty("user.dir")))
+                .toAbsolutePath().normalize();
+        Path source = moduleRoot.resolve(
+                "src/main/java/com/bidr/authorization/service/tenant/AcTenantPortalService.java");
+        Assert.assertTrue("service 源文件定位失效（针会空转，拒绝假绿）: " + source, Files.isRegularFile(source));
+        String text = new String(Files.readAllBytes(source), StandardCharsets.UTF_8);
+
+        Assert.assertTrue("四路等值缺工号列", text.contains("eq(AcUser::getCustomerNumber, kw)"));
+        Assert.assertTrue("四路等值缺手机号列", text.contains("or().eq(AcUser::getPhoneNumber, kw)"));
+        Assert.assertTrue("四路等值缺登录名列", text.contains("or().eq(AcUser::getUserName, kw)"));
+        Assert.assertTrue("四路等值缺姓名列", text.contains("or().eq(AcUser::getName, kw)"));
+        Assert.assertFalse("查人只做精确等值，不得引入模糊查询面（.like(）", text.contains(".like("));
+        Assert.assertTrue("入参闸必须在（空白/超长先拒不进查询）",
+                text.contains("requireValidLookupKeyword"));
+
+        Path vo = moduleRoot.resolve(
+                "src/main/java/com/bidr/authorization/vo/tenant/TenantUserLookupVO.java");
+        Assert.assertTrue("VO 源文件定位失效: " + vo, Files.isRegularFile(vo));
+        String voText = new String(Files.readAllBytes(vo), StandardCharsets.UTF_8);
+        Assert.assertEquals("查人回显必须钉死最小面四字段（多给一列敏感字段都会被抓）",
+                4, countOccurrences(voText, "@ApiModelProperty"));
+        Assert.assertEquals("回显 VO 只许 userId/customerNumber/name/phoneNumber 四个字段（按字段声明数钉死）",
+                4, countOccurrences(voText, "private "));
     }
 }

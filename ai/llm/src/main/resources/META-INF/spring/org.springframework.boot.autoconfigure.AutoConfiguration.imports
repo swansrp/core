@@ -1,2 +1,3 @@
 com.bidr.llm.config.LlmDefaultAutoConfiguration
+com.bidr.llm.config.LlmDocumentToolsAutoConfiguration
 com.bidr.llm.config.AgentSessionAutoConfiguration

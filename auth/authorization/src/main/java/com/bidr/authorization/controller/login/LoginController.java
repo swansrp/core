@@ -88,10 +88,18 @@ public class LoginController {
     @Auth(AuthToken.class)
     @RequestMapping(value = "/password/init", method = RequestMethod.POST)
     @CaptchaVerify("INIT_PASSWORD_CAPTCHA")
-    public LoginRes initPassword(@Validated InitPasswordReq req) {
+    public LoginRes initPassword(@Validated InitPasswordReq req, HttpServletResponse response) {
         passwordService.initPassword(req);
         LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
         afterLogin(res);
+        // 会话 cookie（2026-11-08 对齐 login 腿）：首设密链同样是"登录成功"路径——该链用户多为
+        // SSO 过来的新号，登录后必经子系统 iframe（authorize 整页导航只认 cookie 回退），
+        // 不种则 iframe 内 authorize 判未登录 302 回登录页＝单点断裂（e2e-20261107 实锤场景）。
+        // 形态/口径与 login 腿逐字一致（见上方注释）。
+        if (FuncUtil.isNotEmpty(res.getAccessToken())) {
+            response.addHeader("Set-Cookie", OAuth2IdpController.SESSION_COOKIE + "="
+                    + res.getAccessToken() + "; Path=/; HttpOnly; SameSite=Lax");
+        }
         return res;
     }
 

@@ -12,7 +12,9 @@ import com.bidr.authorization.dao.repository.AcPartnerHistoryService;
 import com.bidr.authorization.dao.repository.AcPartnerService;
 import com.bidr.authorization.holder.AccountContext;
 import com.bidr.authorization.holder.TenantContext;
+import com.bidr.kernel.config.response.ApiResultStatus;
 import com.bidr.kernel.config.response.Response;
+import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.utils.Base64Util;
 import com.bidr.kernel.utils.HttpUtil;
 import com.bidr.kernel.utils.JsonUtil;
@@ -50,6 +52,30 @@ public class AuthPartner implements AuthRole {
         Validator.assertTrue(info.length == 2, AccountErrCode.AC_PARTNER_SECRET_INVALID);
         AcPartner acPartner = acPartnerService.getByAppKey(info[0]);
         Validator.assertNotNull(acPartner, AccountErrCode.AC_PARTNER_NOT_EXISTED);
+        // status 闸（fail-closed）：照 OpenApiLoginServiceImpl#getToken 先例——命中行后先判启用
+        // 再比秘钥。停用的 partner 即便秘钥比对通过也不放行，且以 1027 直陈「渠道不可用」，
+        // 不让后续秘钥比对用 1030 掩盖停用事实。
+        if (!ActiveStatusDict.ACTIVATE.getValue().equals(acPartner.getStatus())) {
+            // inline 补写审计：validate 抛异常后 completion 不会执行（history 属性未挂、判空早退），
+            // 停用拒绝若不在此处落账，这一枪就无痕。先记后拒：status/responseAt/message 填拒绝
+            // 语义，落库形态与 completion 同构（ServiceException → HTTP 200 + 错误码信封）。
+            AcPartnerHistory rejected = buildPartnerHistory(request, acPartner);
+            rejected.setStatus(HttpServletResponse.SC_OK);
+            rejected.setResponseAt(new Date());
+            rejected.setMessage(JsonUtil.toJson(new ApiResultStatus(AccountErrCode.AC_PARTNER_NOT_AVAILABLE.getErrCode(),
+                    AccountErrCode.AC_PARTNER_NOT_AVAILABLE.getErrMsg(), null), false, false, true));
+            // 审计尽力而为（S-1）：inline 落库失败不得劫持下面的 1027 拒绝契约——
+            // 否则干净的「渠道不可用」业务信封劣化为系统错误信封，审计意图也未达成
+            // （异常连 log 都没有）。记 ERROR 后继续走拒绝，与 completion
+            // 「审计失败不影响响应」的容忍度对齐。
+            try {
+                acPartnerHistoryService.insert(rejected);
+            } catch (Exception e) {
+                log.error("停用 partner 拒绝审计落库失败", e);
+            }
+            Validator.assertEquals(acPartner.getStatus(), ActiveStatusDict.ACTIVATE.getValue(),
+                    AccountErrCode.AC_PARTNER_NOT_AVAILABLE);
+        }
         Validator.assertEquals(acPartner.getAppSecret(), info[1], AccountErrCode.AC_PARTNER_SECRET_INVALID);
         buildContext(acPartner);
         // 机器凭证＝平台级服务间凭证（ac_partner 本就是平台登记面）：显式置平台档，
@@ -72,10 +98,13 @@ public class AuthPartner implements AuthRole {
     }
 
     private void buildContext(AcPartner acPartner) {
-        Map<String, Object> map = new HashMap<>(2);
+        Map<String, Object> map = new HashMap<>(4);
         map.put(TokenItem.PLATFORM.name(), acPartner.getPlatform());
         // appKey 烤入上下文：IdP 账密换票端点取它作签发 claim 的 app_id（票的受众接入方）
         map.put(TokenItem.APP_KEY.name(), acPartner.getAppKey());
+        // partnerId 烤入上下文：开放口控制器按 ac_subsystem.partner_id 解析菜单归属应用
+        // （app_code）——机器凭证现场已持有 ac_partner 整行，id 顺手烤入免二次查表
+        map.put(TokenItem.PARTNER_ID.name(), acPartner.getId());
         AccountInfo accountInfo = new AccountInfo();
         accountInfo.setExtraData(map);
         AccountContext.set(accountInfo);

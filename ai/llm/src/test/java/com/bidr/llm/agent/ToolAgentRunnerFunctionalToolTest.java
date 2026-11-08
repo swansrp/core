@@ -2,9 +2,9 @@ package com.bidr.llm.agent;
 
 import com.bidr.kernel.utils.BeanUtil;
 import dev.langchain4j.agent.tool.Tool;
-import dev.langchain4j.agent.tool.ToolParameters;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -279,17 +279,19 @@ public class ToolAgentRunnerFunctionalToolTest {
                 ScriptedModel.Step.done("结论：已完成"));
     }
 
-    /** 参数 schema 的简写工厂：name/type 成对给出，required＝全部（与反射面默认一致） */
-    private static ToolParameters objectParams(String... nameAndTypePairs) {
-        Map<String, Map<String, Object>> properties = new LinkedHashMap<>();
+    /** 参数 schema 的简写工厂：name/type 成对给出（本测试全为 string 型），required＝全部（与反射面默认一致）。
+     *  lc4j 1.23 起声明式参数 schema 用 JsonObjectSchema（dev.langchain4j.model.chat.request.json） */
+    private static JsonObjectSchema objectParams(String... nameAndTypePairs) {
+        JsonObjectSchema.Builder builder = JsonObjectSchema.builder();
         List<String> required = new ArrayList<>();
         for (int i = 0; i + 1 < nameAndTypePairs.length; i += 2) {
-            Map<String, Object> prop = new LinkedHashMap<>();
-            prop.put("type", nameAndTypePairs[i + 1]);
-            properties.put(nameAndTypePairs[i], prop);
+            if (!"string".equals(nameAndTypePairs[i + 1])) {
+                throw new IllegalArgumentException("简写工厂只覆盖 string 型参数: " + nameAndTypePairs[i + 1]);
+            }
+            builder.addStringProperty(nameAndTypePairs[i]);
             required.add(nameAndTypePairs[i]);
         }
-        return ToolParameters.builder().type("object").properties(properties).required(required).build();
+        return builder.required(required).build();
     }
 
     private static void stubFilterKeeping(String... names) {

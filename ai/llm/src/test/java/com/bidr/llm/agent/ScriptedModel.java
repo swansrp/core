@@ -5,8 +5,9 @@ import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.List;
 /**
  * Title: ScriptedModel
  * Description: 层 1 断言层假模型（沿用 ToolAgentRunnerToolEventTest.ScriptedModel 风格，零外部依赖）：
- * 按脚本步骤产出「工具调用轮 / 结论轮」；每次 generate 前对入窗消息执行 I1 配对自检
+ * 按脚本步骤产出「工具调用轮 / 结论轮」；每次 chat 前对入窗消息执行 I1 配对自检
  * （每个带 toolExecutionRequests 的 AiMessage 之后必须紧随、同序、同数量、id 一致地跟着
  * ToolExecutionResultMessage，且无孤立结果——违反即 AssertionError 使测试失败，模拟端点 400），
  * 并记录逐轮计量视图（条数/字符/估算 token/specs），供对照数字表与断言取数
@@ -25,7 +26,7 @@ import java.util.List;
  * @author sharp
  * @since 2026/9/25
  */
-public class ScriptedModel implements ChatLanguageModel {
+public class ScriptedModel implements ChatModel {
 
     /** 脚本一步：要么发起一组工具调用（可多个=并行形态），要么给结论文本 */
     public static final class Step {
@@ -54,7 +55,7 @@ public class ScriptedModel implements ChatLanguageModel {
         return ToolExecutionRequest.builder().id(id).name(name).arguments(argsJson).build();
     }
 
-    /** 一轮 generate 的入窗快照（I8 校准与对照表取数入口） */
+    /** 一轮 chat 的入窗快照（I8 校准与对照表取数入口） */
     public static final class RoundView {
         public int round;
         public int messageCount;
@@ -77,13 +78,11 @@ public class ScriptedModel implements ChatLanguageModel {
         this.steps = Arrays.asList(steps);
     }
 
+    /** doChat 在 1.23 为 default 方法：fake 必须显式覆写，漏写＝静默走 default 假绿 */
     @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages) {
-        return generate(messages, Collections.<ToolSpecification>emptyList());
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+    public ChatResponse doChat(ChatRequest request) {
+        List<ChatMessage> messages = request.messages();
+        List<ToolSpecification> toolSpecifications = request.toolSpecifications();
         if (checkPairing) {
             assertPairing(messages);
         }
@@ -98,15 +97,10 @@ public class ScriptedModel implements ChatLanguageModel {
                 : new ArrayList<>(toolSpecifications);
         views.add(v);
         Step s = steps.get(Math.min(v.round - 1, steps.size() - 1));
-        Response<AiMessage> resp = s.requests == null
-                ? Response.from(AiMessage.from(s.finalText), new TokenUsage(10, 5))
-                : Response.from(AiMessage.from(s.requests), new TokenUsage(10, 5));
-        return resp;
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification toolSpecification) {
-        return generate(messages, Collections.singletonList(toolSpecification));
+        return ChatResponse.builder()
+                .aiMessage(s.requests == null ? AiMessage.from(s.finalText) : AiMessage.from(s.requests))
+                .tokenUsage(new TokenUsage(10, 5))
+                .build();
     }
 
     /** I1 配对自检：Ai(带调用) 之后必须紧随同序同数量 id 一致的结果；不存在孤立结果 */

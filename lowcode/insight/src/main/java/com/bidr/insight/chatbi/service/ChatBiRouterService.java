@@ -11,7 +11,7 @@ import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.validate.Validator;
 import com.bidr.llm.flow.FlowContext;
 import com.bidr.llm.flow.FlowEngine;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -50,7 +50,7 @@ public class ChatBiRouterService {
     /**
      * 生成描述草稿的非流式模型通道（与 llm 结点同源，缺失时调用即报错）
      */
-    private final ObjectProvider<ChatLanguageModel> modelProvider;
+    private final ObjectProvider<ChatModel> modelProvider;
 
     /**
      * 路由候选目录（候选注册制）：只返回写了业务描述的看板——运营写描述即注册进候选，
@@ -88,11 +88,11 @@ public class ChatBiRouterService {
     public String generateDesc(String tableId) {
         SysPortal portal = sysPortalService.getByName(tableId, null);
         Validator.assertNotNull(portal, ErrCodeSys.PA_DATA_NOT_EXIST, "看板视图");
-        ChatLanguageModel model = modelProvider.getIfUnique();
+        ChatModel model = modelProvider.getIfUnique();
         if (model == null) {
-            throw new IllegalStateException("未找到唯一的 ChatLanguageModel Bean，请检查 llm 模块配置");
+            throw new IllegalStateException("未找到唯一的 ChatModel Bean，请检查 llm 模块配置");
         }
-        String answer = model.generate(buildGeneratePrompt(portal, chatBiSemanticService.getSemanticCatalog(tableId)));
+        String answer = model.chat(buildGeneratePrompt(portal, chatBiSemanticService.getSemanticCatalog(tableId)));
         return answer == null ? "" : answer.trim();
     }
 

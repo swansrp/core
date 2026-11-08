@@ -2,7 +2,7 @@ package com.bidr.llm.agent;
 
 import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.usage.ModelCallContexts;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +37,7 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
     }
 
     /** 本会话使用的业务模型 */
-    protected abstract ChatLanguageModel model(S state, AgentSessionContext ctx, Map<String, Object> payload);
+    protected abstract ChatModel model(S state, AgentSessionContext ctx, Map<String, Object> payload);
 
     /** 系统提示词（角色与约束） */
     protected abstract String systemPrompt(S state, AgentSessionContext ctx, Map<String, Object> payload);

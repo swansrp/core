@@ -4,7 +4,7 @@ import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,11 +53,12 @@ public class StreamingProgressChatModelFinalFrameTest {
             for (String d : tokenDeltas) {
                 listener.onToken(d);
             }
-            listener.onComplete(Response.from(AiMessage.from(String.join("", tokenDeltas))));
+            listener.onComplete(ChatResponse.builder()
+                    .aiMessage(AiMessage.from(String.join("", tokenDeltas))).build());
         });
         StreamingProgressChatModel model = new StreamingProgressChatModel(delegate, frames::add, 30, null, verbose);
-        Response<AiMessage> resp = model.generate(Collections.singletonList(UserMessage.from("hi")));
-        Assert.assertNotNull("onComplete 响应应透传返回", resp.content());
+        ChatResponse resp = model.chat(UserMessage.from("hi"));
+        Assert.assertNotNull("onComplete 响应应透传返回", resp.aiMessage());
         return frames;
     }
 

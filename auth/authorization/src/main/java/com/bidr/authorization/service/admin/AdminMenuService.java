@@ -49,6 +49,11 @@ public class AdminMenuService {
         entity.setMenuType(menuType.getValue());
         entity.setStatus(CommonConst.YES);
         entity.setVisible(CommonConst.YES);
+        // app_code 落列（方案B 棒3 §4.4）：请求体显式携带则原样落库；未携带＝继承当前应用上下文
+        // ——非顶部菜单按父行（pid 为空取 grandId）的 app_code 继承，顶部菜单无父行即平台自身（NULL）
+        if (FuncUtil.isEmpty(entity.getAppCode())) {
+            entity.setAppCode(inheritAppCode(entity));
+        }
         acMenuService.insert(entity);
         entity.setKey(entity.getMenuId());
         acMenuService.updateById(entity);
@@ -58,8 +63,28 @@ public class AdminMenuService {
         acRoleMenuService.insert(acRoleMenu);
     }
 
+    /**
+     * 新增菜单的 app_code 继承：父行在场则取父行 app_code（子菜单挂到子系统父节点下不会错落平台自身），
+     * 父行缺席/为顶部菜单 ⇒ null（平台自身）。
+     */
+    private String inheritAppCode(AcMenu entity) {
+        Long parentId = FuncUtil.isNotEmpty(entity.getPid()) ? entity.getPid() : entity.getGrandId();
+        if (FuncUtil.isEmpty(parentId)) {
+            return null;
+        }
+        AcMenu parent = acMenuService.selectById(parentId);
+        return parent == null ? null : parent.getAppCode();
+    }
+
     public List<AcMenu> getAllData() {
-        List<AcMenu> menuList = acMenuService.getAllMenu(permitService.isAdmin());
+        return getAllData(null);
+    }
+
+    /**
+     * 全量菜单（方案B 棒3 §4.4）：appCode 空＝平台自身（app_code IS NULL），非空＝等值收窄。
+     */
+    public List<AcMenu> getAllData(String appCode) {
+        List<AcMenu> menuList = acMenuService.getAllMenu(permitService.isAdmin(), appCode);
         for (AcMenu acMenu : menuList) {
             if (FuncUtil.isEmpty(acMenu.getPid())) {
                 acMenu.setPid(acMenu.getGrandId());
@@ -69,19 +94,34 @@ public class AdminMenuService {
     }
 
     public List<MenuTreeRes> getMenuTree() {
-        List<AcMenu> menuList = getAllData();
+        return getMenuTree(null);
+    }
+
+    /**
+     * 管理面菜单树（方案B 棒3 §4.4）：appCode 空＝平台自身，非空＝该子系统菜单。
+     */
+    public List<MenuTreeRes> getMenuTree(String appCode) {
+        List<AcMenu> menuList = getAllData(appCode);
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }
 
     public List<MenuTreeRes> getMainMenuTree() {
-        List<AcMenu> menuList = acMenuService.getMainMenu();
+        return getMainMenuTree(null);
+    }
+
+    public List<MenuTreeRes> getMainMenuTree(String appCode) {
+        List<AcMenu> menuList = acMenuService.getMainMenu(appCode);
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }
 
     public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req) {
-        List<AcMenu> menuList = acMenuService.getSubMenu(req.getMenuId());
+        return getSubMenuTree(req, null);
+    }
+
+    public List<MenuTreeRes> getSubMenuTree(MenuTreeReq req, String appCode) {
+        List<AcMenu> menuList = acMenuService.getSubMenu(req.getMenuId(), appCode);
         return ReflectionUtil.buildTree(MenuTreeRes::setChildren, menuList, AcMenu::getMenuId, AcMenu::getPid);
 
     }

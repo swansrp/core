@@ -514,6 +514,16 @@ public interface MybatisPlusTableInitializerInf {
                 return !indexExists(metaData, table, constraint);
             }
 
+            // ADD UNIQUE KEY
+            // 分词形态：ALTER TABLE `t` ADD UNIQUE KEY `idx` (...) ⇒ 下标 0..6，
+            // 索引名落 parts[6]（比 ADD INDEX 多占 UNIQUE/KEY 两词）。不补此分支时，
+            // fresh install（create DDL 已带唯一键）的升级腿会重复执行撞 ERROR 1061，
+            // 且版本闸卡 0 挡死后续所有升级腿（ac_partner v1 uk_app_key 实撞）。
+            if (sql.contains("ADD UNIQUE KEY")) {
+                String index = parts.length > 6 ? stripIdent(parts[6]) : "";
+                return indexExists(metaData, table, index);
+            }
+
             // ADD INDEX
             if (sql.contains("ADD INDEX")) {
                 String index = parts.length > 5 ? stripIdent(parts[5]) : "";

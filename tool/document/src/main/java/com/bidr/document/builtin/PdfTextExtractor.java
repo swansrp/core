@@ -2,6 +2,7 @@ package com.bidr.document.builtin;
 
 import com.bidr.document.DocumentProperties;
 import com.bidr.document.VisionEndpoint;
+import com.bidr.document.VisionTranscriber;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;

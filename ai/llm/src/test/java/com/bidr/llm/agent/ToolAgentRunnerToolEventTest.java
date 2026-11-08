@@ -5,11 +5,10 @@ import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.agent.session.AgentSessionState;
 import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
 import dev.langchain4j.agent.tool.Tool;
-import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,32 +29,29 @@ import java.util.List;
  */
 public class ToolAgentRunnerToolEventTest {
 
-    /** 第一轮要工具、第二轮直出结论的假模型（不依赖任何外部服务） */
-    private static final class ScriptedModel implements ChatLanguageModel {
+    /** 第一轮要工具、第二轮直出结论的假模型（不依赖任何外部服务）；
+     *  doChat 在 1.23 为 default 方法，fake 须显式覆写防静默假绿 */
+    private static final class ScriptedModel implements ChatModel {
 
         private int round;
 
         @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages) {
-            return generate(messages, Collections.<ToolSpecification>emptyList());
-        }
-
-        @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+        public ChatResponse doChat(ChatRequest request) {
             round++;
             if (round == 1) {
-                return Response.from(AiMessage.from(dev.langchain4j.agent.tool.ToolExecutionRequest.builder()
-                        .id("call-1")
-                        .name("echo")
-                        .arguments("{\"text\":\"hi\"}")
-                        .build()), new TokenUsage(10, 5));
+                return ChatResponse.builder()
+                        .aiMessage(AiMessage.from(dev.langchain4j.agent.tool.ToolExecutionRequest.builder()
+                                .id("call-1")
+                                .name("echo")
+                                .arguments("{\"text\":\"hi\"}")
+                                .build()))
+                        .tokenUsage(new TokenUsage(10, 5))
+                        .build();
             }
-            return Response.from(AiMessage.from("结论：已完成"), new TokenUsage(3, 2));
-        }
-
-        @Override
-        public Response<AiMessage> generate(List<ChatMessage> messages, ToolSpecification toolSpecification) {
-            return generate(messages, Collections.singletonList(toolSpecification));
+            return ChatResponse.builder()
+                    .aiMessage(AiMessage.from("结论：已完成"))
+                    .tokenUsage(new TokenUsage(3, 2))
+                    .build();
         }
     }
 

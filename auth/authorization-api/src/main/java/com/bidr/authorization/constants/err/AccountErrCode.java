@@ -94,6 +94,10 @@ public enum AccountErrCode implements ErrCode {
 
     AC_TENANT_NOT_AVAILABLE(1039, "该租户不存在或已停用"),
 
+    AC_SUBSYSTEM_HAS_MENU(1040, "该应用下尚有菜单, 不能删除该应用"),
+
+    AC_PARTNER_HAS_SUBSYSTEM(1041, "该渠道已绑定子系统, 不能删除"),
+
     ;
 
     private final Integer errCode;

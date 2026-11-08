@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -76,7 +76,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
     private final CertifiedDraftMerger certifiedDraftMerger;
     private final InsightAgentService insightAgentService;
     private final DataSourceCacheService dataSourceCacheService;
-    private final ObjectProvider<ChatLanguageModel> chatModelProvider;
+    private final ObjectProvider<ChatModel> chatModelProvider;
     private final ObjectProvider<RedisService> redisServiceProvider;
     /** 全局串行闸（llm 框架下沉：SETNX 属主锁 + 心跳续期 + 失联强解锁自愈，无 Redis 时内存实现兑底） */
     private final AgentTaskGate agentTaskGate;
@@ -784,13 +784,13 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
 
     /** 配对推断结点：LLM 逐表推断编码↔名称配对与备注枚举域，后端采样补齐码值域（增强步骤不阻断链路） */
     public void flowPair(GenTaskContext ctx, String promptKey) {
-        ChatLanguageModel model = chatModelProvider.getIfUnique();
+        ChatModel model = chatModelProvider.getIfUnique();
         if (model == null) {
             throw new NoticeException("未配置 LLM 模型（llm.* 或系统参数），无法 LLM 生成；可改用「仅生成骨架」");
         }
         appendLog("第一步：LLM 推断编码↔名称配对字段，采样补齐码值域");
         // 逐表直连小请求的日志包装（runner 内部自带循环日志，直连链路复用同口径；停止键透传供等待期轮询）
-        ChatLanguageModel logged = ToolAgentRunner.loggingModel(model, this::appendLog, this::stopRequested);
+        ChatModel logged = ToolAgentRunner.loggingModel(model, this::appendLog, this::stopRequested);
         inferAndSampleCodeLabelPairs(logged, ctx, promptKey);
     }
 
@@ -800,7 +800,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
         checkStop();
         ctx.setSaveStep(ctx.getSaveStep() + 1);
         advanceTo(ctx.getSaveStep(), "正在生成" + assetCnName(assetType) + "（LLM 多轮探索，可能需几分钟）…");
-        ChatLanguageModel model = chatModelProvider.getIfUnique();
+        ChatModel model = chatModelProvider.getIfUnique();
         if (model == null) {
             throw new NoticeException("未配置 LLM 模型（llm.* 或系统参数），无法 LLM 生成；可改用「仅生成骨架」");
         }
@@ -875,7 +875,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
                 appendLog(line);
             }
         };
-        ChatLanguageModel model = buildLiveModel(liveSink, budgetOf(SmartQueryParam.GENERATE_THINKING_BUDGET));
+        ChatModel model = buildLiveModel(liveSink, budgetOf(SmartQueryParam.GENERATE_THINKING_BUDGET));
         if (model == null) {
             throw new NoticeException("未配置 LLM 模型（llm.* 或系统参数），无法 AI 自主生成");
         }
@@ -1053,7 +1053,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
                 appendLog(line);
             }
         };
-        ChatLanguageModel model = buildLiveModel(liveSink, budgetOf(SmartQueryParam.REVIEW_THINKING_BUDGET));
+        ChatModel model = buildLiveModel(liveSink, budgetOf(SmartQueryParam.REVIEW_THINKING_BUDGET));
         if (model == null) {
             throw new NoticeException("未配置 LLM 模型（llm.* 或系统参数），无法 AI 评审");
         }
@@ -1121,7 +1121,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
      *  全文展示，与问数链同口径）；轮末思考全文归档一条；AGENT 用途独立长超时；
      *  网关不支持 stream 时首应答 token 前自动降级同步回落；无 Provider 回落同步模型。
      *  思考强度走通用系统参数（thinking_budget：0/非正=最强不限制） */
-    private ChatLanguageModel buildLiveModel(java.util.function.Consumer<String> live, Integer thinkingBudget) {
+    private ChatModel buildLiveModel(java.util.function.Consumer<String> live, Integer thinkingBudget) {
         return liveModelFactory.build(DbAwareModelConfigProvider.PURPOSE_AGENT, live,
                 () -> chatModelProvider.getIfUnique(), thinkingBudget);
     }
@@ -1139,7 +1139,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
     /** 单类资产生成：单资产模板拼指导语 → 通用工具循环引擎（多轮探索，不支持工具时引擎内部回落直连）
      * → 解析产出覆盖对应草稿。全体生成与单独重生成共用此链路；
      * 指标多表时走逐表子链路（formula 严格单表，小上下文+独享探索预算公式更准） */
-    private void generateSingleAsset(ChatLanguageModel model, GenTaskContext ctx, String assetType, String guidance, String promptKey) {
+    private void generateSingleAsset(ChatModel model, GenTaskContext ctx, String assetType, String guidance, String promptKey) {
         if ("metrics".equals(assetType) && ctx.getEntities().size() > 1) {
             generateMetricsByTable(model, ctx, guidance);
             return;
@@ -1170,7 +1170,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
 
     /** LLM 调用（通用引擎）：探索工具随会话传入，轮次/滑窗/触顶收口/回落直连/停止信号由
      *  ToolAgentRunner 统一处理（平移自原 generateWithTools 自管循环） */
-    private String invokeLlm(ChatLanguageModel model, GenTaskContext ctx, String prompt, String cn) {
+    private String invokeLlm(ChatModel model, GenTaskContext ctx, String prompt, String cn) {
         AgentExploreTools tools = new AgentExploreTools(ctx.getDataSource()::getConnection, ctx.getAgentCode(), ctx.getEntities(),
                 (e, c, l) -> registerCodeLabelPair(ctx, e, c, l), this::appendLog, this::stopRequested);
         // 无 system 槽（该链无框架纪律可发）；业务提示拼入 user 首部（system 槽不沾业务）
@@ -1235,7 +1235,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
      *  工具探索预算，降低长上下文迷失导致的引错列/漏生成；逐表解析后合并即落盘（增量），
      *  停止/失联不丢已完成表，继续时 get_draft/tableMetricsDraft 天然识别本表已有指标。
      *  串行执行，避免多路并发采样压目标库 */
-    private void generateMetricsByTable(ChatLanguageModel model, GenTaskContext ctx, String guidance) {
+    private void generateMetricsByTable(ChatModel model, GenTaskContext ctx, String guidance) {
         appendLog("开始生成指标（逐表模式：" + ctx.getEntities().size() + " 张表串行，单表失败不影响其余）");
         ArrayNode merged = om.createArrayNode();
         Set<String> names = new HashSet<>();
@@ -1348,7 +1348,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
     /** LLM 推断码值配对：从实体字段清单判断哪些是「编码字段↔业务名称字段」配对，
      * 验证真实存在后全表 GROUP BY 采样真实 code→label 映射合入 domains（含补维度与回填 value_domain）；
      * 补齐属增强步骤：解析失败/调用失败（含超时）仅告警不阻断四类生成 */
-    private void inferAndSampleCodeLabelPairs(ChatLanguageModel model, GenTaskContext ctx, String promptKey) {
+    private void inferAndSampleCodeLabelPairs(ChatModel model, GenTaskContext ctx, String promptKey) {
         // 逐表推断：全量实体一把推断上下文过大易超时，拆成单表小请求（推断逐表，
         // GROUP BY 采样本就是后端登记时逐对执行，不经过 LLM）；单表失败跳过不阻断
         appendLog("开始逐表推断编码↔名称配对（" + ctx.getEntities().size() + " 张表，推断后由后端采样补齐码值域）");
@@ -1360,7 +1360,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
             idx++;
             String answer;
             try {
-                answer = model.generate(buildPairPrompt(ctx, entity, promptKey));
+                answer = model.chat(buildPairPrompt(ctx, entity, promptKey));
             } catch (RuntimeException e) {
                 log.warn("Agent '{}' 表 {} 配对推断失败，跳过: {}", ctx.getAgentCode(), entity.getTable(), e.getMessage());
                 appendLog("表 " + entity.getTable() + " 配对推断失败（" + briefCause(e) + "），跳过继续（" + idx + "/" + ctx.getEntities().size() + "）");
@@ -2021,7 +2021,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
             purgeSensitiveDomains(ctx);
             openContext(ctx);
             // 与全体生成同链路：包日志代理，重生成过程同样可见 LLM 输出（停止键透传，等待期轮询快速收口）
-            ChatLanguageModel model = ToolAgentRunner.loggingModel(chatModelProvider.getIfUnique(),
+            ChatModel model = ToolAgentRunner.loggingModel(chatModelProvider.getIfUnique(),
                     this::appendLog, this::stopRequested);
             generateSingleAsset(model, ctx, assetType, guidance, promptKeyOf(assetType));
             uploadProgressFinish();
@@ -2058,7 +2058,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
         if (form == null || !form.isObject()) {
             throw new NoticeException("当前表单内容不是 JSON 对象");
         }
-        ChatLanguageModel model = buildLiveModel(live == null ? text -> { } : live,
+        ChatModel model = buildLiveModel(live == null ? text -> { } : live,
                 budgetOf(SmartQueryParam.GENERATE_THINKING_BUDGET));
         if (model == null) {
             throw new NoticeException("未配置 LLM 模型（llm.* 或系统参数），无法 AI 补全");
@@ -2080,7 +2080,7 @@ public class SmartAgentAssetGenerateService implements AsyncProcessInf<InsightAg
                 + (FuncUtil.isNotEmpty(guidance)
                 ? "\n\n【人工指导语】（优先遵循，与上述规则冲突时以指导语为准）\n" + guidance.trim()
                 : "");
-        String answer = model.generate(prompt);
+        String answer = model.chat(prompt);
         try {
             JsonNode node = om.readTree(extractJson(answer));
             if (!node.isObject()) {

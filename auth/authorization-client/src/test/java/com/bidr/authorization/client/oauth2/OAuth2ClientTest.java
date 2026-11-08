@@ -184,4 +184,25 @@ public class OAuth2ClientTest {
                     e.getMessage().contains("密码不正确，剩余2次"));
         }
     }
+
+    @Test
+    public void exchangePasswordSurfacesInkhubEnvelopeFamily() {
+        // 墨枢实机信封字段族（2026-11-06 上线实证）：status.msg=枚举名、status.details=人话、
+        // payload.errMsg=人话——只认 "message" 会漏成裸错误码（用户看不到「用户不存在」）
+        server.expect(requestTo(BASE_URL + "/open-api/v1/idp/password-login"))
+                .andRespond(withSuccess("{\"status\":{\"code\":1003,\"msg\":\"AC_USER_NOT_EXISTED\","
+                        + "\"details\":\"用户不存在\"},\"payload\":{\"errLevel\":2,\"errType\":\"0\","
+                        + "\"errMsg\":\"用户不存在\"}}", MediaType.APPLICATION_JSON));
+
+        try {
+            client.exchangePassword("ghost", "wrong");
+            Assert.fail("信封错误必须抛 OAuth2ExchangeException");
+        } catch (OAuth2ExchangeException e) {
+            Assert.assertTrue("错误消息须含信封错误码: " + e.getMessage(), e.getMessage().contains("1003"));
+            Assert.assertTrue("错误消息须含墨枢信封人话文案: " + e.getMessage(),
+                    e.getMessage().contains("用户不存在"));
+            Assert.assertFalse("枚举名不该当文案露出（人话优先）: " + e.getMessage(),
+                    e.getMessage().contains("AC_USER_NOT_EXISTED"));
+        }
+    }
 }

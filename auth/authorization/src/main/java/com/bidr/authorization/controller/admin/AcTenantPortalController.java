@@ -5,6 +5,7 @@ import com.bidr.authorization.annotation.auth.AuthAdmin;
 import com.bidr.authorization.annotation.auth.AuthLogin;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.service.tenant.AcTenantPortalService;
+import com.bidr.authorization.vo.tenant.TenantUserLookupVO;
 import com.bidr.kernel.config.response.Resp;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -40,10 +41,10 @@ public class AcTenantPortalController {
 
     // ==================== 平台档面（类级 AuthAdmin） ====================
 
-    @ApiOperation(value = "租户目录列表(有效租户)")
+    @ApiOperation(value = "租户目录列表（默认仅有效租户；includeDisabled=true 含停用行——管理面回看/启用入口）")
     @RequestMapping(value = "/list", method = RequestMethod.GET)
-    public List<AcTenant> list() {
-        return acTenantPortalService.listTenants();
+    public List<AcTenant> list(@RequestParam(value = "includeDisabled", required = false, defaultValue = "false") boolean includeDisabled) {
+        return acTenantPortalService.listTenants(includeDisabled);
     }
 
     @ApiOperation(value = "租户详情")
@@ -72,6 +73,27 @@ public class AcTenantPortalController {
     public void disable(@RequestParam Long id) {
         acTenantPortalService.disableTenant(id);
         Resp.notice("租户已停用");
+    }
+
+    @ApiOperation(value = "启用租户（恢复停用行 valid='1'，对称 disable）")
+    @RequestMapping(value = "/enable", method = RequestMethod.POST)
+    public void enable(@RequestParam Long id) {
+        acTenantPortalService.enableTenant(id);
+        Resp.notice("租户已启用");
+    }
+
+    /**
+     * 加成员前按人精确查（工号/手机号/登录名/姓名 四路等值）：平台档面形态（类级 AuthAdmin
+     * 挂闸，同 /list /detail——判权不在 service 再收口）。🔴 不做 /my 反向豁免的硬理由：
+     * AuthAdminGateConventionTest 针1/针2 把反向豁免端点数与 guardTenantAdmin 调用点钉死＝4
+     * （防漂移针，动它须显式改针），且 keyword-only 契约无 tenantId 供 guard 收口；平台档本就是
+     * /my/member/add 判权矩阵的放行超集，不放大。返回形态照 {@link #myMembers}
+     * （数据直出进 Resp payload，不加 notice）。
+     */
+    @ApiOperation(value = "加成员前按工号/手机号/姓名精确查人")
+    @RequestMapping(value = "/my/lookup-user", method = RequestMethod.GET)
+    public TenantUserLookupVO lookupMyUser(@RequestParam String keyword) {
+        return acTenantPortalService.lookupUser(keyword);
     }
 
     // ==================== 本租户面（方法级 AuthLogin 反向豁免，service 现查判权） ====================

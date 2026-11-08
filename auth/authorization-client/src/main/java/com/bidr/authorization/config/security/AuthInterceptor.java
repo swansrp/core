@@ -138,6 +138,10 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (FuncUtil.equals(BeanUtil.getActiveProfile(), "dev") ||
                 FuncUtil.equals(BeanUtil.getActiveProfile(), "local") || corsEnable) {
             response.setHeader("Access-Control-Allow-Origin", headersInfoMap.get("origin"));
+            // 🔴 必配对：ACAO 回显 origin 时补 ACAC=true，前端 withCredentials:true 的跨源 XHR
+            // 才允许落 Set-Cookie（2026-11-08 实锤：dev 跨源形态登录 cookie 永远不落盘 ⇒
+            // iframe 内 authorize 的 cookie 回退恒「未登录」）。生产同源形态不走本分支，零变化。
+            response.setHeader("Access-Control-Allow-Credentials", "true");
         }
         response.setHeader("Access-Control-Allow-Headers", RequestConst.getAllHeader());
         response.setHeader("Access-Control-Allow-Methods", RequestConst.getAllMethod());

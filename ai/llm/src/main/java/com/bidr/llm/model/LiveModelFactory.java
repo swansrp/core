@@ -2,7 +2,7 @@ package com.bidr.llm.model;
 
 import com.bidr.llm.config.LlmDefaultAutoConfiguration;
 import com.bidr.llm.provider.ModelConfigProvider;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 
 import java.net.Proxy;
 import java.util.function.Consumer;
@@ -72,8 +72,8 @@ public class LiveModelFactory {
      * @param live               流式帧回调（替换式全文/token 增量，语义由调用方定义）
      * @param noProviderFallback Provider 缺失时的同步模型回落（懒求值）
      */
-    public ChatLanguageModel build(String purposeType, Consumer<String> live,
-            Supplier<ChatLanguageModel> noProviderFallback) {
+    public ChatModel build(String purposeType, Consumer<String> live,
+            Supplier<ChatModel> noProviderFallback) {
         return build(purposeType, live, noProviderFallback, null);
     }
 
@@ -82,17 +82,18 @@ public class LiveModelFactory {
      *
      * @param thinkingBudget 思考 token 上限：null/非正=最强（模型默认全功率思考）；
      *                       正值写入请求体 thinking_budget 截断思考长尾。同步回落路径
-     *                       （langchain4j 0.33 不支持自定义参数）不生效，仅流式主路径生效
+     *                       （RefreshableChatModel 走库原生客户端，不支持自定义参数）不生效，
+     *                       仅流式主路径生效
      */
-    public ChatLanguageModel build(String purposeType, Consumer<String> live,
-            Supplier<ChatLanguageModel> noProviderFallback, Integer thinkingBudget) {
+    public ChatModel build(String purposeType, Consumer<String> live,
+            Supplier<ChatModel> noProviderFallback, Integer thinkingBudget) {
         if (provider == null) {
             return noProviderFallback.get();
         }
         Proxy proxy = LlmDefaultAutoConfiguration.buildProxy(proxyEnable, proxyHost, proxyPort);
         RawSseStreamingChatModel streaming = new RawSseStreamingChatModel(provider, purposeType, proxy,
                 thinkingBudget);
-        ChatLanguageModel syncFallback = new RefreshableChatModel(
+        ChatModel syncFallback = new RefreshableChatModel(
                 provider, purposeType, syncMaxAttempts, proxy, () -> null);
         long interval = Math.max(LIVE_INTERVAL_MIN_MS, Math.min(LIVE_INTERVAL_MAX_MS, liveIntervalMillis));
         return new StreamingProgressChatModel(streaming, live,

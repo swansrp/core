@@ -10,10 +10,11 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.StreamingResponseHandler;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -67,9 +68,9 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
      */
     private static final Pattern VAR_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
 
-    private final ObjectProvider<ChatLanguageModel> modelProvider;
+    private final ObjectProvider<ChatModel> modelProvider;
 
-    private final ObjectProvider<StreamingChatLanguageModel> streamingModelProvider;
+    private final ObjectProvider<StreamingChatModel> streamingModelProvider;
 
     /**
      * 引擎经 ObjectProvider 延迟引用（引擎构造注入全部执行器，直接依赖会循环）
@@ -152,15 +153,15 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
             startStreaming(node, context, rendered, role, includeHistory, userVar, outputVar);
             return false;
         }
-        ChatLanguageModel model = resolveModel(config);
+        ChatModel model = resolveModel(config);
         String answer;
         if (includeHistory || "system".equals(role)) {
-            Response<AiMessage> response = model
-                    .generate(buildMessages(rendered, role, includeHistory, userVar, context));
-            answer = response.content() == null ? "" : response.content().text();
+            ChatResponse response = model.chat(ChatRequest.builder()
+                    .messages(buildMessages(rendered, role, includeHistory, userVar, context)).build());
+            answer = response.aiMessage() == null ? "" : response.aiMessage().text();
         } else {
             // 路由类链路路径：退化为单串调用（模型只收到一条 user 消息）
-            answer = model.generate(rendered);
+            answer = model.chat(rendered);
         }
         context.setVariable(outputVar, answer);
         context.setVariable(FlowContext.TRACE_LLM_ANSWER, answer);
@@ -178,11 +179,12 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
         }
         StringBuilder buffer = new StringBuilder();
         String nodeId = node.getId();
-        resolveStreamingModel(node.getConfig()).generate(
-                buildMessages(rendered, role, includeHistory, userVar, context),
-                new StreamingResponseHandler<AiMessage>() {
+        resolveStreamingModel(node.getConfig()).chat(
+                ChatRequest.builder()
+                        .messages(buildMessages(rendered, role, includeHistory, userVar, context)).build(),
+                new StreamingChatResponseHandler() {
                     @Override
-                    public void onNext(String token) {
+                    public void onPartialResponse(String token) {
                         if (token == null) {
                             return;
                         }
@@ -193,8 +195,8 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
                     }
 
                     @Override
-                    public void onComplete(Response<AiMessage> response) {
-                        AiMessage message = response == null ? null : response.content();
+                    public void onCompleteResponse(ChatResponse response) {
+                        AiMessage message = response == null ? null : response.aiMessage();
                         String finalText = message == null ? null : message.text();
                         String fullContent;
                         synchronized (buffer) {
@@ -328,10 +330,10 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
     /**
      * 取应用中唯一的非流式模型 Bean；装配期不强求存在，调用时缺失则报错提示
      */
-    private ChatLanguageModel requireModel() {
-        ChatLanguageModel model = modelProvider.getIfUnique();
+    private ChatModel requireModel() {
+        ChatModel model = modelProvider.getIfUnique();
         if (model == null) {
-            throw new IllegalStateException("未找到唯一的 ChatLanguageModel Bean，请检查 llm 模块配置");
+            throw new IllegalStateException("未找到唯一的 ChatModel Bean，请检查 llm 模块配置");
         }
         return model;
     }
@@ -339,10 +341,10 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
     /**
      * 取应用中唯一的流式模型 Bean；装配期不强求存在，调用时缺失则报错提示
      */
-    private StreamingChatLanguageModel requireStreamingModel() {
-        StreamingChatLanguageModel model = streamingModelProvider.getIfUnique();
+    private StreamingChatModel requireStreamingModel() {
+        StreamingChatModel model = streamingModelProvider.getIfUnique();
         if (model == null) {
-            throw new IllegalStateException("未找到唯一的 StreamingChatLanguageModel Bean，请检查 llm 模块配置");
+            throw new IllegalStateException("未找到唯一的 StreamingChatModel Bean，请检查 llm 模块配置");
         }
         return model;
     }
@@ -351,7 +353,7 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
      * 结点级模型解析：baseUrl/apiKey/modelName 任一配置即按覆盖组合取/建模型（缓存），
      * 三项全空走全局默认 Bean
      */
-    private ChatLanguageModel resolveModel(Map<String, Object> config) {
+    private ChatModel resolveModel(Map<String, Object> config) {
         String overrideKey = endpointOverrideKey(config);
         if (overrideKey == null) {
             return requireModel();
@@ -368,7 +370,7 @@ public class LlmNodeExecutor implements FlowNodeExecutor {
     /**
      * 结点级流式模型解析，语义同 {@link #resolveModel(Map)}
      */
-    private StreamingChatLanguageModel resolveStreamingModel(Map<String, Object> config) {
+    private StreamingChatModel resolveStreamingModel(Map<String, Object> config) {
         String overrideKey = endpointOverrideKey(config);
         if (overrideKey == null) {
             return requireStreamingModel();

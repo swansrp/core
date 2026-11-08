@@ -1,31 +1,34 @@
 package com.bidr.llm.model;
 
+import com.bidr.llm.config.LlmDefaultAutoConfiguration;
 import com.bidr.llm.provider.ModelConfigProvider;
-import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.model.StreamingResponseHandler;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.Proxy;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * 可刷新的 StreamingChatLanguageModel 代理（支持按用户隔离缓存）。
+ * 可刷新的 StreamingChatModel 代理（支持按用户隔离缓存）。
  * <p>
  * 以 userId + 配置签名 + 用户级 apiKey 作为缓存键，配置或 Key 变化时自动重建底层模型，
  * 实现配置热刷新与用户隔离。用途（purpose）由构造时传入。
+ * </p>
+ * <p>
+ * langchain4j 1.23 适配：0.33 的 3 个 generate 重载收敛为 {@link #doChat(ChatRequest, StreamingChatResponseHandler)}
+ * 单方法（消息/工具清单随 ChatRequest 携带，chat(String, handler)/chat(List, handler) 走接口 default 最终路由至此）。
  * </p>
  *
  * @author Sharp
  */
 @Slf4j
-public class RefreshableStreamingChatModel implements StreamingChatLanguageModel {
+public class RefreshableStreamingChatModel implements StreamingChatModel {
 
     /**
      * 用户级模型缓存上限，超出后整体清空重建，防止无淘汰机制导致内存膨胀
@@ -40,14 +43,14 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
     private final boolean verbose;
 
     /**
-     * 按用户缓存模型实例：key = userId_configSignature_apiKey, value = StreamingChatLanguageModel
+     * 按用户缓存模型实例：key = userId_configSignature_apiKey, value = StreamingChatModel
      */
-    private final ConcurrentHashMap<String, StreamingChatLanguageModel> userDelegates = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, StreamingChatModel> userDelegates = new ConcurrentHashMap<>();
 
     /**
      * 当前线程使用的 delegate
      */
-    private final ThreadLocal<StreamingChatLanguageModel> currentDelegate = new ThreadLocal<>();
+    private final ThreadLocal<StreamingChatModel> currentDelegate = new ThreadLocal<>();
 
     public RefreshableStreamingChatModel(ModelConfigProvider configProvider,
                                          String purposeType,
@@ -68,31 +71,15 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
         this.verbose = verbose;
     }
 
+    /**
+     * 流式生成：消息与工具清单随 {@link ChatRequest} 携带，经此委托到底层模型
+     * （接口方法全为 default，显式 @Override 防漏写静默失效）
+     */
     @Override
-    public void generate(List<ChatMessage> messages, StreamingResponseHandler<AiMessage> handler) {
+    public void doChat(ChatRequest request, StreamingChatResponseHandler handler) {
         // 确保底层代理模型为最新配置
         ensureFreshDelegate();
-        currentDelegate.get().generate(messages, handler);
-    }
-
-    /**
-     * 带工具清单的流式生成：接口默认实现抛 UnsupportedOperationException，补齐委托以支持工具调用型上游
-     */
-    @Override
-    public void generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications,
-                         StreamingResponseHandler<AiMessage> handler) {
-        ensureFreshDelegate();
-        currentDelegate.get().generate(messages, toolSpecifications, handler);
-    }
-
-    /**
-     * 带单个强制工具的流式生成，语义同 {@link #generate(List, List, StreamingResponseHandler)}
-     */
-    @Override
-    public void generate(List<ChatMessage> messages, ToolSpecification toolSpecification,
-                         StreamingResponseHandler<AiMessage> handler) {
-        ensureFreshDelegate();
-        currentDelegate.get().generate(messages, toolSpecification, handler);
+        currentDelegate.get().chat(request, handler);
     }
 
     // 检查配置签名是否变化，若变化则重新构建模型
@@ -107,9 +94,9 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
                 : "****";
         log.info("[{}] StreamingChatModel 使用 apiKey: userId={}, apiKey={}", purposeType, userId, maskedKey);
 
-        StreamingChatLanguageModel delegate = userDelegates.get(cacheKey);
+        StreamingChatModel delegate = userDelegates.get(cacheKey);
         if (delegate == null) {
-            log.info("[{}] 用户级流式模型缓存未命中，正在重建 StreamingChatLanguageModel, userId={}", purposeType, userId);
+            log.info("[{}] 用户级流式模型缓存未命中，正在重建 StreamingChatModel, userId={}", purposeType, userId);
             if (userDelegates.size() >= MAX_CACHE_SIZE) {
                 log.warn("[{}] 用户级流式模型缓存超过上限 {}，整体清空重建", purposeType, MAX_CACHE_SIZE);
                 userDelegates.clear();
@@ -120,15 +107,18 @@ public class RefreshableStreamingChatModel implements StreamingChatLanguageModel
         currentDelegate.set(delegate);
     }
 
-    private StreamingChatLanguageModel buildDelegate(String apiKey) {
-        return OpenAiStreamingChatModel.builder()
+    private StreamingChatModel buildDelegate(String apiKey) {
+        OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder builder = OpenAiStreamingChatModel.builder()
                 .baseUrl(configProvider.getBaseUrl(purposeType))
                 .apiKey(apiKey)
                 .modelName(configProvider.getModelName(purposeType))
                 .timeout(Duration.ofSeconds(configProvider.getTimeoutSeconds(purposeType)))
-                .proxy(proxy)
                 .logRequests(verbose)
-                .logResponses(verbose)
-                .build();
+                .logResponses(verbose);
+        JdkHttpClientBuilder httpClient = LlmDefaultAutoConfiguration.buildLc4jHttpClientBuilder(proxy);
+        if (httpClient != null) {
+            builder.httpClientBuilder(httpClient);
+        }
+        return builder.build();
     }
 }

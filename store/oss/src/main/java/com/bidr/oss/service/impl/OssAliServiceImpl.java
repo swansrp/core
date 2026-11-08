@@ -108,6 +108,16 @@ public class OssAliServiceImpl extends BaseOssService {
     }
 
     @Override
+    public InputStream openStream(String objectName) {
+        try {
+            // OSSObject 的资源释放挂在流关闭上（caller 关闭流即释放连接）
+            return client().getObject(bucketName, objectName).getObjectContent();
+        } catch (Exception e) {
+            throw new ServiceException("打开对象流失败: " + objectName, e);
+        }
+    }
+
+    @Override
     public String getReadUrl(String url) {
         return getReadUrl(url, null);
     }
@@ -115,7 +125,13 @@ public class OssAliServiceImpl extends BaseOssService {
     @Override
     public String getReadUrl(String url, String fileName) {
         log.info("getReadUrl == {}", getKey(url));
-        return presign(getKey(url), fileName, false);
+        return presign(getKey(url), fileName, false, READ_EXPIRE_SECONDS);
+    }
+
+    @Override
+    public String getReadUrl(String url, String fileName, long expiresSeconds) {
+        log.info("getReadUrl(expires={}) == {}", expiresSeconds, getKey(url));
+        return presign(getKey(url), fileName, false, expiresSeconds);
     }
 
     /**
@@ -127,14 +143,14 @@ public class OssAliServiceImpl extends BaseOssService {
     public String getPreviewUrl(String url, String fileName) {
         String key = getKey(url);
         log.info("getPreviewUrl == {}", key);
-        return presign(key, fileName, true);
+        return presign(key, fileName, true, READ_EXPIRE_SECONDS);
     }
 
     /** 生成 GET 预签名地址（私有桶可匿名访问；inline 时覆盖响应 Content-Type 与内联下载头） */
-    private String presign(String key, String fileName, boolean inline) {
+    private String presign(String key, String fileName, boolean inline, long expiresSeconds) {
         GeneratePresignedUrlRequest request =
                 new GeneratePresignedUrlRequest(bucketName, key, HttpMethod.GET);
-        request.setExpiration(new Date(System.currentTimeMillis() + READ_EXPIRE_SECONDS * 1000L));
+        request.setExpiration(new Date(System.currentTimeMillis() + expiresSeconds * 1000L));
         ResponseHeaderOverrides overrides = new ResponseHeaderOverrides();
         boolean overrideSet = false;
         if (inline) {

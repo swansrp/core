@@ -220,7 +220,12 @@ public class OAuth2IdpController {
         return null;
     }
 
-    /** SPA 登录页回跳地址：{context-path}/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）> */
+    /**
+     * SPA 登录页回跳地址：默认 {context-path}/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）>。
+     * 配置 {@code identity.idp.login-page-base}（env MY_IDP_LOGIN_PAGE_BASE）⇒ 302 到
+     * {base}/#/login?...（绝对地址）——供「SPA 不与后端同源挂载」的本地 dev 拓扑用（run-local 注入）：
+     * pre/生产 nginx 把 SPA 挂在 {ctx}/ 下，同源相对形态即可落登录页，**不配即现行为**。
+     */
     private String loginBackUrl(HttpServletRequest request) {
         String back = request.getRequestURI();
         if (back != null && back.startsWith("/")) {
@@ -230,7 +235,11 @@ public class OAuth2IdpController {
         if (StringUtils.isNotBlank(query)) {
             back = back + "?" + query;
         }
-        return request.getContextPath() + LOGIN_PAGE_HASH_SUFFIX + "?redirect_uri=" + urlEncode(back);
+        String base = idpProperties.getLoginPageBase();
+        String prefix = StringUtils.isNotBlank(base)
+                ? base.replaceAll("/+$", "")
+                : request.getContextPath();
+        return prefix + LOGIN_PAGE_HASH_SUFFIX + "?redirect_uri=" + urlEncode(back);
     }
 
     /** state 可选回传（RFC 6749 §4.1.1 原值透传，encodeURIComponent 等价物） */

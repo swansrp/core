@@ -7,7 +7,7 @@ import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.provider.ModelConfigProvider;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,7 +90,7 @@ public class RawSyncChatModelIT {
      * 建模型：{@code extraBody} 按自家网关的扩展字段填（示例是关思考；OpenAI 官方网关通常不需要，
      * 传 null 即可），{@code traceSink} 收审计轨迹，{@code maxAttempts} 管 5xx 重试。
      */
-    private static ChatLanguageModel model(Consumer<String> traceSink) {
+    private static ChatModel model(Consumer<String> traceSink) {
         Map<String, Object> extraBody = new HashMap<>();
         // 若你的网关支持扩展字段，在这里加；框架只透传不解释。例：extraBody.put("enable_thinking", false);
         return new RawSyncChatModel(envProvider(), "AGENT", null, extraBody, 512, 3, traceSink);
@@ -135,7 +135,7 @@ public class RawSyncChatModelIT {
     public void traceLineCarriesUsageAndThinkingTokens() {
         List<String> trace = new CopyOnWriteArrayList<>();
 
-        model(trace::add).generate(
+        model(trace::add).chat(
                 Collections.singletonList(UserMessage.from("请只回答一个数字：2 加 3 等于几？")));
 
         org.junit.Assert.assertEquals("每次调用一行轨迹", 1, trace.size());
