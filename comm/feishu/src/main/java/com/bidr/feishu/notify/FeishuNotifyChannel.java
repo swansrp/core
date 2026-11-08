@@ -1,6 +1,6 @@
 package com.bidr.feishu.notify;
 
-import com.bidr.feishu.config.OnFeishuBridgeForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.notification.NotifyChannel;
@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuBridgeForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' != 'true'")
 public class FeishuNotifyChannel implements NotifyChannel {
 
     /** 渠道标识（core SPI 契约：内核用于渠道注册与路由去重） */

@@ -1,6 +1,6 @@
 package com.bidr.feishu.task;
 
-import com.bidr.feishu.config.OnFeishuDirectForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.feishu.dto.sync.FeishuSyncResult;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuDirectForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' == 'true'")
 @Service
 @RequiredArgsConstructor
 public class FeishuSyncTask {

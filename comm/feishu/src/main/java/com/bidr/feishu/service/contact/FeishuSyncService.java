@@ -1,6 +1,6 @@
 package com.bidr.feishu.service.contact;
 
-import com.bidr.feishu.config.OnFeishuDirectForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.authorization.dao.entity.AcAccount;
@@ -40,7 +40,7 @@ import java.util.List;
  */
 @Slf4j
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuDirectForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' == 'true'")
 @Service
 @RequiredArgsConstructor
 public class FeishuSyncService {

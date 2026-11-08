@@ -1,6 +1,6 @@
 package com.bidr.feishu.controller.direct;
 
-import com.bidr.feishu.config.OnFeishuDirectForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.authorization.annotation.auth.Auth;
@@ -33,7 +33,7 @@ import javax.annotation.Resource;
 @RestController("FeishuSsoController")
 @RequestMapping(value = "/web/feishu/sso")
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuDirectForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' == 'true'")
 public class FeishuSsoController {
 
     @Resource

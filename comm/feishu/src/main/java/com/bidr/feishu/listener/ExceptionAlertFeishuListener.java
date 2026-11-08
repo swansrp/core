@@ -1,6 +1,6 @@
 package com.bidr.feishu.listener;
 
-import com.bidr.feishu.config.OnFeishuDirectForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.kernel.event.ExceptionAlertEvent;
@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuDirectForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' == 'true'")
 @Component
 public class ExceptionAlertFeishuListener {
 

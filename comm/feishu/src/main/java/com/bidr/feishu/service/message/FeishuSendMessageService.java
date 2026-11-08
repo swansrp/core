@@ -1,5 +1,6 @@
 package com.bidr.feishu.service.message;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.repository.AcAccountService;

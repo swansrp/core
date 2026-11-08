@@ -1,6 +1,6 @@
 package com.bidr.feishu.bridge;
 
-import com.bidr.feishu.config.OnFeishuBridgeForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.authorization.identity.IdentityBridge;
@@ -80,7 +80,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuBridgeForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' != 'true'")
 public class FeishuIdentityBridge implements IdentityBridge {
 
     /** 在职（原同步链 employStatus=YES 的语义） */

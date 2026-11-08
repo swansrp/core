@@ -1,6 +1,6 @@
 package com.bidr.feishu.controller;
 
-import com.bidr.feishu.config.OnFeishuBridgeForm;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Conditional;
 import com.bidr.authorization.annotation.auth.Auth;
@@ -37,7 +37,7 @@ import javax.annotation.Resource;
 @RestController("FeishuSyncController")
 @RequestMapping(value = "/web/feishu/sync")
 @ConditionalOnProperty(prefix = "feishu", name = "app-id")
-@Conditional(OnFeishuBridgeForm.class)
+@ConditionalOnExpression("'${feishu.direct:false}' != 'true'")
 public class FeishuSyncController {
 
     @Resource
