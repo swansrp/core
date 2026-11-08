@@ -234,7 +234,32 @@ public final class MenuDeclaration {
         Set<String> components = new HashSet<>();
         for (Node root : roots) {
             validateRoot(root);
+            validateAppCodeConsistency(root);
             validateTree(root, components);
+        }
+    }
+
+    /**
+     * 整树 appCode 一致性守卫（守卫 A，2026-11-08 用户拍板）：一棵 topnav 树内 appCode 必须
+     * <b>全体一致</b>——全缺省（平台自身 NULL）或全声明且同值。父声明而子孙缺省（或反向、或兄弟
+     * 异值）⇒ 校验期 fail-fast「整树归属不完整」：该形态落库后读侧两侧皆不可见（平台 IS NULL
+     * 不命中 app 子树的 grand_id 链、app 等值不命中 NULL）＝静默劈树（语义详见 Node.appCode 注释）。
+     * 校验期炸＝开发期可见，替代静默缺页。
+     */
+    private static void validateAppCodeConsistency(Node root) {
+        Set<String> seen = new HashSet<>();
+        collectAppCode(root, seen);
+        if (seen.size() > 1) {
+            throw declError(root.source, "整树归属不完整：appCode 必须每节点显式声明且全体一致"
+                    + "（缺省与声明混用/多值＝读侧两侧不可见的劈树）：" + root.title + "/" + root.path
+                    + " 实际=" + seen);
+        }
+    }
+
+    private static void collectAppCode(Node node, Set<String> seen) {
+        seen.add(node.appCode == null ? "∅(平台自身)" : node.appCode);
+        for (Node child : node.children) {
+            collectAppCode(child, seen);
         }
     }
 

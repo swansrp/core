@@ -278,7 +278,7 @@ public class MenuDeclarationTest {
                 + "    path: shared\n"
                 + "    appCode: app-x\n"
                 + "    children:\n"
-                + "      - {title: 应用页, path: p1, component: /views/app/index.vue}\n");
+                + "      - {title: 应用页, path: p1, component: /views/app/index.vue, appCode: app-x}\n");
         List<Node> b = one(""
                 + "menus:\n"
                 + "  - title: 共享导航\n"
@@ -331,7 +331,13 @@ public class MenuDeclarationTest {
         List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
         Assert.assertEquals("topnav 仍是一棵", 1, merged.size());
         Assert.assertEquals("异 appCode 子节点分流", 2, merged.get(0).children.size());
-        validate(merged);
+        // 守卫 A：平台(NULL)/应用(app-x) 混用＝劈树形态，merge 分流后 validate 必拒
+        try {
+            validate(merged);
+            Assert.fail("整树混用必须拒");
+        } catch (RuntimeException e) {
+            Assert.assertTrue(e.getMessage().contains("整树归属不完整"));
+        }
     }
 
     @Test
@@ -341,12 +347,14 @@ public class MenuDeclarationTest {
                 + "menus:\n"
                 + "  - title: 共享导航\n"
                 + "    path: shared\n"
+                + "    appCode: app-x\n"
                 + "    children:\n"
                 + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: app-x}\n");
         List<Node> b = one(""
                 + "menus:\n"
                 + "  - title: 共享导航\n"
                 + "    path: shared\n"
+                + "    appCode: app-x\n"
                 + "    children:\n"
                 + "      - {title: 页一, path: p1, icon: SettingOutlined, appCode: app-x}\n");
         List<Node> merged = MenuDeclaration.mergeAll(wrap(a, b));
@@ -367,7 +375,7 @@ public class MenuDeclarationTest {
                 + "    path: navA\n"
                 + "    appCode: " + wide + "\n"
                 + "    children:\n"
-                + "      - {title: 页一, path: p1, component: /views/one/index.vue}\n");
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: " + wide + "}\n");
         assertThrowsContains(() -> validate(roots), "appCode 超宽");
     }
 
@@ -384,7 +392,7 @@ public class MenuDeclarationTest {
                 + "    path: navA\n"
                 + "    appCode: " + full + "\n"
                 + "    children:\n"
-                + "      - {title: 页一, path: p1, component: /views/one/index.vue}\n");
+                + "      - {title: 页一, path: p1, component: /views/one/index.vue, appCode: " + full + "}\n");
         Assert.assertEquals(64, roots.get(0).appCode.length());
         validate(roots);
     }
@@ -567,4 +575,73 @@ public class MenuDeclarationTest {
         }
         Assert.fail("预期抛 IllegalStateException（含 " + fragment + "），实际未抛");
     }
+
+    // ==================== 整树 appCode 一致性守卫（守卫 A，2026-11-08 用户拍板） ====================
+
+    private static Node tree(String appCode, Node... children) {
+        Node root = new Node(true, "guard-a");
+        root.title = "守卫导航";
+        root.path = "guardNav";
+        root.appCode = appCode;
+        for (Node c : children) {
+            root.children.add(c);
+        }
+        return root;
+    }
+
+    private static Node leaf(String path, String appCode) {
+        Node n = new Node(false, "guard-a");
+        n.title = path;
+        n.path = path;
+        n.component = "/views/x/" + path + "/index.vue"; // component 全局唯一（validate 硬校验）
+        n.appCode = appCode;
+        return n;
+    }
+
+    /** 父声明而子缺省 ⇒ 校验期抛「整树归属不完整」（静默劈树变开发期炸）。 */
+    @Test
+    public void validateRejectsParentDeclaredChildMissing() {
+        try {
+            MenuDeclaration.validate(java.util.Collections.singletonList(
+                    tree("app-x", leaf("p1", null))));
+            Assert.fail("父声明子缺省必须拒");
+        } catch (RuntimeException e) {
+            Assert.assertTrue("文案含整树归属不完整：" + e.getMessage(),
+                    e.getMessage().contains("整树归属不完整"));
+        }
+    }
+
+    /** 父缺省而子声明（反向劈树）⇒ 同拒。 */
+    @Test
+    public void validateRejectsParentMissingChildDeclared() {
+        try {
+            MenuDeclaration.validate(java.util.Collections.singletonList(
+                    tree(null, leaf("p1", "app-x"))));
+            Assert.fail("父缺省子声明必须拒");
+        } catch (RuntimeException e) {
+            Assert.assertTrue(e.getMessage().contains("整树归属不完整"));
+        }
+    }
+
+    /** 兄弟异值 ⇒ 同拒。 */
+    @Test
+    public void validateRejectsSiblingAppCodeMismatch() {
+        try {
+            MenuDeclaration.validate(java.util.Collections.singletonList(
+                    tree("app-x", leaf("p1", "app-x"), leaf("p2", "app-y"))));
+            Assert.fail("兄弟 appCode 异值必须拒");
+        } catch (RuntimeException e) {
+            Assert.assertTrue(e.getMessage().contains("整树归属不完整"));
+        }
+    }
+
+    /** 全树一致（全缺省＝平台自身 / 全声明同值）⇒ 校验通过。 */
+    @Test
+    public void validatePassesWhenTreeAppCodeConsistent() {
+        MenuDeclaration.validate(java.util.Collections.singletonList(
+                tree(null, leaf("p1", null), leaf("p2", null))));
+        MenuDeclaration.validate(java.util.Collections.singletonList(
+                tree("app-x", leaf("p1", "app-x"), leaf("p2", "app-x"))));
+    }
+
 }
