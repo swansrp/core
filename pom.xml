@@ -183,6 +183,25 @@
                             <waitUntil>validated</waitUntil>
                         </configuration>
                     </plugin>
+                    <!-- 打平发布 pom：${jarVersion} 属性版本与字面 parent 版本(0.0.1-SNAPSHOT)在
+                         Central 校验下不可解析（jitpack 时代靠它改写 pom 才没炸过）——oss 模式按有效
+                         模型生成自包含发布 pom：版本全部落定、parent 边内联、继承元数据物化进各模块 -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>flatten-maven-plugin</artifactId>
+                        <version>1.6.0</version>
+                        <configuration>
+                            <flattenMode>oss</flattenMode>
+                            <updatePomFile>true</updatePomFile>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>flatten-dist</id>
+                                <phase>process-resources</phase>
+                                <goals><goal>flatten</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
