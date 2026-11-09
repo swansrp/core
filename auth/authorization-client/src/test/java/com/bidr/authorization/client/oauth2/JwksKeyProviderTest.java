@@ -156,14 +156,14 @@ public class JwksKeyProviderTest {
     @Test
     public void refreshFailureKeepsLastGoodSnapshot() {
         server.expect(requestTo(JWKS_URL)).andRespond(withSuccess(jwksJson, MediaType.APPLICATION_JSON));
-        JwksKeyProvider provider = new JwksKeyProvider(BASE, "", 1L, restTemplate); // TTL=1ms ⇒ 立刻过期
+        JwksKeyProvider provider = new JwksKeyProvider(BASE, "", 500L, restTemplate); // TTL=500ms：1ms 在负载下连 refresh→assert 的窗口都会擦枪（首发 deploy #3 实锤），两边各留 100ms 余量
         provider.refresh();
         Assert.assertEquals(publicKeyBase64, provider.resolve(kid));
 
         // 过期后拉取失败：必须仍拿得到上次快照（子系统的可用性不能绑在主系统抖动上）
         server.reset();
         server.expect(requestTo(JWKS_URL)).andRespond(withServerError());
-        sleep(5);
+        sleep(600);
         Assert.assertEquals("刷新失败应沿用上次成功快照", publicKeyBase64, provider.resolve(kid));
     }
 
@@ -201,11 +201,11 @@ public class JwksKeyProviderTest {
     @Test
     public void ttlExpiryMarksCacheNotFresh() {
         server.expect(requestTo(JWKS_URL)).andRespond(withSuccess(jwksJson, MediaType.APPLICATION_JSON));
-        JwksKeyProvider provider = new JwksKeyProvider(BASE, "", 1L, restTemplate);
+        JwksKeyProvider provider = new JwksKeyProvider(BASE, "", 500L, restTemplate); // TTL 放宽防负载擦枪，同腿 3
         provider.refresh();
         Assert.assertTrue(provider.fresh());
 
-        sleep(5);
+        sleep(600);
         // 过期 ⇒ 下次 resolve 会重新拉取（"拉到失败仍用快照"由 refreshFailureKeepsLastGoodSnapshot 腿覆盖）
         Assert.assertFalse("TTL 过期后 fresh 必须为 false", provider.fresh());
     }
