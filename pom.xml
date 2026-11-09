@@ -192,8 +192,10 @@
                          生成自包含发布 pom：版本全部落定、parent 边内联、继承元数据物化进各模块。
                          【pomElements 白名单而非 oss 预设】oss 会保留 distributionManagement——内网
                          Nexus 的 http://10.3.23.193 地址随 pom 发布＝Central 供应链防护（非 HTTPS
-                         仓库地址）必打回（首发两轮校验挂同一因）。白名单只留硬性元数据＋解析后依赖，
-                         内网通道信息零外泄 -->
+                         仓库地址）必打回（首发两轮校验挂同一因）。白名单只留元数据五项；
+                         licenses/dependencies 由插件自动解析保留、不在 pomElements 可配之列
+                         （写了即报 Cannot find，1.6.0 实测）；其余（distributionManagement/
+                         repositories/properties/profiles...）不在名单＝剥离，内网通道零外泄 -->
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>flatten-maven-plugin</artifactId>
@@ -204,10 +206,8 @@
                                 <name/>
                                 <description/>
                                 <url/>
-                                <licenses/>
                                 <developers/>
                                 <scm/>
-                                <dependencies/>
                             </pomElements>
                         </configuration>
                         <executions>

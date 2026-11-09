@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.swansrp</groupId>
   <artifactId>kernel</artifactId>
-  <version>train_20261109110900</version>
+  <version>0.0.1-SNAPSHOT</version>
   <description>Bidr Core</description>
   <url>https://gitee.com/swansrp/core/base/kernel</url>
   <licenses>
@@ -25,18 +25,6 @@
     <developerConnection>scm:git:git@gitee.com:swansrp/core.git/base/kernel</developerConnection>
     <url>https://gitee.com/swansrp/core/base/kernel</url>
   </scm>
-  <distributionManagement>
-    <repository>
-      <id>bidr</id>
-      <name>nexus Repository RELEASES</name>
-      <url>http://10.3.23.193:8081/repository/maven-releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>bidr</id>
-      <name>nexus Repository SNAPSHOTS</name>
-      <url>http://10.3.23.193:8081/repository/maven-snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
