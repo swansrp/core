@@ -33,3 +33,6 @@ hs_err_pid*
 # 构建隔离：本地 Maven 仓库指向（各克隆/各 worktree 自持，不入库）；CI 用 CLI 覆盖
 /.mvn/jvm.config
 /.mvn/maven.config
+
+# flatten 生成物(发布 pom 的字面快照,不入库)
+.flattened-pom.xml
