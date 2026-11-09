@@ -7,7 +7,7 @@
         <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>td</artifactId>
@@ -23,7 +23,7 @@
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
-            <version>${jarVersion}</version>
+            <version>${revision}</version>
             <exclusions>
                 <!-- 排除 JUnit 4，确保 surefire 使用 JUnit 5 -->
                 <exclusion>

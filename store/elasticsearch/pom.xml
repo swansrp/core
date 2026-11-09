@@ -6,7 +6,7 @@
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <groupId>io.github.swansrp</groupId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <properties>
         <elasticsearch.version>8.17.3</elasticsearch.version>
@@ -17,7 +17,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>elasticsearch</artifactId>
-    <version>${jarVersion}</version>
+    <version>${revision}</version>
 
     
 

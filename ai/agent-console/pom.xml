@@ -7,11 +7,11 @@
         <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>agent-console</artifactId>
-    <version>${jarVersion}</version>
+    <version>${revision}</version>
     <packaging>jar</packaging>
     <description>Agent 资产化控制面（M14）：能力包登记 SPI 与只读清单——工具/技能/模型档的"系统级"资产目录与装配单。
         运行时仍在 core/llm，本模块只出机制（登记、聚合、只读端点），不含业务语义、不自持空间概念。</description>

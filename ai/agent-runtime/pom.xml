@@ -7,11 +7,11 @@
         <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>agent-runtime</artifactId>
-    <version>${jarVersion}</version>
+    <version>${revision}</version>
     <description>外部 Agent Runtime 接入层：provider SPI 实现（agent-system / OpenHands）+ 浏览器中转 relay +
         会话归属映射。SPI 接口本身在 core/llm（com.bidr.llm.agent.runtime.spi），本模块只做实现与中转。</description>
 

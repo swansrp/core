@@ -168,7 +168,7 @@
 <dependency>
     <groupId>com.bidr</groupId>
     <artifactId>td</artifactId>
-    <version>${jarVersion}</version>
+    <version>${revision}</version>
 </dependency>
 ```
 

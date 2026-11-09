@@ -6,7 +6,7 @@
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <groupId>io.github.swansrp</groupId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -18,7 +18,7 @@
 </properties>
 
     <artifactId>engine-file-parse</artifactId>
-    <version>${jarVersion}</version>
+    <version>${revision}</version>
     <packaging>jar</packaging>
 
     
@@ -28,20 +28,20 @@
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>base-task</artifactId>
-            <version>${jarVersion}</version>
+            <version>${revision}</version>
         </dependency>
         <!-- 产物存储（BlobStore 八前缀键正源 + sa_blob 台账） -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>store-blob</artifactId>
-            <version>${jarVersion}</version>
+            <version>${revision}</version>
         </dependency>
         <!-- 加工门面（DocumentProcessor 内置直读 + ConvertStep 外挂腿 + AsyncTranscribeLeg 异步口；
              不直接依赖 tool/mineru / tool/gotenberg——腿装不装由 classpath 决定，经 document 间接） -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>document</artifactId>
-            <version>${jarVersion}</version>
+            <version>${revision}</version>
         </dependency>
         <!-- 页图渲染（PageImageRenderer 的 PDFBox）：本模块直依件必须显式声明（A13——
            此前只靠 document 传递，fat jar 闭包里没有它＝NoClassDefFoundError 运行时爆）。
