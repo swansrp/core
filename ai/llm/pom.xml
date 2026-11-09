@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <version>0.0.1-SNAPSHOT</version>
@@ -27,14 +27,14 @@
     <dependencies>
         <!-- 系统参数契约（Param/@MetaParam）：LlmParam 据此声明数据库参数 key -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- 文档 SPI 桥接：VisionConfigProvider 默认适配器（LLM 视觉配置 → document 视觉腿）。
              2026-11-05 SPI 反转后依赖方向＝llm → document 单向；document 已零本模块依赖 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>document</artifactId>
             <version>${document.version}</version>
         </dependency>
@@ -44,14 +44,14 @@
              依赖方向＝document → llm，反向有守卫测试 LlmLayeringGuardTest 守着 -->
         <!-- 系统参数读取为可选能力：类路径上有 core/platform 时数据库参数（sys_config）才优先生效，否则回落 llm.* yaml -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
             <optional>true</optional>
         </dependency>
         <!-- Redis 流式回答存储为可选能力：类路径上有 core/redis 时才装配 RedisStreamAnswerStore -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>redis</artifactId>
             <version>${redis.version}</version>
             <optional>true</optional>

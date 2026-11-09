@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.bidr</groupId>
+    <groupId>io.github.swansrp</groupId>
     <artifactId>core</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <!-- ============================================================
@@ -59,6 +59,28 @@
 
     <name>core</name>
     <description>Bidr Core</description>
+
+    <!-- Central 发布元数据（2026-11-09 定案 io.github.swansrp 命名空间）：Portal 校验硬性要求
+         url/licenses/developers/scm，各模块经继承生效；scm 指向 gitee 正源（公开源码地） -->
+    <url>https://gitee.com/swansrp/core</url>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>swansrp</name>
+            <organization>bidr</organization>
+        </developer>
+    </developers>
+    <scm>
+        <url>https://gitee.com/swansrp/core</url>
+        <connection>scm:git:https://gitee.com/swansrp/core.git</connection>
+        <developerConnection>scm:git:git@gitee.com:swansrp/core.git</developerConnection>
+    </scm>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -137,6 +159,74 @@
             <properties>
                 <jdk.module.opens>--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED</jdk.module.opens>
             </properties>
+        </profile>
+
+        <!-- ===== Central 发布档（2026-11-09 定案）=====
+             用法: mvn clean deploy -Pcentral-dist -DjarVersion=<戳> -DskipTests
+             前置: ~/.m2/settings.xml 配 server id=central（Portal token）＋ gpg 密钥已推 keyserver
+             与内网 Nexus 通道(distributionManagement)互不干扰：不带本档的 deploy 照走 Nexus，
+             带本档的 deploy 被 central-publishing-maven-plugin 接管（extensions=true）直传 Portal。
+             autoPublish=false＝首发人工闸：Portal 校验过之后人手点 Publish（发布即永久不可撤）；
+             火车脚本稳定后可改 true。 -->
+        <profile>
+            <id>central-dist</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.8.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>false</autoPublish>
+                            <waitUntil>validated</waitUntil>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals><goal>jar-no-fork</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.6.3</version>
+                        <configuration>
+                            <doclint>none</doclint>
+                            <quiet>true</quiet>
+                            <charset>UTF-8</charset>
+                            <encoding>UTF-8</encoding>
+                            <docencoding>UTF-8</docencoding>
+                            <failOnError>false</failOnError>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals><goal>jar</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 

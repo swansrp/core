@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -25,13 +25,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- T2.3a：BaseVO/Sys* 引 bind 注解与 AccountContext（authorization-api 类型面） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
         </dependency>

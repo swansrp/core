@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -25,14 +25,14 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- 操作人/租户取数（AccountContext/TenantContext）——审计行身份列的唯一来源；
              base 家族依赖 auth 家族的既有方向（base-task 同款） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization</artifactId>
             <version>${authorization.version}</version>
         </dependency>

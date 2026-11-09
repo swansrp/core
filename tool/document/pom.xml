@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -27,7 +27,7 @@
         <!-- MinerU 客户端：本模块内置增强转写腿 MineruTranscribeLeg 的实现件，
              处理路径自带（依赖方向＝document → mineru，mineru 不反向依赖本模块） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>mineru</artifactId>
             <version>${mineru.version}</version>
         </dependency>

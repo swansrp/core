@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <version>0.0.1-SNAPSHOT</version>
@@ -29,13 +29,13 @@
     <dependencies>
         <!-- kernel：web 基座（@RestController / jackson） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- 运行时与本模块的依赖方向＝console → llm：登记件引用 llm 的工具名常量，llm 反向不感知本模块 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>llm</artifactId>
             <version>${llm.version}</version>
         </dependency>
@@ -44,14 +44,14 @@
             选型正源仍是 sys_config 的 OSS_SERVER_TYPE，与本模块是否认识某家 SDK 无关
         -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>oss</artifactId>
             <version>${oss.version}</version>
         </dependency>
         <!-- platform：读系统参数缓存（SysConfigCacheService）。llm 本就传递带它，但这里是我方直接 import 的类，
              直接用的就直接声明——靠传递依赖声明，等于让 llm 的依赖变化决定本模块能否编译 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
@@ -61,7 +61,7 @@
             🔴 管理员闸门仍不走它——权限判定继续用反射取 permitService（见 AgentManifestController#isAdmin）
         -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization</artifactId>
             <version>${authorization.version}</version>
         </dependency>

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <properties>
@@ -23,7 +23,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>

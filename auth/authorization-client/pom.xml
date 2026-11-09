@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -30,22 +30,22 @@
              redis/platform＝TokenServiceImpl（RedisService＋SysConfigCacheService）；
              spring-web/spring-webmvc＝AuthInterceptor（MVC 拦截器）与 AuthorizationConfigureAdapter。 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>redis</artifactId>
             <version>${redis.version}</version>
         </dependency>
@@ -63,7 +63,7 @@
              （不建 idm_* 表、会话自动装配退位）；子系统显式依赖 identity-mirror（epc-ai-common
              已声明），装配才生效。 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>identity-mirror</artifactId>
             <version>${identity-mirror.version}</version>
             <optional>true</optional>

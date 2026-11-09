@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <version>0.0.1-SNAPSHOT</version>
@@ -28,13 +28,13 @@
     <dependencies>
         <!-- kernel：spring-boot-starter-web（SseEmitter）/ jackson / mybatis-plus 等基座 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- SPI 与契约 DTO 的宿主：本模块只做实现，接口定义在 core/llm -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>llm</artifactId>
             <version>${llm.version}</version>
         </dependency>
@@ -43,7 +43,7 @@
             否则全部回落应用配置 my.agent.runtime.*（与 core/llm 的 Param 优先/yaml 回落同一模式）
         -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
             <optional>true</optional>
@@ -51,7 +51,7 @@
         <!-- authorization-api：只用实体审计填充的注解与主体（@AccountContextFill / AccountContext），
              不碰 server 版的 dao/service；原先误依赖 server 件会把 ac_* 带给所有宿主 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
         </dependency>

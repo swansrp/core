@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -32,19 +32,19 @@
              platform 是授权的底层传输件——依赖方向 platform←authorization-client←场景客户端，
              mirror 取传输/信封不取凭据实现，authorization-client 仍禁）。 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- 开放口传输层（方案B 棒4）：IdentitySnapshotClient/OpenApiMenuClient 的
              OpenApiDataClient（HTTP＋统一信封解包）与 OpenApiAuthProvider 凭据注入面 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>

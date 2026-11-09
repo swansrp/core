@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -27,7 +27,7 @@
         <!-- 腿→口（D10/§7.3 定形）：本模块实现 tool/document 的 ConvertStep，
              tool/document 不反向依赖本模块（无环） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>document</artifactId>
             <version>${document.version}</version>
         </dependency>

@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <version>0.0.1-SNAPSHOT</version>
@@ -25,27 +25,27 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>redis</artifactId>
             <version>${redis.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization</artifactId>
             <version>${authorization.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>admin</artifactId>
             <version>${admin.version}</version>
         </dependency>

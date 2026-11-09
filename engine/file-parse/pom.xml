@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -26,20 +26,20 @@
     <dependencies>
         <!-- 编排车床（@AsyncTaskType/@AsyncStage 三态阶段 + sa_async_task 台账） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>base-task</artifactId>
             <version>${jarVersion}</version>
         </dependency>
         <!-- 产物存储（BlobStore 八前缀键正源 + sa_blob 台账） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>store-blob</artifactId>
             <version>${jarVersion}</version>
         </dependency>
         <!-- 加工门面（DocumentProcessor 内置直读 + ConvertStep 外挂腿 + AsyncTranscribeLeg 异步口；
              不直接依赖 tool/mineru / tool/gotenberg——腿装不装由 classpath 决定，经 document 间接） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>document</artifactId>
             <version>${jarVersion}</version>
         </dependency>

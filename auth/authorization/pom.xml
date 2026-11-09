@@ -5,7 +5,7 @@
     <parent>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <groupId>com.bidr</groupId>
+        <groupId>io.github.swansrp</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <properties>
@@ -23,36 +23,36 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
         <!-- T2.3a 拆分：authorization-api（同包名类型面正源）。本模块=server，经此传递供货给
              11 个存量依赖方（它们 pom 一行不改）；api 禁反向依赖本模块（见 tools/dep-direction-check.mjs） -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization-api</artifactId>
             <version>${authorization-api.version}</version>
         </dependency>
         <!-- T2.3c 上提：authorization-client（客户端运行时：AuthInterceptor/AuthLogin/TokenServiceImpl 等）。
              server→client 单向（client 禁反向依赖 server，dep-direction 断言②）；经此传递供货给存量依赖方 -->
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>authorization-client</artifactId>
             <version>${authorization-client.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>email</artifactId>
             <version>${email.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.bidr</groupId>
+            <groupId>io.github.swansrp</groupId>
             <artifactId>redis</artifactId>
             <version>${redis.version}</version>
         </dependency>
