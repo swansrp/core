@@ -17,6 +17,7 @@
     </properties>
 
     <artifactId>insight</artifactId>
+    <name>insight</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 

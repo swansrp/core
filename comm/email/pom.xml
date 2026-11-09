@@ -16,6 +16,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>email</artifactId>
+    <name>email</name>
     <version>${jarVersion}</version>
 
     

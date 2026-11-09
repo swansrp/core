@@ -18,6 +18,7 @@
 </properties>
 
     <artifactId>document</artifactId>
+    <name>document</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 

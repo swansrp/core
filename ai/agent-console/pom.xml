@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>agent-console</artifactId>
+    <name>agent-console</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
     <description>Agent 资产化控制面（M14）：能力包登记 SPI 与只读清单——工具/技能/模型档的"系统级"资产目录与装配单。

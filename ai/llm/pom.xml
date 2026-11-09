@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>llm</artifactId>
+    <name>llm</name>
     <version>${jarVersion}</version>
 
     <properties>

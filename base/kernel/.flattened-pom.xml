@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.swansrp</groupId>
   <artifactId>kernel</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>train_20261109110900</version>
   <description>Bidr Core</description>
   <url>https://gitee.com/swansrp/core/base/kernel</url>
   <licenses>

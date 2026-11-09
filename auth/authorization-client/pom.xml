@@ -18,6 +18,7 @@
 </properties>
 
     <artifactId>authorization-client</artifactId>
+    <name>authorization-client</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 

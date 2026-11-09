@@ -18,6 +18,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>mcp</artifactId>
+    <name>mcp</name>
     <version>${jarVersion}</version>
 
     

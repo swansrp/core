@@ -16,6 +16,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>authorization</artifactId>
+    <name>authorization</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 

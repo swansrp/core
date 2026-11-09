@@ -16,6 +16,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>mongo</artifactId>
+    <name>mongo</name>
     <version>${jarVersion}</version>
 
     

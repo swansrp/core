@@ -16,6 +16,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>platform</artifactId>
+    <name>platform</name>
     <version>${jarVersion}</version>
 
     

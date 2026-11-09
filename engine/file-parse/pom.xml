@@ -18,6 +18,7 @@
 </properties>
 
     <artifactId>engine-file-parse</artifactId>
+    <name>engine-file-parse</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 

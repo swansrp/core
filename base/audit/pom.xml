@@ -18,6 +18,7 @@
 </properties>
 
     <artifactId>base-audit</artifactId>
+    <name>base-audit</name>
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
