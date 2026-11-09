@@ -3,10 +3,15 @@
 # central.sh — 本机发布 core 到 Maven Central（Portal 通道）
 #
 # 用法:
-#   ./central.sh                 # 快枪（跳测试，发 train_<当前时间戳>）
+#   ./central.sh                 # 快枪（跳测试，版本自动递增 0.0.1→0.0.2→…）
 #   ./central.sh --full          # 全量测试枪（验收/首发推荐，约 12 分钟）
-#   ./central.sh train_20261201  # 指定版本戳
-#   ./central.sh --tag           # 成功后在 core 仓打 tag 并 push（发版留锚点）
+#   ./central.sh 1.2.3           # 手动指定版本
+#   ./central.sh --tag           # 成功后把版本 tag push 到 origin
+#
+# 版本号规则（tag.sh 同款公式）:
+#   候选 = 本地 tag central_X.Y.Z ＋ repo1 已发布元数据里的裸版本 X.Y.Z（防撞号，网络查询尽力而为）
+#   取最大 → 末位+1 → 满99进十位、十位满99进主位；无候选从 0.0.1 起。
+#   号源消耗：构建成功后自动打本地 tag central_<版本>（--tag 再 push）；下次跑自然递增。
 #
 # 前置（均已一次性就位，脚本会自检并给出提示）:
 #   1. ~/.m2/settings.xml 有 <server><id>central</id>（Portal token）
@@ -35,7 +40,23 @@ for a in "$@"; do
     *)      STAMP="$a" ;;
   esac
 done
-STAMP="${STAMP:-train_$(date +%Y%m%d%H%M%S)}"
+# ---------- 版本号自动递增（tag.sh 公式＋已发布元数据双保险） ----------
+next_version() {
+  local vers=() v max a b c
+  while IFS= read -r v; do [ -n "$v" ] && vers+=("$v"); done < <(
+    git tag -l 'central_*' | sed 's/^central_//'
+    # 已发布裸版本（7ccff197 那种 train_ 戳不匹配、自动忽略）；查不到就只信本地 tag
+    curl -s -m 8 'https://repo1.maven.org/maven2/io/github/swansrp/kernel/maven-metadata.xml' 2>/dev/null \
+      | grep -oE '<version>[0-9]+\.[0-9]+\.[0-9]+</version>' | sed -E 's~</?version>~~g'
+  )
+  if [ ${#vers[@]} -eq 0 ]; then echo '0.0.1'; return; fi
+  max=$(printf '%s\n' "${vers[@]}" | sort -V | tail -1)
+  IFS=. read -r a b c <<<"$max"
+  c=$((c+1)); [ "$c" -gt 99 ] && { c=0; b=$((b+1)); }
+  [ "$b" -gt 99 ] && { b=0; a=$((a+1)); }
+  echo "$a.$b.$c"
+}
+STAMP="${STAMP:-$(next_version)}"
 
 # ---------- 自检 ----------
 command -v mvn  >/dev/null || { echo "✗ 未找到 mvn" >&2; exit 1; }
@@ -84,10 +105,12 @@ echo "── 发版: mvn ${ARGS[*]}"
 echo "── 版本戳: $STAMP"
 mvn "${ARGS[@]}"
 
-# ---------- 成功收尾 ----------
+# ---------- 成功收尾：消耗号源（本地 tag 必打；--tag 才 push） ----------
+git tag "central_$STAMP" 2>/dev/null || true
+echo "── 已打本地 tag: central_$STAMP（下次自动 $STAMP→递增）"
 if $DO_TAG; then
-  git tag "$STAMP" && git push origin "$STAMP"
-  echo "── 已打 tag 并 push: $STAMP"
+  git push origin "central_$STAMP"
+  echo "── tag 已 push: central_$STAMP"
 fi
 cat <<EOF
 
