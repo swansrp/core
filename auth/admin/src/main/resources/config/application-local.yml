@@ -1,8 +1,9 @@
+# 本地档凭据一律现场自填，真实值不入库（2026-11-09 Central 公开发布清理）
 spring:
   mail:
     host: smtp.qq.com
-    username: 56093273@qq.com
-    password: tljbvojjskilbhdc
+    username:
+    password:
     properties:
       mail:
         smtp:
@@ -18,7 +19,7 @@ my:
       db: erp
       url: 10.3.23.191
       username: root
-      password: Root@1234
+      password:
       driver: com.mysql.cj.jdbc.Driver
 
 swagger: # 是否开启swagger
@@ -33,8 +34,8 @@ app:
 
 mqtt:
   host: tcp://49.232.132.116:1883
-  user-name: sharp
-  password: Adm!n123
+  user-name:
+  password:
   client:
     id: sharp-server
 

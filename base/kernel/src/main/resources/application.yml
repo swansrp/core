@@ -122,8 +122,10 @@ spring:
         max-wait: -1ms
   mail:
     host: smtp.qq.com
-    username: 56093273@qq.com
-    password: tljbvojjskilbhdc
+    # 【现场自配】发件邮箱与授权码不入库（2026-11-09 Central 公开发布清理：
+    # 旧授权码已随 jitpack 历史 jar 泄漏，必须去 QQ 邮箱换新）
+    username:
+    password:
     properties:
       mail:
         smtp:
