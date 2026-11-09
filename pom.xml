@@ -284,6 +284,34 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <!-- 发布 pom 物化＝全局常态（2026-11-10 从 central-dist 档上提）：install/deploy 产物
+                 一律自包含（parent 边内联、版本落定）——发 Nexus（火车）同样需要：占位 pom 出去
+                 ＝消费端传递边断（framework 仓「找不到 com.bidr.kernel 类」同款病实证）。
+                 oss 模式保留 distributionManagement（发 Nexus 无供应链校验）；
+                 central-dist 档内同名插件以 pomElements 白名单覆盖（发 Central 剥内网地址）。 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <flattenMode>oss</flattenMode>
+                    <updatePomFile>true</updatePomFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten-dist</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>flatten</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals><goal>clean</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <distributionManagement>
