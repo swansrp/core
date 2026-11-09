@@ -7,7 +7,7 @@
         <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>${revision}</version>
+        <version>${jarVersion}</version>
     </parent>
 
     <properties>
@@ -18,7 +18,7 @@
 </properties>
 
     <artifactId>forge</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
     

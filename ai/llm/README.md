@@ -55,7 +55,7 @@ com.bidr.llm
 <dependency>
     <groupId>com.bidr</groupId>
     <artifactId>llm</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
 </dependency>
 ```
 

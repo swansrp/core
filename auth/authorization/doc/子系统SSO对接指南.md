@@ -343,14 +343,14 @@ openssl pkey -in sso-key/priv.pem -pubout -outform DER | base64 -w0 > sso-key/pu
 <dependency>
     <groupId>com.bidr</groupId>
     <artifactId>authorization-client</artifactId>
-    <version>${revision}</version>   <!-- 跟随 core 的 revision；framework 老项目需先接 core -->
+    <version>${jarVersion}</version>   <!-- 跟随 core 的 jarVersion；framework 老项目需先接 core -->
 </dependency>
 <!-- 2) 身份镜像：共享会话编排（SubsystemSessionService）的账号源
      🔴 client 对它是 optional（不传递），子系统必须显式声明这一行 -->
 <dependency>
     <groupId>com.bidr</groupId>
     <artifactId>identity-mirror</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
 </dependency>
 ```
 

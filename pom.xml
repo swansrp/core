@@ -5,7 +5,7 @@
 
     <groupId>io.github.swansrp</groupId>
     <artifactId>core</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
     <!-- ============================================================
          兼容性纪律(1.8/17 并存期):
          1. 除 ai/* 外,本仓库源码必须保持 Java 8 语法/API 兼容——下游 1.8
@@ -90,7 +90,7 @@
     </parent>
 
     <properties>
-        <revision>0.0.1-SNAPSHOT</revision>
+        <jarVersion>0.0.1-SNAPSHOT</jarVersion>
 
         <!-- 混合字节码模型（2026-11-09 拍板，修正 11-08 的全量统一 17）：老项目必须 JDK8 且不用
              ai 模块——默认编译目标 1.8（非 ai 32 模块），ai17 五模块各自在模块 pom override 17；
@@ -100,12 +100,12 @@
 
         <!-- ============ 版本开关(双 profile 退役后的唯一机制) ============
              默认 0.0.1-SNAPSHOT = 本地源码模式(reactor 全量现编,零参数);
-             发布火车:-Drevision=<戳> 一根旗子——模块版本与兄弟互 pin 全部对齐该戳
-             (core.dist.version 跟随 revision);消费方再用 -Dcore.dist.version=<同一戳> 锁定。
-             2026-11-09 由 jarVersion 更名 revision＝Maven 3.5+ 原生 CI-friendly 版本
-             (Jenkins 零改动:它只写消费侧 core.dist.version,从不碰本旗标)。
+             发布火车:-DjarVersion=<戳> 一根旗子——模块版本与兄弟互 pin 全部对齐该戳
+             (core.dist.version 跟随 jarVersion);消费方再用 -Dcore.dist.version=<同一戳> 锁定。
+             (2026-11-09 曾试改 CI-friendly revision,因 Jenkins 火车链/脚手架全家依赖
+              jarVersion 且 devops 共享库禁改而回退——旗标名是生态契约,勿再动。)
              下列兄弟属性全部由此一根派生,模块 pom 不再各自携带版本。 -->
-        <core.dist.version>${revision}</core.dist.version>
+        <core.dist.version>${jarVersion}</core.dist.version>
         <admin-api.version>${core.dist.version}</admin-api.version>
         <admin.version>${core.dist.version}</admin.version>
         <authorization-api.version>${core.dist.version}</authorization-api.version>
@@ -166,7 +166,7 @@
         </profile>
 
         <!-- ===== Central 发布档（2026-11-09 定案）=====
-             用法: mvn clean deploy -Pcentral-dist -Drevision=<戳> -DskipTests
+             用法: mvn clean deploy -Pcentral-dist -DjarVersion=<戳> -DskipTests
              前置: ~/.m2/settings.xml 配 server id=central（Portal token）＋ gpg 密钥已推 keyserver
              与内网 Nexus 通道(distributionManagement)互不干扰：不带本档的 deploy 照走 Nexus，
              带本档的 deploy 被 central-publishing-maven-plugin 接管（extensions=true）直传 Portal。
@@ -187,16 +187,28 @@
                             <waitUntil>validated</waitUntil>
                         </configuration>
                     </plugin>
-                    <!-- 打平发布 pom：${revision} 属性版本与字面 parent 版本(0.0.1-SNAPSHOT)在
-                         Central 校验下不可解析（jitpack 时代靠它改写 pom 才没炸过）——oss 模式按有效
-                         模型生成自包含发布 pom：版本全部落定、parent 边内联、继承元数据物化进各模块 -->
+                    <!-- 打平发布 pom：${jarVersion} 属性版本与字面 parent 版本(0.0.1-SNAPSHOT)在
+                         Central 校验下不可解析（jitpack 时代靠它改写 pom 才没炸过）——按有效模型
+                         生成自包含发布 pom：版本全部落定、parent 边内联、继承元数据物化进各模块。
+                         【pomElements 白名单而非 oss 预设】oss 会保留 distributionManagement——内网
+                         Nexus 的 http://10.3.23.193 地址随 pom 发布＝Central 供应链防护（非 HTTPS
+                         仓库地址）必打回（首发两轮校验挂同一因）。白名单只留硬性元数据＋解析后依赖，
+                         内网通道信息零外泄 -->
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>flatten-maven-plugin</artifactId>
                         <version>1.6.0</version>
                         <configuration>
-                            <flattenMode>oss</flattenMode>
                             <updatePomFile>true</updatePomFile>
+                            <pomElements>
+                                <name/>
+                                <description/>
+                                <url/>
+                                <licenses/>
+                                <developers/>
+                                <scm/>
+                                <dependencies/>
+                            </pomElements>
                         </configuration>
                         <executions>
                             <execution>

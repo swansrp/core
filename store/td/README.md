@@ -59,7 +59,7 @@ td/
 <dependency>
     <groupId>com.bidr</groupId>
     <artifactId>td</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
 </dependency>
 ```
 

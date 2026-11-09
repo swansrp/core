@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.github.swansrp</groupId>
+  <artifactId>socket-io</artifactId>
+  <version>train_20261109110900</version>
+  <description>Bidr Core</description>
+  <url>https://gitee.com/swansrp/core/comm/socket-io</url>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>swansrp</name>
+      <organization>bidr</organization>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://gitee.com/swansrp/core.git/comm/socket-io</connection>
+    <developerConnection>scm:git:git@gitee.com:swansrp/core.git/comm/socket-io</developerConnection>
+    <url>https://gitee.com/swansrp/core/comm/socket-io</url>
+  </scm>
+  <distributionManagement>
+    <repository>
+      <id>bidr</id>
+      <name>nexus Repository RELEASES</name>
+      <url>http://10.3.23.193:8081/repository/maven-releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>bidr</id>
+      <name>nexus Repository SNAPSHOTS</name>
+      <url>http://10.3.23.193:8081/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+  <dependencies>
+    <dependency>
+      <groupId>io.github.swansrp</groupId>
+      <artifactId>authorization</artifactId>
+      <version>train_20261109110900</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.swansrp</groupId>
+      <artifactId>mongo</artifactId>
+      <version>train_20261109110900</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.corundumstudio.socketio</groupId>
+      <artifactId>netty-socketio</artifactId>
+      <version>2.0.12</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>4.1.117.Final</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>4.1.117.Final</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+</project>

@@ -7,11 +7,11 @@
         <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>${revision}</version>
+        <version>${jarVersion}</version>
     </parent>
 
     <artifactId>llm</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

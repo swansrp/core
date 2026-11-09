@@ -59,7 +59,7 @@ docker run -d --name openhands-spike \
 ## 5. OpenHands 侧功能配置（profile 与子 agent）
 
 - **profile 是可写的**：`GET/POST /api/agent-profiles/{name}`（POST = 保存，返回 201）。
-  当前 `default` 已开 `enable_sub_agents=true`（revision 1）。
+  当前 `default` 已开 `enable_sub_agents=true`（jarVersion 1）。
 - **子 agent 类型是文件式的**：放 `~/.openhands/agents/<name>.md`（容器内），frontmatter
   `name/description/tools/model`，正文即 system prompt；`POST /api/sub-agents` 只读发现
   （load_user/load_project/load_builtin 三个开关）。

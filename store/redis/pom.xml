@@ -6,7 +6,7 @@
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <groupId>io.github.swansrp</groupId>
-        <version>${revision}</version>
+        <version>${jarVersion}</version>
     </parent>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,7 +16,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redis</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
 
     
 

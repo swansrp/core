@@ -6,11 +6,11 @@
         <groupId>io.github.swansrp</groupId>
         <artifactId>core</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>${revision}</version>
+        <version>${jarVersion}</version>
     </parent>
 
     <artifactId>mineru</artifactId>
-    <version>${revision}</version>
+    <version>${jarVersion}</version>
     <packaging>jar</packaging>
 
     <properties>
