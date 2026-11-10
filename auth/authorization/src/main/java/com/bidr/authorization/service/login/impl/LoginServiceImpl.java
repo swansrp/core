@@ -10,6 +10,7 @@ import com.bidr.authorization.constants.dict.UserTypeDict;
 import com.bidr.authorization.constants.err.AccountErrCode;
 import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.constants.token.TokenItem;
+import com.bidr.authorization.constants.token.TokenType;
 import com.bidr.authorization.dao.entity.AcAccount;
 import com.bidr.authorization.dao.entity.AcTenant;
 import com.bidr.authorization.dao.entity.AcUser;
@@ -213,14 +214,28 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public LoginRes refreshLogin(String refreshToken) {
         TokenInfo tokenInfo = AuthTokenUtil.decode(refreshToken);
+        // refresh 口已放开鉴权（AuthNone）：只认刷新票。否则任何存活 access token
+        // （含 24h 内泄露票）都能换出 7 天刷新票，续期端点就成了提权器
+        Validator.assertTrue(isRefreshTokenType(tokenInfo), ErrCodeSys.SYS_SESSION_TIME_OUT);
         Validator.assertTrue(tokenService.isTokenExist(tokenInfo), ErrCodeSys.SYS_SESSION_TIME_OUT);
         String customerNumber = tokenService.getItem(tokenInfo, TokenItem.OPERATOR.name(), String.class);
         Validator.assertNotBlank(customerNumber, ErrCodeSys.PA_DATA_NOT_EXIST, "用户");
         AcUser user = acUserService.getByCustomerNumber(customerNumber);
         Validator.assertNotNull(user, AccountErrCode.AC_USER_NOT_EXISTED);
-        Validator.assertNotEquals(user.getStatus(), ActiveStatusDict.LOCKING.getValue(), AccountErrCode.AC_LOCK);
+        // 与 login(AcUser) 同口径：续期等同于一次登录，停用/锁定等非激活态一律不再续
+        Validator.assertTrue(FuncUtil.equals(user.getStatus(), ActiveStatusDict.ACTIVATE.getValue()),
+                AccountErrCode.AC_LOCK);
         tokenService.removeToken(tokenInfo);
         return buildLoginRes(user);
+    }
+
+    /** 可续期票型：与签发侧 {@code TokenType#refreshTokenType} 同口径（微信/平台/改密/iot 票无续期语义）。 */
+    static boolean isRefreshTokenType(TokenInfo tokenInfo) {
+        if (tokenInfo == null) {
+            return false;
+        }
+        return FuncUtil.equals(tokenInfo.getType(), TokenType.WEB_REFRESH_TOKEN)
+                || FuncUtil.equals(tokenInfo.getType(), TokenType.APP_REFRESH_TOKEN);
     }
 
     /**

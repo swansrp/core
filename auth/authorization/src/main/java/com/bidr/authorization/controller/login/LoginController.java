@@ -149,6 +149,8 @@ public class LoginController {
         return loginService.getRegisterMode();
     }
 
+    // refresh 以票自证：access token 过期后才会来续期，端点不能再要求有效 access token
+    @Auth(AuthNone.class)
     @RequestMapping(value = "/refresh", method = RequestMethod.POST)
     public LoginRes refresh(@RequestBody @Validated TokenReq req) {
         LoginRes res = loginService.refreshLogin(req.getToken());
