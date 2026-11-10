@@ -29,15 +29,22 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Title: ChatSessionService
+ * Title: SocketChatSessionService
  * Description: Copyright: Copyright (c) 2019 Company: BHFAE
+ * <p>
+ * 🔴 类名由 ChatSessionService 改为带模块限定：ai/agent-runtime 另有一个同名
+ * com.bidr.agent.runtime.dao.repository.ChatSessionService，两边都是裸 @Service ⇒ 默认 bean 名同为
+ * chatSessionService，同时依赖 socket-io 与 agent-runtime 的项目 component-scan 覆盖 com.bidr 时
+ * 启动即 ConflictingBeanDefinitionException（与内核缓存类 Ac*CacheService 同批收口）。
+ * 本类管的是「操作人 → 客户端连接」的在线登记表，加 Socket 前缀也更贴实义。
+ * 兼容性：全 workspace 唯一消费方是同模块 SocketIoEndpoint，无业务仓引用，改名不外溢。
  *
  * @author Sharp
  * @date 2020/9/25 18:21
  */
 @Slf4j
 @Service
-public class ChatSessionService {
+public class SocketChatSessionService {
 
     private static final ConcurrentHashMap<String, ConcurrentHashMap<String, ChatSession>> MAP = new ConcurrentHashMap<>();
     @Resource
