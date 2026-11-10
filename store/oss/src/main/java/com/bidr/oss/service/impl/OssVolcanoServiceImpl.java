@@ -28,7 +28,9 @@ import java.util.stream.Collectors;
  * Title: OssVolcanoServiceImpl
  * Description: 火山引擎对象存储（TOS）实现，使用火山官方 TOS SDK。
  * 注意：TOS 不支持 S3 path-style 访问（minio 客户端请求会报 InvalidPathAccess），
- * oss.endpoint 需配置为原生端点（如 https://tos-cn-shanghai.volces.com），region 自动从中解析
+ * oss.endpoint 需配置为原生端点（如 https://tos-cn-shanghai.volces.com），
+ * 或传输加速端点（https://tos-accelerate.volces.com，SDK 拼成 bucket.tos-accelerate.volces.com）；
+ * 加速域名不含地域段，region 无法从中解析，须显式配置 oss.region
  * Copyright: Copyright (c) 2026 Company: plsintec Ltd.
  *
  * @author sharp
@@ -55,6 +57,13 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     @Value("${oss.internal-endpoint:}")
     private String internalEndpoint;
 
+    /**
+     * 显式地域（如 cn-shanghai）：传输加速域名 {@code tos-accelerate.volces.com}
+     * 不含地域段，无法从端点解析，此时必须配置
+     */
+    @Value("${oss.region:}")
+    private String region;
+
     /** TOS 客户端持有连接池，懒加载单例复用：服务器侧 I/O（内网端点优先） */
     private volatile TOSV2 tosClient;
 
@@ -68,7 +77,7 @@ public class OssVolcanoServiceImpl extends BaseOssService {
                     // build(region, endpoint, ak, sk)：TOS 仅支持虚拟主机式访问，SDK 自动拼 bucket.endpoint
                     String ioEndpoint = ioEndpoint();
                     tosClient = new TOSV2ClientBuilder()
-                            .build(resolveRegion(ioEndpoint), ioEndpoint, appKey, appSecret);
+                            .build(regionOf(ioEndpoint), ioEndpoint, appKey, appSecret);
                 }
             }
         }
@@ -84,7 +93,7 @@ public class OssVolcanoServiceImpl extends BaseOssService {
             synchronized (this) {
                 if (signClient == null) {
                     signClient = new TOSV2ClientBuilder()
-                            .build(resolveRegion(endpoint), endpoint, appKey, appSecret);
+                            .build(regionOf(endpoint), endpoint, appKey, appSecret);
                 }
             }
         }
@@ -99,6 +108,21 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     private static String resolveRegion(String endpoint) {
         Matcher matcher = REGION_PATTERN.matcher(endpoint);
         return matcher.find() ? matcher.group(1) : "cn-beijing";
+    }
+
+    /**
+     * 地域：显式配置优先。传输加速域名会被上面的正则误解析成 {@code accelerate}
+     * （签名 credential scope 含地域，用错会全部请求签名失败），必须在 oss.region 配置真实地域
+     */
+    private String regionOf(String endpoint) {
+        if (StringUtils.hasText(region)) {
+            return region;
+        }
+        String resolved = resolveRegion(endpoint);
+        if ("accelerate".equals(resolved)) {
+            throw new ServiceException("oss.endpoint 为传输加速域名，请在 oss.region 显式配置地域（如 cn-shanghai）");
+        }
+        return resolved;
     }
 
     @Override
