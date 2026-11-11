@@ -86,7 +86,8 @@ public class OAuth2IdpController {
     private final IdentityIdpProperties idpProperties;
 
     /**
-     * 浏览器会话 cookie 名（登录成功时由 LoginController 种下）。
+     * 浏览器会话 cookie 名（登录成功时由 {@code SessionCookieUtil} 在 afterLogin 链统一种下，
+     * 覆盖密码登录/注册/短信/扫码/改密/refresh/SSO 换取/幽灵登录全部登录成功腿）。
      *
      * <p>存在的唯一理由＝authorize 是**整页导航**：浏览器无法携带 SPA 存在 localStorage 里的
      * Authorization 头，只认头的实现会把每个已登录用户都当成未登录、302 回登录页——登录后再跳

@@ -15,6 +15,7 @@ import com.bidr.authorization.vo.login.pwd.InitPasswordReq;
 import com.bidr.authorization.vo.token.TokenReq;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
+import com.bidr.authorization.utils.SessionCookieUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +27,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import com.bidr.authorization.controller.oauth2.OAuth2IdpController;
-import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 
@@ -58,28 +57,29 @@ public class LoginController {
     @Auth(AuthToken.class)
     @RequestMapping(value = "", method = RequestMethod.POST)
     @CaptchaVerify("LOGIN_CAPTCHA")
-    public LoginRes login(@Validated LoginReq req, HttpServletResponse response) {
+    public LoginRes login(@Validated LoginReq req) {
         LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
         afterLogin(res);
-        // 会话 cookie（T1.3 浏览器腿）：SSO 授权入口 /web/oauth2/authorize 是**整页导航**，
-        // 浏览器带不上 localStorage 里的 Authorization 头 ⇒ 该端点按 cookie 回退取票，
-        // 否则一律 302 回登录页、登录后再跳 authorize 仍无头＝死循环。
-        // 只种给登录成功路径；口径见 OAuth2IdpController#SESSION_COOKIE。
-        if (FuncUtil.isNotEmpty(res.getAccessToken())) {
-            // 手写 Set-Cookie 而不用 Cookie#setAttribute：javax Cookie 的 SameSite 属性需 Servlet 4.0，
-            // 本 reactor 编译期仍是老 servlet-api，直接拼头最稳（值＝Base64 信封，无 ; / , 风险）。
-            response.addHeader("Set-Cookie", OAuth2IdpController.SESSION_COOKIE + "="
-                    + res.getAccessToken() + "; Path=/; HttpOnly; SameSite=Lax");
-        }
         return res;
     }
 
+    /**
+     * 登录成功统一收尾：fillToken 链 + 会话 cookie + 登录日志。
+     *
+     * <p>🔴 会话 cookie 必须在这里种（而不是逐个端点）：authorize 是整页导航，只认 cookie 回退，
+     * 而本项目所有登录成功腿——密码登录／首设密／注册／短信登录／扫码／改密／refresh／SSO 换取
+     * （pack-bidr {@code POST /web/auth/login}）／超管幽灵登录——都必经本方法。漏任何一条腿都会
+     * 出现"门户已登录、子系统 302 或身份错位"（2026-11-11 test e2e 实证，见
+     * {@link com.bidr.authorization.utils.SessionCookieUtil} 类注释）。</p>
+     */
     protected void afterLogin(LoginRes res) {
         if (FuncUtil.isNotEmpty(fillTokenInfList)) {
             for (LoginFillTokenInf loginFillTokenInf : fillTokenInfList) {
                 loginFillTokenInf.fillToken(res);
             }
         }
+        // fillToken 之后再种：cookie 里的票必须与最终返回给前端的票一致
+        SessionCookieUtil.write(res);
         Map<String, Object> tokenValue = tokenService.getTokenValue();
         log.info("[登录信息]用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
                 JsonUtil.toJson(tokenValue, false, false, true));
@@ -88,18 +88,10 @@ public class LoginController {
     @Auth(AuthToken.class)
     @RequestMapping(value = "/password/init", method = RequestMethod.POST)
     @CaptchaVerify("INIT_PASSWORD_CAPTCHA")
-    public LoginRes initPassword(@Validated InitPasswordReq req, HttpServletResponse response) {
+    public LoginRes initPassword(@Validated InitPasswordReq req) {
         passwordService.initPassword(req);
         LoginRes res = loginService.login(req.getLoginId(), req.getPassword());
         afterLogin(res);
-        // 会话 cookie（2026-11-08 对齐 login 腿）：首设密链同样是"登录成功"路径——该链用户多为
-        // SSO 过来的新号，登录后必经子系统 iframe（authorize 整页导航只认 cookie 回退），
-        // 不种则 iframe 内 authorize 判未登录 302 回登录页＝单点断裂（e2e-20261107 实锤场景）。
-        // 形态/口径与 login 腿逐字一致（见上方注释）。
-        if (FuncUtil.isNotEmpty(res.getAccessToken())) {
-            response.addHeader("Set-Cookie", OAuth2IdpController.SESSION_COOKIE + "="
-                    + res.getAccessToken() + "; Path=/; HttpOnly; SameSite=Lax");
-        }
         return res;
     }
 

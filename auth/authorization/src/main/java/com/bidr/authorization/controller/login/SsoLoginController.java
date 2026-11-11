@@ -6,6 +6,7 @@ import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.impl.SsoLoginServiceImpl;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.authorization.utils.SessionCookieUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.kernel.utils.JsonUtil;
 import io.swagger.annotations.Api;
@@ -76,6 +77,8 @@ public class SsoLoginController {
                 loginFillTokenInf.fillToken(res);
             }
         }
+        // 与 LoginController.afterLogin 同口径：登录成功即种 authorize 整页导航用的会话 cookie
+        SessionCookieUtil.write(res);
         Map<String, Object> tokenValue = tokenService.getTokenValue();
         log.info("[登录信息]用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
                 JsonUtil.toJson(tokenValue, false, false, true));
