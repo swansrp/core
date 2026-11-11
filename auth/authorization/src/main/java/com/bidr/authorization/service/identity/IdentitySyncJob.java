@@ -49,17 +49,31 @@ public class IdentitySyncJob {
     /** 定时同步（identity.org-sync.cron，缺省 0 15 1 * * ?＝原双 cron 合并落点） */
     @Scheduled(cron = "${identity.org-sync.cron:0 15 1 * * ?}")
     public void sync() {
-        runOnce("scheduled");
+        try {
+            runOnce("scheduled");
+        } catch (Exception e) {
+            // 与 pan 定时任务同口径：失败只告警，等下一个 cron 周期（不炸调度线程）
+            log.error("[组织同步](scheduled)本轮失败，等下一周期重试: {}", e.getMessage(), e);
+        }
     }
 
-    /** 启动初始化：装配就绪后桥钩子一次＋首轮拉平落库一次（DeptInitService 启动语义承接） */
+    /**
+     * 启动初始化：装配就绪后桥钩子一次＋首轮拉平落库一次（DeptInitService 启动语义承接）。
+     * 🔴 失败不阻断启动：ApplicationReadyEvent 监听器抛异常会经 SpringApplication.run 上浮
+     * ⇒ 进程启动失败（外部身份源临时不可达就 crash-loop）。组织同步是增量对账腿，
+     * 失败留待下个 cron 周期即可，启动只记录同一趟的错误。
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
-        IdentityBridge bridge = identityBridgeProvider.getIfAvailable();
-        if (bridge != null) {
-            bridge.onStartup();
+        try {
+            IdentityBridge bridge = identityBridgeProvider.getIfAvailable();
+            if (bridge != null) {
+                bridge.onStartup();
+            }
+            runOnce("startup");
+        } catch (Exception e) {
+            log.error("[组织同步](startup)首轮失败（不阻断启动，等 cron 周期重试）: {}", e.getMessage(), e);
         }
-        runOnce("startup");
     }
 
     private void runOnce(String trigger) {

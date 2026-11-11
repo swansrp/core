@@ -54,9 +54,28 @@ public class AccountInitService {
                     }
                     createUserService.createUser(account);
                 } else {
+                    // 2026-11-11：已存在用户的身份字段跟随主数据（此前只更部门，姓名/头像只在
+                    // 首次建号 mergeAccount 时写一次 ⇒ 身份源改名换头像后，重登仍读旧 ac_user）。
+                    boolean changed = false;
                     if (!FuncUtil.equals(account.getDepartment(), user.getDeptId())) {
                         userInfoService.updateDept(account, user);
                         user.setDeptId(account.getDepartment());
+                        changed = true;
+                    }
+                    // 身份源为主数据：MDM 的 name / 飞书的 displayName 落到 ac_user.name；
+                    // 空值不覆盖（半拉子快照不擦掉已有姓名），同值不写（减少无意义 update）。
+                    if (FuncUtil.isNotEmpty(account.getName())
+                            && !FuncUtil.equals(account.getName(), user.getName())) {
+                        user.setName(account.getName());
+                        changed = true;
+                    }
+                    // MDM pictureLink / 飞书 avatar 落到 ac_user.avatar（同上：非空且不同才写）
+                    if (FuncUtil.isNotEmpty(account.getPictureLink())
+                            && !FuncUtil.equals(account.getPictureLink(), user.getAvatar())) {
+                        user.setAvatar(account.getPictureLink());
+                        changed = true;
+                    }
+                    if (changed) {
                         acUserService.updateById(user);
                     }
                 }

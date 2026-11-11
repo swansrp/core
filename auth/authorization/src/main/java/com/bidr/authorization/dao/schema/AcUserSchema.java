@@ -69,5 +69,9 @@ public class AcUserSchema extends BaseMybatisSchema<AcUser> {
                 " `email`, `phone_number`, `sex`, `avatar`, `password`, `password_error_time`, `password_last_time`, `status`, `login_ip`, `login_date`, " +
                 "`create_by`, `update_by`, `remark`, `valid`) VALUES\n\t(1, '000001', NULL, NULL, '系统管理员', NULL, 'BidrAdmin', NULL, '00', '', '', '1', '', " +
                 "'" + FACTORY_ADMIN_PASSWORD_HASH + "', 0, NOW(), 1, '127.0.0.1', '2025-06-04 11:44:53', NULL, NULL, NULL, '1');");
+
+        // 🔴 2026-11-11：飞书账号身份键回退 open_id 时是 35 字符（ou_…），旧库 user_name varchar(30)
+        //    会插不进去；user_id（工号）一般 8 位，故平时不暴露。存量库放宽到 64（UNIQUE 索引随列宽）。
+        setUpgradeDDL(1, "ALTER TABLE `ac_user` MODIFY COLUMN `user_name` varchar(64) NOT NULL COMMENT '用户账号'");
     }
 }
