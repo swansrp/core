@@ -47,7 +47,8 @@ public class LoginRegisterModeTest {
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
                 Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
-                new RegisterModeService());
+                new RegisterModeService(),
+                Mockito.mock(com.bidr.authorization.tenant.TenantResolver.class));
         impl.setRegisterModeYml(yml);
         return impl;
     }
@@ -221,7 +222,8 @@ public class LoginRegisterModeTest {
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
                 Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
-                new RegisterModeService());
+                new RegisterModeService(),
+                Mockito.mock(com.bidr.authorization.tenant.TenantResolver.class));
         service.bindRegisterTenant(100L, tenant(7L));
         Mockito.verify(relationRepo).insertIfAbsent(100L, 7L, Boolean.FALSE);
         Mockito.verify(relationRepo, Mockito.never()).insert(Mockito.any(AcUserTenant.class));

@@ -23,10 +23,11 @@ import static org.junit.Assert.fail;
 
 /**
  * Title: SsoTenantModeGateTest
- * Description: SSO/IdM 首登的租户模式闸离线守卫（2026-10-27 子系统联调）——钉三条口径：
- * ①tenant/closed 下禁止自动建号（杜绝零租户归属＝数据旁路）；②tenant 下存量 SSO/REGISTER
- * 类型零归属账号拒绝登录；③SYSTEM/ACCOUNT 与 open 模式保持原行为（系统管理级旁路语义不误伤）。
- * 纯 static 直断，不起 Spring、不连库。
+ * Description: SSO/IdM 首登的租户模式闸离线守卫（2026-10-27 钉三口径 → 2026-11-11 拍板「SSO
+ * 登录账号默认绑定 bidr 租户」后建号闸改为租户正源语义）：
+ * ①建号闸＝tenant+正源在位放行（JIT 建号由 createUser 漏斗按 identity.tenant.code 赋籍）/tenant+正源
+ * 缺位仍拒（fail-closed）/closed 一律拒/open 保持原行为；②tenant 下存量 SSO/REGISTER 类型零归属
+ * 账号拒绝登录（不动）；③SYSTEM/ACCOUNT 与 open 模式不误伤（不动）。纯 static 直断，不起 Spring、不连库。
  *
  * @author Sharp
  * @since 2026-10-27
@@ -35,6 +36,14 @@ public class SsoTenantModeGateTest {
 
     /** mode＝yml {@code my.auth.register-mode}（唯一来源；null/空白归一为 open）。 */
     private static LoginServiceImpl service(String mode, AcUserTenantService relationService) {
+        return service(mode, relationService, java.util.Optional.empty());
+    }
+
+    /** tenantResolver 可注入租户正源形态（有值=identity.tenant.code 已配置）。 */
+    private static LoginServiceImpl service(String mode, AcUserTenantService relationService,
+                                            java.util.Optional<String> tenantCode) {
+        com.bidr.authorization.tenant.TenantResolver resolver = Mockito.mock(com.bidr.authorization.tenant.TenantResolver.class);
+        Mockito.when(resolver.resolveTenantCode(Mockito.any())).thenReturn(tenantCode);
         LoginServiceImpl impl = new LoginServiceImpl(
                 Mockito.mock(AcUserService.class),
                 Mockito.mock(AcTenantService.class),
@@ -45,7 +54,8 @@ public class SsoTenantModeGateTest {
                 Mockito.mock(CreateUserService.class),
                 Mockito.mock(HttpServletRequest.class),
                 Mockito.mock(com.bidr.authorization.service.tenant.TenantBindOnLoginService.class),
-                new RegisterModeService());
+                new RegisterModeService(),
+                resolver);
         impl.setRegisterModeYml(mode);
         return impl;
     }
@@ -70,8 +80,16 @@ public class SsoTenantModeGateTest {
         service("open", relationService(Collections.emptyList())).assertSsoAutoCreateAllowed();
     }
 
+    /** 2026-11-11 拍板：tenant+租户正源在位 → SSO JIT 建号放行（漏斗按 identity.tenant.code 赋籍）。 */
     @Test
-    public void tenantModeDeniesSsoAutoCreate() {
+    public void tenantModeAllowsSsoAutoCreateWithTenantSource() {
+        service("tenant", relationService(Collections.emptyList()), java.util.Optional.of("bidr"))
+                .assertSsoAutoCreateAllowed();
+    }
+
+    /** 正源缺位（identity.tenant.code 未配置）→ 维持 fail-closed 拒绝（零归属旁路闸）。 */
+    @Test
+    public void tenantModeDeniesSsoAutoCreateWithoutTenantSource() {
         assertThrows(ServiceException.class,
                 () -> service("tenant", relationService(Collections.emptyList())).assertSsoAutoCreateAllowed());
     }
@@ -79,7 +97,8 @@ public class SsoTenantModeGateTest {
     @Test
     public void closedModeDeniesSsoAutoCreate() {
         assertThrows(ServiceException.class,
-                () -> service("closed", relationService(Collections.emptyList())).assertSsoAutoCreateAllowed());
+                () -> service("closed", relationService(Collections.emptyList()),
+                        java.util.Optional.of("bidr")).assertSsoAutoCreateAllowed());
     }
 
     // ==================== ② 登录前闸 ====================

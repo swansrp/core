@@ -84,6 +84,6 @@ public class LoginRefreshTokenGuardTest {
 
     /** 被测路径在存活性校验之前不触达其余依赖，故只装 tokenService；构造参数序同 @RequiredArgsConstructor。 */
     private LoginServiceImpl newService(TokenService tokenService) {
-        return new LoginServiceImpl(null, null, null, null, tokenService, null, null, null, null, null);
+        return new LoginServiceImpl(null, null, null, null, tokenService, null, null, null, null, null, null);
     }
 }

@@ -26,6 +26,7 @@ import com.bidr.authorization.service.login.LoginService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.tenant.TenantBindOnLoginService;
 import com.bidr.authorization.service.user.CreateUserService;
+import com.bidr.authorization.tenant.TenantResolver;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
 import com.bidr.authorization.vo.login.LoginRes;
 import com.bidr.authorization.vo.login.QrCodeReq;
@@ -67,6 +68,7 @@ public class LoginServiceImpl implements LoginService {
     private final HttpServletRequest request;
     private final TenantBindOnLoginService tenantBindOnLoginService;
     private final RegisterModeService registerModeService;
+    private final TenantResolver tenantResolver;
 
     @Autowired(required = false)
     private CustomerNumberHandler customerNumberHandler;
@@ -309,19 +311,27 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * 租户模式闸·SSO 首登建号前（口径见接口注释）：tenant/closed 一律拒绝自动建号，
-     * 避免产生「零租户归属＝数据旁路」账号。open 保持历史行为。
+     * 租户模式闸·SSO 首登建号前。
+     * <p>🔴 口径更新（2026-11-11 用户拍板「SSO 登录账号默认绑定 bidr 租户」）：tenant 模式不再
+     * 一刀切拒 JIT 建号——租户正源（identity.tenant.code，经 {@link TenantResolver}）在位即放行，
+     * 后续 {@code createUser} 漏斗的 {@code resolveCreateTenantTarget} 会按同一正源赋籍
+     * （bindCreateUserTenant 落 ac_user_tenant，is_admin=false），零归属旁路在结构上不可能发生；
+     * 正源不在位（未配置/空白）＝维持 2026-10-27 闸的 fail-closed 拒绝语义。closed 仍一律拒。</p>
+     * <p>原口径（tenant 一律拒）随本次拍板作废；存量零归属 SSO/REGISTER 账号的登录闸
+     * （assertSsoTenantReady）不动——已有账号仍需管理员补籍或走登录补绑钩子。</p>
      */
     @Override
     public void assertSsoAutoCreateAllowed() {
         String mode = resolveRegisterMode();
-        if (REGISTER_MODE_TENANT.equals(mode)) {
-            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
-                    "当前为租户模式，账号需由管理员/主系统创建并分配租户后使用");
-        }
         if (REGISTER_MODE_CLOSED.equals(mode)) {
             throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
                     "自助注册已关闭，账号请联系管理员创建");
+        }
+        if (REGISTER_MODE_TENANT.equals(mode)
+                && !tenantResolver.resolveTenantCode(null).isPresent()) {
+            throw new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                    "当前为租户模式但未配置默认租户正源（identity.tenant.code），"
+                            + "SSO 账号无法自动赋籍，请联系管理员");
         }
     }
 
