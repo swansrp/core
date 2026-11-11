@@ -1,5 +1,6 @@
 package com.bidr.authorization.seed;
 
+import com.bidr.authorization.config.ClientProperties;
 import com.bidr.authorization.constants.AuthConstants;
 import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.dao.entity.AcSubsystem;
@@ -14,21 +15,27 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.Objects;
 
 /**
  * Title: AcSubsystemSeeder
- * Description: 子系统注册表首启兜底种子器（主系统开放口·方案B 棒2）——
- * 仅当 ac_partner 存在 app_key='epc-ai' 行（PartnerSeeder 按 identity.clients 保证到位）
- * 且 ac_subsystem 无 app_code='epc-ai' 行时插入一条绑定行，其余情况一律幂等跳过。
+ * Description: 子系统种子器（主系统开放口·方案B 棒2 起步，2026-11-11 用户拍板方案 A 扩为入口种子）——
+ * 遍历 identity.clients，对配置了 entry-url 的条目做两件事（app_code 幂等键）：
+ * <ol>
+ *   <li>建行：ac_subsystem 无该行 → 插一条完整行（name/entry_type/entry_url/partner_id/status/visible），
+ *       name 缺省用 app_code 兜底；</li>
+ *   <li>入口 upsert：已有行且 entry_type/entry_url 与配置不同 → 只回写这两列（+update_by），
+ *       相同即零写（幂等）。🔴 配置是入口正源：管理页手改的入口会在下次重启被配置顶回
+ *       （与 PartnerSeeder 回写 app_secret 同哲学）；entry-url 不配＝完全不碰该 app 的入口字段。</li>
+ * </ol>
  *
- * <p>时序：@Order 取 LOWEST_PRECEDENCE＝排 PartnerSeeder（LOWEST_PRECEDENCE - 1）之后，
- * 保证「先有 partner 再挂子系统」的引导顺序。</p>
+ * <p>前置：ac_partner 行由 PartnerSeeder（@Order LOWEST_PRECEDENCE - 1，先于本类）按 identity.clients
+ * 保证到位；某条目 partner 缺席（配置与 PartnerSeeder 不同源时）＝该条目跳过并记日志，不阻断其他条目。</p>
  *
- * <p>⚠ 门户清单（ac_menu 按 app_code 挂页）在 seed 前为空是已接受后果（M-14：menu-seed 只声明
- * title/path/component/icon，播种不涉及 app_code）——本行＝首启兜底，菜单归属后续由应用管理面维护。</p>
- *
- * <p>⚠ 本类 DB 写路径不在离线单测覆盖（离线腿 mock 仓库层断言三态分支，见 AcSubsystemSeederTest；
- * 建行真值交真机腿：起服务后核 ac_subsystem，重启第二次应零新增）。</p>
+ * <p>⚠ 本类 DB 写路径不在离线单测覆盖（离线腿 mock 仓库层断言分支，见 AcSubsystemSeederTest；
+ * 建行/回写真值交真机腿：起服务后核 ac_subsystem，重启第二次应零新增）。</p>
  *
  * @author Sharp
  * @since 2026-11-06
@@ -39,36 +46,66 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AcSubsystemSeeder implements ApplicationRunner {
 
-    /** 'epc-ai'＝identity.clients 既有 client 的 app_key 数据值（与 PartnerSeeder 播的 partner 对齐） */
-    static final String EPC_APP_CODE = "epc-ai";
-    /** 兜底显示名（现库无正源，首启展示兜底） */
-    static final String EPC_NAME = "EPC 进度子系统";
-
     private final AcPartnerService acPartnerService;
     private final AcSubsystemService acSubsystemService;
+    private final ClientProperties clientProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void run(ApplicationArguments args) {
-        AcPartner partner = acPartnerService.getByAppKey(EPC_APP_CODE);
+        for (ClientProperties.ClientItem item : clientProperties.getClients()) {
+            if (!StringUtils.hasText(item.getEntryUrl())) {
+                continue;
+            }
+            seedOne(item);
+        }
+    }
+
+    /** 单条目种子：partner 在位检查 → 缺行建行 / 有行入口 upsert（逐条隔离，失败不阻断其他条目由调用方事务兜底）。 */
+    private void seedOne(ClientProperties.ClientItem item) {
+        String appCode = item.getAppKey();
+        AcPartner partner = acPartnerService.getByAppKey(appCode);
         if (partner == null) {
             log.info("[subsystem-seed] ac_partner 无 app_key={} 行——跳过子系统种子（partner 由 PartnerSeeder 按配置保证）",
-                    EPC_APP_CODE);
+                    appCode);
             return;
         }
-        if (acSubsystemService.selectById(EPC_APP_CODE) != null) {
-            log.info("[subsystem-seed] 子系统已在位 app_code={}——幂等跳过", EPC_APP_CODE);
+
+        AcSubsystem row = acSubsystemService.selectById(appCode);
+        if (row == null) {
+            AcSubsystem subsystem = new AcSubsystem();
+            subsystem.setAppCode(appCode);
+            // 显示名兜底：配置 name 优先，缺省用 app_code（现网 epc-ai 行由 yml 带 name 保持既有显示名）
+            subsystem.setName(StringUtils.hasText(item.getName()) ? item.getName() : appCode);
+            // 空串归一成 null：properties 默认值是 ""，不归一会让 DB 列落 '' 而非保持 NULL 语义
+            subsystem.setEntryType(StringUtils.hasText(item.getEntryType()) ? item.getEntryType() : null);
+            subsystem.setEntryUrl(item.getEntryUrl());
+            subsystem.setPartnerId(partner.getId());
+            subsystem.setStatus(CommonConst.YES);
+            subsystem.setVisibleToAllTenant(CommonConst.YES);
+            subsystem.setCreateBy(AuthConstants.SYSTEM_USER);
+            subsystem.setUpdateBy(AuthConstants.SYSTEM_USER);
+            acSubsystemService.insert(subsystem);
+            log.info("[subsystem-seed] 首启建子系统 app_code={} partner_id={} entry_url={}",
+                    appCode, partner.getId(), item.getEntryUrl());
             return;
         }
-        AcSubsystem subsystem = new AcSubsystem();
-        subsystem.setAppCode(EPC_APP_CODE);
-        subsystem.setName(EPC_NAME);
-        subsystem.setPartnerId(partner.getId());
-        subsystem.setStatus(CommonConst.YES);
-        subsystem.setVisibleToAllTenant(CommonConst.YES);
-        subsystem.setCreateBy(AuthConstants.SYSTEM_USER);
-        subsystem.setUpdateBy(AuthConstants.SYSTEM_USER);
-        acSubsystemService.insert(subsystem);
-        log.info("[subsystem-seed] 首启兜底建子系统 app_code={} partner_id={}", EPC_APP_CODE, partner.getId());
+
+        // 入口 upsert：只回写与配置不同的两列（null/同值不写，管理页其他列一律不碰）
+        boolean changed = false;
+        if (StringUtils.hasText(item.getEntryType()) && !Objects.equals(item.getEntryType(), row.getEntryType())) {
+            row.setEntryType(item.getEntryType());
+            changed = true;
+        }
+        if (!Objects.equals(item.getEntryUrl(), row.getEntryUrl())) {
+            row.setEntryUrl(item.getEntryUrl());
+            changed = true;
+        }
+        if (changed) {
+            row.setUpdateBy(AuthConstants.SYSTEM_USER);
+            acSubsystemService.updateById(row);
+            log.info("[subsystem-seed] 入口按配置回写 app_code={} entry_type={} entry_url={}",
+                    appCode, row.getEntryType(), row.getEntryUrl());
+        }
     }
 }
