@@ -20,8 +20,8 @@ import java.util.List;
 
 /**
  * Title: OrgSyncApplierTest
- * Description: 组织同步落库器离线单测（T1.1 棒4）——编排与映射两条腿：全量替换（truncate＋
- * saveBatch）＋建号漏斗接续（accountSyncUser）；空腿护栏；UserRow 状态字典到
+ * Description: 组织同步落库器离线单测（T1.1 棒4）——编排与映射两条腿：全量替换（delete＋
+ * saveBatch，事务内可回滚）＋建号漏斗接续（accountSyncUser）；空腿护栏；UserRow 状态字典到
  * employ_status/status 两列的映射。纯 Mockito 不碰真库。
  * Copyright: Copyright (c) 2026 Company: Bidr Ltd.
  *
@@ -66,7 +66,7 @@ public class OrgSyncApplierTest {
         return row;
     }
 
-    /** 全量替换编排：部门/账号两腿 truncate＋saveBatch（映射断言）＋建号漏斗接续一次 */
+    /** 全量替换编排：部门/账号两腿 delete＋saveBatch（映射断言）＋建号漏斗接续一次 */
     @Test
     public void applyReplacesBothLegsThenRunsAccountFunnel() {
         OrgSyncResult result = new OrgSyncResult();
@@ -76,7 +76,7 @@ public class OrgSyncApplierTest {
 
         applier.apply(result);
 
-        Mockito.verify(acDeptService).truncate();
+        Mockito.verify(acDeptService).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
         ArgumentCaptor<List<AcDept>> deptCaptor = ArgumentCaptor.forClass((Class) List.class);
         Mockito.verify(acDeptService).saveBatch(deptCaptor.capture());
         Assert.assertEquals(1, deptCaptor.getValue().size());
@@ -88,7 +88,7 @@ public class OrgSyncApplierTest {
         Assert.assertEquals(Integer.valueOf(5), dept.getShowOrder());
         Assert.assertEquals(ActiveStatusDict.ACTIVATE.getValue(), dept.getStatus());
 
-        Mockito.verify(acAccountService).truncate();
+        Mockito.verify(acAccountService).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
         ArgumentCaptor<List<AcAccount>> userCaptor = ArgumentCaptor.forClass((Class) List.class);
         Mockito.verify(acAccountService).saveBatch(userCaptor.capture());
         Assert.assertEquals(2, userCaptor.getValue().size());
@@ -109,18 +109,18 @@ public class OrgSyncApplierTest {
         Mockito.verify(accountInitService).accountSyncUser();
     }
 
-    /** 空腿护栏：部门快照空 → 不 truncate 部门（不清空既有组织树），账号腿照常、漏斗照常 */
+    /** 空腿护栏：部门快照空 → 不 delete 部门（不清空既有组织树），账号腿照常、漏斗照常 */
     @Test
-    public void applySkipsTruncateOnEmptyDeptSnapshot() {
+    public void applySkipsDeleteOnEmptyDeptSnapshot() {
         OrgSyncResult result = new OrgSyncResult();
         result.depts = Collections.emptyList();
         result.users = Collections.singletonList(userRow("E100", "zhangsan", "active"));
 
         applier.apply(result);
 
-        Mockito.verify(acDeptService, Mockito.never()).truncate();
+        Mockito.verify(acDeptService, Mockito.never()).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
         Mockito.verify(acDeptService, Mockito.never()).saveBatch(Mockito.anyList());
-        Mockito.verify(acAccountService).truncate();
+        Mockito.verify(acAccountService).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
         Mockito.verify(accountInitService).accountSyncUser();
     }
 
@@ -128,16 +128,16 @@ public class OrgSyncApplierTest {
     @Test
     public void applyToleratesNullAndEmptySnapshotWithoutWipingTables() {
         applier.apply(null);
-        Mockito.verify(acDeptService, Mockito.never()).truncate();
-        Mockito.verify(acAccountService, Mockito.never()).truncate();
+        Mockito.verify(acDeptService, Mockito.never()).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+        Mockito.verify(acAccountService, Mockito.never()).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
         Mockito.verify(accountInitService).accountSyncUser();
 
         OrgSyncResult empty = new OrgSyncResult();
         empty.depts = null;
         empty.users = null;
         applier.apply(empty);
-        Mockito.verify(acDeptService, Mockito.never()).truncate();
-        Mockito.verify(acAccountService, Mockito.never()).truncate();
+        Mockito.verify(acDeptService, Mockito.never()).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+        Mockito.verify(acAccountService, Mockito.never()).delete(Mockito.any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
         Mockito.verify(accountInitService, Mockito.times(2)).accountSyncUser();
     }
 }

@@ -84,6 +84,31 @@ public class AccountInitServiceTest {
         assertEquals("http://a/old.png", user.getAvatar());
     }
 
+    /**
+     * 并账腿（2026-11-11 pre 部署实测）：customerNumber 查不到，但 user_name 已有另一套
+     * customerNumber 的账号（SSO JIT 建号）——必须按同一身份改绑并同步，绝不能 insert
+     * （否则撞 ac_user.user_name 唯一键，pre 3197 账号同步在 sha_rp 上整批回滚）。
+     */
+    @Test
+    public void mergesExistingUserByUserNameInsteadOfInsert() {
+        AcAccount account = account("MDM-1", "张三", "http://a/1.png", "D2");
+        account.setUserName("sha_rp");
+        AcUser existing = user("OLD-CUST", "旧名", "", "D1");
+        existing.setUserName("sha_rp");
+        Mockito.when(acUserService.getByCustomerNumber("MDM-1")).thenReturn(null);
+        Mockito.when(acUserService.getUserByUserName("sha_rp")).thenReturn(existing);
+
+        service.accountSyncUser(Arrays.asList(account));
+
+        Mockito.verify(createUserService, Mockito.never()).createUser(Mockito.any(AcAccount.class));
+        ArgumentCaptor<AcUser> captor = ArgumentCaptor.forClass(AcUser.class);
+        Mockito.verify(acUserService, Mockito.times(1)).updateById(captor.capture());
+        assertEquals("MDM-1", captor.getValue().getCustomerNumber());
+        assertEquals("张三", captor.getValue().getName());
+        assertEquals("http://a/1.png", captor.getValue().getAvatar());
+        assertEquals("D2", captor.getValue().getDeptId());
+    }
+
     /** 部门变化仍沿用原口径：updateDept + 同一次 updateById 带上新部门与身份字段 */
     @Test
     public void departmentChangeStillSyncsAndKeepsProfile() {

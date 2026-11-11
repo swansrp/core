@@ -6,6 +6,7 @@ import com.bidr.authorization.dao.repository.AcAccountService;
 import com.bidr.authorization.dao.repository.AcDeptService;
 import com.bidr.authorization.service.account.AccountInitService;
 import com.bidr.authorization.identity.OrgSyncResult;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.kernel.constant.dict.common.ActiveStatusDict;
 import com.bidr.kernel.constant.dict.common.BoolDict;
 import com.bidr.kernel.utils.FuncUtil;
@@ -26,9 +27,13 @@ import java.util.List;
  * 桥只拉数不写表（M-5），落库编排单点在此。
  *
  * <p>写法沿用原 bidr 侧同步链（MdmJobService.syncMdmDept/syncMdmAccount → DeptInitService/
- * UserAccountService）的<b>全量替换</b>语义：truncate＋saveBatch（部门/账号主键均为外部业务键
+ * UserAccountService）的<b>全量替换</b>语义：delete＋saveBatch（部门/账号主键均为外部业务键
  * dept_id/id，重建后引用稳定），整体单事务、失败即回滚不落半截快照；两条腿各带空快照护栏
- * （空列表不 truncate——mdm 半拉子数据不清空既有组织树，原链无此护栏属补强）。
+ * （空列表不动既有组织树，原链无此护栏属补强）。</p>
+ *
+ * <p>🔴 2026-11-11：TRUNCATE→DELETE。TRUNCATE 是 DDL 隐式提交，pre 实测 accountSyncUser 撞
+ * ac_user.user_name 唯一键失败后事务回滚不了已清空的表（组织数据直接丢、子系统 visible 面空）；
+ * DELETE 带 WHERE 参与事务，失败时部门/账号快照一起回滚，旧数据原样保留。</p>
  * DeptRow/UserRow 五要素/八要素之外的列（abbreviate/org/category 等）SPI 无源，随收编放弃、
  * 重建后为空（登记于棒4报告"已知数据缩减"）。</p>
  *
@@ -84,7 +89,10 @@ public class OrgSyncApplier {
         for (OrgSyncResult.DeptRow row : result.depts) {
             depts.add(buildDept(row));
         }
-        acDeptService.truncate();
+        // 🔴 2026-11-11：禁止 TRUNCATE——它是 DDL 隐式提交，后续 accountSyncUser 一旦失败
+        // （pre 实测：SSO 账号 user_name 唯一键冲突）事务回滚救不回已清空的表，组织数据直接丢。
+        // 用带 WHERE 的 DELETE（DML，参与事务）⇒ 失败整批回滚，既有部门树原样保留。
+        acDeptService.delete(new LambdaQueryWrapper<AcDept>().isNotNull(AcDept::getDeptId));
         acDeptService.saveBatch(depts);
     }
 
@@ -97,7 +105,8 @@ public class OrgSyncApplier {
         for (OrgSyncResult.UserRow row : result.users) {
             accounts.add(buildAccount(row));
         }
-        acAccountService.truncate();
+        // 同部门腿：DELETE 参与事务，accountSyncUser 失败时账号快照也一起回滚，不落半截/空表
+        acAccountService.delete(new LambdaQueryWrapper<AcAccount>().isNotNull(AcAccount::getId));
         acAccountService.saveBatch(accounts);
     }
 
