@@ -23,6 +23,7 @@ import com.bidr.authorization.holder.ClientTypeHolder;
 import com.bidr.authorization.holder.TokenHolder;
 import com.bidr.authorization.service.login.CustomerNumberHandler;
 import com.bidr.authorization.service.login.LoginService;
+import com.bidr.authorization.service.permit.PermitService;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.authorization.service.tenant.TenantBindOnLoginService;
 import com.bidr.authorization.service.user.CreateUserService;
@@ -39,6 +40,7 @@ import com.bidr.kernel.validate.Validator;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +74,18 @@ public class LoginServiceImpl implements LoginService {
 
     @Autowired(required = false)
     private CustomerNumberHandler customerNumberHandler;
+
+    /**
+     * 租户行级隔离开关（与 TenantBindOnLoginService 同键）：false＝非租户交付形态，
+     * buildTenantIds 的 B′ 补腿惰性（零绑定保持缺键旁路，登录链零感知）。
+     */
+    @Value("${my.tenant.line-enabled:false}")
+    private boolean tenantLineEnabled;
+
+    /** 测试注入用（离线单测不起 Spring）；包可见不构成对外入口，风格同 TenantBindOnLoginService#setTenantLineEnabled。 */
+    void setTenantLineEnabled(boolean tenantLineEnabled) {
+        this.tenantLineEnabled = tenantLineEnabled;
+    }
 
     /** 测试注入用（离线单测不起 Spring）；包可见不构成对外入口，风格同 AcTenantPortalService#isPlatformTier 的测试口。 */
     void setRegisterModeYml(String registerModeYml) {
@@ -484,7 +498,7 @@ public class LoginServiceImpl implements LoginService {
         // 登录补绑钩子（T1.1 棒3）：存量零绑定老号在此补籍/拒登，必须在 buildTenantIds 之前——
         // 补绑结果随即被同请求的现查烤进 token；fillToken 是全部登录链的公共装配点，一处挂接全链生效
         tenantBindOnLoginService.bindOnLogin(acUser.getUserId(), acUser.getUserName(), roleMap);
-        buildTenantIds(acUser.getUserId(), accessToken);
+        buildTenantIds(acUser.getUserId(), roleMap, accessToken);
         TokenHolder.set(accessToken);
     }
 
@@ -495,12 +509,29 @@ public class LoginServiceImpl implements LoginService {
      * <p>2026-10-19 增：同步烤入「当前租户」{@code TENANT_ID}（单租户直取；多租户取首个，
      * 多租户用户可经切换端点改写该键后凭旧 token 继续用，不必重登录）。行级隔离
      * （my.tenant.line-enabled）据此判定当前租户；缺键＝系统管理级用户旁路。</p>
+     * <p>2026-11-13 增（#65 B′ 补腿）：租户模式下零绑定平台超管登录，默认落「首个有效租户」
+     * 进 {@code TENANT_ID}（acTenantService.listValid() 按 id 升序首行），进门即有当前租户，
+     * 免手动齿轮切一次；🔴 只写 TENANT_ID 单键、绝不写 TENANT_IDS——写宽即推翻
+     * TenantMyService.elevated 的零绑定前腿（齿轮自毁）；不写任何绑定行（零绑定旁路形态保留）。
+     * 超管判据＝登录时点 DB 现查 roleMap × PermitService.containsAdminRole 纯函数
+     * （isAdmin() 登录时点 token 未装配恒 false，不可用）；任一条件不满足或 listValid 空
+     * ⇒ 两键均不写，维持现状。</p>
+     * 包可见＝离线单测直调（先例=TenantBindOnLoginService#setTenantLineEnabled），不构成对外入口。
      */
-    private void buildTenantIds(Long userId, TokenInfo accessToken) {
+    void buildTenantIds(Long userId, Map<Long, RoleInfo> roleMap, TokenInfo accessToken) {
         List<Long> tenantIds = acUserTenantService.listTenantIdsByUserId(userId);
         if (FuncUtil.isNotEmpty(tenantIds)) {
             tokenService.putItem(accessToken, TokenItem.TENANT_IDS.name(), tenantIds);
             tokenService.putItem(accessToken, TokenItem.TENANT_ID.name(), tenantIds.get(0));
+            return;
+        }
+        // B′ 补腿（#65）：零绑定平台超管＝零绑定形态保留，但仅烤 TENANT_ID 单键给默认当前租户
+        if (tenantLineEnabled && PermitService.containsAdminRole(roleMap,
+                frameCacheService.getParamLong(AccountParam.ACCOUNT_ADMIN_ROLE_ID))) {
+            List<AcTenant> validTenants = acTenantService.listValid();
+            if (FuncUtil.isNotEmpty(validTenants)) {
+                tokenService.putItem(accessToken, TokenItem.TENANT_ID.name(), validTenants.get(0).getId());
+            }
         }
     }
 
