@@ -3,10 +3,10 @@ package com.bidr.oss.dao.repository;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.oss.dao.entity.AcUserRef;
 import com.bidr.oss.dao.entity.SaWikiCollaborator;
 import com.bidr.oss.dao.entity.SaWikiPage;
 import com.bidr.oss.dao.mapper.SaWikiPageMapper;
+import com.bidr.kernel.config.response.RespConvert;
 import com.bidr.oss.vo.OssWikiPageVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
@@ -32,10 +32,9 @@ public class SaWikiPageService extends BaseSqlRepo<SaWikiPageMapper, SaWikiPage>
         wrapper.selectAs(SaWikiPage::getParentId, OssWikiPageVO::getParentId);
         wrapper.selectAs(SaWikiPage::getTitle, OssWikiPageVO::getTitle);
         wrapper.selectAs(SaWikiPage::getMode, OssWikiPageVO::getMode);
-        wrapper.selectAs(AcUserRef::getName, OssWikiPageVO::getAuthorName);
+        wrapper.selectAs(SaWikiPage::getAuthorId, OssWikiPageVO::getAuthorId);
         wrapper.selectAs(SaWikiPage::getModifyAt, OssWikiPageVO::getModifyAt);
         wrapper.leftJoin(SaWikiCollaborator.class, SaWikiCollaborator::getPageId, SaWikiPage::getId);
-        wrapper.leftJoin(AcUserRef.class, AcUserRef::getCustomerNumber, SaWikiPage::getAuthorId);
         wrapper.and(FuncUtil.isNotEmpty(searchName), w -> w.like(SaWikiPage::getTitle, searchName)
                 .or()
                 .like(SaWikiPage::getContentHtml, searchName));
@@ -47,7 +46,12 @@ public class SaWikiPageService extends BaseSqlRepo<SaWikiPageMapper, SaWikiPage>
         }
 
         wrapper.orderByAsc(SaWikiPage::getSortOrder);
-        return super.selectJoinList(OssWikiPageVO.class, wrapper);
+        List<OssWikiPageVO> pages = super.selectJoinList(OssWikiPageVO.class, wrapper);
+        // authorName 不走 SQL JOIN（ac_user 在子系统库不存在）：@BindUser("authorId") 经 BindRepoHandler
+        // SPI 兜底展开——epc 容器解析为身份镜像 idm_user_mirror（MirrorBindRepoResolver），
+        // provider 容器解析为 AcUser（DefaultBindRepoResolver），行为两端等价；解析器缺席仅告警跳过
+        RespConvert.customBindConvert(pages, OssWikiPageVO.class);
+        return pages;
     }
 
     public Long countByPid(Long parentId) {

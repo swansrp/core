@@ -47,7 +47,7 @@
         </dependency>
         <!--
             authorization-api（D-1 依赖收窄降级）：authorization 裸包不再引——TokenService 死注入已删
-            （M-14）、ac_user JOIN 改走本地只读实体 AcUserRef（M-15），余下 import 全为 api 包静态
+            （M-14）、ac_user JOIN 已于续笔二摘除——人名走 @BindUser SPI 兜底展开（Mirror/Default 解析器两端各自供给），余下 import 全为 api 包静态
             注解/holder（M-16），下游装配零运行时 bean 依赖；⚠ wiki 端点 @Auth 强制由宿主
             authorization-client 提供（AuthInterceptor 在 client），宿主不带 client 则 wiki 面不设防
         -->
