@@ -60,11 +60,13 @@
             authorization：只吃它的 @BindUser 显示绑定（装配单读视图把发起人工号翻成姓名，走 kernel
             BindRepoHandler 的批量 IN，不逐行查库）。口径同 core/oss 的 OssWikiCollaboratorVO。
             🔴 管理员闸门仍不走它——权限判定继续用反射取 permitService（见 AgentManifestController#isAdmin）
+            🔴 降 authorization-api（D-1 依赖收窄）：全模块 authorization 系 import 唯一为 api 包的
+            @BindUser（mechanism-checks M-13），无需整包 authorization
         -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
-            <artifactId>authorization</artifactId>
-            <version>${authorization.version}</version>
+            <artifactId>authorization-api</artifactId>
+            <version>${authorization-api.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
