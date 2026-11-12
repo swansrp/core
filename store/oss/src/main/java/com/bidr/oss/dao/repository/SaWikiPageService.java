@@ -1,9 +1,9 @@
 package com.bidr.oss.dao.repository;
 
-import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.mybatis.repository.BaseSqlRepo;
 import com.bidr.kernel.utils.FuncUtil;
+import com.bidr.oss.dao.entity.AcUserRef;
 import com.bidr.oss.dao.entity.SaWikiCollaborator;
 import com.bidr.oss.dao.entity.SaWikiPage;
 import com.bidr.oss.dao.mapper.SaWikiPageMapper;
@@ -32,10 +32,10 @@ public class SaWikiPageService extends BaseSqlRepo<SaWikiPageMapper, SaWikiPage>
         wrapper.selectAs(SaWikiPage::getParentId, OssWikiPageVO::getParentId);
         wrapper.selectAs(SaWikiPage::getTitle, OssWikiPageVO::getTitle);
         wrapper.selectAs(SaWikiPage::getMode, OssWikiPageVO::getMode);
-        wrapper.selectAs(AcUser::getName, OssWikiPageVO::getAuthorName);
+        wrapper.selectAs(AcUserRef::getName, OssWikiPageVO::getAuthorName);
         wrapper.selectAs(SaWikiPage::getModifyAt, OssWikiPageVO::getModifyAt);
         wrapper.leftJoin(SaWikiCollaborator.class, SaWikiCollaborator::getPageId, SaWikiPage::getId);
-        wrapper.leftJoin(AcUser.class, AcUser::getCustomerNumber, SaWikiPage::getAuthorId);
+        wrapper.leftJoin(AcUserRef.class, AcUserRef::getCustomerNumber, SaWikiPage::getAuthorId);
         wrapper.and(FuncUtil.isNotEmpty(searchName), w -> w.like(SaWikiPage::getTitle, searchName)
                 .or()
                 .like(SaWikiPage::getContentHtml, searchName));

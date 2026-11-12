@@ -1,5 +1,7 @@
 package com.bidr.agent.console;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.bidr.agent.console.dao.entity.AgentDefinition;
 import com.bidr.agent.console.dao.entity.AgentManifest;
@@ -13,7 +15,6 @@ import com.bidr.agent.console.selection.AgentDefinitionAdminService;
 import com.bidr.agent.console.skill.SystemSkillAdminService;
 import com.bidr.authorization.bind.annotation.BindUser;
 import com.bidr.authorization.bind.annotation.UserRef;
-import com.bidr.authorization.dao.entity.AcUser;
 import com.bidr.kernel.config.response.BindRepo;
 import com.bidr.kernel.config.response.BindRepoHandler;
 import com.bidr.kernel.config.response.BindRepoResolver;
@@ -47,7 +48,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * ④ {@code @BindUser} 的靶子钉死：T2.3c 起 {@code entity()} 声明占位实体 {@link UserRef}（不再直耦合
  * AcUser），运行时经 {@code BindRepoResolver} SPI 解析——server 侧 {@code DefaultBindRepoResolver}
  * 默认解析为 {@code AcUser}（工号列 customer_number，取 name）。本测试按同语义注册桩解析器
- * UserRef→(桩 repo, AcUser)，行为腿走真实 SPI 兜底通道；元数据腿钉占位声明本身。改注解必先过这条腿。
+ * UserRef→(桩 repo, 桩实体 {@link StubAcUser}：D-1 依赖收窄后本模块不再引 authorization(server)，
+ * 桩实体映射 ac_user 的 customer_number/`name` 逐字同形、valid 走驼峰 fallback（桩 repo 为 mock 不落库，列名差异无行为面）)，行为腿走真实 SPI 兜底通道；
+ * 元数据腿钉占位声明本身。改注解必先过这条腿。
  * 全程 mock Spring 上下文与 BaseSqlRepo，不连库。
  *
  * @author Sharp
@@ -69,12 +72,12 @@ class AgentConsoleUserNameBindTest {
     @SuppressWarnings("rawtypes")
     static void stubAcUserRepo() {
         BaseSqlRepo acUserRepo = Mockito.mock(BaseSqlRepo.class);
-        Mockito.when(acUserRepo.getEntityClass()).thenReturn(AcUser.class);
+        Mockito.when(acUserRepo.getEntityClass()).thenReturn(StubAcUser.class);
         Mockito.when(acUserRepo.select(Mockito.any(Wrapper.class)))
                 .thenReturn(Arrays.asList(acUser(ADMIN_NUMBER, ADMIN_NAME), acUser("000002", "张三")));
 
         BindRepoResolver userRefResolver = entityClass -> UserRef.class.equals(entityClass)
-                ? Optional.of(new BindRepoResolver.BindTarget(acUserRepo, AcUser.class))
+                ? Optional.of(new BindRepoResolver.BindTarget(acUserRepo, StubAcUser.class))
                 : Optional.empty();
 
         WebApplicationContext ctx = Mockito.mock(WebApplicationContext.class);
@@ -297,12 +300,30 @@ class AgentConsoleUserNameBindTest {
         return row;
     }
 
-    private static AcUser acUser(String customerNumber, String name) {
-        AcUser user = new AcUser();
+    private static StubAcUser acUser(String customerNumber, String name) {
+        StubAcUser user = new StubAcUser();
         user.setCustomerNumber(customerNumber);
         user.setName(name);
         user.setValid("1");
         return user;
+    }
+
+    /**
+     * ac_user 只读桩实体（D-1 依赖收窄）：替代原先测试直引的 authorization(server) AcUser，
+     * 列映射同形（customer_number / `name` / valid）——BindRepoHandler 对有效实体只做反射读
+     * （@TableField 列名解析 + valid 存在性判定 + 行 getter），桩 repo 本身 mock，SQL 不落库。
+     */
+    @TableName(value = "ac_user")
+    @lombok.Data
+    public static class StubAcUser {
+
+        @TableField(value = "customer_number")
+        private String customerNumber;
+
+        @TableField(value = "`name`")
+        private String name;
+
+        private String valid;
     }
 
     private static AgentManifest row(String sessionId, String askedBy) {
