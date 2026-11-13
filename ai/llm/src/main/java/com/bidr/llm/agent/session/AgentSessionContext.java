@@ -4,12 +4,17 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.agent.AgentLoopListener;
 import com.bidr.llm.agent.AgentToolSurfaceSink;
 import com.bidr.llm.agent.ToolSurfaceFacts;
+import com.bidr.llm.agent.file.AgentFileStore;
+import com.bidr.llm.agent.file.AttachmentContextAssembler;
+import com.bidr.llm.agent.file.FileRef;
 import com.bidr.llm.usage.ModelCallContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -55,6 +60,15 @@ public class AgentSessionContext {
     /** 计划待办板（状态机下沉框架层）：真源是 state.plan 同一 list 引用，
      *  变更回调挂快照持久化＋状态帧；公开四方法保留为约定名桥接（见接入指南 §2.4） */
     private final PlanBoard planBoard;
+    /** 已投递（已进入模型上下文）的附件 fileId 集合：{@link #pendingUserText()} 与
+     *  {@link #markAttachmentsDelivered(Collection)} 共用一份去重账，同一附件只注入一次。
+     *  写侧约定 run 线程（首轮注入与逐轮注入都发生在 run 线程）；并发集合兜扩展调用 */
+    private final Set<String> deliveredAttachmentIds = ConcurrentHashMap.newKeySet();
+    /** 附件事件增量扫描位点：seq 大于此值的事件尚未看过——逻辑上每轮只看新增段。
+     *  <p>注意：位点只解决"重复注入"与"从哪之后找"；{@code AgentSessionStore#events(sessionId, since)}
+     *  的存储实现仍可能全量反序列化后再过滤（Redis 现状），故 {@link #pendingUserText()} 开头
+     *  先做廉价短路，无新增可能时连存储读都不发生 */
+    private final AtomicLong attachmentScanSeq = new AtomicLong(0L);
 
     public AgentSessionContext(AgentSessionState state, AgentSessionStore store, Map<String, Object> payload) {
         this(state, store, payload, null);
@@ -120,6 +134,139 @@ public class AgentSessionContext {
     /** 过程日志便捷上报（LOG 事件） */
     public void log(String line) {
         emit(AgentEvent.LOG, line);
+    }
+
+    // ---- 会话附件（上传落事件流，读取口供业务拼 prompt） ----
+
+    /**
+     * 登记一份已落存储的会话附件：追加 {@link AgentEvent#FILE_ATTACHED} 事件（payload 只含
+     * file_id/name/size/mime，key 不入事件），前端按事件流渲染文件卡。
+     * 运行线程内业务自行追加附件走本方法；HTTP 上传端点经会话服务同口径落事件。
+     *
+     * @return 事件 seq
+     */
+    public long attachFile(FileRef file) {
+        if (file == null) {
+            throw new IllegalArgumentException("附件引用不能为空");
+        }
+        return emit(AgentEvent.FILE_ATTACHED, AgentEvent.fileAttachedPayload(file));
+    }
+
+    /**
+     * 本会话已上传附件清单（只读口，业务在 userPrompt/systemPrompt 拼入文件名与大小用）：
+     * 以事件流为正源——HTTP 上传（请求线程）与运行期追加（run 线程）都可见，无需额外状态。
+     * 返回的引用 key 为 null（事件协议不携带存储键）；需要读内容时经
+     * {@code AgentFileStore#get(sessionId, fileId)} 换回完整引用再 {@code read/presignedUrl}。
+     */
+    public List<FileRef> attachedFiles() {
+        List<FileRef> files = new ArrayList<>();
+        long scannedTo = attachmentScanSeq.get();
+        for (AgentEvent event : store.events(state.getSessionId(), 0)) {
+            if (event.getSeq() > scannedTo) {
+                scannedTo = event.getSeq();
+            }
+            if (!AgentEvent.FILE_ATTACHED.equals(event.getType()) || !(event.getPayload() instanceof Map)) {
+                continue;
+            }
+            FileRef file = FileRef.fromEventPayload((Map<?, ?>) event.getPayload());
+            if (file != null) {
+                files.add(file);
+            }
+        }
+        // 首轮清单扫描同时建立增量位点（后续逐轮注入从这里往后找）；业务中途再调用本口不移动位点，
+        // 避免把"已上传但尚未注入"的附件跳过
+        if (attachmentScanSeq.get() <= 0) {
+            attachmentScanSeq.set(scannedTo);
+        }
+        return files;
+    }
+
+    /**
+     * 本轮新增附件说明（引擎每轮循环头调用，见 {@code AgentLoopListener#pendingUserText()}）：
+     * 取事件流增量段里尚未投递的 {@link AgentEvent#FILE_ATTACHED}，用
+     * {@link AttachmentContextAssembler} 生成与首轮同口径的说明文本（白名单文本原文/
+     * 其余给 file_id 指令由 {@code read_attachment} 读取），
+     * 并记账防重复——首轮已拼进提示词的附件由
+     * {@link #markAttachmentsDelivered(Collection)} 标记，这里只返回真正的新增件。
+     * <p>
+     * 返回 null 表示本轮无新增（无附件/存储端口缺席/新增件全部定位失败），引擎不追加任何消息。
+     * <p>扫描逻辑按 seq 增量：只取上次位点之后的事件；<b>存储实现可能全量读取</b>
+     * （Redis 现状＝反序列化整条事件流再过滤），故入口先做廉价短路（m-r2-4）：
+     * 总开关关、首轮位点未建立（{@code attachmentScanSeq<=0}）、或附件存储端口缺席时，
+     * 连 {@code store.events} 都不调用，直接返回 null。
+     * <p>读失败只记 warn 并返回 null——附件注入是增强面，不阻断工具循环。
+     */
+    public String pendingUserText() {
+        // I-r2-1 整体回退：开关关＝逐轮附件上下文也不注入（与首轮附件前置说明同口径）
+        if (!AttachmentContextAssembler.resolveFileToolsEnabled()) {
+            return null;
+        }
+        long since = attachmentScanSeq.get();
+        if (since <= 0) {
+            // m-r2-4 廉价短路：首轮附件清单扫描（attachmentContext→attachedFiles）已建立位点；
+            // 位点<=0 说明本会话从未出现任何事件（正常会话 RUN_START 在 start 前落库，seq>=1）
+            // 或从未走过首轮注入，无增量可找，不读事件流
+            return null;
+        }
+        AgentFileStore earlyStore;
+        try {
+            earlyStore = BeanUtil.getBean(AgentFileStore.class);
+        } catch (Exception e) {
+            log.debug("附件存储端口解析不可用，逐轮注入跳过: sessionId={}, error={}",
+                    state.getSessionId(), e.getMessage());
+            return null;
+        }
+        if (earlyStore == null) {
+            // 宿主未装配附件能力：无读取通道，与首轮注入同口径直接放弃（且不读事件流）
+            return null;
+        }
+        List<FileRef> pending = new ArrayList<>();
+        long scannedTo = since;
+        try {
+            for (AgentEvent event : store.events(state.getSessionId(), since)) {
+                if (event.getSeq() > scannedTo) {
+                    scannedTo = event.getSeq();
+                }
+                if (!AgentEvent.FILE_ATTACHED.equals(event.getType()) || !(event.getPayload() instanceof Map)) {
+                    continue;
+                }
+                FileRef file = FileRef.fromEventPayload((Map<?, ?>) event.getPayload());
+                if (file == null || file.fileId() == null || deliveredAttachmentIds.contains(file.fileId())) {
+                    continue;
+                }
+                pending.add(file);
+            }
+            attachmentScanSeq.set(scannedTo);
+        } catch (Exception e) {
+            log.warn("运行期附件事件读取失败（本轮不追加附件上下文）, sessionId={}, error={}",
+                    state.getSessionId(), e.getMessage());
+            return null;
+        }
+        if (pending.isEmpty()) {
+            return null;
+        }
+        String text = AttachmentContextAssembler.assemble(earlyStore, state.getSessionId(), pending,
+                AttachmentContextAssembler.resolveInlineTextMaxBytes(),
+                AttachmentContextAssembler.resolveInlineTotalMaxBytes());
+        // 无论生成是否全部成功都记投递：坏附件每轮重试只会刷同样的 warn，不产生新信息。
+        // 首批投递后事件已跳过，后续轮次不会重复进入本分支
+        markAttachmentsDelivered(pending);
+        return text.isEmpty() ? null : text;
+    }
+
+    /**
+     * 标记附件已投递（进入模型上下文）：首轮前置注入（{@code AbstractToolLoopAgent#attachmentContext}）
+     * 与运行期逐轮增量注入（{@link #pendingUserText()}）共用本口，同一 fileId 只注入一次。
+     */
+    public void markAttachmentsDelivered(Collection<FileRef> files) {
+        if (files == null) {
+            return;
+        }
+        for (FileRef file : files) {
+            if (file != null && file.fileId() != null) {
+                deliveredAttachmentIds.add(file.fileId());
+            }
+        }
     }
 
     /** LLM 流式实时内容上报（替换式：覆盖 state.live，与问数链 live 同口径）；
@@ -461,6 +608,12 @@ public class AgentSessionContext {
             @Override
             public String awaitResumeIfPaused() {
                 return AgentSessionContext.this.awaitResumeIfPaused();
+            }
+
+            /** 运行期新增附件（start 之后才上传）→ 下一轮头作为用户消息追加进上下文 */
+            @Override
+            public String pendingUserText() {
+                return AgentSessionContext.this.pendingUserText();
             }
 
             /** 结构化工具事件：payload 键位与 relay §5.7 帧对齐，两路共用一个前端视图模型 */

@@ -4,6 +4,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.usage.ModelCallContext;
 import com.bidr.llm.usage.ModelCallContexts;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -160,6 +161,14 @@ public class ToolAgentRunner {
                 if (resumeGuidance != null && !resumeGuidance.trim().isEmpty()) {
                     sink.log("恢复指导语已注入：" + resumeGuidance);
                     messages.add(UserMessage.from("【用户补充指导】" + resumeGuidance.trim()));
+                }
+                // 运行期附件增量：会话 start 之后才上传的附件在本轮头变成一条用户消息追加进上下文
+                // （start 时已拼进首轮提示词的附件由会话侧记投递，这里只返回新增件；默认 null＝零行为变化）
+                String pendingUserText = pendingUserText(sink);
+                if (pendingUserText != null && !pendingUserText.trim().isEmpty()) {
+                    messages.add(UserMessage.from(pendingUserText));
+                    sink.log("附件上下文追加（第 " + round + " 轮）：新增附件说明 " + pendingUserText.length()
+                            + " 字符已作为用户消息注入本轮上下文");
                 }
                 trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
@@ -518,6 +527,17 @@ public class ToolAgentRunner {
         return new ArrayList<>(restricted);
     }
 
+    /** 运行期附件上下文取数：listener 默认 null（无附件路径零行为），实现方抛错也吞在这里——
+     *  附件注入是增强面，绝不因为一次存储读失败击穿整个工具循环 */
+    private static String pendingUserText(AgentLoopListener sink) {
+        try {
+            return sink.pendingUserText();
+        } catch (Exception e) {
+            log.warn("运行期附件上下文读取失败（本轮跳过附件追加）: error={}", e.getMessage());
+            return null;
+        }
+    }
+
     /** 工具面定形上报：listener 默认空实现（无台账即零行为），实现方抛错也吞在这里——
      *  台账是复盘链路，绝不改写会话结局也不中断循环 */
     private static void notifyToolSurfaceResolved(List<ToolSpecification> specs, String systemPrompt,
@@ -529,8 +549,14 @@ public class ToolAgentRunner {
         }
     }
 
-    /** 解析工具参数 JSON：按方法参数名（@Tool 生成 schema 即参数名）逐个取值并转目标类型；
-     *  空/缺省参数传 null，由工具方法自行处理 */
+    /**
+     * 解析工具参数 JSON：按<b>发给模型的参数名</b>逐个取值并转目标类型。
+     * <p>参数名口径必须与 schema 同源：langchain4j 生成 schema 时优先取 {@code @P(name=...)}，
+     * 未声明才回落 Java 参数名；执行期若只认 Java 参数名，任何 snake_case 声明（如
+     * {@code read_attachment} 的 file_id/max_chars）都会被解析成 null，基本类型参数随后在
+     * {@code Method.invoke} 抛 {@code IllegalArgumentException}。故这里同口径优先 {@code @P.name}。
+     * <p>空/缺省参数传 null，由工具方法自行处理。
+     */
     private static Object[] parseToolArgs(Method method, String argumentsJson) throws Exception {
         Parameter[] params = method.getParameters();
         if (params.length == 0) {
@@ -540,7 +566,10 @@ public class ToolAgentRunner {
         com.fasterxml.jackson.databind.JsonNode node = ARG_OM.readTree(json);
         Object[] args = new Object[params.length];
         for (int i = 0; i < params.length; i++) {
-            com.fasterxml.jackson.databind.JsonNode v = node.path(params[i].getName());
+            P p = params[i].getAnnotation(P.class);
+            String key = p != null && p.name() != null && !p.name().trim().isEmpty()
+                    ? p.name().trim() : params[i].getName();
+            com.fasterxml.jackson.databind.JsonNode v = node.path(key);
             args[i] = v.isMissingNode() || v.isNull() ? null : ARG_OM.convertValue(v, params[i].getType());
         }
         return args;

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.swansrp</groupId>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <version>${jarVersion}</version>
+    </parent>
+
+    <artifactId>agent-capability</artifactId>
+    <name>agent-capability</name>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+    <description>Agent 能力装配层（P0a）：把 llm 声明的能力端口（AgentFileStore）落到具体底座
+        （store/blob 对象存储）。本模块唯一引外围（mineru/gotenberg/agent-runtime 为 P1/P2 预留，
+        optional 不向宿主传递）；能力缺席时自动配置整体不装配，llm 协议面零感知。</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>17</java.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 协议端口宿主：AgentFileStore/FileRef 定义在 llm（本模块只做实现） -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>llm</artifactId>
+            <version>${llm.version}</version>
+        </dependency>
+        <!-- 附件字节通道：BlobStore.put/presign/get/remove + 选型路由（sys_config OSS_SERVER_TYPE） -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>store-blob</artifactId>
+            <version>${core.dist.version}</version>
+        </dependency>
+        <!-- 文档能力（FileMarkdownService/read_file 加工本体）：P0 只做能力在场声明，
+             文件 → Markdown 的加工仍在 document；后续工具扩展不另立门户 -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>document</artifactId>
+            <version>${document.version}</version>
+        </dependency>
+        <!-- 租户/操作人上下文（对象键首段 tenantOrOp）：只用 api 包的 holder 静态口，
+             不碰 dao/service；server 件不在下游 classpath（守卫面A 同口径） -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>authorization-api</artifactId>
+            <version>${authorization-api.version}</version>
+        </dependency>
+        <!-- 元数据侧车对象（get(sessionId,fileId) 还原 FileRef）：Jackson 全平台既有件，
+             版本由 spring-boot-starter-parent 管理 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- @AutoConfiguration/@Bean/@ConditionalOn* 的宿主（Spring Boot 基座，平台既有件） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ===== P1/P2 预留（本棒只在 pom 占位，代码零引用；optional 不向宿主传递） ===== -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>mineru</artifactId>
+            <version>${mineru.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>gotenberg</artifactId>
+            <version>${core.dist.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>agent-runtime</artifactId>
+            <version>${core.dist.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- 传递依赖含 JUnit4 时 surefire 会选错 provider，表现为 Tests run: 0（必须显式指定） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>2.22.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

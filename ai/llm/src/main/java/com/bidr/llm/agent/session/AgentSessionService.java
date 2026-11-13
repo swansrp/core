@@ -5,6 +5,7 @@ import com.bidr.llm.agent.AutonomousAgentDefinition;
 import com.bidr.llm.agent.DetachPolicy;
 import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.agent.conversation.AgentConversationService;
+import com.bidr.llm.agent.file.FileRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -284,6 +285,25 @@ public class AgentSessionService {
     public List<AgentEvent> events(String sessionId, long sinceSeq) {
         requireState(sessionId);
         return store.events(sessionId, sinceSeq);
+    }
+
+    /**
+     * 登记会话附件事件（HTTP 上传链路）：附件字节已由 {@code AgentFileStore} 落存储，
+     * 本方法只把关「会话存在」并追加 {@link AgentEvent#FILE_ATTACHED}（payload 键口径
+     * 与运行线程 {@code AgentSessionContext#attachFile} 共用 {@link AgentEvent#fileAttachedPayload}）。
+     * <p>
+     * 写者说明：事件流惯例是 run 线程单写者；上传是用户低频动作、且"上传事实必须即时出现在
+     * 事件流"是协议要求（前端 chips 与模型上下文都靠它），故此处由请求线程直接追加。
+     * 归属校验（操作人＝发起人）在端点侧完成后再调本方法。
+     *
+     * @return 事件 seq；&lt;=0 表示落库失败（未扩容事件流）
+     */
+    public long attachFile(String sessionId, FileRef file) {
+        requireState(sessionId);
+        if (file == null) {
+            throw new ServiceException("附件引用不能为空");
+        }
+        return emitAndPublish(sessionId, AgentEvent.FILE_ATTACHED, AgentEvent.fileAttachedPayload(file));
     }
 
     /**

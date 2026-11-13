@@ -4,6 +4,7 @@ import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.agent.session.AgentSessionState;
 import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatModel;
@@ -178,5 +179,56 @@ public class ToolAgentRunnerToolEventTest {
         java.util.Map<?, ?> resultPayload = (java.util.Map<?, ?>) results.get(0).getPayload();
         Assert.assertEquals("id 必须与调用一致，供前端配对", "call-1", resultPayload.get("tool_call_id"));
         Assert.assertEquals("echo:hi", resultPayload.get("output"));
+    }
+
+    /**
+     * 参数名口径必须与 schema 同源：{@code @P(name=...)} 声明 snake_case 时，执行期按同一名字取值。
+     * （read_attachment 的 file_id/max_chars/offset 依赖；只认 Java 参数名会把参数全解析成 null，
+     * 基本类型参数随后在 Method.invoke 抛 IllegalArgumentException——2026-11-13 e2e 实测抓到的缺口。）
+     */
+    @Test
+    public void 参数名按P声明的名称解析() {
+        RecordingListener listener = new RecordingListener();
+        AgentLoopResult result = new ToolAgentRunner().run(new SnakeParamModel(), null, "请调用 snake_echo",
+                Collections.<Object>singletonList(new SnakeParamTools()), new AgentLoopOptions(5, 20), listener);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals("snake_case 参数必须按 @P.name 取值并成功执行", 1, listener.results.size());
+        Assert.assertEquals("f1:7", listener.results.get(0)[2]);
+    }
+
+    /** 第一轮按 snake_case 参数名调用工具、第二轮直出结论 */
+    private static final class SnakeParamModel implements ChatModel {
+
+        private int round;
+
+        @Override
+        public ChatResponse doChat(ChatRequest request) {
+            round++;
+            if (round == 1) {
+                return ChatResponse.builder()
+                        .aiMessage(AiMessage.from(dev.langchain4j.agent.tool.ToolExecutionRequest.builder()
+                                .id("call-snake")
+                                .name("snake_echo")
+                                .arguments("{\"file_id\":\"f1\",\"max_chars\":7}")
+                                .build()))
+                        .tokenUsage(new TokenUsage(10, 5))
+                        .build();
+            }
+            return ChatResponse.builder()
+                    .aiMessage(AiMessage.from("结论：已完成"))
+                    .tokenUsage(new TokenUsage(3, 2))
+                    .build();
+        }
+    }
+
+    /** 参数声明为 snake_case 的工具集 */
+    public static class SnakeParamTools {
+
+        @Tool(name = "snake_echo", value = "echo snake_case parameters")
+        public String snakeEcho(@P(name = "file_id", value = "file id") String fileId,
+                                @P(name = "max_chars", value = "max chars") Integer maxChars) {
+            return fileId + ":" + maxChars;
+        }
     }
 }

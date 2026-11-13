@@ -1,8 +1,10 @@
 package com.bidr.llm.agent.session;
 
+import com.bidr.llm.agent.file.FileRef;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * Title: AgentEvent
@@ -53,6 +55,12 @@ public class AgentEvent implements Serializable {
     /** 用户对 LLM 提问作答（payload：答案文本；跳过/超时由工具侧另行上报） */
     public static final String ANSWERED = "answered";
 
+    /**
+     * 会话附件已上传/追加（payload：file_id/name/size/mime，snake_case 与 TOOL_CALL 同口径；
+     * key 不入事件——前端 chips 渲染只需前四项，读取内容走存储端口按 file_id 换回完整引用）
+     */
+    public static final String FILE_ATTACHED = "file_attached";
+
     /** 登记待确认口径（payload：AgentConfirmation 摘要——id/question/adopted，确认页数据以状态快照为准） */
     public static final String CONFIRMATION = "confirmation";
 
@@ -84,4 +92,12 @@ public class AgentEvent implements Serializable {
      * 事件时间（System.currentTimeMillis()）
      */
     private long time;
+
+    /**
+     * 附件事件 payload 的唯一组装口（运行线程 attachFile 与 HTTP 上传端点共用，键口径不漂移）：
+     * file_id/name/size/mime；key 是存储实现私有字段，不进事件流
+     */
+    public static Map<String, Object> fileAttachedPayload(FileRef ref) {
+        return ref.toEventPayload();
+    }
 }
