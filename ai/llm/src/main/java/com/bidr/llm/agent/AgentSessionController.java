@@ -1,6 +1,7 @@
 package com.bidr.llm.agent;
 
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
@@ -13,6 +14,7 @@ import com.bidr.llm.flow.trace.FlowTrace;
 import com.bidr.llm.flow.trace.FlowTraceRecorder;
 import com.bidr.llm.skill.*;
 import com.bidr.platform.config.anno.ApiTrace;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -30,9 +32,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Title: AgentSessionController
@@ -87,6 +91,9 @@ public class AgentSessionController {
     /** 附件能力位与存储端口（能力模块/文档模块缺席时降级为空，不影响既有端点） */
     private final AgentFileCapabilityResolver fileCapabilityResolver;
 
+    /** 能力位运行级健康快照端口（探活件实现；缺席＝health 字段不输出＝旧前端全亮兼容） */
+    private final ObjectProvider<AgentCapabilityHealthProvider> healthProvider;
+
     /** 单文件大小上限（MB）：llm.agent.files.max-size-mb，缺省 20 */
     @Value("${llm.agent.files.max-size-mb:20}")
     private long maxFileSizeMb = 20;
@@ -111,6 +118,12 @@ public class AgentSessionController {
     public List<AgentSummary> listAgents() {
         // 能力位是装配级事实（端口/工具在场与否），同一次请求内各 agent 共用一份
         List<String> capabilities = fileCapabilityResolver.current();
+        // 运行级健康快照（探活件上报，声明级 capabilities 的运行级补充）：capabilities 空＝
+        // 能力整体未启用，health 同步退化为空 map；探活端口缺席（旧宿主）＝null ⇒ 不 set
+        // ⇒ JSON 不出该字段（旧前端全亮兼容）
+        Map<String, String> health = capabilities.isEmpty() ? Collections.emptyMap()
+                : Optional.ofNullable(healthProvider.getIfUnique())
+                        .map(AgentCapabilityHealthProvider::snapshot).orElse(null);
         List<AgentSummary> result = new ArrayList<>();
         for (FlowDefinitionProvider provider : flowProviders) {
             AgentSummary summary = new AgentSummary();
@@ -119,6 +132,9 @@ public class AgentSessionController {
             summary.setType("flow");
             summary.setSkillCode(provider.skillCode());
             summary.setCapabilities(capabilities);
+            if (health != null) {
+                summary.setHealth(health);
+            }
             result.add(summary);
         }
         for (AutonomousAgentDefinition definition : agentSessionService.registeredAgents()) {
@@ -128,6 +144,9 @@ public class AgentSessionController {
             summary.setType("autonomous");
             summary.setSkillCode(definition.skillCode());
             summary.setCapabilities(capabilities);
+            if (health != null) {
+                summary.setHealth(health);
+            }
             result.add(summary);
         }
         return result;
@@ -773,5 +792,16 @@ public class AgentSessionController {
          * {@code files.read}（模型可读文件）；空列表＝附件能力整体不启用
          */
         private List<String> capabilities;
+
+        /**
+         * 能力位运行级健康快照（探活件上报，key=能力位名，value=up/down/unconfigured）：
+         * 声明级 {@link #capabilities} 的运行级补充（探活失败只让前端徽标变灰，不改能力位与工具面）。
+         * 探活端口缺席（旧宿主）时本字段<b>不输出</b>（前端全亮＝兼容）——🔴 {@code NON_NULL} 字段级
+         * 钉死：宿主 Jackson 未配全局 non-null 时 null 也会序列化成 {@code "health":null}，
+         * 前端 {@code health?.[cap]} 判定虽同样全亮，但字段缺席是跨宿主稳定的契约形态；
+         * capabilities 空＝空 map 同步退化（{@code "health":{}} 照常输出）
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private Map<String, String> health;
     }
 }

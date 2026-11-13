@@ -11,8 +11,11 @@ import com.bidr.document.spi.ConvertStep;
 import com.bidr.document.spi.TranscribeStep;
 import com.bidr.gotenberg.GotenbergAutoConfiguration;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
+import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
+import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.sandbox.AgentSandbox;
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +24,12 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.system.CapturedOutput;
+
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -154,10 +163,89 @@ class AgentCapabilityAutoConfigurationTest {
     @DisplayName("探活件：无条件装配；宿主自建同类型 Bean 时让位")
     void healthProbeAssemblesAndYieldsToHost() {
         runner.run(context -> assertThat(context).hasSingleBean(AgentCapabilityHealthProbe.class));
-        AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(null, null, 0);
+        AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(null, null, 0, "", "");
         runner.withBean(AgentCapabilityHealthProbe.class, () -> hostProbe)
                 .run(context -> assertThat(context.getBean(AgentCapabilityHealthProbe.class))
                         .isSameAs(hostProbe));
+    }
+
+    @Test
+    @DisplayName("探活件 openhands 腿解析（真值）：runtime enabled+openhands+isConfigured ⇒ 探活拿到生效地址"
+            + "（探测 200 ⇒ 快照 exec.sandbox=up，密钥经 X-Session-API-Key 头下发）")
+    void openhandsProbeLegResolvesConfiguredRuntime() throws Exception {
+        List<String> capturedKeys = new ArrayList<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            if ("/api/agent-profiles".equals(exchange.getRequestURI().getPath())) {
+                capturedKeys.add(exchange.getRequestHeaders().getFirst("X-Session-API-Key"));
+                exchange.sendResponseHeaders(200, 2);
+            } else {
+                exchange.sendResponseHeaders(404, 2);
+            }
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write("ok".getBytes(StandardCharsets.UTF_8));
+            }
+        });
+        server.start();
+        try {
+            sandboxRunner.withPropertyValues(
+                            "my.agent.runtime.base-url=http://127.0.0.1:" + server.getAddress().getPort(),
+                            "my.agent.runtime.api-key=sk-probe-test",
+                            "llm.agent.health-probe.interval-seconds=0")
+                    .run(context -> {
+                        AgentCapabilityHealthProbe probe = context.getBean(AgentCapabilityHealthProbe.class);
+                        // probeOnce 为包私有：装配测试经公开口 run(null) 触发启动探测（interval=0 不建定时器）
+                        probe.run(null);
+                        assertThat(probe.snapshot())
+                                .as("openhands 腿拿到真值并探测成功；其余两腿未配置不发包")
+                                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX,
+                                        AgentCapabilityHealthProvider.UP)
+                                .containsEntry(AgentFileCapabilityResolver.OCR,
+                                        AgentCapabilityHealthProvider.UNCONFIGURED)
+                                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC,
+                                        AgentCapabilityHealthProvider.UNCONFIGURED);
+                        assertThat(capturedKeys).containsExactly("sk-probe-test");
+                    });
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    @DisplayName("探活件 openhands 腿解析（空串）：provider=agent-system ⇒ 传空串＝unconfigured 不发包"
+            + "（口径同 AgentRuntimeOpenHandsCondition）")
+    void openhandsProbeLegBlankForLegacyProvider() throws Exception {
+        List<String> capturedKeys = new ArrayList<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            if ("/api/agent-profiles".equals(exchange.getRequestURI().getPath())) {
+                capturedKeys.add(exchange.getRequestHeaders().getFirst("X-Session-API-Key"));
+                exchange.sendResponseHeaders(200, 2);
+            } else {
+                exchange.sendResponseHeaders(404, 2);
+            }
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write("ok".getBytes(StandardCharsets.UTF_8));
+            }
+        });
+        server.start();
+        try {
+            // 地址/密钥都配了，但 provider=agent-system ⇒ 探活入参仍传空串（不向 openhands 发包）
+            sandboxRunner.withPropertyValues(
+                            "my.agent.runtime.provider=agent-system",
+                            "my.agent.runtime.base-url=http://127.0.0.1:" + server.getAddress().getPort(),
+                            "my.agent.runtime.api-key=sk-probe-test",
+                            "llm.agent.health-probe.interval-seconds=0")
+                    .run(context -> {
+                        AgentCapabilityHealthProbe probe = context.getBean(AgentCapabilityHealthProbe.class);
+                        probe.run(null);
+                        assertThat(probe.snapshot()).containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX,
+                                AgentCapabilityHealthProvider.UNCONFIGURED);
+                        assertThat(capturedKeys).as("legacy 腿不向 openhands 发包").isEmpty();
+                    });
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Test

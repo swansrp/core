@@ -12,6 +12,7 @@ import com.bidr.llm.agent.AutonomousAgentDefinition;
 import com.bidr.llm.agent.OperatorResolver;
 import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
+import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
@@ -162,6 +163,57 @@ public class AgentSessionFileAttachmentTest {
         assertEquals(1, agents.size());
         assertEquals(Arrays.asList(AgentFileCapabilityResolver.FILES_UPLOAD,
                 AgentFileCapabilityResolver.FILES_READ), agents.get(0).getCapabilities());
+    }
+
+    /** /agents health 腿一：探活端口在场＋capabilities 非空 ⇒ 每条带探活快照（JSON 出 health 字段） */
+    @Test
+    public void agentSummaryCarriesHealthWhenPortPresent() throws Exception {
+        Map<String, String> snapshot = new HashMap<>();
+        snapshot.put(AgentFileCapabilityResolver.OCR, "up");
+        snapshot.put(AgentFileCapabilityResolver.ARTIFACTS_DOC, "down");
+        snapshot.put(AgentFileCapabilityResolver.EXEC_SANDBOX, "unconfigured");
+        AgentCapabilityHealthProvider provider = () -> snapshot;
+        AgentSessionController controller = controller(OWNER, Mockito.mock(AgentFileStore.class),
+                Mockito.mock(FileMarkdownTool.class), service(definitions()), providerOf(provider));
+
+        List<AgentSessionController.AgentSummary> agents = controller.listAgents();
+        assertEquals(1, agents.size());
+        assertEquals("health＝探活快照原样上报（能力位名→up/down/unconfigured）",
+                snapshot, agents.get(0).getHealth());
+        String json = new ObjectMapper().writeValueAsString(agents);
+        assertTrue("capabilities 非空 ⇒ JSON 输出 health 字段", json.contains("\"health\""));
+    }
+
+    /** /agents health 腿二：探活端口缺席（旧宿主）＝不填充＋JSON 不出 health 字段（前端全亮兼容） */
+    @Test
+    public void agentSummaryOmitsHealthWhenPortAbsent() throws Exception {
+        AgentSessionController controller = controller(OWNER, Mockito.mock(AgentFileStore.class),
+                Mockito.mock(FileMarkdownTool.class), service(definitions()));
+
+        List<AgentSessionController.AgentSummary> agents = controller.listAgents();
+        assertEquals(1, agents.size());
+        assertEquals("前提：capabilities 非空（存储端口+文件工具在场）", 2,
+                agents.get(0).getCapabilities().size());
+        assertNull("探活端口缺席＝health 不填充", agents.get(0).getHealth());
+        String json = new ObjectMapper().writeValueAsString(agents);
+        assertFalse("health 字段不得出现在 JSON（旧前端全亮兼容）", json.contains("\"health\""));
+    }
+
+    /** /agents health 腿三：capabilities 空＝能力整体未启用 ⇒ health 同步退化为空 map（探活快照不入） */
+    @Test
+    public void agentSummaryHealthDegradesToEmptyMapWhenCapabilitiesEmpty() throws Exception {
+        AgentCapabilityHealthProvider provider = () -> Collections.singletonMap(
+                AgentFileCapabilityResolver.OCR, "up");
+        AgentSessionController controller = controller(OWNER, null, null,
+                service(definitions()), providerOf(provider));
+
+        List<AgentSessionController.AgentSummary> agents = controller.listAgents();
+        assertEquals(1, agents.size());
+        assertTrue("前提：能力位全缺席", agents.get(0).getCapabilities().isEmpty());
+        assertNotNull("capabilities 空 ⇒ health 同步退化输出空 map", agents.get(0).getHealth());
+        assertTrue(agents.get(0).getHealth().isEmpty());
+        String json = new ObjectMapper().writeValueAsString(agents);
+        assertTrue("空 map 仍输出（health:{} 同退形态）", json.contains("\"health\":{}"));
     }
 
     // ---------------- 事件与清单读取口 ----------------
@@ -808,14 +860,21 @@ public class AgentSessionFileAttachmentTest {
         return new AgentSessionService(store, definitions, Mockito.mock(ObjectProvider.class));
     }
 
+    /** health 端口缺省喂 mock（getIfUnique 返回 null＝探活端口缺席＝health 不输出） */
     private AgentSessionController controller(String operator, AgentFileStore fileStore,
                                               FileMarkdownTool fileTool, AgentSessionService service) {
+        return controller(operator, fileStore, fileTool, service, Mockito.mock(ObjectProvider.class));
+    }
+
+    private AgentSessionController controller(String operator, AgentFileStore fileStore,
+                                              FileMarkdownTool fileTool, AgentSessionService service,
+                                              ObjectProvider<AgentCapabilityHealthProvider> healthProvider) {
         AgentFileCapabilityResolver resolver = new AgentFileCapabilityResolver(
                 providerOf(fileStore), providerOf(fileTool), providerOf(null), providerOf(null),
                 providerOf(null));
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
-                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver);
+                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver, healthProvider);
     }
 
     /** 已注册 agent 占位（/agents 能力位腿只需要注册表非空） */

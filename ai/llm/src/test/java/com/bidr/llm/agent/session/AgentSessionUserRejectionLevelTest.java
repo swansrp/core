@@ -49,7 +49,8 @@ public class AgentSessionUserRejectionLevelTest {
         return new AgentSessionController(null, null, null, Collections.emptyList(),
                 Mockito.mock(ObjectProvider.class), null,
                 Mockito.mock(ObjectProvider.class), Collections.emptyList(),
-                Mockito.mock(AgentFileCapabilityResolver.class));
+                Mockito.mock(AgentFileCapabilityResolver.class),
+                Mockito.mock(ObjectProvider.class));
     }
 
     private void save(String status, List<AgentQuestion> questions, List<AgentConfirmation> confirmations) {

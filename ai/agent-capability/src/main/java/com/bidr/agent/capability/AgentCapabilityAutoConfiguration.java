@@ -5,6 +5,7 @@ import com.bidr.agent.capability.file.BlobStoreAgentFileStore;
 import com.bidr.agent.capability.health.AgentCapabilityHealthProbe;
 import com.bidr.agent.capability.sandbox.AgentRuntimeOpenHandsCondition;
 import com.bidr.agent.capability.sandbox.OpenHandsSandboxProvider;
+import com.bidr.agent.runtime.config.AgentRuntimeConfigProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeProperties;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsClient;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsProvider;
@@ -51,8 +52,9 @@ import java.util.List;
  *     {@link OpenHandsSandboxProvider}——同一相位口径，同样不用 {@code @ConditionalOnBean}；
  *     llm 的 {@code exec.sandbox} 能力位随端口在场自动点亮。</li>
  *     <li>业务/宿主自建同类型端口 Bean 即让位（{@code @ConditionalOnMissingBean}）。</li>
- *     <li>{@link AgentCapabilityHealthProbe}（棒2）：mineru/gotenberg 两探针的<b>可观测层</b>——
- *     只打状态变化日志，不改能力位、不阻断启动、不进 /agents 契约（配置键见探活件类注释）。</li>
+     *     <li>{@link AgentCapabilityHealthProbe}（棒2）：mineru/gotenberg/openhands 三探针的
+     *     <b>可观测层</b>——状态变化日志＋运行级健康快照（{@code AgentCapabilityHealthProvider} 端口，
+     *     /agents 契约的 health 字段上报），不改能力位、不阻断启动（配置键见探活件类注释）。</li>
  * </ul>
  * 缺席语义：无 BlobStore Bean ⇒ 存储腿/产物腿都不装配；gotenberg 未配置（base-url 空）⇒ 产物腿
  * 不装配——llm 的能力位/工具自然降级（{@code /agents} 不出对应能力位，{@code generate_artifact}
@@ -182,9 +184,15 @@ public class AgentCapabilityAutoConfiguration {
     }
 
     /**
-     * 能力探活件（棒2，可观测层）：mineru（ocr）/gotenberg（artifacts）两探针——启动一次＋
-     * 定时（{@code llm.agent.health-probe.interval-seconds} 缺省 300，≤0 关定时）只打状态变化行。
-     * 配置空＝未配置不计失败；探针异常吞掉不阻断启动；探活结果<b>不改能力位</b>（/agents 契约零感知）。
+     * 能力探活件（棒2，可观测层）：mineru（ocr）/gotenberg（artifacts）/openhands（exec.sandbox）
+     * 三探针——启动一次＋定时（{@code llm.agent.health-probe.interval-seconds} 缺省 300，≤0 关定时）
+     * 打状态变化行并维护运行级健康快照（{@code AgentCapabilityHealthProvider} 端口实现，
+     * 经 /agents 契约上报前端徽标）。配置空＝未配置不计失败；探针异常吞掉不阻断启动；
+     * 探活结果<b>不改能力位</b>（capabilities 仍按声明级推导）。
+     * OpenHands 探活入参在装配处解析（探活件保持纯字符串入参）：口径同
+     * {@link AgentRuntimeOpenHandsCondition}（{@code my.agent.runtime.enabled=true} 且 provider
+     * 缺省/openhands）＋生效配置判定（{@link AgentRuntimeConfigProvider#isConfigured()}＝地址与
+     * 密钥齐备）；未启用/未接线一律传空串＝探活标 unconfigured 不发包。
      * 宿主自建同类型 Bean 时让位。
      */
     @Bean
@@ -192,7 +200,22 @@ public class AgentCapabilityAutoConfiguration {
     public AgentCapabilityHealthProbe agentCapabilityHealthProbe(
             @Value("${mineru.local.base-url:}") String mineruBaseUrl,
             @Value("${tool.gotenberg.base-url:}") String gotenbergBaseUrl,
-            @Value("${llm.agent.health-probe.interval-seconds:300}") long intervalSeconds) {
-        return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds);
+            @Value("${llm.agent.health-probe.interval-seconds:300}") long intervalSeconds,
+            ObjectProvider<AgentRuntimeConfigProvider> runtimeConfigProvider,
+            @Value("${my.agent.runtime.enabled:false}") boolean runtimeEnabled,
+            @Value("${my.agent.runtime.provider:openhands}") String runtimeProvider) {
+        String openhandsBaseUrl = "";
+        String openhandsApiKey = "";
+        if (runtimeEnabled
+                && (runtimeProvider == null || runtimeProvider.trim().isEmpty()
+                    || OpenHandsProvider.NAME.equalsIgnoreCase(runtimeProvider.trim()))) {
+            AgentRuntimeConfigProvider config = runtimeConfigProvider.getIfUnique();
+            if (config != null && config.isConfigured()) {
+                openhandsBaseUrl = config.getBaseUrl();
+                openhandsApiKey = config.getApiKey();
+            }
+        }
+        return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds,
+                openhandsBaseUrl, openhandsApiKey);
     }
 }
