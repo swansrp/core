@@ -35,10 +35,26 @@
             <artifactId>platform</artifactId>
             <version>${platform.version}</version>
         </dependency>
+        <!--
+            redis：WikiCollaboratorPortalService 直接 import RedisService（分享链接缓存 set/get/delete）。
+            原先靠 authorization(server) 传递供给——D-1 降 authorization-api 后传递断，按"直接用的
+            就直接声明"口径（同 agent-console 对 platform 的注释）补直依
+        -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
-            <artifactId>authorization</artifactId>
-            <version>${authorization.version}</version>
+            <artifactId>redis</artifactId>
+            <version>${redis.version}</version>
+        </dependency>
+        <!--
+            authorization-api（D-1 依赖收窄降级）：authorization 裸包不再引——TokenService 死注入已删
+            （M-14）、ac_user JOIN 已于续笔二摘除——人名走 @BindUser SPI 兜底展开（Mirror/Default 解析器两端各自供给），余下 import 全为 api 包静态
+            注解/holder（M-16），下游装配零运行时 bean 依赖；⚠ wiki 端点 @Auth 强制由宿主
+            authorization-client 提供（AuthInterceptor 在 client），宿主不带 client 则 wiki 面不设防
+        -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>authorization-api</artifactId>
+            <version>${authorization-api.version}</version>
         </dependency>
         <!-- minio -->
         <dependency>
