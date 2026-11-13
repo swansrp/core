@@ -95,6 +95,15 @@
             <groupId>com.alibaba</groupId>
             <artifactId>easyexcel</artifactId>
             <version>3.3.4</version>
+            <exclusions>
+                <!-- POI 4 的 schema jar 与本工程统一的 POI 5.2.2（poi-ooxml→poi-ooxml-lite）同包重复：
+                     old 4.1.2 schema 先被类加载即让 POI 5 的 XWPF 解析在运行期炸（2026-11-13 附件读 docx 实测），
+                     统一走 poi-ooxml-lite 5.2.2，easyexcel 只用常见 xlsx schema，无缺口 -->
+                <exclusion>
+                    <groupId>org.apache.poi</groupId>
+                    <artifactId>poi-ooxml-schemas</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- ftp -->

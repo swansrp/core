@@ -1,5 +1,5 @@
 # =============================================================================
-# core/llm 模块读取的全部 yml 键（28 把，正源＝本模块代码里的 ${llm...} 占位符）
+# core/llm 模块读取的全部 yml 键（33 把，正源＝本模块代码里的 ${llm...} 占位符）
 #   重新取证命令（改了代码就跑一次，模板必须跟着更新）：
 #     cd server/framework/core/llm && grep -rho '\${llm[^}]*}' src/main/java | sort -u
 #   机器对账腿＝LlmConfigTemplateCoverageTest（模板叶子键集合与代码 ${llm...} 占位符集合必须**完全相等**，
@@ -27,6 +27,14 @@ llm:
   # Agent 长任务用途（core AgentLiveModels／LiveModelFactory 走这条超时口径；地址密钥仍用上面默认）
   agent:
     timeout-seconds:   # 【出厂默认即可】编排单次调用可达数分钟。[600]  🔁 sys_config: AGENT_TIMEOUT_SECONDS
+    # 会话附件（P0a）：上传大小/数量上限与会话端点同源；总开关关＝附件能力整体回退
+    file-tools:
+      enabled:         # 【出厂默认即可】true＝附件能力启用（read_attachment 工具面＋首轮/逐轮附件上下文注入＋/agents 能力位）；false＝整体回退（模型侧三处一起关，提示词与改造前逐字节一致；上传/清单管理面仍可用，但前端按空能力位不渲染入口）。raw read_file 不再默认下发。[true]  ✋
+    files:
+      max-size-mb:     # 【按需调整】单文件上传上限（MB），超限上传端点直接拒绝。[20]  ✋
+      max-per-session: # 【按需调整】单会话附件数量上限（按 file_attached 事件计数）。[10]  ✋
+      inline-text-max-bytes: # 【按需调整】白名单文本 MIME（text/plain|text/markdown|text/csv|application/json）单件直接注入原文的字节上限；超过则改给 file_id 由 read_attachment 取回。[65536＝64KB]  ✋
+      inline-total-max-bytes: # 【按需调整】单批附件内联原文的总字节上限；超出按剩余额度截断并标注「…（已截断）」。[131072＝128KB]  ✋
 
   # ---------------------------------------------------------------------------
   # ② 多模态（视觉）模型：扫描件/图片转 Markdown、图注生成

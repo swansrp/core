@@ -1,6 +1,9 @@
 package com.bidr.llm.agent;
 
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
+import com.bidr.llm.agent.file.AgentFileStore;
+import com.bidr.llm.agent.file.FileRef;
 import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionService;
 import com.bidr.llm.agent.session.AgentSessionState;
@@ -16,13 +19,16 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -78,6 +84,17 @@ public class AgentSessionController {
     /** 评价动作业务钩子（按 skillCode 分发；无实现时端点按请求体自组装直落底座） */
     private final List<AgentRatingListener> ratingListeners;
 
+    /** 附件能力位与存储端口（能力模块/文档模块缺席时降级为空，不影响既有端点） */
+    private final AgentFileCapabilityResolver fileCapabilityResolver;
+
+    /** 单文件大小上限（MB）：llm.agent.files.max-size-mb，缺省 20 */
+    @Value("${llm.agent.files.max-size-mb:20}")
+    private long maxFileSizeMb = 20;
+
+    /** 单会话附件数量上限：llm.agent.files.max-per-session，缺省 10 */
+    @Value("${llm.agent.files.max-per-session:10}")
+    private int maxFilesPerSession = 10;
+
     /** extEquals 查询参数 JSON 解析 */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -92,6 +109,8 @@ public class AgentSessionController {
      */
     @GetMapping("/agents")
     public List<AgentSummary> listAgents() {
+        // 能力位是装配级事实（端口/工具在场与否），同一次请求内各 agent 共用一份
+        List<String> capabilities = fileCapabilityResolver.current();
         List<AgentSummary> result = new ArrayList<>();
         for (FlowDefinitionProvider provider : flowProviders) {
             AgentSummary summary = new AgentSummary();
@@ -99,6 +118,7 @@ public class AgentSessionController {
             summary.setDisplayName(provider.displayName());
             summary.setType("flow");
             summary.setSkillCode(provider.skillCode());
+            summary.setCapabilities(capabilities);
             result.add(summary);
         }
         for (AutonomousAgentDefinition definition : agentSessionService.registeredAgents()) {
@@ -107,6 +127,7 @@ public class AgentSessionController {
             summary.setDisplayName(definition.displayName());
             summary.setType("autonomous");
             summary.setSkillCode(definition.skillCode());
+            summary.setCapabilities(capabilities);
             result.add(summary);
         }
         return result;
@@ -219,6 +240,89 @@ public class AgentSessionController {
     public List<AgentEvent> events(@PathVariable("sessionId") String sessionId,
                                    @RequestParam(name = "sinceSeq", defaultValue = "0") long sinceSeq) {
         return agentSessionService.events(sessionId, sinceSeq);
+    }
+
+    /**
+     * 上传会话附件（P0a 附件协议）：multipart 字段名 {@code file}，落存储端口后追加
+     * {@link AgentEvent#FILE_ATTACHED} 事件（前端 chips 与模型上下文的事件正源）。
+     * 归属校验＝当前操作人与会话发起人一致（{@link OperatorResolver}）；<b>未登录/操作人解析不出
+     * 一律 fail-closed 拒绝</b>（I-1），终态会话拒绝上传（m-3）；大小/数量上限读配置
+     * {@code llm.agent.files.max-size-mb}（缺省 20）/ {@code llm.agent.files.max-per-session}（缺省 10）。
+     * 事件写入失败（{@code attachFile} 返回 seq&lt;=0）不回 200——事件流是模型可见性的唯一正源（I-2）。
+     * 响应为 {@link AgentFileView}（m-r2-7：不回传存储 key）；存储写失败（含元数据侧车失败）同样
+     * 由端点转人话错误，不会出现"上传 200 但模型读不到"。
+     * 能力未装配（无 {@link AgentFileStore} Bean）时明确拒绝——前端按 {@code /agents} 能力位不渲染入口。
+     */
+    @PostMapping("/session/{sessionId}/files")
+    public AgentFileView uploadFile(@PathVariable("sessionId") String sessionId,
+                                    @RequestPart("file") MultipartFile file) {
+        AgentSessionState state = requireSessionOwner(sessionId);
+        if (state.isTerminal()) {
+            // m-3：run 线程已结束，附件事件不会再被注入；直接拒绝避免"上传成功但模型永远读不到"
+            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法上传附件");
+        }
+        AgentFileStore fileStore = fileCapabilityResolver.fileStore();
+        if (fileStore == null) {
+            throw new ServiceException("附件能力未启用（对象存储或能力模块未装配）");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException("上传文件不能为空");
+        }
+        if (file.getSize() > maxFileSizeMb * 1024L * 1024L) {
+            throw new ServiceException("文件超过上限 " + maxFileSizeMb + "MB：" + file.getOriginalFilename());
+        }
+        if (attachmentCount(sessionId) >= maxFilesPerSession) {
+            throw new ServiceException("单会话附件数量已达上限 " + maxFilesPerSession + " 个");
+        }
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new ServiceException("读取上传文件失败：" + e.getMessage());
+        }
+        FileRef ref;
+        try {
+            ref = fileStore.put(sessionId, safeFilename(file.getOriginalFilename()),
+                    file.getContentType(), bytes);
+        } catch (ServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            // m-r2-2：存储实现（含元数据侧车）失败必须显式失败，不能 200 后让模型读不到
+            log.warn("附件存储写入失败: sessionId={}, name={}, error={}",
+                    sessionId, safeFilename(file.getOriginalFilename()), e.getMessage());
+            throw new ServiceException("附件保存失败，请重试");
+        }
+        long seq = agentSessionService.attachFile(sessionId, ref);
+        if (seq <= 0) {
+            // I-2：事件流是模型附件可见性的唯一正源；写入失败不能静默返回 200
+            throw new ServiceException("附件已存储但事件写入失败，请重试");
+        }
+        return AgentFileView.of(ref);
+    }
+
+    /**
+     * 本会话附件清单（文件卡回显/刷新恢复的数据源）：以事件流为正源按
+     * {@link AgentEvent#FILE_ATTACHED} 顺序返回；存储端口在场时经
+     * {@link AgentFileStore#get(String, String)} 补全元数据，响应统一收窄为
+     * {@link AgentFileView}（m-r2-7：不回传存储 key；事件重建的引用本身 key 为 null）。
+     */
+    @GetMapping("/session/{sessionId}/files")
+    public List<AgentFileView> listFiles(@PathVariable("sessionId") String sessionId) {
+        requireSessionOwner(sessionId);
+        AgentFileStore fileStore = fileCapabilityResolver.fileStore();
+        List<AgentFileView> result = new ArrayList<>();
+        for (AgentEvent event : agentSessionService.events(sessionId, 0)) {
+            if (!AgentEvent.FILE_ATTACHED.equals(event.getType()) || !(event.getPayload() instanceof Map)) {
+                continue;
+            }
+            FileRef rebuilt = FileRef.fromEventPayload((Map<?, ?>) event.getPayload());
+            if (rebuilt == null) {
+                continue;
+            }
+            FileRef stored = fileStore == null ? null : fileStore.get(sessionId, rebuilt.fileId());
+            result.add(AgentFileView.of(stored == null ? rebuilt : stored));
+        }
+        return result;
     }
 
     /**
@@ -484,6 +588,47 @@ public class AgentSessionController {
         }
     }
 
+    /**
+     * 附件端点归属校验：<b>未登录/操作人解析不出即 fail-closed</b>（I-1：不再把 null 归一成
+     * anonymous 后与 anonymous 会话"相等"）；已登录则比较当前操作人＝会话发起人。
+     * 会话不存在由 status 抛"会话不存在或已过期"，不等抛人话拒绝
+     * （ServiceException＝WARN 档，不进告警邮件射程）。
+     */
+    private AgentSessionState requireSessionOwner(String sessionId) {
+        String current = operator();
+        if (!StringUtils.hasText(current)) {
+            throw new ServiceException("未登录，无法操作会话附件");
+        }
+        AgentSessionState state = agentSessionService.status(sessionId);
+        if (!current.trim().equals(state.getOperator())) {
+            // 不向非属主回显发起人标识（m-7 顺手收口）
+            throw new ServiceException("无权操作该会话的附件");
+        }
+        return state;
+    }
+
+    /** 已登记附件数（事件流正源；上传前置校验数量上限用） */
+    private int attachmentCount(String sessionId) {
+        int count = 0;
+        for (AgentEvent event : agentSessionService.events(sessionId, 0)) {
+            if (AgentEvent.FILE_ATTACHED.equals(event.getType())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** 上传文件名清洗：取路径末段（兼容旧客户端带全路径），空名回落 file */
+    private static String safeFilename(String originalFilename) {
+        String name = originalFilename == null ? "" : originalFilename.trim();
+        if (name.isEmpty()) {
+            return "file";
+        }
+        name = name.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        return slash >= 0 ? name.substring(slash + 1) : name;
+    }
+
     private List<FlowTrace.TraceRecord> cap(List<FlowTrace.TraceRecord> traces, int limit) {
         if (limit <= 0) {
             limit = DEFAULT_TRACE_LIMIT;
@@ -606,7 +751,7 @@ public class AgentSessionController {
     }
 
     /**
-     * agent 注册表条目：key/名称/类型（flow|autonomous）/skillCode
+     * agent 注册表条目：key/名称/类型（flow|autonomous）/skillCode/能力位
      */
     @Data
     public static class AgentSummary {
@@ -622,5 +767,11 @@ public class AgentSessionController {
 
         /** 归属 skill（SkillWorkbench 编组） */
         private String skillCode;
+
+        /**
+         * 附件能力位（装配级声明，前端据此显隐控件）：{@code files.upload}（可上传）/
+         * {@code files.read}（模型可读文件）；空列表＝附件能力整体不启用
+         */
+        private List<String> capabilities;
     }
 }

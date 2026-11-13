@@ -4,6 +4,7 @@ import com.bidr.kernel.constant.err.ErrCodeLevel;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.AgentSessionController;
+import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -47,7 +48,8 @@ public class AgentSessionUserRejectionLevelTest {
     private AgentSessionController controller() {
         return new AgentSessionController(null, null, null, Collections.emptyList(),
                 Mockito.mock(ObjectProvider.class), null,
-                Mockito.mock(ObjectProvider.class), Collections.emptyList());
+                Mockito.mock(ObjectProvider.class), Collections.emptyList(),
+                Mockito.mock(AgentFileCapabilityResolver.class));
     }
 
     private void save(String status, List<AgentQuestion> questions, List<AgentConfirmation> confirmations) {

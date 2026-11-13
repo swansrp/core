@@ -146,6 +146,8 @@
                 <module>ai/mcp</module>
                 <module>ai/agent-runtime</module>
                 <module>ai/agent-console</module>
+                <!-- 能力装配层（P0a）：llm 协议端口 → store/blob 实现；无 blob 时自动配置整体不装配 -->
+                <module>ai/agent-capability</module>
                 <module>lowcode/insight</module>
             </modules>
         </profile>

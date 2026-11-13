@@ -30,11 +30,14 @@
             <artifactId>kernel</artifactId>
             <version>${kernel.version}</version>
         </dependency>
-        <!-- entity 的 @AccountContextFill（create_by/update_by 审计填充） -->
+        <!-- entity 的 @AccountContextFill（create_by/update_by 审计填充）。
+             D-1 依赖收窄（2026-11-13）：全模块 authorization 系 import 仅 api 包的
+             com.bidr.authorization.mybatis.anno.AccountContextFill，降 authorization-api；
+             server 件仍是 auth/authorization 的编译直依，不在下游 classpath 泄露 ac_* 服务 -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
-            <artifactId>authorization</artifactId>
-            <version>${authorization.version}</version>
+            <artifactId>authorization-api</artifactId>
+            <version>${authorization-api.version}</version>
         </dependency>
         <!-- 对象存储门面只经 OssServiceSelector 取实现（与业务侧同一条选型正源） -->
         <dependency>
