@@ -15,8 +15,9 @@
     <version>${jarVersion}</version>
     <packaging>jar</packaging>
     <description>Agent 能力装配层（P0a）：把 llm 声明的能力端口（AgentFileStore）落到具体底座
-        （store/blob 对象存储）。本模块唯一引外围（mineru/gotenberg/agent-runtime 为 P1/P2 预留，
-        optional 不向宿主传递）；能力缺席时自动配置整体不装配，llm 协议面零感知。</description>
+        （store/blob 对象存储）；P2a 增产物腿（AgentArtifactGenerator → ArtifactService，
+        gotenberg 转换腿转正为 compile）。mineru/agent-runtime 仍为 P1 预留 optional 不向宿主传递；
+        能力缺席时对应自动装配不生效，llm 协议面零感知。</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -46,6 +47,13 @@
             <artifactId>document</artifactId>
             <version>${document.version}</version>
         </dependency>
+        <!-- P2a 产物腿：Markdown→docx 渲染（MarkdownDocxRenderer）用 XWPF——POI 5.2.2 与
+             document 同版同源（document 已传递携带，这里显式声明自用件，版本不变） -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.2</version>
+        </dependency>
         <!-- 租户/操作人上下文（对象键首段 tenantOrOp）：只用 api 包的 holder 静态口，
              不碰 dao/service；server 件不在下游 classpath（守卫面A 同口径） -->
         <dependency>
@@ -70,7 +78,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- ===== P1/P2 预留（本棒只在 pom 占位，代码零引用；optional 不向宿主传递） ===== -->
+        <!-- ===== P1 预留（optional 不向宿主传递）；gotenberg 已随 P2a 产物腿转正（见上） ===== -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>mineru</artifactId>
@@ -79,15 +87,16 @@
         </dependency>
         <dependency>
             <groupId>io.github.swansrp</groupId>
-            <artifactId>gotenberg</artifactId>
-            <version>${core.dist.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>io.github.swansrp</groupId>
             <artifactId>agent-runtime</artifactId>
             <version>${core.dist.version}</version>
             <optional>true</optional>
+        </dependency>
+        <!-- P2a 产物腿：ConvertStep（gotenberg LibreOffice 通道）——ArtifactService 的 PDF 出件通道；
+             Bean 装配按 gotenberg auto-config（base-url 非空才装配）让位降级 -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>gotenberg</artifactId>
+            <version>${core.dist.version}</version>
         </dependency>
 
         <dependency>

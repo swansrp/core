@@ -3,6 +3,7 @@ package com.bidr.agent.console.capability.builtin;
 import com.bidr.agent.console.capability.AgentCapabilityPackage;
 import com.bidr.agent.console.capability.CapabilityTag;
 import com.bidr.llm.agent.AgentToolRecall;
+import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
 import com.bidr.llm.agent.tools.ExternalRuntimeTools;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +14,7 @@ import java.util.Set;
 
 /**
  * Title: LlmCapabilityPackageConfig
- * Description: core/llm 侧 6 个能力包（共 12 只纯通用工具）的登记件。
+ * Description: core/llm 侧 7 个能力包（共 13 只纯通用工具，P2a 增 artifact 包）的登记件。
  * <p>
  * 登记住在 console 侧、<b>工具代码一行不改</b>：依赖方向是 agent-console → llm（引用其注册名常量），
  * llm 不感知本模块。这样"框架自带的通用能力"先进目录，业务模块照同一 SPI 追加自己的包
@@ -95,5 +96,17 @@ public class LlmCapabilityPackageConfig {
                 "把一份文件读取为 Markdown 正文（pdf/图片/office/文本），长文件可分页续读。只读。",
                 tags(CapabilityTag.READ),
                 "readFile");
+    }
+
+    /**
+     * 产物生成（generate_artifact，P2a）：把模型给出的 Markdown 正文转 docx/pdf 落对象存储，
+     * 前端出下载卡片——只产生会话产物文件，不写业务数据（SESSION 档）
+     */
+    @Bean
+    public AgentCapabilityPackage artifactCapabilityPackage() {
+        return AgentCapabilityPackage.of("artifact", "产物生成", MODULE,
+                "把 Markdown 正文转成可下载的 docx/pdf 产物文件供用户下载。只产生会话内产物，不写业务数据。",
+                tags(CapabilityTag.SESSION),
+                SessionArtifactGenerateTool.TOOL_NAME);
     }
 }

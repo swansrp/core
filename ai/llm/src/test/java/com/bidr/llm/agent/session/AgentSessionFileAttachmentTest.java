@@ -10,10 +10,12 @@ import com.bidr.llm.agent.AgentSessionController;
 import com.bidr.llm.agent.AutonomousAgentDefinition;
 import com.bidr.llm.agent.OperatorResolver;
 import com.bidr.llm.agent.ToolAgentRunner;
+import com.bidr.llm.agent.file.AgentArtifactGenerator;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
 import com.bidr.llm.agent.file.SessionAttachmentReadTool;
+import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
 import com.bidr.llm.document.FileMarkdownTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.AiMessage;
@@ -81,20 +83,29 @@ public class AgentSessionFileAttachmentTest {
 
     // ---------------- 能力位 ----------------
 
-    /** 存储端口与文件工具都在场时同时出 files.upload/files.read，缺席为空 */
+    /** 存储端口/文件工具/产物端口都在场时依次出 files.upload/files.read/artifacts.doc，缺席为空 */
     @Test
     public void capabilitiesDerivedFromPortsAndTools() {
         AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
         FileMarkdownTool fileTool = Mockito.mock(FileMarkdownTool.class);
+        AgentArtifactGenerator generator = Mockito.mock(AgentArtifactGenerator.class);
 
-        AgentFileCapabilityResolver both = new AgentFileCapabilityResolver(providerOf(fileStore), providerOf(fileTool));
+        AgentFileCapabilityResolver all = new AgentFileCapabilityResolver(
+                providerOf(fileStore), providerOf(fileTool), providerOf(generator));
+        assertEquals(Arrays.asList(AgentFileCapabilityResolver.FILES_UPLOAD,
+                AgentFileCapabilityResolver.FILES_READ, AgentFileCapabilityResolver.ARTIFACTS_DOC), all.current());
+
+        AgentFileCapabilityResolver both = new AgentFileCapabilityResolver(
+                providerOf(fileStore), providerOf(fileTool), providerOf(null));
         assertEquals(Arrays.asList(AgentFileCapabilityResolver.FILES_UPLOAD,
                 AgentFileCapabilityResolver.FILES_READ), both.current());
 
-        AgentFileCapabilityResolver uploadOnly = new AgentFileCapabilityResolver(providerOf(fileStore), providerOf(null));
+        AgentFileCapabilityResolver uploadOnly = new AgentFileCapabilityResolver(
+                providerOf(fileStore), providerOf(null), providerOf(null));
         assertEquals(Collections.singletonList(AgentFileCapabilityResolver.FILES_UPLOAD), uploadOnly.current());
 
-        AgentFileCapabilityResolver none = new AgentFileCapabilityResolver(providerOf(null), providerOf(null));
+        AgentFileCapabilityResolver none = new AgentFileCapabilityResolver(
+                providerOf(null), providerOf(null), providerOf(null));
         assertTrue("端口与工具都缺席时能力位必须为空（前端不渲染附件控件）", none.current().isEmpty());
         assertNull(none.fileStore());
     }
@@ -105,11 +116,12 @@ public class AgentSessionFileAttachmentTest {
     public void disabledSwitchClearsAllFileCapabilities() {
         AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
         FileMarkdownTool fileTool = Mockito.mock(FileMarkdownTool.class);
-        AgentFileCapabilityResolver resolver =
-                new AgentFileCapabilityResolver(providerOf(fileStore), providerOf(fileTool));
+        AgentArtifactGenerator generator = Mockito.mock(AgentArtifactGenerator.class);
+        AgentFileCapabilityResolver resolver = new AgentFileCapabilityResolver(
+                providerOf(fileStore), providerOf(fileTool), providerOf(generator));
         ReflectionTestUtils.setField(resolver, "fileToolsEnabled", false);
 
-        assertTrue("总开关关＝/agents 不得报告任何附件能力位", resolver.current().isEmpty());
+        assertTrue("总开关关＝/agents 不得报告任何能力位（含 artifacts.doc）", resolver.current().isEmpty());
         assertEquals("上传/清单端点仍可用（不属于模型可见性）", fileStore, resolver.fileStore());
     }
 
@@ -497,7 +509,8 @@ public class AgentSessionFileAttachmentTest {
         assertNull("存储端口缺席返回 null", ctx.pendingUserText());
     }
 
-    /** 框架工具面收窄（C-1）：默认只挂会话受限 read_attachment，不再挂 raw read_file；总开关关＝空 */
+    /** 框架工具面收窄（C-1/P2a）：默认只挂会话受限 read_attachment＋generate_artifact 两只，
+     *  不再挂 raw read_file；总开关关＝空 */
     @Test
     public void frameworkToolsExposeSessionScopedReadAttachmentOnly() {
         seedSession(OWNER);
@@ -505,10 +518,14 @@ public class AgentSessionFileAttachmentTest {
         PromptCapturingAgent agent = new PromptCapturingAgent(new RecordingModel(), "业务提示词");
 
         List<Object> enabled = agent.frameworkToolsForTest(ctx);
-        assertEquals("默认框架工具面只应有一个会话附件读取工具", 1, enabled.size());
-        assertTrue("默认框架工具必须是 SessionAttachmentReadTool",
+        assertEquals("默认框架工具面应为附件读取＋产物生成两只", 2, enabled.size());
+        assertTrue("第一只框架工具必须是 SessionAttachmentReadTool",
                 enabled.get(0) instanceof SessionAttachmentReadTool);
-        assertFalse("raw read_file 不得默认并入（C-1）", enabled.get(0) instanceof FileMarkdownTool);
+        assertTrue("第二只框架工具必须是 SessionArtifactGenerateTool（P2a）",
+                enabled.get(1) instanceof SessionArtifactGenerateTool);
+        for (Object tool : enabled) {
+            assertFalse("raw read_file 不得默认并入（C-1）", tool instanceof FileMarkdownTool);
+        }
 
         ReflectionTestUtils.setField(agent, "fileToolsEnabled", false);
         assertTrue("总开关关闭时框架工具面必须为空", agent.frameworkToolsForTest(ctx).isEmpty());
@@ -756,7 +773,7 @@ public class AgentSessionFileAttachmentTest {
     private AgentSessionController controller(String operator, AgentFileStore fileStore,
                                               FileMarkdownTool fileTool, AgentSessionService service) {
         AgentFileCapabilityResolver resolver = new AgentFileCapabilityResolver(
-                providerOf(fileStore), providerOf(fileTool));
+                providerOf(fileStore), providerOf(fileTool), providerOf(null));
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
                 null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver);

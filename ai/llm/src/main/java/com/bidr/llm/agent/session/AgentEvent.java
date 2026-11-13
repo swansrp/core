@@ -1,5 +1,6 @@
 package com.bidr.llm.agent.session;
 
+import com.bidr.llm.agent.file.AgentArtifact;
 import com.bidr.llm.agent.file.FileRef;
 import lombok.Data;
 
@@ -60,6 +61,14 @@ public class AgentEvent implements Serializable {
      * key 不入事件——前端 chips 渲染只需前四项，读取内容走存储端口按 file_id 换回完整引用）
      */
     public static final String FILE_ATTACHED = "file_attached";
+
+    /**
+     * 会话产物已生成可下载（P2a；payload：{@link AgentArtifact} 事件视图——file_id/name/size/
+     * mime/format/url，snake_case 与 FILE_ATTACHED 同口径）。url 是生成时点的预签名读址
+     * （有效期 1 小时）：下载卡片直接用它做 href，过期后由模型重新 generate_artifact 出新件；
+     * key 不入事件（存储键由实现按 file_id+format 确定性重构，无需侧车）
+     */
+    public static final String ARTIFACT = "artifact";
 
     /** 登记待确认口径（payload：AgentConfirmation 摘要——id/question/adopted，确认页数据以状态快照为准） */
     public static final String CONFIRMATION = "confirmation";
