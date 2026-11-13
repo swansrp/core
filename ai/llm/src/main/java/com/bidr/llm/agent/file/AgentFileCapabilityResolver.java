@@ -1,5 +1,7 @@
 package com.bidr.llm.agent.file;
 
+import com.bidr.document.spi.TranscribeStep;
+import com.bidr.llm.agent.sandbox.AgentSandbox;
 import com.bidr.llm.document.FileMarkdownTool;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +20,12 @@ import java.util.List;
  *     （会话链路经受限工具 {@code read_attachment} 按 file_id 解析，不暴露任意地址读取）；</li>
  *     <li>{@link #ARTIFACTS_DOC}：{@link AgentArtifactGenerator} 端口在场（能力模块在 gotenberg
  *     转换腿＋对象存储在场时装配）＝模型可生成可下载产物（{@code generate_artifact} 工具实转，
- *     端口缺席时工具回「产物生成未启用」）。</li>
+ *     端口缺席时工具回「产物生成未启用」）；</li>
+ *     <li>{@link #OCR}：{@link TranscribeStep} Bean 在场（document spi，{@code tool.document.transcriber}
+ *     点名装配增强转写腿，当前唯一实现＝mineru 腿）＝照片/扫描件可经外部 OCR 转写（声明级：
+ *     只声明「腿在装」，服务在线与否由探活件观测，不影响本能力位）；</li>
+ *     <li>{@link #EXEC_SANDBOX}：{@link AgentSandbox} 端口在场（能力模块装配沙箱底座，棒3b 实现落位）
+ *     ＝模型可在会话沙箱里执行命令（{@code sandbox_run}）并取回产出文件（{@code sandbox_fetch}）。</li>
  * </ul>
  * 全部缺席时返回空列表：前端不渲染附件控件、上传端点报"未启用"，既有页面行为与改造前一致。
  * 统一注册中心（{@code /registry}）与会话控制面（{@code /agents}）共用本口径，避免两处漂移。
@@ -46,11 +53,21 @@ public class AgentFileCapabilityResolver {
     /** 能力位：模型可生成可下载产物（generate_artifact 工具所依赖的转换＋存储能力在场） */
     public static final String ARTIFACTS_DOC = "artifacts.doc";
 
+    /** 能力位：照片/扫描件可 OCR 转写（TranscribeStep 增强转写腿在场＝声明级，探活只观测不改本位） */
+    public static final String OCR = "ocr";
+
+    /** 能力位：模型可在会话沙箱执行命令并取回产出文件（AgentSandbox 端口在场＝sandbox 两只工具可用） */
+    public static final String EXEC_SANDBOX = "exec.sandbox";
+
     private final ObjectProvider<AgentFileStore> fileStoreProvider;
 
     private final ObjectProvider<FileMarkdownTool> fileMarkdownToolProvider;
 
     private final ObjectProvider<AgentArtifactGenerator> artifactGeneratorProvider;
+
+    private final ObjectProvider<TranscribeStep> transcribeStepProvider;
+
+    private final ObjectProvider<AgentSandbox> sandboxProvider;
 
     /** 附件能力总开关（{@code llm.agent.file-tools.enabled}，缺省 true）：关＝能力位与端口整体回退 */
     @Value("${llm.agent.file-tools.enabled:true}")
@@ -58,13 +75,18 @@ public class AgentFileCapabilityResolver {
 
     public AgentFileCapabilityResolver(ObjectProvider<AgentFileStore> fileStoreProvider,
                                        ObjectProvider<FileMarkdownTool> fileMarkdownToolProvider,
-                                       ObjectProvider<AgentArtifactGenerator> artifactGeneratorProvider) {
+                                       ObjectProvider<AgentArtifactGenerator> artifactGeneratorProvider,
+                                       ObjectProvider<TranscribeStep> transcribeStepProvider,
+                                       ObjectProvider<AgentSandbox> sandboxProvider) {
         this.fileStoreProvider = fileStoreProvider;
         this.fileMarkdownToolProvider = fileMarkdownToolProvider;
         this.artifactGeneratorProvider = artifactGeneratorProvider;
+        this.transcribeStepProvider = transcribeStepProvider;
+        this.sandboxProvider = sandboxProvider;
     }
 
-    /** 当前生效能力位（顺序固定 upload → read → artifacts.doc；空列表＝文件面能力整体不启用） */
+    /** 当前生效能力位（顺序固定 upload → read → artifacts.doc → ocr → exec.sandbox；
+     *  空列表＝文件面能力整体不启用） */
     public List<String> current() {
         if (!fileToolsEnabled) {
             return new ArrayList<>();
@@ -78,6 +100,12 @@ public class AgentFileCapabilityResolver {
         }
         if (artifactGeneratorProvider.getIfUnique() != null) {
             capabilities.add(ARTIFACTS_DOC);
+        }
+        if (transcribeStepProvider.getIfUnique() != null) {
+            capabilities.add(OCR);
+        }
+        if (sandboxProvider.getIfUnique() != null) {
+            capabilities.add(EXEC_SANDBOX);
         }
         return capabilities;
     }

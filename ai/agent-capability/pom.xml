@@ -16,7 +16,8 @@
     <packaging>jar</packaging>
     <description>Agent 能力装配层（P0a）：把 llm 声明的能力端口（AgentFileStore）落到具体底座
         （store/blob 对象存储）；P2a 增产物腿（AgentArtifactGenerator → ArtifactService，
-        gotenberg 转换腿转正为 compile）。mineru/agent-runtime 仍为 P1 预留 optional 不向宿主传递；
+        gotenberg 转换腿转正为 compile）；棒3b 增沙箱腿（AgentSandbox → OpenHandsSandboxProvider，
+        agent-runtime 随之转正为 compile 直依）。mineru 仍为 P1 预留 optional 不向宿主传递；
         能力缺席时对应自动装配不生效，llm 协议面零感知。</description>
 
     <properties>
@@ -78,18 +79,21 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- ===== P1 预留（optional 不向宿主传递）；gotenberg 已随 P2a 产物腿转正（见上） ===== -->
+        <!-- ===== P1 预留（optional 不向宿主传递）；gotenberg 已随 P2a 产物腿转正（见上），
+              agent-runtime 已随棒3b 沙箱腿转正（见上） ===== -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>mineru</artifactId>
             <version>${mineru.version}</version>
             <optional>true</optional>
         </dependency>
+        <!-- 沙箱腿（棒3b）：OpenHandsClient/OpenHandsProvider/AgentRuntimeProperties 装配面——
+             Bean 由 agent-runtime 的 auto-config 按 my.agent.runtime.* 注册，本件只放实现与条件；
+             optional 传递不出去，宿主引本件即具备沙箱腿的装配前提 -->
         <dependency>
             <groupId>io.github.swansrp</groupId>
             <artifactId>agent-runtime</artifactId>
             <version>${core.dist.version}</version>
-            <optional>true</optional>
         </dependency>
         <!-- P2a 产物腿：ConvertStep（gotenberg LibreOffice 通道）——ArtifactService 的 PDF 出件通道；
              Bean 装配按 gotenberg auto-config（base-url 非空才装配）让位降级 -->

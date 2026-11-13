@@ -46,6 +46,24 @@ public class OpenHandsClient {
      */
     static final int DOWNLOAD_MAX_BYTES = 20 * 1024 * 1024;
 
+    /**
+     * bash 同步端点的读超时余量（毫秒）：命令本身要跑满时限时，HTTP 读超时须比命令时限再宽一截
+     * （响应组装、上游 SIGTERM→SIGKILL 收尾都要时间），否则命令没超时连接先断。
+     */
+    static final long BASH_READ_TIMEOUT_MARGIN_MS = 15_000;
+
+    /**
+     * bash 同步执行结果（上游 {@code BashOutput} 的忠实映射，不做合并/截断——那是
+     * {@code OpenHandsSandboxProvider}（沙箱装配层）的职责）。
+     *
+     * @param exitCode 进程退出码（上游超时路径与「未取得退出码」统一为 -1）
+     * @param stdout   标准输出（可空）
+     * @param stderr   错误输出（可空）
+     * @param timedOut 是否超时被终止（exitCode==-1 判定，见 {@link #executeBash}）
+     */
+    public record BashExecResult(int exitCode, String stdout, String stderr, boolean timedOut) {
+    }
+
     private final AgentRuntimeConfigProvider config;
     private final RestTemplate rest;
     private final ObjectMapper mapper;
@@ -53,11 +71,20 @@ public class OpenHandsClient {
     public OpenHandsClient(AgentRuntimeConfigProvider config) {
         this.config = config;
         this.mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.rest = buildRest(config.getIdleTimeoutMs());
+    }
+
+    /**
+     * 按读超时建一只 RestTemplate（SimpleClientHttpRequestFactory 无连接池，逐请求新建连接，
+     * 按需多建一只无共享态风险）：长等待调用（如 {@link #executeBash} 同步等命令跑完）用它放宽读超时，
+     * 其余调用共享构造器建的那只（读超时＝idleTimeoutMs）。
+     */
+    private RestTemplate buildRest(int readTimeoutMs) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(config.getConnectTimeoutMs());
-        factory.setReadTimeout(config.getIdleTimeoutMs());
-        this.rest = new RestTemplate(factory);
-        this.rest.setMessageConverters(Arrays.asList(
+        factory.setReadTimeout(readTimeoutMs);
+        RestTemplate template = new RestTemplate(factory);
+        template.setMessageConverters(Arrays.asList(
                 // 🔴 产物回读要裸字节，且必须**排在 Jackson 之前**：本清单是 setMessageConverters
                 //    整体替换默认转换器，不显式加这条就没人支持 byte[]；加了但排在后面，
                 //    缺失文件的 404 响应（Content-Type=application/json）会被 Jackson 先抢去按
@@ -69,7 +96,7 @@ public class OpenHandsClient {
                 // 附件代收转推走 multipart，需表单转换器（其余调用仍只认 JSON/文本）
                 new FormHttpMessageConverter()));
         // 非 2xx 不抛：detail 体要读出来才能映射错误码
-        this.rest.setErrorHandler(new ResponseErrorHandler() {
+        template.setErrorHandler(new ResponseErrorHandler() {
             @Override
             public boolean hasError(ClientHttpResponse response) {
                 return false;
@@ -80,6 +107,7 @@ public class OpenHandsClient {
                 // 交由 call() 统一判定
             }
         });
+        return template;
     }
 
     public ObjectMapper mapper() {
@@ -245,6 +273,73 @@ public class OpenHandsClient {
             return AgentRuntimeErrors.of(40010, detail);
         }
         return AgentRuntimeErrors.of(-1, "Agent 运行时返回 HTTP " + status + "：" + detail);
+    }
+
+    /**
+     * 同步执行 bash 命令并等结果：{@code POST /api/conversations/{cid}/bash/execute_bash_command}
+     * （端点形状经 openhands-agent-server 1.62.0 wheel 解包核对，bash_router/dependencies.py）。
+     * <ul>
+     *     <li>body＝{@code ExecuteBashRequest}：{@code command}（必填）＋{@code timeout}<b>（秒，缺省 300）</b>；
+     *     {@code cwd} 不传——按会话挂载的 bash 路由会把默认工作目录绑成该会话工作区
+     *     （{@code default_cwd=conversation.workspace.working_dir}），命令天然落在本会话目录里；</li>
+     *     <li>响应＝{@code BashOutput}：{@code exit_code}（超时/未取得码统一 -1）＋{@code stdout}/{@code stderr}
+     *     （上游已把分片输出合并成单份）；</li>
+     *     <li>🔴 不走裸挂载 {@code POST /api/bash/execute_bash_command}：那是**单会话模式**的 app 级服务
+     *     （命令跑在服务进程 cwd，无会话隔离），多会话形态下必须带 conversation 维度。</li>
+     * </ul>
+     * HTTP 读超时按命令时限放宽（idle-timeout 是给空闲事件流的缺省值，同步等命令会轻易超过它）。
+     * 错误映射走 {@link #mapError} 同一套平台码。
+     *
+     * @param conversationId 会话标识（引擎 B sessionId＝上游 conversation id）
+     * @param command        bash 命令全文
+     * @param timeoutMs      命令超时毫秒数（向上游折算成秒，向上取整、至少 1 秒）
+     */
+    public BashExecResult executeBash(String conversationId, String command, long timeoutMs) {
+        Map<String, Object> body = new HashMap<>(4);
+        body.put("command", command);
+        body.put("timeout", (int) Math.max(1, (timeoutMs + 999) / 1000));
+        String path = "/api/conversations/" + enc(conversationId) + "/bash/execute_bash_command";
+        long readTimeout = Math.max(config.getIdleTimeoutMs(), timeoutMs + BASH_READ_TIMEOUT_MARGIN_MS);
+        RestTemplate bashRest = buildRest((int) Math.min(Integer.MAX_VALUE, readTimeout));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.set("X-Session-API-Key", config.requireApiKey());
+        long t0 = System.currentTimeMillis();
+        ResponseEntity<String> resp;
+        try {
+            resp = bashRest.exchange(URI.create(base() + path), HttpMethod.POST,
+                    new HttpEntity<>(body, headers), String.class);
+        } catch (RestClientException e) {
+            if (AgentRuntimeErrors.isUnauthorized(e)) {
+                throw AgentRuntimeErrors.keyRejected("POST " + path);
+            }
+            throw AgentRuntimeErrors.of(-1, "Agent 运行时不可达：POST " + path
+                    + "（" + e.getMessage() + "）");
+        }
+        int status = resp.getStatusCode().value();
+        String raw = resp.getBody();
+        JsonNode out;
+        if (status >= 200 && status < 300) {
+            try {
+                out = raw == null || raw.trim().isEmpty() ? mapper.nullNode() : mapper.readTree(raw);
+            } catch (Exception e) {
+                throw AgentRuntimeErrors.of(-1, "Agent 运行时响应不是合法 JSON（POST " + path + "）");
+            }
+        } else {
+            throw mapError(status, raw, HttpMethod.POST, path, t0);
+        }
+        int exitCode = out.path("exit_code").asInt(-1);
+        // 上游超时路径固定 SIGTERM→SIGKILL 后置 -1；「仍在跑」（null）在同步端点也被归一成 -1
+        boolean timedOut = exitCode == -1;
+        String stdout = out.hasNonNull("stdout") ? out.get("stdout").asText() : null;
+        String stderr = out.hasNonNull("stderr") ? out.get("stderr").asText() : null;
+        // 日志纪律同 sandbox_run：命令可能含敏感内容，只打长度不打全文
+        log.info("OpenHands bash 执行完成: cid={} exitCode={} timedOut={} stdoutLen={} stderrLen={}（{}ms）",
+                conversationId, exitCode, timedOut,
+                stdout == null ? 0 : stdout.length(), stderr == null ? 0 : stderr.length(),
+                System.currentTimeMillis() - t0);
+        return new BashExecResult(exitCode, stdout, stderr, timedOut);
     }
 
     // ==================== 常用调用 ====================
