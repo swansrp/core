@@ -111,7 +111,16 @@
             <appender-ref ref="ASYNC-FILE"/>
             <appender-ref ref="ASYNC-MYSQL"/>
         </root>
+        <!-- 🔴 com.bidr 整树 TRACE 是有意为之（DB 访问日志 debug 用），勿降 INFO（2026-11-14
+             台账 #70 用户纠正）；高频噪声类逐个钉 INFO 见下。 -->
         <logger name="com.bidr" level="TRACE" additivity="false">
+            <appender-ref ref="STDOUT"/>
+            <appender-ref ref="ASYNC-FILE"/>
+            <appender-ref ref="ASYNC-MYSQL"/>
+        </logger>
+        <!-- 定时器常客逐类降噪（不伤 DB/其余 DEBUG）：缓存命中类 DEBUG 每分钟打「从本地缓存
+             命中 xxx」，无 debug 价值 -->
+        <logger name="com.bidr.platform.redis.cache.HybridDynamicMemoryCacheManager" level="INFO" additivity="false">
             <appender-ref ref="STDOUT"/>
             <appender-ref ref="ASYNC-FILE"/>
             <appender-ref ref="ASYNC-MYSQL"/>
