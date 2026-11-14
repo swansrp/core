@@ -13,6 +13,8 @@ import com.bidr.blob.BlobStore;
 import com.bidr.document.spi.ConvertStep;
 import com.bidr.document.spi.TranscribeStep;
 import com.bidr.gotenberg.GotenbergBaseUrlCondition;
+import com.bidr.mineru.MineruProperties;
+import org.springframework.util.StringUtils;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
@@ -203,7 +205,8 @@ public class AgentCapabilityAutoConfiguration {
             @Value("${llm.agent.health-probe.interval-seconds:300}") long intervalSeconds,
             ObjectProvider<AgentRuntimeConfigProvider> runtimeConfigProvider,
             @Value("${my.agent.runtime.enabled:false}") boolean runtimeEnabled,
-            @Value("${my.agent.runtime.provider:openhands}") String runtimeProvider) {
+            @Value("${my.agent.runtime.provider:openhands}") String runtimeProvider,
+            ObjectProvider<MineruProperties> mineruProperties) {
         String openhandsBaseUrl = "";
         String openhandsApiKey = "";
         if (runtimeEnabled
@@ -215,7 +218,20 @@ public class AgentCapabilityAutoConfiguration {
                 openhandsApiKey = config.getApiKey();
             }
         }
+        // mineru 探活代理：业务链 MineruLocalClient 走 mineru.proxy.*，探活同步走＝否则对外网段
+        // 底座直连探测恒 timeout 误报 down（2026-11-14 pre 实锤）。判定与 MineruLocalClient.buildProxy
+        // 同口径（enable+host+port 齐），buildProxy 是 mineru 包级可见故此处自写同逻辑
+        java.net.Proxy mineruProxy = null;
+        MineruProperties mp = mineruProperties.getIfUnique();
+        if (mp != null) {
+            MineruProperties.Proxy proxy = mp.getProxy();
+            if (proxy != null && proxy.isEnable()
+                    && StringUtils.hasText(proxy.getHost()) && proxy.getPort() > 0) {
+                mineruProxy = new java.net.Proxy(java.net.Proxy.Type.HTTP,
+                        new java.net.InetSocketAddress(proxy.getHost(), proxy.getPort()));
+            }
+        }
         return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds,
-                openhandsBaseUrl, openhandsApiKey);
+                openhandsBaseUrl, openhandsApiKey, mineruProxy);
     }
 }

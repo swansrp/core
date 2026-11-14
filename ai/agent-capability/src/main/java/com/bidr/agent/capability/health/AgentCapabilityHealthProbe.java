@@ -82,6 +82,11 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
 
     private final long intervalSeconds;
 
+    /** mineru 探活专用 HTTP 代理：外围件带代理场景的镜像口径——业务链 {@code MineruLocalClient}
+     *  走 {@code mineru.proxy.*}，探活不同步走＝直连探测对外网段底座恒 timeout 误报 down
+     *  （2026-11-14 pre 实锤：pre 机直连 5.103 不通、代理 200，探活误报）。null＝直连 */
+    private final java.net.Proxy mineruProxy;
+
     /** 探针函数（可注入替身）：入参（探针名, 完整 URL, 会话密钥——仅 openhands 腿使用）→ 探测结果 */
     private final ProbeFunction prober;
 
@@ -94,17 +99,20 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     private volatile ScheduledExecutorService scheduler;
 
     public AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
-                                      String openhandsBaseUrl, String openhandsApiKey) {
-        this(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds, openhandsBaseUrl, openhandsApiKey,
-                AgentCapabilityHealthProbe::httpProbe);
+                                      String openhandsBaseUrl, String openhandsApiKey,
+                                      java.net.Proxy mineruProxy) {
+        this(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds, openhandsBaseUrl, openhandsApiKey, mineruProxy,
+                (kind, url, apiKey) -> httpProbe(kind, url, apiKey, mineruProxy));
     }
 
     AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
-                               String openhandsBaseUrl, String openhandsApiKey, ProbeFunction prober) {
+                               String openhandsBaseUrl, String openhandsApiKey, java.net.Proxy mineruProxy,
+                               ProbeFunction prober) {
         this.mineruBaseUrl = trimmed(mineruBaseUrl);
         this.gotenbergBaseUrl = trimmed(gotenbergBaseUrl);
         this.openhandsBaseUrl = trimmed(openhandsBaseUrl);
         this.openhandsApiKey = openhandsApiKey == null ? "" : openhandsApiKey.trim();
+        this.mineruProxy = mineruProxy;
         this.intervalSeconds = intervalSeconds;
         this.prober = prober;
     }
@@ -234,7 +242,7 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
      * （密钥无效或未配置）、其余状态码带码入原因；连接异常/超时＝不可达（异常短语入行）。
      * ⚠ 密钥只进请求头：异常消息可能带 URL（不含密钥），原因短语不含密钥。
      */
-    static ProbeResult httpProbe(String kind, String url, String apiKey) {
+    static ProbeResult httpProbe(String kind, String url, String apiKey, java.net.Proxy mineruProxy) {
         try {
             java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(3))
@@ -250,7 +258,8 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
                 }
             }
             java.net.http.HttpResponse<Void> response =
-                    HTTP.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.discarding());
+                    HTTP.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.discarding(),
+                            KIND_MINERU.equals(kind) ? mineruProxy : null);
             if (KIND_GOTENBERG.equals(kind) && response.statusCode() != 200) {
                 return ProbeResult.unreachable("HTTP " + response.statusCode());
             }
@@ -297,8 +306,28 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     private static final class HttpClientShim {
         private volatile java.net.http.HttpClient client;
 
+        /** 代理专用 client 缓存（key=proxy 地址串；探活频率低，数量小，不做淘汰） */
+        private final java.util.concurrent.ConcurrentHashMap<String, java.net.http.HttpClient> proxyClients =
+                new java.util.concurrent.ConcurrentHashMap<>();
+
         java.net.http.HttpResponse<Void> send(java.net.http.HttpRequest request,
-                                              java.net.http.HttpResponse.BodyHandler<Void> bodyHandler) throws Exception {
+                                              java.net.http.HttpResponse.BodyHandler<Void> bodyHandler,
+                                              java.net.Proxy proxy) throws Exception {
+            java.net.http.HttpClient current;
+            if (proxy == null) {
+                current = sharedClient();
+            } else {
+                // 代理专用 client 按 host:port 缓存（探活频率低，避免每次重建连接池）
+                current = proxyClients.computeIfAbsent(proxy.address().toString(), k ->
+                        java.net.http.HttpClient.newBuilder()
+                                .connectTimeout(Duration.ofSeconds(3))
+                                .proxy(java.net.ProxySelector.of((java.net.InetSocketAddress) proxy.address()))
+                                .build());
+            }
+            return current.send(request, bodyHandler);
+        }
+
+        private java.net.http.HttpClient sharedClient() {
             java.net.http.HttpClient current = client;
             if (current == null) {
                 synchronized (this) {
@@ -311,7 +340,7 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
                     }
                 }
             }
-            return current.send(request, bodyHandler);
+            return current;
         }
     }
 
