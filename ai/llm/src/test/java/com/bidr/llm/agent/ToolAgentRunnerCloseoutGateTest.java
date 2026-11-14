@@ -20,9 +20,9 @@ import static com.bidr.llm.agent.ScriptedModel.Step.tool;
  * Description: 触顶收口保留工具面（closeoutKeepTools）＋续期闸（askBeforeCloseout）端到端测试
  * （2026-11-14 真机实锤驱动：监理日志素材缺口会话 12 轮触顶，旧收口剥光工具 ⇒ save/finish 双缺、
  * 产出只留会话文本不落库；用户拍板硬停止前先问人）。ScriptedModel 假模型零外部依赖，锁死：
- * ①保留链收口轮带 save/finish 工具面＋「先收尾再直出」指令；②未登记链逐字符旧口径（零行为变化）；
+ * ①保留链收口轮带 save/finish 工具面＋「先收尾再直出」指令；②显式关闸链逐字符旧口径（opt-out）；
  * ③收口轮上限到顶强制直出；④续期闸同意 → 抬升上限继续跑完；⑤拒绝/⑥超时文案 → 回落收口；
- * ⑦无 askUser 工具时闸自动跳过
+ * ⑦无 askUser 工具时闸自动跳过；⑧默认开（闸开/保留面空/12 轮/1 次）；⑨裸 options 默认闸先问人
  *
  * @author Sharp
  * @since 2026/11/14
@@ -136,17 +136,19 @@ public class ToolAgentRunnerCloseoutGateTest {
         Assert.assertFalse(instruction.contains("禁止再调用任何工具"));
     }
 
-    /** ②未登记链（默认 options）：收口面只有 askUser、指令逐字符旧口径——零行为变化 */
+    /** ②显式关闸链：收口面只有 askUser、指令逐字符旧口径——opt-out 通路保持 */
     @Test
-    public void 未登记链收口面与指令保持旧口径() {
+    public void 显式关闸链收口面与指令保持旧口径() {
         TermListener listener = new TermListener();
         ScriptedModel model = new ScriptedModel(
                 tool("call-1", "explore", "{\"query\":\"素材\"}"),
                 done("直接结论"));
+        AgentLoopOptions opt = new AgentLoopOptions(1, 30);
+        opt.setAskBeforeCloseout(false);
         new ToolAgentRunner().run(model, "系统", "任务",
                 Arrays.<Object>asList(new CloseoutProbeTools(),
                         new ToolAgentRunnerOffloadTest.FakeAskUserTool("口径答复")),
-                new AgentLoopOptions(1, 30), listener);
+                opt, listener);
         List<String> closing = specNames(model.views.get(1).specs);
         Assert.assertEquals("未登记链收口面＝仅 askUser（旧口径）",
                 Arrays.asList("askUser"), closing);
@@ -243,7 +245,7 @@ public class ToolAgentRunnerCloseoutGateTest {
                 (int) listener.toolCalls.stream().filter(t -> t.startsWith("askUser#round-extend-ask")).count());
     }
 
-    /** ⑦闸自动跳过：askUser 未注册时开闸也直接收口（无合成事件） */
+    /** ⑦闸自动跳过：askUser 未注册时默认开闸也直接收口（无合成事件）＝无交互通道链零影响 */
     @Test
     public void 无askUser工具时续期闸自动跳过() {
         TermListener listener = new TermListener();
@@ -257,5 +259,33 @@ public class ToolAgentRunnerCloseoutGateTest {
         Assert.assertEquals("无 askUser＝闸跳过＝直接收口", "无闸收口", r.getText());
         Assert.assertTrue("不得有合成询问事件",
                 listener.toolCalls.stream().noneMatch(t -> t.startsWith("askUser#round-extend-ask")));
+    }
+
+    /** ⑧默认开（2026-11-14 二次拍板）：新 options 不设任何旋钮即有闸；保留面默认空（业务名单各链登记） */
+    @Test
+    public void 续期闸默认开保留面默认空() {
+        AgentLoopOptions fresh = new AgentLoopOptions();
+        Assert.assertTrue("续期闸应默认开（无 askUser 通道的链自动跳过＝等效关闭）",
+                fresh.isAskBeforeCloseout());
+        Assert.assertTrue("收口保留面应默认空——业务收尾工具名单 core 猜不了，由各链登记",
+                fresh.getCloseoutKeepTools().isEmpty());
+        Assert.assertEquals("续期授予轮数默认与监理链上限同源", 12, fresh.getRoundExtension());
+        Assert.assertEquals("续期次数默认封顶 1（防无人无限续命）", 1, fresh.getMaxRoundExtensions());
+    }
+
+    /** ⑨默认开落地：裸 options（未显式 set 闸）＋注册 askUser 的链触顶即先问人（拒绝→旧口径收口） */
+    @Test
+    public void 裸options默认闸触顶先问人() {
+        TermListener listener = new TermListener();
+        ScriptedModel model = new ScriptedModel(
+                tool("call-1", "explore", "{\"query\":\"素材\"}"),
+                done("默认闸拒绝后收口"));
+        AgentLoopResult r = new ToolAgentRunner().run(model, "系统", "任务",
+                Arrays.<Object>asList(new CloseoutProbeTools(),
+                        new ToolAgentRunnerOffloadTest.FakeAskUserTool(
+                                "用户选择：收口（结束任务，按编排纪律完成收尾）")),
+                new AgentLoopOptions(1, 30), listener);
+        Assert.assertEquals("默认闸命中（拒绝）→收口直出", "默认闸拒绝后收口", r.getText());
+        Assert.assertTrue("默认闸应已发起合成询问", listener.toolCalls.contains("askUser#round-extend-ask-1"));
     }
 }

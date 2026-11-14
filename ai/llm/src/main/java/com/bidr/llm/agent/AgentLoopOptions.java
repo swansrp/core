@@ -32,13 +32,14 @@ public class AgentLoopOptions {
      *  在收口轮命中时立即短路返回终文本，不消耗后续轮。默认 3＝save→finish→askUser 例外三连够用 */
     private int closeoutMaxRounds = 3;
 
-    /** 轮次触顶续期闸（默认关）：maxRounds 用尽时不直接收口，而是由引擎合成一次 askUser 问用户
-     *  「是否追加轮数继续」——人在回路决定成本，把硬停止变人闸（2026-11-14 用户拍板：轮数控制
-     *  不该拦完工作，强制停止前先问人）。仅作用于<b>轮次</b>触顶；budgetSeconds 超限直接收口
-     *  （续轮救不了时间预算）。链路未注册 askUser 工具时闸自动跳过（等同收口）。用户不在场
-     *  （KEEP_RUNNING 后台）时 askUser 超时/跳过即回落收口，配合 {@link #closeoutKeepTools}
-     *  产出不丢——maxRounds 的无人值守成本兜底语义不变，变的只是兜底触发前先问一次人 */
-    private boolean askBeforeCloseout = false;
+    /** 轮次触顶续期闸（<b>默认开</b>，2026-11-14 用户二次拍板「默认开吧」）：maxRounds 用尽时不直接
+     *  收口，而是由引擎合成一次 askUser 问用户「是否追加轮数继续」——人在回路决定成本，把硬停止
+     *  变人闸。默认开的安全性：链路未注册 askUser 工具时闸自动跳过（等效关闭，轻链路/无交互通道
+     *  零影响）；有 askUser 的链触顶从「静默截断」变「先问人」，用户不在场（KEEP_RUNNING 后台）时
+     *  超时/跳过即回落收口，maxRounds 的无人值守成本兜底语义不变。仅作用于<b>轮次</b>触顶；
+     *  budgetSeconds 超限直接收口（续轮救不了时间预算）。收尾工具不丢库的完整形态＝本闸（默认开）
+     *  ＋{@link #closeoutKeepTools}（业务按需登记） */
+    private boolean askBeforeCloseout = true;
 
     /** 续期一次授予的轮数（{@link #askBeforeCloseout} 开且用户选继续时生效）；默认 12 与监理链上限同源 */
     private int roundExtension = 12;
