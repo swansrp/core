@@ -134,5 +134,11 @@ public class AgentRuntimeProperties {
 
         /** 引擎 A 开放面接口前缀 */
         private String apiPrefix = "/open/v1";
+
+        /**
+         * SDK 代理三键：agent 平台只在 6.60（5.112/5.110 均无），pre/prod 出网受限须走 230 代理——
+         * bootstrap 的 RestTemplate 与 relay 客户端不同源，独立一套（每服务一套的框架惯例）。
+         */
+        private final Proxy proxy = new Proxy();
     }
 }

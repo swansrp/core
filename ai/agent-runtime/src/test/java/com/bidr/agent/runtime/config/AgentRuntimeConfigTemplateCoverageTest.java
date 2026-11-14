@@ -61,7 +61,7 @@ class AgentRuntimeConfigTemplateCoverageTest {
     void 判据本身可被证伪() throws IOException {
         String text = templateText();
         Set<String> templateLeaves = templateLeaves(text);
-        assertEquals(18, templateLeaves.size(), "配置类展开 18 把键（含 openhands 专用三把、proxy 子块三把与 sdk 子块三把）须全在模板");
+        assertEquals(21, templateLeaves.size(), "配置类展开 18 把键（含 openhands 专用三把、proxy 子块三把与 sdk 子块三把）须全在模板");
         assertTrue(templateLeaves.contains(PREFIX + ".proxy.port"), "嵌套子块不许漏");
         assertTrue(templateLeaves.contains(PREFIX + ".sdk.api-key"), "sdk 嵌套子块不许漏");
         assertTrue(templateLeaves.contains(PREFIX + ".enabled"), "装配闸那把不许漏");
