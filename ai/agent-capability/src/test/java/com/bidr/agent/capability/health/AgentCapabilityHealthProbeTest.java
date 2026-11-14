@@ -4,6 +4,7 @@ import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,12 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * Title: AgentCapabilityHealthProbeTest
@@ -32,7 +39,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *         X-Session-API-Key 头下发且不入原因短语）、401＝不可达（密钥无效或未配置）、
  *         连接拒绝＝不可达；</li>
  *     <li>健康快照：探测前三位全 unconfigured，探测后按腿映射刷新（key=能力位名，value 小写），</li>
- *     <li>snapshot() 不可变副本（put 抛 UnsupportedOperationException）。</li>
+ *     <li>snapshot() 不可变副本（put 抛 UnsupportedOperationException），</li>
+ *     <li>SSE 广播：状态变化即 {@code broadcast("health", 最新快照)}（同状态不广播；
+ *     hub 缺席静默＝既有用例以 null hub 覆盖）。</li>
  * </ul>
  *
  * @author Sharp
@@ -76,7 +85,7 @@ class AgentCapabilityHealthProbeTest {
     @DisplayName("未配置三态：base-url 空＝替身零调用，三位标「未配置」")
     void blankConfigMeansNotConfiguredWithoutProbing() {
         StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("  ", null, 0, "", "", null, stub);
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("  ", null, 0, "", "", null, null, stub);
         assertThat(probe.probeOnce()).isTrue();
         assertThat(probe.lastLoggedLine())
                 .isEqualTo("Agent 能力探活: ocr(mineru)=未配置, artifacts(gotenberg)=未配置, exec.sandbox(openhands)=未配置");
@@ -88,14 +97,14 @@ class AgentCapabilityHealthProbeTest {
     void probeUrlsAppendPathOnTrimmedBase() {
         StubProber stub = new StubProber();
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("http://m:9100/",
-                "http://g:13000", 0, "", "", null, stub);
+                "http://g:13000", 0, "", "", null, null, stub);
         probe.probeOnce();
         assertThat(stub.calls).containsExactly("mineru http://m:9100/docs", "gotenberg http://g:13000/health");
 
         // openhands：base-url 在而密钥空＝同样不发包（齐备才探测）
         StubProber keyed = new StubProber();
         AgentCapabilityHealthProbe halfConfigured = new AgentCapabilityHealthProbe(null, null, 0,
-                "http://o:8080", "  ", null, keyed);
+                "http://o:8080", "  ", null, null, keyed);
         halfConfigured.probeOnce();
         assertThat(keyed.calls).as("密钥空＝不发包").isEmpty();
         assertThat(halfConfigured.snapshot()).containsEntry("exec.sandbox", "unconfigured");
@@ -106,7 +115,7 @@ class AgentCapabilityHealthProbeTest {
     void logsOnlyOnStateChange() {
         StubProber stub = new StubProber();
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("http://m", "http://g", 0,
-                "http://o", "sk", null, stub);
+                "http://o", "sk", null, null, stub);
 
         assertThat(probe.probeOnce()).as("首轮必出一行").isTrue();
         assertThat(probe.lastLoggedLine())
@@ -126,13 +135,43 @@ class AgentCapabilityHealthProbeTest {
     }
 
     @Test
+    @DisplayName("SSE 广播：状态变化即 broadcast(\"health\", 最新快照)；同状态不广播")
+    @SuppressWarnings("unchecked")
+    void stateChangeBroadcastsSnapshotToHub() {
+        AgentHealthSseHub hub = mock(AgentHealthSseHub.class);
+        StubProber stub = new StubProber();
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("http://m", "http://g", 0,
+                "http://o", "sk", null, hub, stub);
+
+        assertThat(probe.probeOnce()).as("首轮状态变化").isTrue();
+        ArgumentCaptor<Map<String, String>> first = ArgumentCaptor.forClass(Map.class);
+        verify(hub, times(1)).broadcast(eq("health"), first.capture());
+        assertThat(first.getValue())
+                .as("首轮广播带上报快照原样（key=能力位名，value 小写）")
+                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UP)
+                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.UP)
+                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
+
+        probe.probeOnce();
+        verify(hub, times(1)).broadcast(anyString(), any());
+
+        stub.gotenberg = AgentCapabilityHealthProbe.ProbeResult.unreachable("HTTP 503");
+        assertThat(probe.probeOnce()).as("降级即变化").isTrue();
+        ArgumentCaptor<Map<String, String>> second = ArgumentCaptor.forClass(Map.class);
+        verify(hub, times(2)).broadcast(eq("health"), second.capture());
+        assertThat(second.getValue())
+                .as("降级后的快照同步广播")
+                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.DOWN);
+    }
+
+    @Test
     @DisplayName("interval-seconds≤0：只留启动探测不建定时器；>0 建 daemon 定时器，close() 即关")
     void schedulerFollowsIntervalConfig() {
-        AgentCapabilityHealthProbe noSchedule = new AgentCapabilityHealthProbe(null, null, 0, "", "", null, new StubProber());
+        AgentCapabilityHealthProbe noSchedule = new AgentCapabilityHealthProbe(null, null, 0, "", "", null, null, new StubProber());
         noSchedule.run(null);
         assertThat(noSchedule.scheduler()).isNull();
 
-        AgentCapabilityHealthProbe scheduled = new AgentCapabilityHealthProbe(null, null, 1, "", "", null, new StubProber());
+        AgentCapabilityHealthProbe scheduled = new AgentCapabilityHealthProbe(null, null, 1, "", "", null, null, new StubProber());
         scheduled.run(null);
         assertThat(scheduled.scheduler()).isNotNull();
         assertThat(scheduled.scheduler().isShutdown()).isFalse();
@@ -143,7 +182,7 @@ class AgentCapabilityHealthProbeTest {
     @Test
     @DisplayName("快照：探测前全 unconfigured；探测后按腿映射刷新；snapshot() 不可变副本")
     void snapshotLifecycleAndImmutability() {
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(null, null, 0, "", "", null, new StubProber());
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(null, null, 0, "", "", null, null, new StubProber());
 
         Map<String, String> initial = probe.snapshot();
         assertThat(initial)
@@ -158,7 +197,7 @@ class AgentCapabilityHealthProbeTest {
         StubProber stub = new StubProber();
         stub.gotenberg = AgentCapabilityHealthProbe.ProbeResult.unreachable("HTTP 503");
         AgentCapabilityHealthProbe probed = new AgentCapabilityHealthProbe("http://m", "http://g", 0,
-                "http://o", "sk", null, stub);
+                "http://o", "sk", null, null, stub);
         probed.probeOnce();
 
         Map<String, String> snapshot = probed.snapshot();
@@ -250,7 +289,7 @@ class AgentCapabilityHealthProbeTest {
     void openhandsLegProbesWhenFullyConfigured() {
         StubProber stub = new StubProber();
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(null, null, 0,
-                "http://o:8080/", "sk-x", null, stub);
+                "http://o:8080/", "sk-x", null, null, stub);
         assertThat(probe.probeOnce()).isTrue();
         assertThat(stub.calls).contains("openhands http://o:8080/api/agent-profiles");
         assertThat(probe.snapshot()).containsEntry(

@@ -3,6 +3,7 @@ package com.bidr.agent.capability;
 import com.bidr.agent.capability.artifact.ArtifactService;
 import com.bidr.agent.capability.file.BlobStoreAgentFileStore;
 import com.bidr.agent.capability.health.AgentCapabilityHealthProbe;
+import com.bidr.agent.capability.health.AgentHealthSseHub;
 import com.bidr.agent.capability.sandbox.AgentRuntimeOpenHandsCondition;
 import com.bidr.agent.capability.sandbox.OpenHandsSandboxProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeConfigProvider;
@@ -56,7 +57,11 @@ import java.util.List;
  *     <li>业务/宿主自建同类型端口 Bean 即让位（{@code @ConditionalOnMissingBean}）。</li>
      *     <li>{@link AgentCapabilityHealthProbe}（棒2）：mineru/gotenberg/openhands 三探针的
      *     <b>可观测层</b>——状态变化日志＋运行级健康快照（{@code AgentCapabilityHealthProvider} 端口，
-     *     /agents 契约的 health 字段上报），不改能力位、不阻断启动（配置键见探活件类注释）。</li>
+     *     /agents 契约的 health 字段上报）＋状态变化的 SSE 广播（{@link AgentHealthSseHub}），
+     *     不改能力位、不阻断启动（配置键见探活件类注释）。</li>
+     *     <li>{@link AgentHealthSseHub}（健康度 SSE）：探活状态变化的 broadcast 注册表
+     *     （无 receiver 维度），前端经 {@code GET /web/api/agent/health/stream} 订阅
+     *     （{@code AgentHealthStreamController} 扫描拾取），徽标实时亮/灰不靠刷新。</li>
  * </ul>
  * 缺席语义：无 BlobStore Bean ⇒ 存储腿/产物腿都不装配；gotenberg 未配置（base-url 空）⇒ 产物腿
  * 不装配——llm 的能力位/工具自然降级（{@code /agents} 不出对应能力位，{@code generate_artifact}
@@ -186,6 +191,17 @@ public class AgentCapabilityAutoConfiguration {
     }
 
     /**
+     * 健康度 SSE 广播注册表（无 receiver 维度，broadcast 全员）：探活状态变化的实时推送口，
+     * 前端经 {@code GET /web/api/agent/health/stream} 订阅（{@code AgentHealthStreamController}
+     * 扫描拾取，构造注入本 Bean）。宿主自建同类型 Bean 时让位。
+     */
+    @Bean
+    @ConditionalOnMissingBean(AgentHealthSseHub.class)
+    public AgentHealthSseHub agentHealthSseHub() {
+        return new AgentHealthSseHub();
+    }
+
+    /**
      * 能力探活件（棒2，可观测层）：mineru（ocr）/gotenberg（artifacts）/openhands（exec.sandbox）
      * 三探针——启动一次＋定时（{@code llm.agent.health-probe.interval-seconds} 缺省 300，≤0 关定时）
      * 打状态变化行并维护运行级健康快照（{@code AgentCapabilityHealthProvider} 端口实现，
@@ -204,14 +220,17 @@ public class AgentCapabilityAutoConfiguration {
             @Value("${tool.gotenberg.base-url:}") String gotenbergBaseUrl,
             @Value("${llm.agent.health-probe.interval-seconds:300}") long intervalSeconds,
             ObjectProvider<AgentRuntimeConfigProvider> runtimeConfigProvider,
-            @Value("${my.agent.runtime.enabled:false}") boolean runtimeEnabled,
+            // 字符串自判字面 true（review #14）：boolean 形参的 relaxed 转换（on/yes/1）比
+            // AgentRuntimeOpenHandsCondition 的字面 true 宽，探活发包面须与沙箱腿装配条件同式
+            @Value("${my.agent.runtime.enabled:false}") String runtimeEnabled,
             @Value("${my.agent.runtime.provider:openhands}") String runtimeProvider,
-            ObjectProvider<MineruProperties> mineruProperties) {
+            ObjectProvider<MineruProperties> mineruProperties,
+            AgentHealthSseHub healthSseHub) {
         String openhandsBaseUrl = "";
         String openhandsApiKey = "";
-        if (runtimeEnabled
-                && (runtimeProvider == null || runtimeProvider.trim().isEmpty()
-                    || OpenHandsProvider.NAME.equalsIgnoreCase(runtimeProvider.trim()))) {
+        if ("true".equalsIgnoreCase(runtimeEnabled)
+                && (runtimeProvider == null || runtimeProvider.isEmpty()
+                    || OpenHandsProvider.NAME.equalsIgnoreCase(runtimeProvider))) {
             AgentRuntimeConfigProvider config = runtimeConfigProvider.getIfUnique();
             if (config != null && config.isConfigured()) {
                 openhandsBaseUrl = config.getBaseUrl();
@@ -232,6 +251,6 @@ public class AgentCapabilityAutoConfiguration {
             }
         }
         return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds,
-                openhandsBaseUrl, openhandsApiKey, mineruProxy);
+                openhandsBaseUrl, openhandsApiKey, mineruProxy, healthSseHub);
     }
 }

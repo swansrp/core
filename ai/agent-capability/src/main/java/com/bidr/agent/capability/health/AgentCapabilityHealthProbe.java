@@ -19,8 +19,10 @@ import java.util.concurrent.TimeUnit;
  * Title: AgentCapabilityHealthProbe
  * Description: agent 依赖底座的<b>能力探活件</b>（棒2，可观测层）——对 ocr(mineru)、
  * artifacts(gotenberg) 与 exec.sandbox(openhands) 三个外部底座做轻量 HTTP 探测，
- * 结果两路输出：<b>状态变化日志</b>＋<b>运行级健康快照</b>（{@link AgentCapabilityHealthProvider}
- * 端口实现，经 {@code /agents} 契约上报前端徽标），不改任何能力位：
+ * 结果三路输出：<b>状态变化日志</b>＋<b>运行级健康快照</b>（{@link AgentCapabilityHealthProvider}
+ * 端口实现，经 {@code /agents} 契约上报前端徽标）＋<b>SSE 广播</b>（状态变化时经
+ * {@link AgentHealthSseHub#broadcast} 推 {@code health} 事件，hub 缺席静默跳过），
+ * 不改任何能力位：
  * <ul>
  *     <li><b>不改能力位</b>：{@code /agents} 契约的 capabilities 仍按声明级推导
  *         （{@code AgentFileCapabilityResolver#current()}），探活失败只进健康快照与日志
@@ -90,6 +92,9 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     /** 探针函数（可注入替身）：入参（探针名, 完整 URL, 会话密钥——仅 openhands 腿使用）→ 探测结果 */
     private final ProbeFunction prober;
 
+    /** 健康度 SSE 广播口（可 null＝未装配静默跳过）：状态变化时把最新快照推全员 */
+    private final AgentHealthSseHub healthHub;
+
     /** 上次探测的一行摘要（null＝尚未探测过）；与本次相同＝状态未变不打日志 */
     private volatile String lastLine;
 
@@ -100,20 +105,21 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
 
     public AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
                                       String openhandsBaseUrl, String openhandsApiKey,
-                                      java.net.Proxy mineruProxy) {
+                                      java.net.Proxy mineruProxy, AgentHealthSseHub healthHub) {
         this(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds, openhandsBaseUrl, openhandsApiKey, mineruProxy,
-                (kind, url, apiKey) -> httpProbe(kind, url, apiKey, mineruProxy));
+                healthHub, (kind, url, apiKey) -> httpProbe(kind, url, apiKey, mineruProxy));
     }
 
     AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
                                String openhandsBaseUrl, String openhandsApiKey, java.net.Proxy mineruProxy,
-                               ProbeFunction prober) {
+                               AgentHealthSseHub healthHub, ProbeFunction prober) {
         this.mineruBaseUrl = trimmed(mineruBaseUrl);
         this.gotenbergBaseUrl = trimmed(gotenbergBaseUrl);
         this.openhandsBaseUrl = trimmed(openhandsBaseUrl);
         this.openhandsApiKey = openhandsApiKey == null ? "" : openhandsApiKey.trim();
         this.mineruProxy = mineruProxy;
         this.intervalSeconds = intervalSeconds;
+        this.healthHub = healthHub;
         this.prober = prober;
     }
 
@@ -154,6 +160,15 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
             log.warn("{}", line);
         } else {
             log.info("{}", line);
+        }
+        // 状态变化即广播最新快照（SSE health 事件，前端徽标实时翻转）；hub 缺席＝未装配
+        // 静默跳过，SSE 任何异常不影响探活本体
+        if (healthHub != null) {
+            try {
+                healthHub.broadcast("health", lastSnapshot);
+            } catch (Exception e) {
+                log.debug("Agent 探活快照 SSE 广播失败（不影响探活）: {}", String.valueOf(e.getMessage()));
+            }
         }
         return true;
     }
@@ -292,6 +307,11 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     /** 定时器在场与否（测试口；interval-seconds≤0 恒 null） */
     ScheduledExecutorService scheduler() {
         return scheduler;
+    }
+
+    /** 健康度 SSE 广播口（public 测试口：装配测试在 capability 包，跨包断言探活件↔hub 接线同源） */
+    public AgentHealthSseHub healthHub() {
+        return healthHub;
     }
 
     @Override

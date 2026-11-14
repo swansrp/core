@@ -23,10 +23,10 @@ import java.util.List;
 public interface AgentSandbox {
 
     /**
-     * 懒建沙箱会话并预置种子文件（幂等：已建则只补缺的种子）
+     * 懒建沙箱会话并预置种子文件（幂等：会话已建不重建；种子按清单全量重传，同路径覆盖＝最新为准）
      *
      * @param sessionId 会话标识（沙箱隔离维度）
-     * @param seeds     种子文件清单（可空/空＝不预置）；同一路径重复 ensure 以首次为准
+     * @param seeds     种子文件清单（可空/空＝不预置）；同一路径重复 ensure 覆盖重传（最新为准）
      */
     void ensure(String sessionId, List<SandboxSeedFile> seeds);
 
@@ -46,7 +46,8 @@ public interface AgentSandbox {
      * @param sessionId 会话标识
      * @param relPath   沙箱内相对路径（须相对；路径穿越校验由实现侧负责，非法路径抛
      *                  {@link IllegalArgumentException}）
-     * @return 文件字节；不存在返回 null 或抛人话异常（实现侧口径，工具层统一转文本）
+     * @return 文件字节；文件不存在同样抛 {@link IllegalArgumentException}（固定人话
+     *          「文件不存在于沙箱」，工具层统一转文本，不回 null）
      */
     byte[] fetch(String sessionId, String relPath);
 

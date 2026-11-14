@@ -2,6 +2,8 @@ package com.bidr.agent.capability;
 
 import com.bidr.agent.capability.artifact.ArtifactService;
 import com.bidr.agent.capability.health.AgentCapabilityHealthProbe;
+import com.bidr.agent.capability.health.AgentHealthSseHub;
+import com.bidr.agent.capability.health.AgentHealthStreamController;
 import com.bidr.agent.capability.sandbox.OpenHandsSandboxProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeAutoConfiguration;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsClient;
@@ -24,6 +26,9 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -49,7 +54,10 @@ import static org.mockito.Mockito.mock;
  *     <li>reporter 一行志（棒2 ocr 位、棒3a exec.sandbox 位）：fallback 分支（解析器缺席，
  *     runner 形态天然如此）与 off 分支都带五位——TranscribeStep/AgentSandbox Bean 在场即 on
  *     （声明级）；</li>
- *     <li>探活件：无条件装配 {@link AgentCapabilityHealthProbe}，宿主自建同类型 Bean 时让位。</li>
+     *     <li>探活件：无条件装配 {@link AgentCapabilityHealthProbe}，宿主自建同类型 Bean 时让位。</li>
+     *     <li>健康度 SSE（{@link AgentHealthSseHub}）：无条件装配＋宿主让位＋探活件拿到同源 hub；
+     *     {@link AgentHealthStreamController}（agent-capability 内首例 controller）按扫描拾取
+     *     （@RestController 元注解 @Component，epc 扫描根 com.bidr 同款先例）＋构造注入 hub。</li>
  *     <li>沙箱腿（棒3b）：{@code my.agent.runtime.enabled=true} ⇒ {@code AgentSandbox}=
  *     {@code OpenHandsSandboxProvider} 装配；{@code enabled=false}／{@code provider=agent-system}
  *     ⇒ 不装配（属性条件口径，非 OnBean）。</li>
@@ -163,10 +171,50 @@ class AgentCapabilityAutoConfigurationTest {
     @DisplayName("探活件：无条件装配；宿主自建同类型 Bean 时让位")
     void healthProbeAssemblesAndYieldsToHost() {
         runner.run(context -> assertThat(context).hasSingleBean(AgentCapabilityHealthProbe.class));
-        AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(null, null, 0, "", "", null);
+        AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(null, null, 0, "", "", null, null);
         runner.withBean(AgentCapabilityHealthProbe.class, () -> hostProbe)
                 .run(context -> assertThat(context.getBean(AgentCapabilityHealthProbe.class))
                         .isSameAs(hostProbe));
+    }
+
+    @Test
+    @DisplayName("健康度 SSE hub：无条件装配＋宿主自建让位；探活件拿到同源 hub（探活↔SSE 接线）")
+    void healthSseHubAssemblesYieldsAndWiresProbe() {
+        runner.run(context -> {
+            assertThat(context).hasSingleBean(AgentHealthSseHub.class);
+            assertThat(context.getBean(AgentCapabilityHealthProbe.class).healthHub())
+                    .as("探活件构造注入的 hub 与容器 Bean 同源")
+                    .isSameAs(context.getBean(AgentHealthSseHub.class));
+        });
+        AgentHealthSseHub hostHub = new AgentHealthSseHub();
+        runner.withBean(AgentHealthSseHub.class, () -> hostHub)
+                .run(context -> {
+                    assertThat(context.getBean(AgentHealthSseHub.class)).isSameAs(hostHub);
+                    assertThat(context.getBean(AgentCapabilityHealthProbe.class).healthHub()).isSameAs(hostHub);
+                });
+    }
+
+    @Test
+    @DisplayName("健康度流端点（agent-capability 内首例 controller）：@RestController 扫描拾取＋构造注入 hub")
+    void healthStreamControllerPickedUpByScanAndWiredToHub() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.registerBean(AgentHealthSseHub.class);
+        context.register(HealthScanConfig.class);
+        context.refresh();
+        try {
+            assertThat(context.getBean(AgentHealthStreamController.class))
+                    .as("扫描拾取成功且 hub 构造注入（缺 Bean 会抛 NoSuchBeanDefinitionException）")
+                    .isNotNull();
+        } finally {
+            context.close();
+        }
+    }
+
+    /** health 包扫描桩（epc 形态的最小还原）：默认过滤器只捞 @RestController 元注解件——
+     *  包内其余类（hub/探活件）无 stereotype 注解不入选，hub 以 registerBean 顶上 */
+    @Configuration
+    @ComponentScan(basePackages = "com.bidr.agent.capability.health")
+    static class HealthScanConfig {
     }
 
     @Test
@@ -271,6 +319,25 @@ class AgentCapabilityAutoConfigurationTest {
                     // legacy 腿自身可装配，但沙箱腿只认 openhands
                     assertThat(context).doesNotHaveBean(OpenHandsClient.class);
                     assertThat(context).doesNotHaveBean(AgentSandbox.class);
+                });
+        // review #9（Condition 去 trim）的 no-trim 语义在 AgentRuntimeOpenHandsConditionTest
+        // 直测钉住（withPropertyValues 对值 trim，「true 」形态到不了 Condition，此处测不出）
+    }
+
+    @Test
+    @DisplayName("探活件 openhands 腿解析（字面 true 收紧，review #14）：enabled=on（boolean relaxed 转换曾放行）"
+            + "⇒ 探活传空串＝unconfigured 不发包（与沙箱腿装配条件同式）")
+    void openhandsProbeLegBlankForNonLiteralTrue() {
+        sandboxRunner.withPropertyValues(
+                        "my.agent.runtime.enabled=on",
+                        "my.agent.runtime.base-url=http://127.0.0.1:1",
+                        "my.agent.runtime.api-key=sk-probe-test",
+                        "llm.agent.health-probe.interval-seconds=0")
+                .run(context -> {
+                    AgentCapabilityHealthProbe probe = context.getBean(AgentCapabilityHealthProbe.class);
+                    probe.run(null);
+                    assertThat(probe.snapshot()).containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX,
+                            AgentCapabilityHealthProvider.UNCONFIGURED);
                 });
     }
 }

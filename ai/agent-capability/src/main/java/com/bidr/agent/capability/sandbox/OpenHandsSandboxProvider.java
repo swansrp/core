@@ -134,10 +134,18 @@ public class OpenHandsSandboxProvider implements AgentSandbox {
         try {
             return provider.downloadFile(sessionId, relPath);
         } catch (ServiceException e) {
-            if (isPlatformCode(e, 40010)) {
-                // 端口契约：非法路径抛 IllegalArgumentException（工具层转「拒绝：…」人话给模型自行纠正）
+            if (isPlatformCode(e, AgentRuntimeErrors.CODE_SESSION_MISSING)) {
+                // 上游 404（该端点语境＝文件不存在）：固定人话 IAE 给模型自纠（请先 ls），
+                // 不透传上游 detail（review #4/#10）
+                throw new IllegalArgumentException("文件不存在于沙箱（请先 sandbox_run ls 确认）");
+            }
+            if (isPlatformCode(e, 40010) && isLocalPathRejection(e)) {
+                // 本地 safeRelPath 拒绝（穿越/绝对路径/非法段）＝真路径非法：IAE 带我方固定话术
+                // （端口契约：工具层转「拒绝：…」人话给模型自行纠正）
                 throw new IllegalArgumentException(stripCodePrefix(e.getMessage()));
             }
+            // 其余（上游 400/422 的 40010、不可达、密钥被拒等）＝取件失败：原样上抛，
+            // 工具层统一「稍后重试」（review #7：上游 400/422 不冒充路径非法）
             throw e;
         }
     }
@@ -205,6 +213,16 @@ public class OpenHandsSandboxProvider implements AgentSandbox {
     private static boolean isPlatformCode(ServiceException e, int code) {
         return e != null && e.getErrCode() instanceof AgentRuntimeErrorCode
                 && Integer.valueOf(code).equals(e.getErrCode().getErrCode());
+    }
+
+    /**
+     * 判定 40010 是否来自<b>本地</b> {@code OpenHandsProvider.safeRelPath} 拒绝（而非上游 400/422
+     * 的 detail，review #7）：safeRelPath 三类拒绝的固定话术都以「工作区路径」开头，路径非法的
+     * 判定只认我方话术——上游 detail 一律不进「拒绝：」通道（review #10，不透传上游内容）。
+     */
+    private static boolean isLocalPathRejection(ServiceException e) {
+        String message = e.getMessage();
+        return message != null && stripCodePrefix(message).startsWith("工作区路径");
     }
 
     /** 去掉平台码前缀（AgentRuntimeErrors.of 会加「[40010] 」前缀，工具层人话不需要它） */

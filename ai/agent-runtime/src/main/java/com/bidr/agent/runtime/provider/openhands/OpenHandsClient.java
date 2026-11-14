@@ -24,6 +24,7 @@ import org.springframework.web.util.UriUtils;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Title: OpenHandsClient
@@ -68,6 +69,9 @@ public class OpenHandsClient {
     private final RestTemplate rest;
     private final ObjectMapper mapper;
 
+    /** RestTemplate 缓存（review #8）：按 readTimeoutMs 档位复用，避免 executeBash 逐次重建装配 */
+    private final Map<Integer, RestTemplate> restCache = new ConcurrentHashMap<>();
+
     public OpenHandsClient(AgentRuntimeConfigProvider config) {
         this.config = config;
         this.mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -75,11 +79,17 @@ public class OpenHandsClient {
     }
 
     /**
-     * 按读超时建一只 RestTemplate（SimpleClientHttpRequestFactory 无连接池，逐请求新建连接，
-     * 按需多建一只无共享态风险）：长等待调用（如 {@link #executeBash} 同步等命令跑完）用它放宽读超时，
-     * 其余调用共享构造器建的那只（读超时＝idleTimeoutMs）。
+     * 按读超时建/取一只 RestTemplate（按 readTimeoutMs 档位 ConcurrentHashMap 缓存——review #8：
+     * executeBash 的读超时随命令时限变化，逐次新建等于每条命令重装配一遍转换器/错误处理器；
+     * RestTemplate 本身无状态线程安全，同档位复用无共享态风险）：长等待调用（如 {@link #executeBash}
+     * 同步等命令跑完）用它放宽读超时，其余调用共享构造器建的那只（读超时＝idleTimeoutMs）。
      */
     private RestTemplate buildRest(int readTimeoutMs) {
+        return restCache.computeIfAbsent(readTimeoutMs, timeout -> newRest(timeout));
+    }
+
+    /** 真正装配一只 RestTemplate（转换器顺序与错误吞并纪律见内注， {@link #buildRest} 负责按档位缓存） */
+    private RestTemplate newRest(int readTimeoutMs) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(config.getConnectTimeoutMs());
         factory.setReadTimeout(readTimeoutMs);

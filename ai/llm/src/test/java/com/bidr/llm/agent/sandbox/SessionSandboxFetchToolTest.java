@@ -172,6 +172,60 @@ public class SessionSandboxFetchToolTest {
         verify(ctx, never()).emit(anyString(), any());
     }
 
+    // ---------------- review #13 补腿：0 字节 / 空 presignedUrl / ctx-null ----------------
+
+    /** 0 字节文件＝「文件为空」人话（直回路线的空字节闸，不转存不 emit） */
+    @Test
+    public void emptyFileReturnsExplicitZeroByteText() {
+        AgentSandbox sandbox = mock(AgentSandbox.class);
+        when(sandbox.fetch(SESSION, "out/empty.csv")).thenReturn(new byte[0]);
+
+        String result = new SessionSandboxFetchTool(SESSION, null, sandbox, null)
+                .fetchFile("out/empty.csv");
+
+        assertEquals("文件为空（0 字节）：out/empty.csv", result);
+    }
+
+    /** presignedUrl 空＝链接缺失走「稍后重试」人话，不 emit 事件（空串不发废卡片） */
+    @Test
+    public void blankPresignedUrlReturnsRetryTextWithoutEvent() {
+        AgentSandbox sandbox = mock(AgentSandbox.class);
+        // 尾部 0xFF 非法 UTF-8 ⇒ 必走产物路线（纯 ASCII 控制字节会被小文本直回截走）
+        byte[] bytes = new byte[]{0x50, 0x4B, 0x03, 0x04, (byte) 0xFF};
+        when(sandbox.fetch(SESSION, "out/doc.docx")).thenReturn(bytes);
+        AgentFileStore fileStore = mock(AgentFileStore.class);
+        FileRef ref = new FileRef("f-blank", "doc.docx", bytes.length, "application/octet-stream", "k-blank");
+        when(fileStore.put(eq(SESSION), eq("doc.docx"), eq("application/octet-stream"), eq(bytes)))
+                .thenReturn(ref);
+        when(fileStore.presignedUrl(eq(ref), Mockito.anyLong())).thenReturn("  ");
+        AgentSessionContext ctx = ctxMock();
+
+        String result = new SessionSandboxFetchTool(SESSION, ctx, sandbox, fileStore)
+                .fetchFile("out/doc.docx");
+
+        assertEquals("沙箱取件失败，请稍后重试", result);
+        verify(ctx, never()).emit(anyString(), any());
+    }
+
+    /** 产物路线 ctx 缺席＝跳过事件直接回链接文本（不 NPE，下载仍可用） */
+    @Test
+    public void artifactRouteWithoutContextSkipsEventAndStillReturnsLink() {
+        AgentSandbox sandbox = mock(AgentSandbox.class);
+        // 尾部 0xFF 非法 UTF-8 ⇒ 必走产物路线（同上）
+        byte[] bytes = new byte[]{0x50, 0x4B, 0x03, 0x04, (byte) 0xFF};
+        when(sandbox.fetch(SESSION, "out/report.bin")).thenReturn(bytes);
+        AgentFileStore fileStore = mock(AgentFileStore.class);
+        FileRef ref = new FileRef("f-noctx", "report.bin", bytes.length, "application/octet-stream", "k-noctx");
+        when(fileStore.put(eq(SESSION), eq("report.bin"), eq("application/octet-stream"), eq(bytes)))
+                .thenReturn(ref);
+        when(fileStore.presignedUrl(eq(ref), Mockito.anyLong())).thenReturn("https://oss.example/f-noctx");
+
+        String result = new SessionSandboxFetchTool(SESSION, null, sandbox, fileStore)
+                .fetchFile("out/report.bin");
+
+        assertEquals("文件已取出：report.bin（" + bytes.length + "B），下载链接：https://oss.example/f-noctx", result);
+    }
+
     /** 常量契约：工具名（console 能力包按此登记） */
     @Test
     public void toolNameConstant() {

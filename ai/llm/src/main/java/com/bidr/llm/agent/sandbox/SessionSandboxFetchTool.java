@@ -93,7 +93,8 @@ public class SessionSandboxFetchTool {
         try {
             bytes = sandbox.fetch(sessionId, relPath);
         } catch (IllegalArgumentException e) {
-            // 路径非法（穿越/绝对路径等）：文案面向模型可自行纠正（实现侧的拒绝信息即人话）
+            // 路径非法 / 文件不存在（实现侧抛 IAE，message 为我方固定人话——review #4/#10：
+            // 两类可自纠错误透传 message，上游 detail 不进模型上下文）
             log.info("沙箱取件入参被拒绝, sessionId={}, error={}", sessionId, e.getMessage());
             return "拒绝：" + e.getMessage();
         } catch (Exception e) {

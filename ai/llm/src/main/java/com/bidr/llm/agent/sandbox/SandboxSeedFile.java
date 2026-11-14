@@ -12,4 +12,19 @@ package com.bidr.llm.agent.sandbox;
  * @since 2026/11/14
  */
 public record SandboxSeedFile(String relPath, byte[] content) {
+
+    /**
+     * 紧凑构造器防御性拷贝（review #12）：{@code byte[]} 可变，调用方传入后改动原数组
+     * 不得影响本记录（种子清单是单例 Bean 的跨会话共享态）；null 容错归一为空数组
+     * （「非 null」契约的兜底，不因调用方疏漏炸构造）。
+     */
+    public SandboxSeedFile {
+        content = content == null ? new byte[0] : content.clone();
+    }
+
+    /** 取出侧同样克隆：拿到字节的调用方改数组不回写进记录（与紧凑构造器成对） */
+    @Override
+    public byte[] content() {
+        return content.clone();
+    }
 }

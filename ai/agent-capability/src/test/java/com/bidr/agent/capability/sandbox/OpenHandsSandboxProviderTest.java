@@ -4,6 +4,7 @@ import com.bidr.agent.runtime.config.AgentRuntimeConfigProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeProperties;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsClient;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsProvider;
+import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.sandbox.SandboxExecResult;
 import com.bidr.llm.agent.sandbox.SandboxSeedFile;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -63,6 +64,8 @@ class OpenHandsSandboxProviderTest {
     private final List<String> deleteCalls = new ArrayList<>();
     private String bashResponse = "{\"exit_code\":0,\"stdout\":\"ok\",\"stderr\":\"\"}";
     private byte[] downloadBytes = "file-content".getBytes(StandardCharsets.UTF_8);
+    private int downloadStatus = 200;
+    private String downloadBody = "{\"detail\":\"boom\"}";
     private int validateStatus = 200;
 
     @BeforeEach
@@ -122,6 +125,11 @@ class OpenHandsSandboxProviderTest {
                 respond(exchange, 200, "{\"success\":true,\"file_size\":" + body.length + "}");
             } else if (path.equals("/api/conversations/" + SID + "/file/download")) {
                 downloadPaths.add(queryParam(query, "path"));
+                if (downloadStatus != 200) {
+                    // 失败分支：错误体仍是 JSON detail（客户端按文本读出去映射平台码）
+                    respond(exchange, downloadStatus, downloadBody);
+                    return;
+                }
                 exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
                 exchange.sendResponseHeaders(200, downloadBytes.length);
                 try (OutputStream os = exchange.getResponseBody()) {
@@ -268,6 +276,30 @@ class OpenHandsSandboxProviderTest {
                     () -> sandbox.fetch(SID, risky), "应拒绝：" + risky);
             assertTrue(!e.getMessage().startsWith("["), "人话不带平台码前缀：" + e.getMessage());
         }
+    }
+
+    @Test
+    @DisplayName("fetch 文件不存在（上游 404→40402）：固定话术 IAE「文件不存在于沙箱」，不透传上游 detail（review #4）")
+    void fetchMissingFileBecomesFixedPhraseIAE() {
+        conversations.add(SID);
+        downloadStatus = 404;
+        downloadBody = "{\"detail\":\"File not found: /workspace/" + SID + "/out/nope.docx\"}";
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> sandbox.fetch(SID, "out/nope.docx"));
+        assertEquals("文件不存在于沙箱（请先 sandbox_run ls 确认）", e.getMessage(),
+                "固定人话（自纠指引），上游 detail 不进模型上下文");
+    }
+
+    @Test
+    @DisplayName("fetch 上游 400/422（40010 非「工作区路径」话术）：归取件失败原样上抛，不转 IAE（review #7）")
+    void fetchUpstreamBadRequestStaysServiceException() {
+        conversations.add(SID);
+        downloadStatus = 400;
+        downloadBody = "{\"detail\":\"upstream boom\"}";
+        ServiceException e = assertThrows(ServiceException.class,
+                () -> sandbox.fetch(SID, "out/x.docx"),
+                "上游 400/422 是取件失败不是路径非法，工具层走「稍后重试」通道");
+        assertTrue(e.getMessage().contains("upstream boom"), "异常本体不被改写：" + e.getMessage());
     }
 
     @Test

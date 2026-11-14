@@ -26,12 +26,14 @@ public class AgentRuntimeOpenHandsCondition implements Condition {
 
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        // 字面 true（equalsIgnoreCase，不 trim——review #9）：对齐 Spring 原生 @ConditionalOnProperty
+        // 的 equalsIgnoreCase 语义，trim/relaxed（on/yes/1）都不放行
         String enabled = context.getEnvironment().getProperty("my.agent.runtime.enabled");
-        if (enabled == null || !"true".equalsIgnoreCase(enabled.trim())) {
+        if (enabled == null || !"true".equalsIgnoreCase(enabled)) {
             return false;
         }
         String provider = context.getEnvironment().getProperty("my.agent.runtime.provider");
-        return provider == null || provider.trim().isEmpty()
-                || OpenHandsProvider.NAME.equalsIgnoreCase(provider.trim());
+        return provider == null || provider.isEmpty()
+                || OpenHandsProvider.NAME.equalsIgnoreCase(provider);
     }
 }
