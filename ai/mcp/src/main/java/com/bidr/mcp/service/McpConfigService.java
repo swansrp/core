@@ -31,7 +31,7 @@ public class McpConfigService {
         return sysMcpService.get(endpoint, type);
     }
 
-    public void updateMcpDescription(SysMcp sysMcp) throws IllegalAccessException {
+    public void updateMcpDescription(SysMcp sysMcp) {
         mcpServerConfig.updateDescription(sysMcp);
     }
 }

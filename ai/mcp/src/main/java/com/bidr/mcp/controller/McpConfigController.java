@@ -40,7 +40,7 @@ public class McpConfigController {
 
     @ApiOperation(value = "修改mcp描述", notes = "修改mcp描述")
     @RequestMapping(value = "/description", method = RequestMethod.POST)
-    public void updateMcpDescription(@RequestBody SysMcp sysMcp) throws IllegalAccessException {
+    public void updateMcpDescription(@RequestBody SysMcp sysMcp) {
         mcpConfigService.updateMcpDescription(sysMcp);
         Resp.notice("修改mcp描述成功");
     }
