@@ -228,15 +228,6 @@ for BRANCH in "${BRANCHES[@]}"; do
     continue
   fi
 
-  # rebase 整理提交顺序（确保本地新提交在远程之上）
-  log_info "rebase 到 $REMOTE_GITEE/$BRANCH"
-  if ! try_rebase "$REMOTE_GITEE/$BRANCH"; then
-    log_error "rebase $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
-    FAILED_BRANCHES+=("$BRANCH")
-    echo ""
-    continue
-  fi
-
   # ---- 推送 -> gitee ----
   log_info "推送 $BRANCH -> $REMOTE_GITEE"
   if ! safe_push "$REMOTE_GITEE" "$BRANCH"; then
