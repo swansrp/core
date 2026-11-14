@@ -68,13 +68,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OAuth2IdpController {
 
-    /**
-     * SPA 登录页 hash 路由后缀（framework router 本地登录页；redirect_uri 为 Login 页约定回跳参数名）。
-     * 🔴 前缀必须随 context-path：SPA 挂在 {context-path}/ 下（6.60／zz 都是 /inkhub/），
-     * 写死 "/#/login" 会让浏览器落在站根、hash 在 302 里丢失 ⇒ 登录页根本打不开。
-     */
-    private static final String LOGIN_PAGE_HASH_SUFFIX = "/#/login";
-
     private static final String RESPONSE_TYPE_CODE = "code";
 
     private final OAuth2ClientService clientService;
@@ -222,9 +215,11 @@ public class OAuth2IdpController {
     }
 
     /**
-     * SPA 登录页回跳地址：默认 {context-path}/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）>。
+     * SPA 登录页回跳地址：默认 {context-path}{loginPagePath}?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）>，
+     * loginPagePath 默认 {@code /#/login}（本地登录页，存量零位移）；公司 SSO 部署配 {@code /#/}
+     * 落 front 根由框架守卫分派（2026-11-14 台账 #69）。
      * 配置 {@code identity.idp.login-page-base}（env MY_IDP_LOGIN_PAGE_BASE）⇒ 302 到
-     * {base}/#/login?...（绝对地址）——供「SPA 不与后端同源挂载」的本地 dev 拓扑用（run-local 注入）：
+     * {base}{loginPagePath}?...（绝对地址）——供「SPA 不与后端同源挂载」的本地 dev 拓扑用（run-local 注入）：
      * pre/生产 nginx 把 SPA 挂在 {ctx}/ 下，同源相对形态即可落登录页，**不配即现行为**。
      */
     private String loginBackUrl(HttpServletRequest request) {
@@ -240,7 +235,7 @@ public class OAuth2IdpController {
         String prefix = StringUtils.isNotBlank(base)
                 ? base.replaceAll("/+$", "")
                 : request.getContextPath();
-        return prefix + LOGIN_PAGE_HASH_SUFFIX + "?redirect_uri=" + urlEncode(back);
+        return prefix + idpProperties.getLoginPagePath() + "?redirect_uri=" + urlEncode(back);
     }
 
     /** state 可选回传（RFC 6749 §4.1.1 原值透传，encodeURIComponent 等价物） */

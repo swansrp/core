@@ -64,6 +64,15 @@ public class IdentityIdpProperties {
     private String loginPageBase = "";
 
     /**
+     * authorize 未登录回跳的 SPA 路由（拼在 loginPageBase/context-path 之后）。
+     * 默认 {@code /#/login}＝本地登录页（存量零位移）。公司 SSO 形态的部署（pre/prod）配
+     * {@code /#/} 落 front 根＝受保护路由，未登录由框架守卫按登录形态分派：local→登录页、
+     * SSO→自动外跳认证中心（2026-11-14 台账 #69——写死 /#/login 会让 SSO 形态的部署在
+     * authorize 回落点出本地账密表单，SSO 链断在半路）。
+     */
+    private String loginPagePath = "/#/login";
+
+    /**
      * 启动期自检：钥匙缺席只 warn 不阻断上下文——IdP 是纯加法腿（SSO 出票、普通登录链不受影响），
      * 阻断启动会把"未对接形态"误升成"整站起不来"。
      */
