@@ -19,6 +19,9 @@ import org.springframework.util.StringUtils;
  * 密钥占位约定：任一来源的密钥含 {@code *}（如默认 sk-****）即视为未填写；两侧均无有效值时不返回
  * 空串冒充配置，{@link #requireApiKey()} 直接抛出带操作指引的异常——避免拿着占位符发起必然失败的调用。
  * <p>
+ * 引擎 A SDK 直连走独立键位（{@code AGENT_SDK_*} / {@code my.agent.runtime.sdk.*}，{@code getSdk*} 系），
+ * 与 OpenHands 用的 {@code AGENT_RUNTIME_*} / {@code my.agent.runtime.*} 各回各家，取值口径同款。
+ * <p>
  * 由 {@link AgentRuntimeAutoConfiguration} 装配（业务可注册同类型 Bean 覆盖）。
  *
  * @author sharp
@@ -129,6 +132,66 @@ public class AgentRuntimeConfigProvider {
         if (!StringUtils.hasText(value)) {
             throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST,
                     "Agent平台密钥（系统参数 AGENT_RUNTIME_API_KEY 或应用配置 my.agent.runtime.api-key）");
+        }
+        return value;
+    }
+
+    // ==================== 引擎 A SDK 直连专用（与 OpenHands 的 AGENT_RUNTIME_* 键位分离） ====================
+
+    /**
+     * 引擎 A 开放面地址（无有效值返回空串；调用方用 {@link #isSdkConfigured()} 判定接线状态）
+     */
+    public String getSdkBaseUrl() {
+        return text(dbValue(AgentRuntimeParam.AGENT_SDK_BASE_URL), properties.getSdk().getBaseUrl());
+    }
+
+    /**
+     * 引擎 A 平台密钥（未填写返回空串，绝不返回占位符）
+     */
+    public String getSdkApiKey() {
+        String dbValue = dbValue(AgentRuntimeParam.AGENT_SDK_API_KEY);
+        if (StringUtils.hasText(dbValue) && !isPlaceholder(dbValue)) {
+            return dbValue;
+        }
+        String yamlValue = properties.getSdk().getApiKey();
+        return StringUtils.hasText(yamlValue) && !isPlaceholder(yamlValue) ? yamlValue.trim() : "";
+    }
+
+    /**
+     * 引擎 A 开放面接口前缀（两侧均无值时回落 SDK 正源缺省 {@link #DEFAULT_API_PREFIX}）
+     */
+    public String getSdkApiPrefix() {
+        String value = text(dbValue(AgentRuntimeParam.AGENT_SDK_API_PREFIX), properties.getSdk().getApiPrefix());
+        return StringUtils.hasText(value) ? value : DEFAULT_API_PREFIX;
+    }
+
+    /**
+     * 引擎 A 接线状态：地址与密钥均有效才算已接线（未接线时不发起任何上游请求）
+     */
+    public boolean isSdkConfigured() {
+        return StringUtils.hasText(getSdkBaseUrl()) && StringUtils.hasText(getSdkApiKey());
+    }
+
+    /**
+     * 取引擎 A 地址（未配置即拒绝）
+     */
+    public String requireSdkBaseUrl() {
+        String value = getSdkBaseUrl();
+        if (!StringUtils.hasText(value)) {
+            throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST,
+                    "引擎A SDK服务地址（系统参数 AGENT_SDK_BASE_URL 或应用配置 my.agent.runtime.sdk.base-url）");
+        }
+        return value;
+    }
+
+    /**
+     * 取引擎 A 密钥（未配置即拒绝）
+     */
+    public String requireSdkApiKey() {
+        String value = getSdkApiKey();
+        if (!StringUtils.hasText(value)) {
+            throw new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST,
+                    "引擎A SDK密钥（系统参数 AGENT_SDK_API_KEY 或应用配置 my.agent.runtime.sdk.api-key）");
         }
         return value;
     }

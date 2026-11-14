@@ -98,6 +98,16 @@ public class AgentRuntimeProperties {
      */
     private final Proxy proxy = new Proxy();
 
+    // ==================== 引擎 A SDK 直连专用（与 OpenHands 的 AGENT_RUNTIME_* 键位分离） ====================
+
+    /**
+     * 引擎 A（agent-system 8100 口径）SDK 直连键位（{@code my.agent.runtime.sdk.*}）——
+     * 系统参数 {@code AGENT_SDK_*}（{@link com.bidr.agent.runtime.constant.param.AgentRuntimeParam}）的回落层，
+     * 仅 {@code AgentSdkBootstrapController}（业务侧，epc-ai-common）读取；与上面 OpenHands 用的
+     * {@code base-url/api-key/api-prefix} 各回各家，互不干扰。缺省值即 SDK 正源缺省。
+     */
+    private final Sdk sdk = new Sdk();
+
     @Getter
     @Setter
     public static class Proxy {
@@ -110,5 +120,19 @@ public class AgentRuntimeProperties {
 
         /** 代理端口 */
         private int port = 0;
+    }
+
+    @Getter
+    @Setter
+    public static class Sdk {
+
+        /** 引擎 A 开放面地址（如 http://10.3.5.110:8100）；留空=未接线 */
+        private String baseUrl = "";
+
+        /** 引擎 A 平台密钥（sk-rt- 开头）：占位符或留空=未填写，生产经系统参数管理页下发 */
+        private String apiKey = "";
+
+        /** 引擎 A 开放面接口前缀 */
+        private String apiPrefix = "/open/v1";
     }
 }

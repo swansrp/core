@@ -59,3 +59,14 @@ my:
         host: ""
         # 代理端口。[0]
         port: 0
+      # ---- 引擎 A SDK 直连专用（与上面 OpenHands 的 base-url/api-key/api-prefix 各回各家） ----
+      # 仅业务侧 AgentSdkBootstrapController（SDK 直连引导包）读取：sys_config AGENT_SDK_* 优先 →
+      # 本段回落 → 占位/空＝未填（requireSdkXxx 抛带指引异常）。缺省值即 SDK 正源缺省。
+      sdk:
+        # 引擎 A 开放面地址（agent-system 8100 口径，如 http://10.3.5.110:8100）；留空＝未接线。[空]
+        base-url: ""
+        # 引擎 A 平台密钥（sk-rt- 开头）：真值走 sys_config 库值 AGENT_SDK_API_KEY（库值优先），
+        # 占位/空＝未填，不入库不入日志。[空]
+        api-key: ""
+        # 引擎 A 开放面接口前缀。[/open/v1]
+        api-prefix: /open/v1
