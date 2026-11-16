@@ -5,6 +5,7 @@ import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
+import com.bidr.llm.agent.sandbox.AgentSandbox;
 import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionService;
 import com.bidr.llm.agent.session.AgentSessionState;
@@ -37,6 +38,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Title: AgentSessionController
@@ -107,6 +112,61 @@ public class AgentSessionController {
 
     /** 评价快照保留天数缺省（业务有 {@link AgentRatingListener} 承接时以其 retentionDays 为准） */
     private static final int RATING_RETENTION_DAYS = 30;
+
+    /**
+     * 上传自动写入沙箱的守护线程池（2 线程＋有界队列 8）：fire-and-forget，上传响应不等待
+     * 沙箱写入（沙箱半死/慢时最坏分钟级，不能把 best-effort 拖成用户可见上传失败）；
+     * 队列满时记 warn 丢弃本次写入（对象存储仍是正源，模型可用工具补拉）。
+     * <p>
+     * 容量按<b>任务数</b>限界（R2-I1）：每个排队任务捕获一份上传字节，单文件上限
+     * {@code llm.agent.files.max-size-mb} 缺省 20MB；峰值＝2 个在跑＋8 个排队 ≈200MB
+     * （按缺省 20MB 估算；调大单文件上限需同步评估队列容量），落在本服务 1GB 堆
+     * （{@code -Xmx1024m}）内的可控区间（原 256 容量最坏 ≈5.1GB，排队几十个即可能 OOM）。
+     * 池为 static daemon、线程随 JVM 生命周期结束，故不注册 shutdown 钩子；全部任务 best-effort，
+     * 进程退出时直接丢弃安全。拒绝处理器带 sessionId/文件名，被丢弃的写入可归因。
+     */
+    private static final ExecutorService SANDBOX_WRITE_EXECUTOR = new ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(8),
+            runnable -> {
+                Thread thread = new Thread(runnable, "agent-sandbox-upload-write");
+                thread.setDaemon(true);
+                return thread;
+            },
+            (runnable, executor) -> {
+                if (runnable instanceof SandboxWriteTask) {
+                    SandboxWriteTask task = (SandboxWriteTask) runnable;
+                    log.warn("附件自动写入沙箱任务队列已满（上限 8），本次跳过（不影响上传结果）: "
+                                    + "sessionId={}, name={}",
+                            task.sessionId, task.ref == null ? null : task.ref.name());
+                } else {
+                    log.warn("附件自动写入沙箱任务队列已满（上限 8），本次跳过（不影响上传结果）");
+                }
+            });
+
+    /** 上传自动写入沙箱任务：携带 sessionId/文件名，被拒绝时供拒绝处理器归因（R2-I1） */
+    private static final class SandboxWriteTask implements Runnable {
+
+        private final AgentSessionController owner;
+
+        private final String sessionId;
+
+        private final FileRef ref;
+
+        private final byte[] bytes;
+
+        private SandboxWriteTask(AgentSessionController owner, String sessionId, FileRef ref, byte[] bytes) {
+            this.owner = owner;
+            this.sessionId = sessionId;
+            this.ref = ref;
+            this.bytes = bytes;
+        }
+
+        @Override
+        public void run() {
+            owner.doWriteUploadToSandbox(sessionId, ref, bytes);
+        }
+    }
 
     // ==================== agent 注册表与会话控制 ====================
 
@@ -274,6 +334,11 @@ public class AgentSessionController {
      * 响应为 {@link AgentFileView}（m-r2-7：不回传存储 key）；存储写失败（含元数据侧车失败）同样
      * 由端点转人话错误，不会出现"上传 200 但模型读不到"。
      * 能力未装配（无 {@link AgentFileStore} Bean）时明确拒绝——前端按 {@code /agents} 能力位不渲染入口。
+     * <p>
+     * 上传即写入（best-effort，异步）：事件落库后提交守护线程池，若会话沙箱<b>已存在</b>，把原件
+     * 原始字节写到 {@code input/<原文件名>}（同名<b>覆盖为最新字节</b>；{@link AgentSandbox#putIfAlive}
+     * 不创建沙箱）。<b>上传响应不等待沙箱写入</b>；任何失败（含 Bean 解析/任务提交被拒）只 warn，
+     * 不改变上传成功语义（对象存储仍是正源，模型可用 {@code sandbox_put_attachment} 补拉）。
      */
     @PostMapping("/session/{sessionId}/files")
     public AgentFileView uploadFile(@PathVariable("sessionId") String sessionId,
@@ -319,6 +384,8 @@ public class AgentSessionController {
             // I-2：事件流是模型附件可见性的唯一正源；写入失败不能静默返回 200
             throw new ServiceException("附件已存储但事件写入失败，请重试");
         }
+        // 沙箱已存在时上传即写入（best-effort 异步）：对象存储仍是正源，失败只 warn，绝不拖慢/改变上传结果
+        writeUploadToSandbox(sessionId, ref, bytes);
         return AgentFileView.of(ref);
     }
 
@@ -638,6 +705,60 @@ public class AgentSessionController {
             }
         }
         return count;
+    }
+
+    /**
+     * 上传即写入沙箱（best-effort，F-4/F-5/I-2）：<b>异步</b>提交守护线程池，上传响应不等待
+     * 沙箱写入（底座半死/慢时最坏分钟级，同步执行会把 best-effort 变成用户可见上传失败）。
+     * 任务内仅当会话沙箱<b>已存在</b>时把原始字节写到 {@code input/<原文件名>}——同名<b>覆盖为
+     * 最新字节</b>（沙箱＝当前素材工作副本）；沙箱尚未创建则不起容器
+     * （{@link AgentSandbox#putIfAlive} 契约：不创建返回 false），留待模型调用
+     * {@code sandbox_put_attachment} 时从对象存储补拉。
+     * <p>
+     * 任何异常（含 Bean 解析 R1-S5、文件名清洗、任务提交被拒）只记 warn，<b>绝不改变上传端点结果</b>
+     * ——对象存储与 file_attached 事件已落，沙箱侧写入只是优化项。
+     * <p>
+     * <b>非原子</b>（R2-S1，登记不修）：同一会话并发上传同名文件时两个任务可能被两个 worker 并发执行，
+     * 最终沙箱内容是「完成更晚者」而非「上传更晚者」——极端情况下旧字节可能后到并覆盖新字节；对象存储
+     * 始终为正源，模型可用 {@code sandbox_put_attachment} 补拉最新版。
+     */
+    private void writeUploadToSandbox(String sessionId, FileRef ref, byte[] bytes) {
+        try {
+            SANDBOX_WRITE_EXECUTOR.execute(new SandboxWriteTask(this, sessionId, ref, bytes));
+        } catch (Exception e) {
+            log.warn("附件自动写入沙箱任务提交失败（不影响上传结果）: sessionId={}, error={}",
+                    sessionId, e.getMessage());
+        }
+    }
+
+    /**
+     * 线程池任务体（非原子：同会话极端并发下旧字节可能后落，对象存储为正源；R2-S1）：
+     * 所有异常必须在任务内收口（守护线程上的未捕获异常不会回传给上传请求）
+     */
+    private void doWriteUploadToSandbox(String sessionId, FileRef ref, byte[] bytes) {
+        try {
+            AgentSandbox sandbox = fileCapabilityResolver.sandbox();
+            if (sandbox == null) {
+                return;
+            }
+            String name = safeFilename(ref == null ? null : ref.name());
+            String targetPath = "input/" + name;
+            boolean written = sandbox.putIfAlive(sessionId, targetPath, bytes);
+            if (written) {
+                // putIfAlive 同名覆盖为最新字节：targetPath 即实际落点（无改名语义）
+                log.info("附件已随上传写入/覆盖会话沙箱: sessionId={}, name={}, path={}",
+                        sessionId, name, targetPath);
+            } else {
+                // R2-S2：false 含两种来源——①沙箱尚未创建（正常且常见：Cube 内存表 miss /
+                // OpenHands 会话缺失）②路径被底座折算或实例状态竞态。debug 仅留痕、不区分；
+                // 级别压在 debug，正常路径不会污染日志
+                log.debug("附件未写入会话沙箱（端口返回 false）: sessionId={}, name={}, path={}",
+                        sessionId, name, targetPath);
+            }
+        } catch (Exception e) {
+            log.warn("附件上传后写入沙箱失败（不影响上传结果）: sessionId={}, name={}, error={}",
+                    sessionId, ref == null ? null : ref.name(), e.getMessage());
+        }
     }
 
     /** 上传文件名清洗：取路径末段（兼容旧客户端带全路径），空名回落 file */

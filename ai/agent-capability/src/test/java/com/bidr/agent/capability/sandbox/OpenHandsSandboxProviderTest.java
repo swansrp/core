@@ -1,5 +1,6 @@
 package com.bidr.agent.capability.sandbox;
 
+import com.bidr.agent.runtime.client.AgentRuntimeErrors;
 import com.bidr.agent.runtime.config.AgentRuntimeConfigProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeProperties;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsClient;
@@ -30,8 +31,19 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Title: OpenHandsSandboxProviderTest
@@ -326,6 +338,90 @@ class OpenHandsSandboxProviderTest {
         assertEquals("", OpenHandsSandboxProvider.mergeOutput(none));
         String within = "x".repeat(64 * 1024);
         assertEquals(within, OpenHandsSandboxProvider.truncateUtf8(within));
+    }
+
+    // ---------------------------------------------------------------- put / putIfAlive（R1-I3）
+
+    @Test
+    @DisplayName("put：ensure 后路径空闲 ⇒ 把相对路径与原始字节交给 provider.uploadFile")
+    void putUploadsBytesToProvider() {
+        OpenHandsClient client = mock(OpenHandsClient.class);
+        OpenHandsProvider provider = mock(OpenHandsProvider.class);
+        when(client.executeBash(eq(SID), anyString(), anyLong()))
+                .thenReturn(new OpenHandsClient.BashExecResult(1, "", "", false));
+        OpenHandsSandboxProvider sandbox =
+                new OpenHandsSandboxProvider(client, provider, new AgentRuntimeProperties());
+        byte[] bytes = {1, 2, 3};
+
+        String actual = sandbox.put(SID, "input/a.docx", bytes);
+
+        assertEquals("input/a.docx", actual);
+        verify(provider).uploadFile(SID, "input/a.docx", bytes);
+        verify(client).executeBash(eq(SID), startsWith("test -e "), eq(10_000L));
+    }
+
+    @Test
+    @DisplayName("put 同名：存在性检查 0（占用）→1（可用）后写 input/a-2.docx 并返回")
+    void putRenamesWhenPathOccupied() {
+        OpenHandsClient client = mock(OpenHandsClient.class);
+        OpenHandsProvider provider = mock(OpenHandsProvider.class);
+        when(client.executeBash(eq(SID), anyString(), anyLong()))
+                .thenReturn(new OpenHandsClient.BashExecResult(0, "", "", false),
+                        new OpenHandsClient.BashExecResult(1, "", "", false));
+        OpenHandsSandboxProvider sandbox =
+                new OpenHandsSandboxProvider(client, provider, new AgentRuntimeProperties());
+        byte[] bytes = {4, 5};
+
+        assertEquals("input/a-2.docx", sandbox.put(SID, "input/a.docx", bytes));
+        verify(provider).uploadFile(SID, "input/a-2.docx", bytes);
+    }
+
+    @Test
+    @DisplayName("putIfAlive 404（会话未创建）：返回 false，零创建零上传（绝不 ensure/create）")
+    void putIfAliveReturnsFalseWhenSessionMissingWithoutCreate() {
+        OpenHandsClient client = mock(OpenHandsClient.class);
+        OpenHandsProvider provider = mock(OpenHandsProvider.class);
+        when(provider.validateSession(SID)).thenThrow(
+                AgentRuntimeErrors.of(AgentRuntimeErrors.CODE_SESSION_MISSING, "会话不存在"));
+        OpenHandsSandboxProvider sandbox =
+                new OpenHandsSandboxProvider(client, provider, new AgentRuntimeProperties());
+
+        assertFalse(sandbox.putIfAlive(SID, "input/a.txt", new byte[]{1}));
+
+        verify(provider, never()).uploadFile(anyString(), anyString(), any(byte[].class));
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    @DisplayName("putIfAlive 非 404 异常（不可达/鉴权）：原样上抛，不伪装成未就绪")
+    void putIfAliveRethrowsNonMissingErrors() {
+        OpenHandsClient client = mock(OpenHandsClient.class);
+        OpenHandsProvider provider = mock(OpenHandsProvider.class);
+        when(provider.validateSession(SID)).thenThrow(AgentRuntimeErrors.of(500, "unreachable"));
+        OpenHandsSandboxProvider sandbox =
+                new OpenHandsSandboxProvider(client, provider, new AgentRuntimeProperties());
+
+        ServiceException e = assertThrows(ServiceException.class,
+                () -> sandbox.putIfAlive(SID, "input/a.txt", new byte[]{1}));
+
+        assertTrue(e.getMessage().contains("unreachable"), e.getMessage());
+        verify(provider, never()).uploadFile(anyString(), anyString(), any(byte[].class));
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    @DisplayName("putIfAlive 同名：会话存在即直接覆盖上传同路径并返回 true（无存在性探测）")
+    void putIfAliveOverwritesExistingFile() {
+        OpenHandsClient client = mock(OpenHandsClient.class);
+        OpenHandsProvider provider = mock(OpenHandsProvider.class);
+        OpenHandsSandboxProvider sandbox =
+                new OpenHandsSandboxProvider(client, provider, new AgentRuntimeProperties());
+        byte[] fresh = {9, 9};
+
+        assertTrue(sandbox.putIfAlive(SID, "input/a.txt", fresh));
+
+        verify(provider).uploadFile(SID, "input/a.txt", fresh);
+        verifyNoInteractions(client);
     }
 
     /** 简易 JSON 对象解析（只服务断言，够用即可） */

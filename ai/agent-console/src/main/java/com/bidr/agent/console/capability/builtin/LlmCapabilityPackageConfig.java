@@ -5,6 +5,7 @@ import com.bidr.agent.console.capability.CapabilityTag;
 import com.bidr.llm.agent.AgentToolRecall;
 import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
 import com.bidr.llm.agent.sandbox.SessionSandboxFetchTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxPutAttachmentTool;
 import com.bidr.llm.agent.sandbox.SessionSandboxRunTool;
 import com.bidr.llm.agent.tools.ExternalRuntimeTools;
 import org.springframework.context.annotation.Bean;
@@ -16,7 +17,7 @@ import java.util.Set;
 
 /**
  * Title: LlmCapabilityPackageConfig
- * Description: core/llm 侧 8 个能力包（共 15 只纯通用工具，P2a 增 artifact 包、棒3a 增 sandbox 包）的登记件。
+ * Description: core/llm 侧 8 个能力包（共 16 只纯通用工具，P2a 增 artifact 包、棒3a 增 sandbox 包）的登记件。
  * <p>
  * 登记住在 console 侧、<b>工具代码一行不改</b>：依赖方向是 agent-console → llm（引用其注册名常量），
  * llm 不感知本模块。这样"框架自带的通用能力"先进目录，业务模块照同一 SPI 追加自己的包
@@ -113,14 +114,17 @@ public class LlmCapabilityPackageConfig {
     }
 
     /**
-     * 沙箱执行（棒3a）：sandbox_run 在会话专属沙箱里跑 shell 命令、sandbox_fetch 取回产出文件
-     * ——副作用圈在会话沙箱内（EXTERNAL_EFFECT 档：登记≠挂载，宿主未装配沙箱端口时工具回未启用）
+     * 沙箱执行（棒3a）：sandbox_run 在会话专属沙箱里跑 shell 命令、sandbox_fetch 取回产出文件、
+     * sandbox_put_attachment 把会话附件原件放进沙箱——副作用圈在会话沙箱内（EXTERNAL_EFFECT 档：
+     * 登记≠挂载，宿主未装配沙箱端口时工具回未启用）
      */
     @Bean
     public AgentCapabilityPackage sandboxCapabilityPackage() {
         return AgentCapabilityPackage.of("sandbox", "沙箱执行", MODULE,
-                "在会话专属的隔离沙箱里执行 shell 命令并取回产出文件。副作用圈在沙箱内，不碰业务数据。",
+                "在会话专属的隔离沙箱里执行 shell 命令、取回产出文件，并把会话附件原件放进沙箱"
+                        + "（供脚本处理 docx/xlsx 等原样式素材）。副作用圈在沙箱内，不碰业务数据。",
                 tags(CapabilityTag.EXTERNAL_EFFECT),
-                SessionSandboxRunTool.TOOL_NAME, SessionSandboxFetchTool.TOOL_NAME);
+                SessionSandboxRunTool.TOOL_NAME, SessionSandboxFetchTool.TOOL_NAME,
+                SessionSandboxPutAttachmentTool.TOOL_NAME);
     }
 }

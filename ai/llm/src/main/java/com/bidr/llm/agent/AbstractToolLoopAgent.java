@@ -8,6 +8,7 @@ import com.bidr.llm.agent.file.SessionAttachmentReadTool;
 import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
 import com.bidr.llm.agent.sandbox.SandboxSeedFile;
 import com.bidr.llm.agent.sandbox.SessionSandboxFetchTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxPutAttachmentTool;
 import com.bidr.llm.agent.sandbox.SessionSandboxRunTool;
 import com.bidr.llm.agent.session.AgentSessionContext;
 import com.bidr.llm.usage.ModelCallContexts;
@@ -98,19 +99,20 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
     }
 
     /**
-     * 框架工具钩子：默认并入四只<b>会话受限</b>工具——附件读取 {@link SessionAttachmentReadTool}
+     * 框架工具钩子：默认并入五只<b>会话受限</b>工具——附件读取 {@link SessionAttachmentReadTool}
      * （{@code read_attachment}，参数只有 file_id/max_chars/offset）、产物生成
      * {@link SessionArtifactGenerateTool}（P2a，{@code generate_artifact}，参数 content/format/title）、
-     * 沙箱执行 {@link SessionSandboxRunTool}（棒3a，{@code sandbox_run}，参数 command/timeout_seconds）
-     * 与沙箱取件 {@link SessionSandboxFetchTool}（棒3a，{@code sandbox_fetch}，参数 path），
-     * {@link #start} 里与 {@link #tools} 合并进同一工具面。
+     * 沙箱执行 {@link SessionSandboxRunTool}（棒3a，{@code sandbox_run}，参数 command/timeout_seconds）、
+     * 沙箱放件 {@link SessionSandboxPutAttachmentTool}（{@code sandbox_put_attachment}，参数
+     * file_id/path，把会话附件原始字节放进沙箱）与沙箱取件 {@link SessionSandboxFetchTool}
+     * （棒3a，{@code sandbox_fetch}，参数 path），{@link #start} 里与 {@link #tools} 合并进同一工具面。
      * <p>
      * <b>安全口径（C-1）</b>：框架不再默认并入通用 {@code read_file}（{@code FileMarkdownTool}）——
      * 它接受服务器本地路径与任意 http(s) URL，会把任意文件读取/SSRF 能力默认发给所有 agent。
      * 业务若确有"读任意地址"的明确需求，在 {@link #tools} 里自行挂载 {@code FileMarkdownTool}。
      * <p>
      * 关闭方式两档：宿主总开关 {@code llm.agent.file-tools.enabled=false}（缺省 true，整体回退：
-     * 工具面（附件读取＋产物生成＋沙箱两只）、附件上下文注入、能力位一起关闭）；单个 agent
+     * 工具面（附件读取＋产物生成＋沙箱三只）、附件上下文注入、能力位一起关闭）；单个 agent
      * 不要某只框架工具时覆写本方法返回所需子集（per-agent 让位，仅工具面；附件上下文注入是否
      * 随之关闭由业务覆写 {@link #attachmentContext} 决定）。存储/文档/产物/沙箱端口缺席时工具
      * 仍返回（调用期回明确错误文本），不阻断工具面装配。
@@ -119,10 +121,11 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
         if (!fileToolsEnabled || ctx == null) {
             return Collections.emptyList();
         }
-        List<Object> tools = new ArrayList<>(4);
+        List<Object> tools = new ArrayList<>(5);
         tools.add(new SessionAttachmentReadTool(ctx));
         tools.add(new SessionArtifactGenerateTool(ctx));
         tools.add(new SessionSandboxRunTool(ctx, sandboxSeedFiles()));
+        tools.add(new SessionSandboxPutAttachmentTool(ctx));
         tools.add(new SessionSandboxFetchTool(ctx));
         return tools;
     }

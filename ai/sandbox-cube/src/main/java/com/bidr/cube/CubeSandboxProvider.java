@@ -35,10 +35,17 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>{@link #fetch}：相对路径校验（空／绝对路径／盘符／{@code .}/{@code ..}／空段 ⇒ IAE，
  *       工具层统一加「拒绝：」前缀转人话）；文件不存在转 IAE 固定话术
  *       「文件不存在于沙箱（请先 sandbox_run ls 确认）」给模型自纠，不回 null；</li>
+ *   <li>{@link #put}：先 {@code ensure}，目标路径被占用时<b>同目录自动改名</b>
+ *       （{@code <base>-2.<ext>}…，上限 100 次），写入原件字节并返回<b>实际落点</b>；</li>
+ *   <li>{@link #putIfAlive}：仅当内存表命中（沙箱已就绪）时写入——<b>同名覆盖为最新字节</b>
+ *       （上传工作副本语义）；<b>绝不 ensure/create</b>（重启丢 map 视为未就绪，后续工具调用会再对账）；</li>
  *   <li>{@link #destroy}：{@code client.delete}（404 静默＝幂等）＋map 逐出；map miss 时按
  *       metadata 对账寻址（重启后也能收口）；<b>宿主目录 {@code {hostRoot}/{sessionId}} 不删</b>
  *       （归档策略后续批次定）。</li>
  * </ul>
+ * <p>
+ * 存在性检查统一走 {@code exec test -e <绝对路径>}（{@code /workspace/<rel>}，不依赖 cwd）：
+ * exit 0＝存在、1＝不存在、超时/其它码＝检查失败（ServiceException 交工具层「稍后重试」）。
  * <p>
  * {@link #mergeOutput}/{@link #truncateUtf8} 为 {@code OpenHandsSandboxProvider} 同名方法的
  * <b>刻意复制</b>（逻辑逐字等价，审查按两份实现逐字等价核对）：复制原因＝模块解耦——
@@ -68,6 +75,12 @@ public class CubeSandboxProvider implements AgentSandbox {
 
     /** fetch 文件不存在的固定人话（照 OpenHandsSandboxProvider 语义；工具层加「拒绝：」前缀转模型话术） */
     private static final String FILE_NOT_FOUND_PHRASE = "文件不存在于沙箱（请先 sandbox_run ls 确认）";
+
+    /** 同名改名探测上限（{@code -2}…{@code -101} 共 100 次；超限抛固定人话 IAE） */
+    private static final int MAX_RENAMES = 100;
+
+    /** 存在性检查 exec 超时（毫秒）：{@code test -e} 正常毫秒级，纯上限 */
+    private static final long EXISTENCE_CHECK_TIMEOUT_MS = 10_000L;
 
     private final CubeHttpClient client;
 
@@ -112,6 +125,49 @@ public class CubeSandboxProvider implements AgentSandbox {
         }
         log.info("Cube 沙箱种子预置完成: session={} sandbox={} files={}",
                 sessionId, sandboxId, seeds.size());
+    }
+
+    /**
+     * 写入原件字节：先 {@code ensure}，目标被占用时同目录自动改名，返回<b>实际落点</b>。
+     * 路径先过安全闸（纯函数）再建箱——非法路径不产生沙箱副作用。
+     */
+    @Override
+    public String put(String sessionId, String relPath, byte[] bytes) {
+        String safeRel = safeRelPath(relPath);
+        ensure(sessionId, List.of());
+        String sandboxId = resolveSandboxId(sessionId);
+        String actualRel = nextAvailableRelPath(sessionId, safeRel);
+        byte[] content = bytes == null ? new byte[0] : bytes;
+        client.writeFile(sandboxId, workspacePath(actualRel), content);
+        log.info("Cube 沙箱写入文件: session={} sandbox={} path={} size={}B",
+                sessionId, sandboxId, actualRel, content.length);
+        return actualRel;
+    }
+
+    /**
+     * best-effort 写入：<b>绝不 ensure/create</b>——内存表 miss（含重启丢 map）一律返回 false，
+     * 后续工具调用 {@code put} 会 ensure 对账再写；沙箱存在时<b>同名直接覆盖为最新字节</b>
+     * （上传工作副本语义：{@code temp.txt} 这类重复名永远是最新那版），不做存在性探测。
+     */
+    @Override
+    public boolean putIfAlive(String sessionId, String relPath, byte[] bytes) {
+        String sandboxId = sandboxIds.get(sessionId);
+        if (sandboxId == null) {
+            return false;
+        }
+        String safeRel;
+        try {
+            safeRel = safeRelPath(relPath);
+        } catch (IllegalArgumentException e) {
+            // 端口契约：路径非法折算 false（best-effort 通道不阻断上传）
+            return false;
+        }
+        byte[] content = bytes == null ? new byte[0] : bytes;
+        // 覆盖写：不先 test -e（同名即最新，避免"先查后写"的两拍往返）
+        client.writeFile(sandboxId, workspacePath(safeRel), content);
+        log.info("Cube 沙箱写入/覆盖文件(best-effort): session={} sandbox={} path={} size={}B",
+                sessionId, sandboxId, safeRel, content.length);
+        return true;
     }
 
     @Override
@@ -209,6 +265,56 @@ public class CubeSandboxProvider implements AgentSandbox {
     /** 沙箱内绝对路径＝/workspace/&lt;safeRelPath&gt;（挂载点见 WORKSPACE_MOUNT；relPath 先过安全闸） */
     private static String workspacePath(String relPath) {
         return WORKSPACE_MOUNT + "/" + safeRelPath(relPath);
+    }
+
+    /**
+     * 同目录找可用落点：目标已占用 ⇒ {@code <base>-2.<ext>}、{@code -3}…（探测上限
+     * {@link #MAX_RENAMES} 次）；无扩展名时 {@code a} → {@code a-2}；超限抛固定人话 IAE。
+     */
+    private String nextAvailableRelPath(String sessionId, String safeRel) {
+        if (!exists(sessionId, safeRel)) {
+            return safeRel;
+        }
+        int slash = safeRel.lastIndexOf('/');
+        String dir = slash < 0 ? "" : safeRel.substring(0, slash + 1);
+        String name = slash < 0 ? safeRel : safeRel.substring(slash + 1);
+        int dot = name.lastIndexOf('.');
+        String base = dot > 0 ? name.substring(0, dot) : name;
+        String ext = dot > 0 ? name.substring(dot) : "";
+        for (int attempt = 1; attempt <= MAX_RENAMES; attempt++) {
+            String candidate = dir + base + "-" + (attempt + 1) + ext;
+            if (!exists(sessionId, candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalArgumentException("同名文件过多（100 次），请指定其他 path");
+    }
+
+    /**
+     * 沙箱内存在性检查（统一 {@code exec test -e}，传绝对路径不依赖 cwd）：exit 0＝存在、
+     * 1＝不存在、超时/其它退出码＝检查失败（ServiceException 交工具层「稍后重试」，不误判）。
+     */
+    private boolean exists(String sessionId, String relPath) {
+        SandboxExecResult result = exec(sessionId,
+                "test -e " + shellQuote(workspacePath(relPath)), EXISTENCE_CHECK_TIMEOUT_MS);
+        if (result.timedOut()) {
+            throw new ServiceException("沙箱存在性检查失败，请稍后重试");
+        }
+        if (result.exitCode() == 0) {
+            return true;
+        }
+        if (result.exitCode() == 1) {
+            return false;
+        }
+        throw new ServiceException("沙箱存在性检查失败，请稍后重试");
+    }
+
+    /**
+     * shell 单引号包裹（内部 {@code '} 用 {@code '\''} 转义），存在性检查路径不逃逸出参数位。
+     * 与 {@code AdminSandboxManager.shellQuote} 同口径；本类自写一份，不做跨模块可见性放宽。
+     */
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\''") + "'";
     }
 
     /**

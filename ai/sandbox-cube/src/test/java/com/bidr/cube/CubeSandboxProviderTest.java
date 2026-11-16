@@ -3,6 +3,7 @@ package com.bidr.cube;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.bidr.cube.admin.AdminSandboxManager;
 import com.bidr.cube.client.CubeHttpClient;
 import com.bidr.cube.config.CubeSandboxProperties;
 import com.bidr.cube.support.CubeFakeServer;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -23,6 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Title: CubeSandboxProviderTest
@@ -311,6 +322,167 @@ class CubeSandboxProviderTest {
                 () -> provider.fetch(SID, "out/HTTP 404.txt"));
         assertTrue(e.getMessage().startsWith("readFile 失败 HTTP 500:"),
                 "固定前缀＋path 只在 detail 段（contains 判定会被路径字样击穿）: " + e.getMessage());
+    }
+
+    // ---------------------------------------------------------------- put / putIfAlive
+
+    @Test
+    @DisplayName("put 成功：ensure → exec test -e（不存在）→ write 原件字节，返回 input/a.txt")
+    void putWritesWhenPathFree() {
+        CubeHttpClient client = new CubeHttpClient(fake.properties);
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), fake.properties);
+        // 管理面 mkdir 已 mock；唯一 exec 是存在性检查，exit 1＝不存在
+        fake.setExecFrames(CubeFakeServer.endFrameExit(1));
+        byte[] bytes = "DOCX".getBytes(StandardCharsets.UTF_8);
+
+        String actual = provider.put(SID, "input/a.txt", bytes);
+
+        assertEquals("input/a.txt", actual);
+        assertTrue(fake.ops.contains("exec:test -e '/workspace/input/a.txt'"), fake.ops.toString());
+        assertTrue(fake.ops.contains("write:/workspace/input/a.txt"), fake.ops.toString());
+        assertArrayEquals(bytes, fake.files.get("/workspace/input/a.txt"));
+    }
+
+    @Test
+    @DisplayName("put 同名改名：exec 第一次 exit 0（占用）第二次 exit 1（可用）⇒ 写 input/a-2.txt 并返回")
+    void putRenamesWhenPathOccupied() {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        AdminSandboxManager admin = mock(AdminSandboxManager.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of(SID));
+        when(client.exec(eq(SID), startsWith("test -e "), eq(10_000L)))
+                .thenReturn(new CubeHttpClient.ExecResult(0, "", "", false),
+                        new CubeHttpClient.ExecResult(1, "", "", false));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client, admin, new CubeSandboxProperties());
+        byte[] bytes = "DOCX".getBytes(StandardCharsets.UTF_8);
+
+        String actual = provider.put(SID, "input/a.txt", bytes);
+
+        assertEquals("input/a-2.txt", actual);
+        verify(client).exec(SID, "test -e '/workspace/input/a.txt'", 10_000L);
+        verify(client).exec(SID, "test -e '/workspace/input/a-2.txt'", 10_000L);
+        ArgumentCaptor<byte[]> content = ArgumentCaptor.forClass(byte[].class);
+        verify(client).writeFile(eq(SID), eq("/workspace/input/a-2.txt"), content.capture());
+        assertArrayEquals(bytes, content.getValue());
+    }
+
+    @Test
+    @DisplayName("putIfAlive 无沙箱：返回 false 且零请求零 create（绝不 ensure/create）")
+    void putIfAliveWithoutSandboxDoesNotCreate() {
+        CubeHttpClient client = new CubeHttpClient(fake.properties);
+        AdminSandboxManager admin = mock(AdminSandboxManager.class);
+        CubeSandboxProvider provider = new CubeSandboxProvider(client, admin, fake.properties);
+
+        assertFalse(provider.putIfAlive(SID, "input/a.txt", "X".getBytes(StandardCharsets.UTF_8)));
+
+        assertTrue(fake.ops.isEmpty(), "零 HTTP 调用: " + fake.ops);
+        assertEquals(0, fake.businessCreateBodies.size(), "沙箱不存在 ⇒ 绝不 create");
+        assertEquals(0, fake.listCalls, "也不做对账");
+        verifyNoInteractions(admin);
+    }
+
+    @Test
+    @DisplayName("putIfAlive 有沙箱：直接写入返回 true（同名覆盖语义，不做存在性检查）")
+    void putIfAliveWritesWhenPathFree() {
+        CubeHttpClient client = new CubeHttpClient(fake.properties);
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), fake.properties);
+        provider.ensure(SID, List.of());
+        int opsBefore = fake.ops.size();
+        byte[] bytes = "X".getBytes(StandardCharsets.UTF_8);
+
+        assertTrue(provider.putIfAlive(SID, "input/a.txt", bytes));
+
+        assertArrayEquals(bytes, fake.files.get("/workspace/input/a.txt"));
+        assertEquals(opsBefore + 1, fake.ops.size(), "只有一次 write（无 test -e 探测）: " + fake.ops);
+        assertTrue(fake.ops.get(opsBefore).startsWith("write:/workspace/input/a.txt"), fake.ops.toString());
+    }
+
+    @Test
+    @DisplayName("putIfAlive 路径已存在：同名覆盖为最新字节并返回 true（上传工作副本语义，不跳过）")
+    void putIfAliveOverwritesWhenPathOccupied() {
+        CubeHttpClient client = new CubeHttpClient(fake.properties);
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), fake.properties);
+        provider.ensure(SID, List.of());
+        byte[] old = "OLD".getBytes(StandardCharsets.UTF_8);
+        fake.files.put("/workspace/input/a.txt", old);
+        int opsBefore = fake.ops.size();
+        byte[] fresh = "NEW".getBytes(StandardCharsets.UTF_8);
+
+        assertTrue(provider.putIfAlive(SID, "input/a.txt", fresh));
+
+        assertEquals(opsBefore + 1, fake.ops.size(), "只多一次 write（无 exists 探测）: " + fake.ops);
+        assertTrue(fake.ops.get(opsBefore).startsWith("write:/workspace/input/a.txt"), fake.ops.toString());
+        assertArrayEquals(fresh, fake.files.get("/workspace/input/a.txt"), "同名必须覆盖为最新字节");
+    }
+
+    @Test
+    @DisplayName("putIfAlive 路径非法：折算 false 且零 write（best-effort 通道不阻断上传）")
+    void putIfAliveRejectsIllegalPathAsFalse() {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of(SID));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+        provider.ensure(SID, List.of());
+
+        assertFalse(provider.putIfAlive(SID, "a//b", new byte[]{1}));
+
+        verify(client, never()).writeFile(anyString(), anyString(), any(byte[].class));
+    }
+
+    @Test
+    @DisplayName("put 路径含单引号：shellQuote 用 '\\'' 转义，exec 收到完整单参数")
+    void putQuotesSingleQuoteInPath() {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of(SID));
+        when(client.exec(eq(SID), startsWith("test -e "), eq(10_000L)))
+                .thenReturn(new CubeHttpClient.ExecResult(1, "", "", false));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+
+        String actual = provider.put(SID, "input/O'Brien.docx", new byte[]{1});
+
+        assertEquals("input/O'Brien.docx", actual);
+        verify(client).exec(SID, "test -e '/workspace/input/O'\\''Brien.docx'", 10_000L);
+        verify(client).writeFile(SID, "/workspace/input/O'Brien.docx", new byte[]{1});
+    }
+
+    @Test
+    @DisplayName("put 改名边界：无扩展名 a→a-2；多点名 a.b.c→a.b-2.c")
+    void putRenamesWithoutExtensionAndWithMultiDot() {
+        assertRenamed("input/a", "input/a-2");
+        assertRenamed("input/a.b.c", "input/a.b-2.c");
+    }
+
+    /** 目标被占用、候选可用（exec exit 0 → 1）⇒ 返回/写入改名后的同目录落点 */
+    private void assertRenamed(String requested, String expected) {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of(SID));
+        when(client.exec(eq(SID), startsWith("test -e "), eq(10_000L)))
+                .thenReturn(new CubeHttpClient.ExecResult(0, "", "", false),
+                        new CubeHttpClient.ExecResult(1, "", "", false));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+        byte[] bytes = new byte[]{1};
+
+        assertEquals(expected, provider.put(SID, requested, bytes));
+
+        verify(client).writeFile(SID, "/workspace/" + expected, bytes);
+    }
+
+    @Test
+    @DisplayName("put 非法路径：在 ensure/任何 HTTP 之前抛 IAE（零副作用）")
+    void putRejectsIllegalPathBeforeEnsure() {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        AdminSandboxManager admin = mock(AdminSandboxManager.class);
+        CubeSandboxProvider provider = new CubeSandboxProvider(client, admin, new CubeSandboxProperties());
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> provider.put(SID, "../escape.txt", new byte[]{1}));
+
+        assertTrue(e.getMessage().contains("含非法路径段"), e.getMessage());
+        verifyNoInteractions(client, admin);
     }
 
     // ---------------------------------------------------------------- destroy
