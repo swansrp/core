@@ -35,7 +35,8 @@ public interface AgentSandbox {
      *
      * @param sessionId 会话标识
      * @param command   shell 命令行（实现侧负责在沙箱内执行，不逃逸到宿主）
-     * @param timeoutMs 超时毫秒数（超时由实现侧终止进程并置 {@link SandboxExecResult#timedOut()}）
+     * @param timeoutMs 超时毫秒数（超时断开等待并置 {@link SandboxExecResult#timedOut()}；
+     *                  进程终止语义由实现自定，见实现侧 javadoc——本端口不承诺 kill）
      * @return 执行结果（exitCode＋合并 stdout/stderr 截断后的 output＋timedOut）
      */
     SandboxExecResult exec(String sessionId, String command, long timeoutMs);
