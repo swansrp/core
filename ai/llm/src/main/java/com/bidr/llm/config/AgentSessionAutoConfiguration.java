@@ -1,14 +1,9 @@
 package com.bidr.llm.config;
 
 import com.bidr.llm.agent.external.ExternalRuntimeTaskService;
-import com.bidr.llm.agent.gate.AgentTaskGate;
-import com.bidr.llm.agent.gate.InMemoryAgentTaskGate;
-import com.bidr.llm.agent.gate.RedisAgentTaskGate;
 import com.bidr.llm.agent.runtime.spi.AgentRuntimeProvider;
 import com.bidr.llm.agent.session.AgentSessionStore;
 import com.bidr.llm.agent.session.AgentSessionStreamHub;
-import com.bidr.llm.agent.session.InMemoryAgentSessionStore;
-import com.bidr.llm.agent.session.RedisAgentSessionStore;
 import com.bidr.llm.constant.param.LlmParam;
 import com.bidr.platform.service.cache.SysConfigCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,13 +17,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * Title: AgentSessionAutoConfiguration
- * Description: agent 会话存储与任务闸门默认装配（开箱即用，业务可覆盖）：
- * 类路径有 core/redis 时装配 Redis 实现（生产：分布式控制键/互斥锁 + TTL 兜底），
- * 否则回落内存实现（单实例 fallback）。Redis 分支放内嵌配置类做类加载隔离——
- * 外层配置类无 RedisService 类型引用，无 redis 依赖的应用装载外层不触发 NoClassDefFoundError
+ * Description: agent 会话存储与任务闸门默认装配（开箱即用，业务可覆盖）。
+ * 存储后端（Redis / 内存兜底）由 {@link AgentSessionStoreBackendSelector} 在 parse 期按
+ * 类路径二选一 import——🔴 不再用「外层内存 bean + 内嵌 {@code @ConditionalOnClass} Redis bean」
+ * 的同类竞争结构：那种结构的胜负取决于 bean 定义注册顺序，随装配通道漂移（同一段代码，
+ * 单测容器/纯组件扫描里 Redis 赢，完整应用里内存先注册、Redis bean 被
+ * {@code @ConditionalOnMissingBean} 干掉——pre 生产事故实锤，CONDITIONS REPORT 显示
+ * {@code @ConditionalOnClass} 从未失手、输的是注册序，详见 selector 注释）。
+ * selector 只放行一个后端配置类（{@link AgentSessionStoreRedisConfiguration} /
+ * {@link AgentSessionStoreInMemoryConfiguration}），注册顺序零竞争；
+ * 两后端类各自隔离 RedisService 类型引用，无 redis 依赖的应用装载本链不触发 NoClassDefFoundError
  * <p>
  * 🔴 <b>寿命与失联阈值是运行期参数，不是构造期常量</b>：会话 TTL 取
  * {@link LlmParam#AGENT_SESSION_TTL_SECONDS} → {@code llm.agent-session.ttl-seconds} 地板 → core 默认 86400；
@@ -44,57 +46,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Slf4j
 @AutoConfiguration
+@Import(AgentSessionStoreBackendSelector.class)
 public class AgentSessionAutoConfiguration {
-
-    @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass(name = "com.bidr.platform.redis.service.RedisService")
-    public static class RedisStoreConfiguration {
-
-        @Bean
-        @ConditionalOnMissingBean(AgentSessionStore.class)
-        public AgentSessionStore redisAgentSessionStore(
-                com.bidr.platform.redis.service.RedisService redisService,
-                ObjectMapper objectMapper,
-                ObjectProvider<SysConfigCacheService> sysConfigProvider,
-                @Value("${llm.agent-session.key-prefix:llm:agent:session:}") String keyPrefix,
-                @Value("${llm.agent-session.ttl-seconds:86400}") int yamlTtlSeconds) {
-            log.info("装配 Redis AgentSessionStore（prefix={}，ttl 地板={}s；运行期以系统参数「{}」为准，留空即按地板）",
-                    keyPrefix, yamlTtlSeconds, LlmParam.AGENT_SESSION_TTL_SECONDS.getTitle());
-            return new RedisAgentSessionStore(redisService, objectMapper, keyPrefix,
-                    () -> positiveInt(LlmParam.AGENT_SESSION_TTL_SECONDS, sysConfigProvider, yamlTtlSeconds));
-        }
-
-        @Bean
-        @ConditionalOnMissingBean(AgentTaskGate.class)
-        public AgentTaskGate redisAgentTaskGate(
-                com.bidr.platform.redis.service.RedisService redisService,
-                ObjectMapper objectMapper,
-                ObjectProvider<SysConfigCacheService> sysConfigProvider,
-                @Value("${llm.agent-task-gate.key-prefix:llm:agent:task-gate:}") String keyPrefix,
-                @Value("${llm.agent-task-gate.orphan-millis:90000}") long yamlOrphanMillis) {
-            log.info("装配 Redis AgentTaskGate（prefix={}，失联阈值地板={}ms；运行期以系统参数「{}」为准，留空即按地板）",
-                    keyPrefix, yamlOrphanMillis, LlmParam.AGENT_TASK_GATE_ORPHAN_MILLIS.getTitle());
-            return new RedisAgentTaskGate(redisService, objectMapper, keyPrefix,
-                    () -> positiveLong(LlmParam.AGENT_TASK_GATE_ORPHAN_MILLIS, sysConfigProvider, yamlOrphanMillis));
-        }
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(AgentSessionStore.class)
-    public AgentSessionStore inMemoryAgentSessionStore() {
-        log.info("类路径无 core/redis，装配内存 AgentSessionStore（单实例 fallback，控制键不跨实例）");
-        return new InMemoryAgentSessionStore();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(AgentTaskGate.class)
-    public AgentTaskGate inMemoryAgentTaskGate(
-            ObjectProvider<SysConfigCacheService> sysConfigProvider,
-            @Value("${llm.agent-task-gate.orphan-millis:90000}") long yamlOrphanMillis) {
-        log.info("类路径无 core/redis，装配内存 AgentTaskGate（单实例 fallback，互斥不跨实例；失联阈值同样按系统参数取值）");
-        return new InMemoryAgentTaskGate(
-                () -> positiveLong(LlmParam.AGENT_TASK_GATE_ORPHAN_MILLIS, sysConfigProvider, yamlOrphanMillis));
-    }
 
     /**
      * 外部 agent runtime 的任务派发服务（形态 B 接线）：provider 缺席时仍可装配，
