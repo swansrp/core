@@ -133,7 +133,7 @@ VALUES ('EPC联调租户-1101', 'EPC1101', 'ops', NOW(), 'ops', NOW(), '1');
 #### B. OAuth2 授权码通道（§3.2）
 
 🔴 **这条通道本身不替子系统做"零租户拒登"判定。** `authorize` 只要求：
-- 调用方已登录 InkHub（header 或 `INKHUB_TOKEN` cookie）；
+- 调用方已登录 InkHub（header 或会话 cookie，名由项目名派生，InkHub＝`INKHUB_TOKEN`）；
 - `client_id` 在 `ac_partner` 登记；
 - `redirect_uri` 在该 partner 的 `ac_sso_redirect` 白名单里全串命中；**本地/内网回调免登记**
   （host＝`localhost`／`127.0.0.0/8`／`10.0.0.0/8`／`::1`，scheme 仅 http(s)，端口/路径任意 ⇒ 直接放行）。
@@ -235,7 +235,7 @@ VALUES ('EPC联调租户-1101', 'EPC1101', 'ops', NOW(), 'ops', NOW(), '1');
 关键点：
 
 - 墨枢**只签票**，不替子系统建会话；子系统必须自己换会话、自己控权限。
-- 墨枢的 `authorize` 需要**浏览器登录态**：整页导航带不上 SPA 存在 localStorage 里的 `Authorization` 头，所以端点额外接受 `INKHUB_TOKEN` cookie 回退（header 优先）。这是 authorize 独有的回退，其他端点不适用。
+- 墨枢的 `authorize` 需要**浏览器登录态**：整页导航带不上 SPA 存在 localStorage 里的 `Authorization` 头，所以端点额外接受会话 cookie 回退（header 优先）。cookie 名由项目名派生（`my.project.name` 大写＋`_TOKEN`，墨枢＝`INKHUB_TOKEN`；未声明项目名回落中性名 `BIDR_TOKEN`）——同域名挂多应用时按项目名天然隔离，互不覆盖票。这是 authorize 独有的回退，其他端点不适用。
 - `redirect_uri` 白名单是**全串精确匹配**（trim 后等值），不是 origin 匹配、大小写敏感；
   **例外＝本地/内网回调免登记**（`localhost`／`127.0.0.0/8`／`10.0.0.0/8`／`::1`，http(s)、端口任意，
   见 §3.7）——这是 OAuth2 通道自己的规则，与已退役 ticket 通道的 origin 等值口径不同。
@@ -247,7 +247,7 @@ VALUES ('EPC联调租户-1101', 'EPC1101', 'ops', NOW(), 'ops', NOW(), '1');
 | 项 | 说明 |
 |----|------|
 | 入参 | `response_type=code`、`client_id`、`redirect_uri`、`state`（可选）、`scope`（可选） |
-| 登录态 | 先抽 `Authorization` 头（`AuthTokenUtil.extractToken`），无头时回退 `INKHUB_TOKEN` cookie；用 `TokenService.verifyToken` 核验 |
+| 登录态 | 先抽 `Authorization` 头（`AuthTokenUtil.extractToken`），无头时回退会话 cookie（名＝项目名派生，墨枢＝`INKHUB_TOKEN`）；用 `TokenService.verifyToken` 核验 |
 | 未登录 | 302 到 `{context-path}/#/login?redirect_uri=<原 authorize 地址去掉前导斜杠>`（前缀随 context-path，如 `/inkhub/#/login`）；登录页登录后 replace 回跳 |
 | client/redirect 未登记 | **就地 400 纯文本**，不跳转（未核验的 redirect_uri 不得作为跳转目标） |
 | `response_type≠code` | 302 回已核验的 `redirect_uri`，带 `error=unsupported_response_type`（可带 `state`） |
@@ -501,7 +501,7 @@ my:
 
 | 现象 | 最可能原因 | 处理 |
 |------|-----------|------|
-| 访问 authorize 反复 302 到登录页 | 浏览器没有 `INKHUB_TOKEN` cookie；或登录态已失效 | 先在墨枢完成登录；确认登录响应种下 `INKHUB_TOKEN`；header 优先，cookie 只是整页导航的回退 |
+| 访问 authorize 反复 302 到登录页 | 浏览器没有会话 cookie（名＝项目名派生，墨枢＝`INKHUB_TOKEN`）；或登录态已失效 | 先在墨枢完成登录；确认登录响应种下会话 cookie（已登录会话的任意鉴权请求也会自愈补种）；header 优先，cookie 只是整页导航的回退 |
 | `400 client_id 未登记` | `ac_partner` 无该 `app_key`（未 seed、拼错、被停用/清库） | 检查 `identity.clients` 种子或 partner 管理页；重启触发 `PartnerSeeder` |
 | `400 redirect_uri 未登记` | 与白名单行不是全串相等：结尾斜杠、端口、scheme 大小写、URL 编码、路径不同（本地/内网 host 有免登记豁免，不走此闸） | 用浏览器实际跳转的 `redirect_uri` 原串逐字符对比 `ac_sso_redirect.redirect_uri` |
 | token `invalid_client` | `client_secret` 不匹配；`PartnerSeeder` 回写了新值；环境变量为空 | 对齐 `ac_partner.app_secret` 与子系统配置；检查 `INKHUB_*_CLIENT_SECRET` |

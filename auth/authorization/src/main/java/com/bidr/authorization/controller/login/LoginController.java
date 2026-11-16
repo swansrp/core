@@ -49,6 +49,8 @@ public class LoginController {
     protected PasswordService passwordService;
     @Resource
     private TokenService tokenService;
+    @Resource
+    private SessionCookieUtil sessionCookieUtil;
 
 
     @Autowired(required = false)
@@ -78,8 +80,8 @@ public class LoginController {
                 loginFillTokenInf.fillToken(res);
             }
         }
-        // fillToken 之后再种：cookie 里的票必须与最终返回给前端的票一致
-        SessionCookieUtil.write(res);
+        // fillToken 之后再种：cookie 里的票必须与最终返回给前端的票一致；Max-Age 由 SessionCookieUtil 对齐票 TTL
+        sessionCookieUtil.write(res);
         Map<String, Object> tokenValue = tokenService.getTokenValue();
         log.info("[登录信息]用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
                 JsonUtil.toJson(tokenValue, false, false, true));

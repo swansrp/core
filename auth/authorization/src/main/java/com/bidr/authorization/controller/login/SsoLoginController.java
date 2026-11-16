@@ -44,6 +44,8 @@ public class SsoLoginController {
     private SsoLoginServiceImpl ssoLoginService;
     @Resource
     private TokenService tokenService;
+    @Resource
+    private SessionCookieUtil sessionCookieUtil;
 
     @Autowired(required = false)
     private List<LoginFillTokenInf> fillTokenInfList;
@@ -77,8 +79,8 @@ public class SsoLoginController {
                 loginFillTokenInf.fillToken(res);
             }
         }
-        // 与 LoginController.afterLogin 同口径：登录成功即种 authorize 整页导航用的会话 cookie
-        SessionCookieUtil.write(res);
+        // 与 LoginController.afterLogin 同口径：登录成功即种 authorize 整页导航用的会话 cookie（Max-Age 由 SessionCookieUtil 对齐票 TTL）
+        sessionCookieUtil.write(res);
         Map<String, Object> tokenValue = tokenService.getTokenValue();
         log.info("[登录信息]用户: {}, 登录token: {}, 内容: {}", res.getCustomerNumber(), res.getAccessToken(),
                 JsonUtil.toJson(tokenValue, false, false, true));

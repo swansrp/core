@@ -1,8 +1,11 @@
 package com.bidr.authorization.controller.login;
 
+import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.utils.SessionCookieUtil;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,9 +24,11 @@ import java.util.HashMap;
  * Title: LoginSessionCookieTest
  * Description: 登录成功会话 cookie 契约（2026-11-11，对账单 #65）。
  *
- * <p>钉住「所有登录成功腿都必经 afterLogin，afterLogin 必写 INKHUB_TOKEN cookie」这条不变量：
+ * <p>钉住「所有登录成功腿都必经 afterLogin，afterLogin 必写会话 cookie」这条不变量：
  * authorize 是整页导航，只认 header 或该 cookie；漏种会让门户已登录、子系统 302 回登录页，
- * 共用浏览器上还会复用上一账号残留 cookie 导致身份错位（test 环境 e2e 实证）。</p>
+ * 共用浏览器上还会复用上一账号残留 cookie 导致身份错位（test 环境 e2e 实证）。
+ * cookie 名由 my.project.name 派生（台账 #71 起 core 无业务常量），本测试钉 inkhub→INKHUB_TOKEN
+ * （InkHub 项目名派生值）验证名字贯穿 afterLogin 全链。</p>
  *
  * <p>纯 Mockito + spring-test mock servlet 对象，不起容器；cookie 通过
  * {@link RequestContextHolder} 取当前响应，因此每条腿都显式绑定请求上下文。</p>
@@ -41,7 +46,13 @@ public class LoginSessionCookieTest {
         controller = new LoginController();
         tokenService = Mockito.mock(TokenService.class);
         Mockito.when(tokenService.getTokenValue()).thenReturn(new HashMap<String, Object>());
+        SysConfigCacheService sysConfigCacheService = Mockito.mock(SysConfigCacheService.class);
+        Mockito.when(sysConfigCacheService.getParamInt(AccountParam.WEB_ACCESS_TOKEN_EXPIRED)).thenReturn(86400);
+        SessionCookieUtil sessionCookieUtil = new SessionCookieUtil();
+        ReflectionTestUtils.setField(sessionCookieUtil, "projectName", "inkhub");
+        ReflectionTestUtils.setField(sessionCookieUtil, "sysConfigCacheService", sysConfigCacheService);
         ReflectionTestUtils.setField(controller, "tokenService", tokenService);
+        ReflectionTestUtils.setField(controller, "sessionCookieUtil", sessionCookieUtil);
         ReflectionTestUtils.setField(controller, "fillTokenInfList", null);
     }
 
@@ -71,6 +82,7 @@ public class LoginSessionCookieTest {
         Assert.assertTrue(cookie.contains("Path=/"));
         Assert.assertTrue(cookie.contains("HttpOnly"));
         Assert.assertTrue(cookie.contains("SameSite=Lax"));
+        Assert.assertTrue("Max-Age 必须对齐票 TTL（票 cookie 同寿，台账 #71）", cookie.contains("Max-Age=86400"));
     }
 
     @Test
