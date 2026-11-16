@@ -176,7 +176,13 @@ public class CubeSandboxProvider implements AgentSandbox {
         // 0/负值也不产生非正 Duration（HTTP client 会抛 IllegalArgumentException: Invalid duration）
         long effectiveTimeoutMs = timeoutMs > 0 ? timeoutMs
                 : Math.max(1000L, properties.getTimeout() * 1000L);
-        CubeHttpClient.ExecResult result = client.exec(resolveSandboxId(sessionId), command, effectiveTimeoutMs);
+        // 🔴 会话工作区语义（2026-11-16 真机发现）：种子/put/exists 全部按绝对路径落
+        // {@code /workspace}，但 Cube 容器默认 cwd＝{@code /root}——不前置 cd 时模型按
+        // 「工作目录＝沙箱根」用相对路径会找不到文件（引擎B 真机实测 pwd=/root）。
+        // 统一包一层 {@code cd '/workspace' && <cmd>}，让相对路径与工具文案口径一致；
+        // 需要用绝对路径/自行 cd 的命令不受影响。
+        String wrapped = "cd " + shellQuote(WORKSPACE_MOUNT) + " && " + command;
+        CubeHttpClient.ExecResult result = client.exec(resolveSandboxId(sessionId), wrapped, effectiveTimeoutMs);
         // 🔴 mergeOutput 内部已做 64KB 截断（与 OH 逐字等价）——此处不得再套一层 truncateUtf8
         // （双重截断会把截断标记再劈一刀，产出带游离 \n 的脏 head——实测坑）
         return new SandboxExecResult(result.exitCode(),
@@ -295,7 +301,9 @@ public class CubeSandboxProvider implements AgentSandbox {
      * 1＝不存在、超时/其它退出码＝检查失败（ServiceException 交工具层「稍后重试」，不误判）。
      */
     private boolean exists(String sessionId, String relPath) {
-        SandboxExecResult result = exec(sessionId,
+        // 绝对路径不依赖 cwd：直接走 client.exec（不经公开 exec 的 `cd /workspace` 包装，
+        // 命令串保持逐字可断言；包装与否对 test -e 结果无影响）
+        CubeHttpClient.ExecResult result = client.exec(resolveSandboxId(sessionId),
                 "test -e " + shellQuote(workspacePath(relPath)), EXISTENCE_CHECK_TIMEOUT_MS);
         if (result.timedOut()) {
             throw new ServiceException("沙箱存在性检查失败，请稍后重试");

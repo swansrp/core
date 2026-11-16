@@ -169,8 +169,20 @@ class CubeSandboxProviderTest {
         assertEquals(7, result.exitCode());
         assertEquals("out-1\nerr-1", result.output(), "stdout 在前、stderr 换行接后");
         assertFalse(result.timedOut());
-        assertTrue(fake.execCommands.contains("python scripts/make.py"));
+        assertTrue(fake.execCommands.contains("cd '/workspace' && python scripts/make.py"),
+                "exec 必须前置 cd /workspace（Cube 容器默认 cwd=/root，相对路径找不到工作区）: " + fake.execCommands);
         assertEquals(1, fake.businessCreateBodies.size(), "ensure 建的会话，exec 不再 create");
+    }
+
+    @Test
+    @DisplayName("exec 工作区口径：任何命令都前置 cd '/workspace'（含已带 cd 的命令，后者自会覆盖）")
+    void execPrefixesWorkspaceDirectory() {
+        provider.ensure(SID, List.of());
+        provider.exec(SID, "pwd", 10_000);
+        provider.exec(SID, "cd /tmp && pwd", 10_000);
+
+        assertTrue(fake.execCommands.contains("cd '/workspace' && pwd"), fake.execCommands.toString());
+        assertTrue(fake.execCommands.contains("cd '/workspace' && cd /tmp && pwd"), fake.execCommands.toString());
     }
 
     @Test
