@@ -49,12 +49,28 @@ public class AgentSessionService {
      *  需大于轮询周期与重连耗时留足余量，避免短暂网络抖动误停 */
     private static final long DETACH_STOP_MILLIS = 60_000;
 
+    /** 建后未起跑的兜底超时（毫秒）：startPaused 会话等素材上传，超时仍未 resume 即自动收口
+     *  （防页面关闭后留下永不执行的暂停会话；正常上传秒级完成，10 分钟足够大文件慢网） */
+    private static final long DEFERRED_START_TIMEOUT_MILLIS = 10 * 60_000L;
+
     private final AgentSessionStore store;
     private final Map<String, AutonomousAgentDefinition> definitions = new LinkedHashMap<>();
     private final Map<String, Thread> runThreads = new ConcurrentHashMap<>();
 
     /** 自动停止原因（断开即停等）：心跳任务写入，run 线程收口时消费替换默认中断文案 */
     private final Map<String, String> autoStopReasons = new ConcurrentHashMap<>();
+
+    /** 建后未起跑会话（{@code startPaused=true}）：run 线程延迟到 resume 才创建，
+     *  期间附件上传事件先落事件流 ⇒ 首轮提示词天然含附件（无"上传晚于首轮"竞态） */
+    private final Map<String, DeferredStart> deferredStarts = new ConcurrentHashMap<>();
+
+    /** 建后未起跑会话的心跳守卫：refreshHeartbeat（断开即停＋存活轻键）＋超时收口，resume/stop 时取消 */
+    private final Map<String, ScheduledFuture<?>> deferredGuards = new ConcurrentHashMap<>();
+
+    /** 延迟起跑快照（definition/state/payload 在 resume 时补起 run 线程所需） */
+    private record DeferredStart(AutonomousAgentDefinition definition, AgentSessionState state,
+                                 Map<String, Object> payload) {
+    }
 
     /** 通用历史对话存储（会话收口自动落单轮对话；可为空=不落盘） */
     private final ObjectProvider<AgentConversationService> conversationProvider;
@@ -110,6 +126,24 @@ public class AgentSessionService {
      */
     public AgentSessionState start(String agentKey, Map<String, Object> payload, String operator,
                                    DetachPolicy requested) {
+        return start(agentKey, payload, operator, requested, false);
+    }
+
+    /**
+     * 发起会话（可「建后未起跑」）：{@code startPaused=true} 时只建会话快照、<b>不启动 run 线程</b>，
+     * 返回 {@link AgentSessionState#PAUSED} 快照——发起方先把素材附件上传到该会话
+     * （{@code file_attached} 事件先落事件流），再调 {@link #resume} 起跑：
+     * 首轮提示词由 run 线程在 resume 时才组装，附件天然进入首轮上下文（业务提示词与
+     * 运行期增量两条通道都不需要赌"上传抢在首轮前"）。
+     * <p>
+     * 等待期由心跳守卫兜底：每 {@link #HEARTBEAT_SECONDS} 秒刷存活轻键（防失联误判）
+     * 并按断开策略/超时自动收口；stop 直接终态收口，不会留下永不执行的暂停会话。
+     * <p>
+     * 🔴 首轮业务参数仍走 {@code payload}（如用户指令），resume 的 guidance 不参与首轮组装
+     * （deferred 分支忽略并记 info）——避免指令被当作「用户补充指导」二次注入。
+     */
+    public AgentSessionState start(String agentKey, Map<String, Object> payload, String operator,
+                                   DetachPolicy requested, boolean startPaused) {
         AutonomousAgentDefinition definition = definitions.get(agentKey);
         if (definition == null) {
             throw new IllegalArgumentException("未注册的 agent: " + agentKey);
@@ -121,7 +155,7 @@ public class AgentSessionService {
         state.setSkillCode(definition.skillCode());
         state.setDisplayName(definition.displayName());
         state.setOperator(operator == null || operator.trim().isEmpty() ? "anonymous" : operator.trim());
-        state.setStatus(AgentSessionState.RUNNING);
+        state.setStatus(startPaused ? AgentSessionState.PAUSED : AgentSessionState.RUNNING);
         state.setStartedAt(System.currentTimeMillis());
         state.setHeartbeat(System.currentTimeMillis());
         state.setDetachPolicy((requested != null ? requested : definition.detachPolicy()).name());
@@ -133,11 +167,28 @@ public class AgentSessionService {
         }
         store.saveState(state);
 
-        Thread thread = new Thread(() -> runSession(definition, state, safePayload),
+        if (startPaused) {
+            deferredStarts.put(state.getSessionId(), new DeferredStart(definition, state, safePayload));
+            deferredGuards.put(state.getSessionId(), heartbeatExecutor.scheduleAtFixedRate(
+                    () -> guardDeferredStart(state.getSessionId()),
+                    HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS));
+            emitAndPublish(state.getSessionId(), AgentEvent.PAUSED, "会话已创建，等待素材上传完成后开始");
+            if (streamHub != null) {
+                streamHub.publishStatus(state);
+            }
+            return state;
+        }
+        launch(definition, state, safePayload);
+        return state;
+    }
+
+    /** 起 run 线程（直起与「建后未起跑」resume 补起共用一处，避免两套线程装配漂移） */
+    private void launch(AutonomousAgentDefinition definition, AgentSessionState state,
+                        Map<String, Object> payload) {
+        Thread thread = new Thread(() -> runSession(definition, state, payload),
                 "agent-session-" + state.getSessionId());
         runThreads.put(state.getSessionId(), thread);
         thread.start();
-        return state;
     }
 
     /** 暂停（幂等）：run 线程在下一检查点阻塞；状态与事件即时更新供前端展示 */
@@ -153,11 +204,31 @@ public class AgentSessionService {
     }
 
     /** 恢复（幂等）：清除暂停键；guidance 空时注入默认指导语（让 LLM 知晓恢复事实而非凭空续跑），
-     *  非空时作为用户补充指导注入下一轮上下文 */
+     *  非空时作为用户补充指导注入下一轮上下文。
+     *  <p>「建后未起跑」会话（startPaused）：本调用＝真正起跑——不落 guidance（首轮指令随 start
+     *  payload 组装，guidance 注入会二次叠加），起 run 线程后正常执行 */
     public void resume(String sessionId, String guidance) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
             throw new ServiceException("会话已结束（" + state.getStatus() + "），无法恢复");
+        }
+        DeferredStart deferred = deferredStarts.remove(sessionId);
+        if (deferred != null) {
+            cancelDeferredGuard(sessionId);
+            if (guidance != null && !guidance.trim().isEmpty()) {
+                log.info("建后未起跑会话的首轮指令走 start payload，resume guidance 不入首轮（忽略）: sessionId={}",
+                        sessionId);
+            }
+            // run 线程尚未创建：此快照是唯一写者，直接落 RUNNING 后起跑
+            deferred.state().setStatus(AgentSessionState.RUNNING);
+            deferred.state().setHeartbeat(System.currentTimeMillis());
+            store.saveState(deferred.state());
+            if (streamHub != null) {
+                streamHub.publishStatus(deferred.state());
+            }
+            emitAndPublish(sessionId, AgentEvent.RESUMED, "素材已就绪，会话开始执行");
+            launch(deferred.definition(), deferred.state(), deferred.payload());
+            return;
         }
         if (guidance == null || guidance.trim().isEmpty()) {
             guidance = "用户未补充新指导，按暂停前的既有计划与进度继续";
@@ -239,9 +310,22 @@ public class AgentSessionService {
         return item;
     }
 
-    /** 停止（幂等）：停止键跨实例轮询生效 + 本实例线程中断加速收口 */
+    /** 停止（幂等）：停止键跨实例轮询生效 + 本实例线程中断加速收口；
+     *  「建后未起跑」会话无 run 线程，由本侧直接终态收口（守卫任务一并取消） */
     public void stop(String sessionId) {
         AgentSessionState state = requireState(sessionId);
+        DeferredStart deferred = deferredStarts.remove(sessionId);
+        if (deferred != null) {
+            cancelDeferredGuard(sessionId);
+            try {
+                store.clearControls(sessionId);
+            } catch (Exception e) {
+                log.warn("未起跑会话控制键清理失败（TTL 到期自动失效）, sessionId={}, error={}",
+                        sessionId, e.getMessage());
+            }
+            finishDeferredStart(deferred.state(), "用户停止了会话");
+            return;
+        }
         store.requestStop(sessionId);
         Thread thread = runThreads.get(sessionId);
         if (thread != null) {
@@ -536,6 +620,70 @@ public class AgentSessionService {
             store.touchRun(state.getSessionId());
         } catch (Exception e) {
             log.warn("agent 会话心跳刷新失败, sessionId={}, error={}", state.getSessionId(), e.getMessage());
+        }
+    }
+
+    // ---- 建后未起跑（startPaused）守卫 ----
+
+    /**
+     * 守卫心跳（每 20s）：刷新存活轻键并执行断开策略；超时未被 resume 则自动收口。
+     * run 线程在场时期望每轮都跑它，见 {@link #refreshHeartbeat}——这里复用同一实现，
+     * 保证「暂停等素材」与会话运行期的存活/断开语义一致。
+     */
+    private void guardDeferredStart(String sessionId) {
+        DeferredStart deferred = deferredStarts.get(sessionId);
+        if (deferred == null) {
+            cancelDeferredGuard(sessionId);
+            return;
+        }
+        refreshHeartbeat(deferred.state(), deferred.definition());
+        boolean stopRequested;
+        try {
+            stopRequested = store.isStopRequested(sessionId);
+        } catch (Exception e) {
+            log.warn("未起跑会话停止键读取失败（按未停止处理）, sessionId={}, error={}",
+                    sessionId, e.getMessage());
+            stopRequested = false;
+        }
+        boolean timedOut = System.currentTimeMillis() - deferred.state().getStartedAt()
+                > DEFERRED_START_TIMEOUT_MILLIS;
+        if (!stopRequested && !timedOut) {
+            return;
+        }
+        if (deferredStarts.remove(sessionId, deferred)) {
+            cancelDeferredGuard(sessionId);
+            try {
+                store.clearControls(sessionId);
+            } catch (Exception e) {
+                log.warn("未起跑会话控制键清理失败（TTL 到期自动失效）, sessionId={}, error={}",
+                        sessionId, e.getMessage());
+            }
+            finishDeferredStart(deferred.state(), timedOut
+                    ? "创建后长时间未开始（素材上传未完成），已自动停止"
+                    : "等待素材期间会话被停止");
+        }
+    }
+
+    /** 取消守卫任务（resume/stop/超时收口任一路径都要取消，避免定时任务泄漏） */
+    private void cancelDeferredGuard(String sessionId) {
+        ScheduledFuture<?> guard = deferredGuards.remove(sessionId);
+        if (guard != null) {
+            guard.cancel(false);
+        }
+    }
+
+    /** 「建后未起跑」会话的终态收口：无 run 线程，快照/阶段/计划/事件由本侧一次写齐 */
+    private void finishDeferredStart(AgentSessionState state, String reason) {
+        state.setStatus(AgentSessionState.STOPPED);
+        state.setEndedAt(System.currentTimeMillis());
+        state.setError(reason);
+        state.setLive(null);
+        finalizeStages(state, AgentSessionState.STOPPED, reason);
+        finalizePlan(state, AgentSessionState.STOPPED);
+        store.saveState(state);
+        emitAndPublish(state.getSessionId(), AgentEvent.STOPPED, "会话已停止：" + reason);
+        if (streamHub != null) {
+            streamHub.publishDone(state);
         }
     }
 

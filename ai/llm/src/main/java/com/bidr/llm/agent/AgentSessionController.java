@@ -154,7 +154,9 @@ public class AgentSessionController {
 
     /**
      * 发起自主 agent 会话：立即返回状态快照（sessionId 供控制与轮询），业务执行体在 run 线程内进行。
-     * 断开策略由发起方定义（同一 agent 不同页面场景需求不同）：传则覆盖、不传回落定义层默认
+     * 断开策略由发起方定义（同一 agent 不同页面场景需求不同）：传则覆盖、不传回落定义层默认。
+     * <p>{@code startPaused=true}＝只建会话不起 run 线程（状态快照 PAUSED），供发起方先上传
+     * 素材附件再 {@code /session/{id}/resume} 起跑：首轮提示词由 resume 时组装，附件天然入首轮。
      */
     @PostMapping("/session/start")
     public AgentSessionState start(@RequestBody SessionStartReq req) {
@@ -169,7 +171,8 @@ public class AgentSessionController {
                 throw new ServiceException("detachPolicy 取值非法：" + req.getDetachPolicy());
             }
         }
-        return agentSessionService.start(req.getAgentKey().trim(), req.getPayload(), operator(), detachPolicy);
+        return agentSessionService.start(req.getAgentKey().trim(), req.getPayload(), operator(),
+                detachPolicy, Boolean.TRUE.equals(req.getStartPaused()));
     }
 
     /**
@@ -678,6 +681,10 @@ public class AgentSessionController {
         /** 可选：断开策略覆盖（STOP_ON_DETACH 断开即停 / KEEP_RUNNING 后台继续可重连）；
          *  不传回落定义层默认——策略随页面场景定，由发起方定义 */
         private String detachPolicy;
+
+        /** 可选：建后未起跑（缺省 false）——只建会话不启 run 线程，先传附件再 resume 起跑；
+         *  见 {@link com.bidr.llm.agent.session.AgentSessionService#start} */
+        private Boolean startPaused;
     }
 
     /**
