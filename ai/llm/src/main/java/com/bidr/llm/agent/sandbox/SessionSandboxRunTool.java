@@ -67,7 +67,7 @@ public class SessionSandboxRunTool {
     /**
      * 在本会话沙箱内执行一条 shell 命令：首次调用会先建沙箱并预置 agent 定义的种子文件，
      * 之后按命令逐条执行。长任务请用 timeout_seconds 控制时限（缺省 120 秒、上限 600 秒），
-     * 超时命令会被终止。
+     * 超时＝停止等待并返回（沙箱内进程可能仍在运行，稍后可用 ps 核查）。
      *
      * @param command         要执行的 shell 命令（工作目录＝沙箱根，产出文件写到沙箱内）
      * @param timeoutSeconds  超时秒数（不传按 120，超过 600 按 600）
@@ -76,7 +76,7 @@ public class SessionSandboxRunTool {
     @Tool(name = TOOL_NAME, value = "在当前会话的隔离沙箱里执行一条 shell 命令（如跑脚本、处理数据文件），"
             + "并返回退出码与输出。沙箱内生成的文件可用 sandbox_fetch 取回。"
             + "command 传完整命令行；timeout_seconds 传超时秒数（不传按 120 秒，最大 600 秒），"
-            + "超时的命令会被终止——请把长任务拆成小步分多次执行")
+            + "超时后停止等待返回（沙箱内进程可能仍在运行，稍后可用 ps 核查）——请把长任务拆成小步分多次执行")
     public String runCommand(
             @P(name = "command", value = "要执行的 shell 命令全文（在会话沙箱内执行，支持多命令用 && 串联）") String command,
             @P(name = "timeout_seconds", value = "超时秒数：不传按 120，传超过 600 的值按 600 执行") Integer timeoutSeconds) {
@@ -99,7 +99,8 @@ public class SessionSandboxRunTool {
             log.info("[LLM工具] 会话 '{}' sandbox_run: cmdLen={}, timeoutMs={}, exitCode={}, timedOut={}, costMs={}",
                     sessionId, command.length(), timeoutMs, result.exitCode(), result.timedOut(), cost);
             if (result.timedOut()) {
-                return "命令超时（" + seconds + " 秒）已终止，请缩小任务或分步执行";
+                return "命令超时（" + seconds + " 秒）已停止等待（沙箱内进程可能仍在运行，"
+                        + "稍后可用 ps 核查），请缩小任务或分步执行";
             }
             String output = result.output() == null ? "" : result.output();
             return "exitCode=" + result.exitCode() + "\n" + output;

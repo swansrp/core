@@ -106,7 +106,7 @@ public class SessionSandboxRunToolTest {
                 .thenReturn(new SandboxExecResult(137, "partial output", true));
         SessionSandboxRunTool tool = new SessionSandboxRunTool(SESSION, sandbox, null);
 
-        assertEquals("命令超时（5 秒）已终止，请缩小任务或分步执行",
+        assertEquals("命令超时（5 秒）已停止等待（沙箱内进程可能仍在运行，稍后可用 ps 核查），请缩小任务或分步执行",
                 tool.runCommand("sleep 600", 5));
     }
 
