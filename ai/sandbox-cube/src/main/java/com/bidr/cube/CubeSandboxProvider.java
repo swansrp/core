@@ -22,8 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Title: CubeSandboxProvider
  * Description: {@link AgentSandbox} 的 Cube 底座实现（会话级容器沙箱：一个会话一个沙箱实例，
  * 业务沙箱把宿主 {@code {hostRoot}/{sessionId}} 挂到容器 {@code /workspace}，种子/取件走文件面，
- * exec 走数据面 Connect 信封）。生命周期由内存 map（sessionId→sandboxId）＋metadata 对账
- * 共同兜底（D3 拍板：重启丢 map 后按 {@code session-id} metadata 对账既有实例，不盲目重建）：
+ * exec 走数据面 Connect 信封）。生命周期由活跃租约表（sessionId→{@link SandboxLease}，
+ * 含 createdAt/lastActiveAt 心跳）＋metadata 对账共同兜底（D3 拍板：重启丢 map 后按
+ * {@code session-id} metadata 对账既有实例，不盲目重建），{@link SandboxJanitor} 负责
+ * idle/lifetime 清扫轮＋启动孤儿对账：
  * <ul>
  *   <li>{@link #ensure}：<b>顺序红线</b>——先 {@code adminSandbox.ensureDir}（宿主目录不存在
  *       ⇒ create 130545 失败，实测坑）→ 内存 map 命中即复用；miss ⇒ 按 metadata 对账
@@ -42,6 +44,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>{@link #destroy}：{@code client.delete}（404 静默＝幂等）＋map 逐出；map miss 时按
  *       metadata 对账寻址（重启后也能收口）；<b>宿主目录 {@code {hostRoot}/{sessionId}} 不删</b>
  *       （归档策略后续批次定）。</li>
+ *   <li><b>活跃续约（touch）</b>：ensure/exec/fetch/put/putIfAlive 在实际触碰沙箱成功路径上
+ *       刷新 {@code lastActiveAt}（putIfAlive 的 map-miss 分支不 touch；ensure 对账/新建路径
+ *       同时刷新 createdAt＝建账）；包内 {@link #leaseView()}/{@link #killLease(String)} 供
+ *       {@link SandboxJanitor} 清扫（destroy 即 killLease 复用）。</li>
  * </ul>
  * <p>
  * 存在性检查统一走 {@code exec test -e <绝对路径>}（{@code /workspace/<rel>}，不依赖 cwd）：
@@ -63,6 +69,9 @@ public class CubeSandboxProvider implements AgentSandbox {
      * 种子写入与 fetch 寻址都落在它下面。
      */
     private static final String WORKSPACE_MOUNT = "/workspace";
+
+    /** metadata 键：会话归属（create 写入；对账寻址键） */
+    private static final String META_SESSION_ID = "session-id";
 
     /**
      * exec 输出合并后的截断上限（UTF-8 字节）：防超长输出（如 cat 大文件）撑爆模型上下文；
@@ -88,8 +97,20 @@ public class CubeSandboxProvider implements AgentSandbox {
 
     private final CubeSandboxProperties properties;
 
-    /** 会话级沙箱实例表（sessionId → sandboxId）；Provider 重启后靠 metadata 对账重建 */
-    private final Map<String, String> sandboxIds = new ConcurrentHashMap<>();
+    /**
+     * 活跃会话租约表（sessionId → {@link SandboxLease}）；Provider 重启后靠 metadata 对账重建。
+     * {@code lastActiveAt} 即活跃心跳——ensure/exec/fetch/put/putIfAlive 实际触碰沙箱成功即续约，
+     * {@link SandboxJanitor} 按 createdAt/lastActiveAt 双判据清扫（包内 leaseView/killLease 消费）。
+     */
+    private final Map<String, SandboxLease> sandboxLeases = new ConcurrentHashMap<>();
+
+    /**
+     * 会话租约（活跃注册表条目，不可变）：{@code sandboxId} 寻址＋{@code createdAt}/
+     * {@code lastActiveAt} 双时点——{@link SandboxJanitor} 清扫判据（idle 看 lastActiveAt、
+     * lifetime 看 createdAt）。换值即换实例（ConcurrentHashMap 条目整体替换，无锁安全）。
+     */
+    record SandboxLease(String sandboxId, long createdAtMillis, long lastActiveAtMillis) {
+    }
 
     public CubeSandboxProvider(CubeHttpClient client, AdminSandboxManager admin,
                                CubeSandboxProperties properties) {
@@ -110,11 +131,15 @@ public class CubeSandboxProvider implements AgentSandbox {
     public synchronized void ensure(String sessionId, List<SandboxSeedFile> seeds) {
         // ① 顺序红线：先经管理沙箱 mkdir -p 宿主会话目录——hostPath 不存在 ⇒ create 130545 失败（实测坑）
         admin.ensureDir(sessionId);
-        // ② 会话沙箱：内存命中复用；miss ⇒ metadata 对账（列表异常降级直接 create＋warn）
-        String sandboxId = sandboxIds.get(sessionId);
-        if (sandboxId == null) {
+        // ② 会话沙箱：内存命中复用＋续约（touch）；miss ⇒ metadata 对账（列表异常降级直接 create＋warn）
+        SandboxLease lease = sandboxLeases.get(sessionId);
+        String sandboxId;
+        if (lease == null) {
             sandboxId = reconcileOrCreate(sessionId);
-            sandboxIds.put(sessionId, sandboxId);
+            registerLease(sessionId, sandboxId);
+        } else {
+            touch(sessionId);
+            sandboxId = lease.sandboxId();
         }
         // ③ 种子全量重传（覆盖写＝幂等）
         if (seeds == null || seeds.isEmpty()) {
@@ -151,8 +176,9 @@ public class CubeSandboxProvider implements AgentSandbox {
      */
     @Override
     public boolean putIfAlive(String sessionId, String relPath, byte[] bytes) {
-        String sandboxId = sandboxIds.get(sessionId);
-        if (sandboxId == null) {
+        SandboxLease lease = sandboxLeases.get(sessionId);
+        if (lease == null) {
+            // map miss：不 touch 不建账（best-effort 通道，绝不 ensure/create）
             return false;
         }
         String safeRel;
@@ -164,9 +190,11 @@ public class CubeSandboxProvider implements AgentSandbox {
         }
         byte[] content = bytes == null ? new byte[0] : bytes;
         // 覆盖写：不先 test -e（同名即最新，避免"先查后写"的两拍往返）
-        client.writeFile(sandboxId, workspacePath(safeRel), content);
+        client.writeFile(lease.sandboxId(), workspacePath(safeRel), content);
+        // 写成功＝实际触碰沙箱 ⇒ 续约（失败路径不续，清扫照常判 idle）
+        touch(sessionId);
         log.info("Cube 沙箱写入/覆盖文件(best-effort): session={} sandbox={} path={} size={}B",
-                sessionId, sandboxId, safeRel, content.length);
+                sessionId, lease.sandboxId(), safeRel, content.length);
         return true;
     }
 
@@ -183,6 +211,11 @@ public class CubeSandboxProvider implements AgentSandbox {
         // 需要用绝对路径/自行 cd 的命令不受影响。
         String wrapped = "cd " + shellQuote(WORKSPACE_MOUNT) + " && " + command;
         CubeHttpClient.ExecResult result = client.exec(resolveSandboxId(sessionId), wrapped, effectiveTimeoutMs);
+        // 🔴 M-1（review 第1轮）：exec 完成后补一次续约——resolveSandboxId 只在**开始**时
+        // touch，长命令（工具层上限 600s）与缺省 idleTimeout(600s) 贴边，尾段可能被清扫轮
+        // 判空闲整箱回收（连快出结果的进程一起删）。成功/超时均续约（超时命令的进程状态
+        // 未知但沙箱仍在提供方跑，续约让其活到下次判定）。
+        touch(sessionId);
         // 🔴 mergeOutput 内部已做 64KB 截断（与 OH 逐字等价）——此处不得再套一层 truncateUtf8
         // （双重截断会把截断标记再劈一刀，产出带游离 \n 的脏 head——实测坑）
         return new SandboxExecResult(result.exitCode(),
@@ -207,12 +240,34 @@ public class CubeSandboxProvider implements AgentSandbox {
 
     @Override
     public void destroy(String sessionId) {
-        String sandboxId = sandboxIds.remove(sessionId);
+        killLease(sessionId);
+    }
+
+    // ------------------------------------------------- Janitor 协作（包内可见，SandboxJanitor 消费）
+
+    /**
+     * 活跃注册表只读快照（sessionId → 租约）：清扫轮遍历判 idle/lifetime 双过期用。
+     * 快照与注册表解耦（并发 killLease/touch 不影响遍历），条目状态以快照时点为准。
+     */
+    Map<String, SandboxLease> leaseView() {
+        return Map.copyOf(sandboxLeases);
+    }
+
+    /**
+     * 销毁会话租约（{@link #destroy} 的复用本体，{@link SandboxJanitor} 清扫/对账通道）：
+     * 注册表先逐出再 {@code client.delete}；map miss（重启丢内存/重复销毁）时按 metadata
+     * 对账寻址，列表为空＝本就不存在，幂等静默（{@code client.delete} 的 404 同样静默）。
+     * 失败上抛交调用方（destroy 直抛给工具层；清扫轮逐条 try/catch 后继续）。
+     * 🔴 宿主目录 {hostRoot}/{sessionId} 不删：产物归档策略后续批次定，届时统一收口。
+     */
+    void killLease(String sessionId) {
+        SandboxLease lease = sandboxLeases.remove(sessionId);
+        String sandboxId = lease == null ? null : lease.sandboxId();
         if (sandboxId == null) {
             // map miss（重启丢内存/重复销毁）：按 metadata 对账寻址；列表为空＝本就不存在，幂等静默
             List<String> ids;
             try {
-                ids = client.listSandboxIds("session-id", sessionId);
+                ids = client.listSandboxIds(META_SESSION_ID, sessionId);
             } catch (RuntimeException e) {
                 throw new ServiceException("destroy 沙箱对账失败（会话 " + sessionId + "）: " + e.getMessage());
             }
@@ -221,11 +276,38 @@ public class CubeSandboxProvider implements AgentSandbox {
             }
             sandboxId = ids.get(0);
         }
-        client.delete(sandboxId);
-        // 🔴 宿主目录 {hostRoot}/{sessionId} 不删：产物归档策略后续批次定，届时统一收口
+        try {
+            client.delete(sandboxId);
+        } catch (RuntimeException e) {
+            // 🔴 M-2（review 第1轮）：delete 失败把租约放回注册表（期间无新值才放回）——
+            // 否则租约已逐出、清扫轮下轮看不到该箱，进程内无人再回收（只能等重启对账/
+            // 平台 create-timeout 过期），与清扫 warn「下轮重试」文案名不符实。
+            if (lease != null) {
+                sandboxLeases.computeIfAbsent(sessionId, key -> lease);
+            }
+            throw e;
+        }
     }
 
     // ---------------------------------------------------------------- 内部
+
+    /**
+     * 活跃续约（touch）：lastActiveAt ⇢ now。record 不可变 ⇒ 条目整体替换（无锁安全）；
+     * miss＝无租约不动作（touch 只续既有会话，建账只走 {@link #registerLease}）。
+     */
+    private void touch(String sessionId) {
+        sandboxLeases.computeIfPresent(sessionId, (key, lease) ->
+                new SandboxLease(lease.sandboxId(), lease.createdAtMillis(), System.currentTimeMillis()));
+    }
+
+    /**
+     * 租约建账：ensure 对账/新建、resolveSandboxId 对账命中——「本进程此刻接管该沙箱」，
+     * createdAt 与 lastActiveAt 同置 now（寿命从接管时刻起算）。
+     */
+    private void registerLease(String sessionId, String sandboxId) {
+        long now = System.currentTimeMillis();
+        sandboxLeases.put(sessionId, new SandboxLease(sandboxId, now, now));
+    }
 
     /**
      * D3 对账（ensure 通道）：内存 miss ⇒ 按 {@code session-id} metadata 对账既有实例
@@ -234,7 +316,7 @@ public class CubeSandboxProvider implements AgentSandbox {
      */
     private String reconcileOrCreate(String sessionId) {
         try {
-            List<String> ids = client.listSandboxIds("session-id", sessionId);
+            List<String> ids = client.listSandboxIds(META_SESSION_ID, sessionId);
             if (!ids.isEmpty()) {
                 log.info("Cube 沙箱对账命中既有实例: session={} sandbox={}", sessionId, ids.get(0));
                 return ids.get(0);
@@ -246,24 +328,26 @@ public class CubeSandboxProvider implements AgentSandbox {
     }
 
     /**
-     * exec/fetch 寻址：内存命中直用；miss ⇒ metadata 对账（命中记回 map）；对账异常/空列表
-     * ⇒ 明确报错（exec/fetch 前置是 ensure，会话缺失属调用方状态错误，不静默新建）。
+     * exec/fetch 寻址：内存命中直用＋续约（touch）；miss ⇒ metadata 对账（命中建账记回）；
+     * 对账异常/空列表 ⇒ 明确报错（exec/fetch 前置是 ensure，会话缺失属调用方状态错误，
+     * 不静默新建）。
      */
     private String resolveSandboxId(String sessionId) {
-        String sandboxId = sandboxIds.get(sessionId);
-        if (sandboxId != null) {
-            return sandboxId;
+        SandboxLease lease = sandboxLeases.get(sessionId);
+        if (lease != null) {
+            touch(sessionId);
+            return lease.sandboxId();
         }
         List<String> ids;
         try {
-            ids = client.listSandboxIds("session-id", sessionId);
+            ids = client.listSandboxIds(META_SESSION_ID, sessionId);
         } catch (RuntimeException e) {
             throw new ServiceException("Cube 沙箱对账失败（会话 " + sessionId + "）: " + e.getMessage());
         }
         if (ids.isEmpty()) {
             throw new ServiceException("Cube 沙箱会话不存在（须先 ensure 建会话）: " + sessionId);
         }
-        sandboxIds.put(sessionId, ids.get(0));
+        registerLease(sessionId, ids.get(0));
         log.info("Cube 沙箱对账命中既有实例: session={} sandbox={}", sessionId, ids.get(0));
         return ids.get(0);
     }

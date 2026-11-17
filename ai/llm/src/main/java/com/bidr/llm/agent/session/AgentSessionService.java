@@ -6,6 +6,7 @@ import com.bidr.llm.agent.DetachPolicy;
 import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.agent.conversation.AgentConversationService;
 import com.bidr.llm.agent.file.FileRef;
+import com.bidr.llm.agent.sandbox.AgentSandbox;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -78,6 +79,9 @@ public class AgentSessionService {
     /** SSE 推送通道（M18 棒2；可为空=未装配，行为与改前一致） */
     private final AgentSessionStreamHub streamHub;
 
+    /** Agent 会话沙箱端口（Cube 清扫对齐棒3；可为空=沙箱能力未启用，终态钩子静默跳过） */
+    private final AgentSandbox sandbox;
+
     private final ScheduledExecutorService heartbeatExecutor =
             Executors.newSingleThreadScheduledExecutor(runnable -> {
                 Thread thread = new Thread(runnable, "agent-session-heartbeat");
@@ -87,16 +91,18 @@ public class AgentSessionService {
 
     public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
                                ObjectProvider<AgentConversationService> conversationProvider) {
-        this(store, definitionList, conversationProvider, null);
+        this(store, definitionList, conversationProvider, null, null);
     }
 
     @Autowired
     public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
                                ObjectProvider<AgentConversationService> conversationProvider,
-                               ObjectProvider<AgentSessionStreamHub> streamHubProvider) {
+                               ObjectProvider<AgentSessionStreamHub> streamHubProvider,
+                               ObjectProvider<AgentSandbox> sandboxProvider) {
         this.store = store;
         this.conversationProvider = conversationProvider;
         this.streamHub = streamHubProvider == null ? null : streamHubProvider.getIfAvailable();
+        this.sandbox = sandboxProvider == null ? null : sandboxProvider.getIfAvailable();
         for (AutonomousAgentDefinition definition : definitionList) {
             AutonomousAgentDefinition existed = definitions.put(definition.agentKey(), definition);
             if (existed != null) {
@@ -547,8 +553,13 @@ public class AgentSessionService {
     }
 
     /** 阶段终态收口：running 段按会话终态置位（FINISHED→ok 补齐 / FAILED→error / STOPPED→stopped），
-     *  后续 pending 段一律 skipped（未执行到）——阶段条不再永久卡在转圈 */
+     *  后续 pending 段一律 skipped（未执行到）——阶段条不再永久卡在转圈。
+     *  <p>🔴 三路终态汇聚单点挂钩：run 主收口（{@link #runSession}）、查询侧失联（{@link #status}）、
+     *  「建后未起跑」收口（{@link #finishDeferredStart}）全部经本方法落终态，沙箱销毁挂此处一处即全覆盖。
+     *  钩子置于方法开头（早于 stages 空表早退，无阶段会话同样销毁）；销毁异常全吞不阻断收口
+     *  （终态收口路径任何异常都可能污染会话落库），失败交由沙箱实现侧清扫循环兜底回收 */
     private void finalizeStages(AgentSessionState state, String finalStatus, String error) {
+        destroySandboxQuietly(state.getSessionId());
         if (state.getStages().isEmpty()) {
             return;
         }
@@ -580,6 +591,22 @@ public class AgentSessionService {
                     item.setNote("收口自动挑勾");
                 }
             }
+        }
+    }
+
+    /** 沙箱终态销毁（静默）：端口缺席（provider 为 null 或 bean 缺席 getIfAvailable() 为 null）
+     *  静默跳过；destroy 抛错只记 WARN 不外溢——本方法经 finalizeStages 在 run 线程/HTTP 线程/
+     *  守卫线程三种上下文被调，本类全程无持锁区，destroy 内部 HTTP 调用无锁竞争；
+     *  销毁失败不重试，由沙箱实现侧清扫循环（Janitor）兜底回收 */
+    private void destroySandboxQuietly(String sessionId) {
+        if (sandbox == null) {
+            return;
+        }
+        try {
+            sandbox.destroy(sessionId);
+        } catch (Exception e) {
+            log.warn("agent 会话沙箱销毁失败（清扫循环兜底回收）, sessionId={}, error={}",
+                    sessionId, e.getMessage());
         }
     }
 

@@ -1,6 +1,7 @@
 package com.bidr.cube.config;
 
 import com.bidr.cube.CubeSandboxProvider;
+import com.bidr.cube.SandboxJanitor;
 import com.bidr.llm.agent.sandbox.AgentSandbox;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -113,5 +114,40 @@ class CubeSandboxAutoConfigurationTest {
             assertThat(props.getAdminTimeout()).isEqualTo(86400L);
             assertThat(props.getTimeout()).isEqualTo(1800);
         });
+    }
+
+    // ---------------------------------------------------------------- Janitor 装配（M-3 review 第1轮）
+
+    @Test
+    @DisplayName("Janitor 装配①：provider=cube＋最小属性（orphan-cleanup 缺省 true）⇒ SandboxJanitor 在场")
+    void janitorAssembledByDefault() {
+        runner.run(context -> {
+            assertThat(context).hasSingleBean(SandboxJanitor.class);
+            assertThat(context.getBean(SandboxJanitor.class)).isNotNull();
+        });
+    }
+
+    @Test
+    @DisplayName("Janitor 装配②：orphan-cleanup-enabled=false ⇒ 无可用 SandboxJanitor 实例（启动对账整体关闭，provider 腿仍在）")
+    void janitorAbsentWhenOrphanCleanupDisabled() {
+        runner.withPropertyValues("my.agent.sandbox.cube.orphan-cleanup-enabled=false")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(AgentSandbox.class);
+                    // 方法体判定返回 null ⇒ Spring 注册 NullBean；断言实例级（getBeansOfType 会实例化
+                    // 并过滤 NullBean，而 doesNotHaveBean 按声明返回类型预测会误报在场）
+                    assertThat(context.getBeansOfType(SandboxJanitor.class)).isEmpty();
+                });
+    }
+
+    @Test
+    @DisplayName("Janitor 装配③：宿主自建 AgentSandbox（非 CubeSandboxProvider）⇒ 让位无 SandboxJanitor 实例（无租约可清扫）")
+    void janitorAbsentWhenHostProviderWins() {
+        runner.withBean(AgentSandbox.class, () -> mock(AgentSandbox.class))
+                .run(context -> {
+                    assertThat(context).hasSingleBean(AgentSandbox.class);
+                    assertThat(context.getBean(AgentSandbox.class))
+                            .isNotInstanceOf(CubeSandboxProvider.class);
+                    assertThat(context.getBeansOfType(SandboxJanitor.class)).isEmpty();
+                });
     }
 }

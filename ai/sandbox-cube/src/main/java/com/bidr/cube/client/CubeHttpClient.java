@@ -20,7 +20,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -54,6 +57,14 @@ public class CubeHttpClient {
     /** 管理沙箱 metadata 标记键值（role=cube-admin）：对账/清理不误伤业务会话 */
     public static final String ADMIN_METADATA_ROLE = "cube-admin";
 
+    /**
+     * 进程实例身份（构造时生成，一进程一 UUID）：随 create metadata 的 {@code instance-id}
+     * 键下发（业务/管理沙箱同源），启动孤儿对账据此区分「本进程活箱（含启动窗口请求线程
+     * 刚建的）／他实例活跃箱（多实例/滚动重启/多环境共用平台）／上进程遗留的存量代际孤儿」
+     * ——owner-id 只能判「是不是本系统」，instance-id 补上「是不是这个进程」（I-1 防线）。
+     */
+    private final String instanceId = UUID.randomUUID().toString();
+
     /** create 重试总次数（探针 ×3＋500ms 固定；生产 ×4＋指数退避起步 500ms——500/1000/2000） */
     private static final int CREATE_ATTEMPTS = 4;
 
@@ -86,6 +97,14 @@ public class CubeHttpClient {
         this.properties = properties;
     }
 
+    /**
+     * 本进程实例身份（{@code instance-id} create metadata 键同源值）：
+     * {@code SandboxJanitor} 对账第④重排除判据消费，包外可读供测试断言。
+     */
+    public String getInstanceId() {
+        return instanceId;
+    }
+
     // ---------------------------------------------------------------- 契约记录（棒3 消费，不得改形状）
 
     /**
@@ -98,6 +117,15 @@ public class CubeHttpClient {
      * exec 产物：exitCode（超时为 -1）、stdout/stderr 文本、timedOut。
      */
     public record ExecResult(int exitCode, String stdout, String stderr, boolean timedOut) {
+    }
+
+    /**
+     * list 全条目：{@code sandboxID}/{@code metadata}/{@code state}（字段名照平台响应）。
+     * 🔴 真机实测 CubeMaster 的 list 不回显创建时 metadata（agent-system 探针口径：
+     * v1/v2 均剥离自定义键）——{@code metadata} 缺席即空 map，对账/清扫<b>不得</b>把它
+     * 当身份判据（身份判定走 {@code properties.ownerId} 匹配的前置写入或沙箱内探针）。
+     */
+    public record SandboxEntry(String sandboxId, Map<String, String> metadata, String state) {
     }
 
     // ---------------------------------------------------------------- 命令面（走 apiUrl + X-API-Key）
@@ -118,10 +146,10 @@ public class CubeHttpClient {
 
     /**
      * 建常驻管理沙箱（{@code AdminSandboxManager} 专用）：挂载 {@code {hostRoot} → {hostRoot}}
-     * （内外路径一致 ⇒ mkdir 的路径即业务沙箱 hostPath，无需换算）；metadata 只带
-     * {@code role=cube-admin} 标记键（对账/清理不误伤——业务对账键是 session-id）；
-     * 不下发 network.allowOut（管理面只做 mkdir）。重试口径与 {@link #create(String)} 相同
-     * （瞬态 ×4＋指数退避；4xx 直接抛）。
+     * （内外路径一致 ⇒ mkdir 的路径即业务沙箱 hostPath，无需换算）；metadata 带
+     * {@code role=cube-admin}＋{@code owner} 标记键（对账/清理不误伤——业务对账键是
+     * session-id，owner 是所有权判据）；不下发 network.allowOut（管理面只做 mkdir）。
+     * 重试口径与 {@link #create(String)} 相同（瞬态 ×4＋指数退避；4xx 直接抛）。
      */
     public CreateResult createAdmin() {
         return createWithBody(buildAdminCreateBody());
@@ -215,6 +243,42 @@ public class CubeHttpClient {
                 }
             }
             return ids;
+        } catch (IOException e) {
+            throw new ServiceException("list 沙箱响应解析失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 列出平台<b>全量</b>沙箱条目（不过滤）：GET {@code /sandboxes}——与
+     * {@link #listSandboxIds(String, String)} 同请求，返回全条目，owner/state 过滤由
+     * 对账/清扫层自行执行。metadata 解析口径：平台回显什么就原样转 {@code Map}，
+     * 缺席（真机实测 CubeMaster list 剥离自定义 metadata）即空 map（见
+     * {@link SandboxEntry} 注）；state 缺席即空串。≥400 上抛
+     * {@link ServiceException}（与 {@code listSandboxIds} 同纪律：5xx 响应体可能是
+     * 合法 JSON，不查状态码会被静默当空集——调用方对账降级依赖异常信号）。
+     */
+    public List<SandboxEntry> listSandboxEntries() {
+        HttpRequest request = adminBuilder(adminBase() + "/sandboxes")
+                .timeout(CALL_TIMEOUT)
+                .GET()
+                .build();
+        HttpResponse<String> resp = send(request, "list 沙箱");
+        if (resp.statusCode() >= 400) {
+            throw new ServiceException("list 沙箱失败 HTTP " + resp.statusCode() + ": " + resp.body());
+        }
+        try {
+            List<SandboxEntry> entries = new ArrayList<>();
+            for (JsonNode node : OM.readTree(resp.body())) {
+                Map<String, String> metadata = new LinkedHashMap<>();
+                JsonNode meta = node.path("metadata");
+                if (meta.isObject()) {
+                    meta.fields().forEachRemaining(field ->
+                            metadata.put(field.getKey(), field.getValue().asText("")));
+                }
+                entries.add(new SandboxEntry(node.path("sandboxID").asText(""),
+                        metadata, node.path("state").asText("")));
+            }
+            return entries;
         } catch (IOException e) {
             throw new ServiceException("list 沙箱响应解析失败: " + e.getMessage());
         }
@@ -325,12 +389,14 @@ public class CubeHttpClient {
                 .header("Authorization", basicRoot());
     }
 
-    /** create body：{templateID, timeout, metadata{session-id, host-mount JSON 字符串}, network?} */
+    /** create body：{templateID, timeout, metadata{owner, session-id, instance-id, host-mount JSON 字符串}, network?} */
     private byte[] buildCreateBody(String sessionId) {
         ArrayNode mounts = OM.createArrayNode()
                 .add(mount(hostRoot() + "/" + sessionId, "/workspace"));
         ObjectNode metadata = OM.createObjectNode();
+        metadata.put("owner", properties.getOwnerId());
         metadata.put("session-id", sessionId);
+        metadata.put("instance-id", instanceId);
         ObjectNode payload = OM.createObjectNode();
         payload.put("templateID", properties.getTemplate());
         payload.put("timeout", properties.getAdminTimeout());
@@ -345,11 +411,13 @@ public class CubeHttpClient {
         return serializeCreateBody(payload, metadata, mounts);
     }
 
-    /** 管理沙箱 create body：挂载 {hostRoot}→{hostRoot}（内外一致），metadata 只带 role=cube-admin 标记 */
+    /** 管理沙箱 create body：挂载 {hostRoot}→{hostRoot}（内外一致），metadata 带 role=cube-admin＋owner＋instance-id 标记 */
     private byte[] buildAdminCreateBody() {
         ArrayNode mounts = OM.createArrayNode().add(mount(hostRoot(), hostRoot()));
         ObjectNode metadata = OM.createObjectNode();
         metadata.put("role", ADMIN_METADATA_ROLE);
+        metadata.put("owner", properties.getOwnerId());
+        metadata.put("instance-id", instanceId);
         ObjectNode payload = OM.createObjectNode();
         payload.put("templateID", properties.getTemplate());
         payload.put("timeout", properties.getAdminTimeout());

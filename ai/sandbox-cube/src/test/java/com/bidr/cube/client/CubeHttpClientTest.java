@@ -41,7 +41,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 非空才下发 network.allowOut）＋瞬态 500 ×4 重试且 4xx 不重试；exec Connect 信封前 5 字节
  * 精确断言＋响应帧流（exit 0 无 exitCode 帧→0、exit status 7 传递、stdout base64/明文双态
  * 解码、end-stream error 帧抛 ServiceException）；HTTP 超时→timedOut；files 写读 roundtrip；
- * delete 404 静默幂等；listSandboxIds 按 metadata 过滤；dataBaseUrl 显式覆盖/缺省 host 推导。
+ * delete 404 静默幂等；listSandboxIds 按 metadata 过滤；listSandboxEntries 全条目解析
+ * （metadata 缺席⇒空 map、state 缺席⇒空串、≥400 上抛）；createAdmin body（role=cube-admin
+ * ＋owner）；create/createAdmin 的 metadata.owner=缺省 ownerId；dataBaseUrl 显式覆盖/缺省
+ * host 推导。
  *
  * @author Sharp
  * @since 2026/11/16
@@ -61,6 +64,7 @@ class CubeHttpClientTest {
     private final List<String> createBodies = new ArrayList<>();
     private int createRemaining500;
     private Integer createStatusOverride;
+    private Integer listStatusOverride;
     private int deleteCalls;
     private int sandboxDeletesUntilMissing;
     private final List<byte[]> execRequests = new ArrayList<>();
@@ -114,8 +118,14 @@ class CubeHttpClientTest {
             respond(exchange, 201, "{\"sandboxID\":\"" + SID + "\",\"domain\":\"" + SID
                     + ".cube.example\",\"envdVersion\":\"0.2.0\"}");
         } else if (path.equals("/sandboxes") && "GET".equals(method)) {
-            respond(exchange, 200, "[{\"sandboxID\":\"s1\",\"metadata\":{\"session-id\":\"sess-A\"}},"
-                    + "{\"sandboxID\":\"s2\",\"metadata\":{\"session-id\":\"sess-B\"}},"
+            if (listStatusOverride != null) {
+                respond(exchange, listStatusOverride, "{\"error\":\"boom\"}");
+                return;
+            }
+            // s1 带多键 metadata＋state；s2 单键；s3 两者全缺（缺席语义钉桩）
+            respond(exchange, 200, "[{\"sandboxID\":\"s1\",\"metadata\":{\"session-id\":\"sess-A\","
+                    + "\"owner\":\"epc-ai\"},\"state\":\"running\"},"
+                    + "{\"sandboxID\":\"s2\",\"metadata\":{\"session-id\":\"sess-B\"},\"state\":\"paused\"},"
                     + "{\"sandboxID\":\"s3\"}]");
         } else if (path.equals("/sandboxes/" + SID) && "DELETE".equals(method)) {
             deleteCalls++;
@@ -253,6 +263,8 @@ class CubeHttpClientTest {
         assertEquals("tpl-test", body.path("templateID").asText());
         assertEquals(properties.getAdminTimeout(), body.path("timeout").asLong());
         assertEquals("sess-42", body.path("metadata").path("session-id").asText());
+        assertEquals("epc-ai", body.path("metadata").path("owner").asText(),
+                "metadata.owner=缺省 ownerId（对账防误杀判据）：\n" + createBodies.get(0));
 
         // 🔴 host-mount 是 JSON 字符串（数组 422）：先当文本取出再解析成数组
         String hostMountText = body.path("metadata").path("host-mount").asText();
@@ -300,6 +312,25 @@ class CubeHttpClientTest {
         assertTrue(allowOut.isArray());
         assertEquals(List.of("10.0.0.0/8", "registry.internal:5000"),
                 List.of(allowOut.get(0).asText(), allowOut.get(1).asText()));
+    }
+
+    @Test
+    @DisplayName("createAdmin body：metadata 带 role=cube-admin＋owner=缺省 ownerId；host-mount={hostRoot}→{hostRoot} 内外一致")
+    void createAdminShapesBody() throws IOException {
+        client.createAdmin();
+        assertEquals(1, createBodies.size());
+        JsonNode body = OM.readTree(createBodies.get(0));
+        assertEquals("tpl-test", body.path("templateID").asText());
+        assertEquals(properties.getAdminTimeout(), body.path("timeout").asLong());
+        assertEquals("cube-admin", body.path("metadata").path("role").asText(), "role 标记键保持");
+        assertEquals("epc-ai", body.path("metadata").path("owner").asText(),
+                "metadata.owner=缺省 ownerId：\n" + createBodies.get(0));
+        assertFalse(body.has("network"), "管理沙箱不下发 network.allowOut");
+        String hostMountText = body.path("metadata").path("host-mount").asText();
+        JsonNode hostMount = OM.readTree(hostMountText);
+        assertTrue(hostMount.isArray(), "host-mount 仍为 JSON 字符串：\n" + createBodies.get(0));
+        assertEquals("/data/sandbox", hostMount.get(0).path("hostPath").asText());
+        assertEquals("/data/sandbox", hostMount.get(0).path("mountPath").asText(), "内外路径一致");
     }
 
     // ---------------------------------------------------------------- exec
@@ -430,6 +461,32 @@ class CubeHttpClientTest {
         assertEquals(List.of("s1"), client.listSandboxIds("session-id", "sess-A"));
         assertTrue(client.listSandboxIds("session-id", "nope").isEmpty());
         assertTrue(client.listSandboxIds("other-key", "sess-A").isEmpty());
+    }
+
+    @Test
+    @DisplayName("listSandboxEntries 全条目不过滤：metadata 多键原样转 Map、缺席⇒空 map；state 缺席⇒空串")
+    void listSandboxEntriesReturnsAllEntries() {
+        List<CubeHttpClient.SandboxEntry> entries = client.listSandboxEntries();
+        assertEquals(3, entries.size(), "全条目返回（不过滤）");
+        CubeHttpClient.SandboxEntry first = entries.get(0);
+        assertEquals("s1", first.sandboxId());
+        assertEquals(Map.of("session-id", "sess-A", "owner", "epc-ai"), first.metadata(),
+                "metadata 多键原样解析");
+        assertEquals("running", first.state());
+        assertEquals("s2", entries.get(1).sandboxId());
+        assertEquals("paused", entries.get(1).state());
+        CubeHttpClient.SandboxEntry bare = entries.get(2);
+        assertEquals("s3", bare.sandboxId());
+        assertTrue(bare.metadata().isEmpty(), "无 metadata ⇒ 空 map（平台剥离口径）");
+        assertEquals("", bare.state(), "无 state ⇒ 空串");
+    }
+
+    @Test
+    @DisplayName("listSandboxEntries ≥400 ⇒ ServiceException（5xx 合法 JSON 不查状态码会被当空集——既有纪律）")
+    void listSandboxEntriesThrowsOnHttpError() {
+        listStatusOverride = 500;
+        ServiceException e = assertThrows(ServiceException.class, () -> client.listSandboxEntries());
+        assertTrue(e.getMessage().contains("500"), e.getMessage());
     }
 
     // ---------------------------------------------------------------- dataBaseUrl 推导（M-6）

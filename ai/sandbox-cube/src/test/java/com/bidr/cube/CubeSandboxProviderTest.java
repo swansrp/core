@@ -26,9 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -518,6 +520,104 @@ class CubeSandboxProviderTest {
         assertTrue(fake.ops.contains("delete:" + SID), "对账到的实例照删（404 静默在 client 内）");
         assertTrue(fake.ops.stream().noneMatch(op -> op.startsWith("exec:rm")),
                 "宿主目录不删（归档策略后续批次定）");
+    }
+
+    // ---------------------------------------------------------------- touch（活跃续约，SandboxJanitor 经 leaseView 消费）
+
+    @Test
+    @DisplayName("touch·exec：map 命中复用后 lastActiveAt 前进、createdAt 不变（leaseView 断言）")
+    void execTouchesLeaseLastActiveOnly() throws InterruptedException {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of("sbx-touch"));
+        when(client.exec(eq("sbx-touch"), anyString(), anyLong()))
+                .thenReturn(new CubeHttpClient.ExecResult(0, "", "", false));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+
+        provider.ensure(SID, List.of());
+        CubeSandboxProvider.SandboxLease t0 = provider.leaseView().get(SID);
+        Thread.sleep(20);
+
+        provider.exec(SID, "true", 10_000);
+        CubeSandboxProvider.SandboxLease t1 = provider.leaseView().get(SID);
+
+        assertTrue(t1.lastActiveAtMillis() > t0.lastActiveAtMillis(),
+                "exec 实际触碰沙箱 ⇒ lastActiveAt 必须前进（否则长会话会被 idle 清扫误杀）");
+        assertEquals(t0.createdAtMillis(), t1.createdAtMillis(),
+                "map 命中复用＝续约不建账 ⇒ createdAt 不变");
+        assertEquals("sbx-touch", t1.sandboxId());
+    }
+
+    @Test
+    @DisplayName("touch·putIfAlive 命中：写入成功后 lastActiveAt 前进（上传工作副本＝活跃）")
+    void putIfAliveHitTouchesLease() throws InterruptedException {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of("sbx-touch"));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+        provider.ensure(SID, List.of());
+        CubeSandboxProvider.SandboxLease t0 = provider.leaseView().get(SID);
+        Thread.sleep(20);
+
+        assertTrue(provider.putIfAlive(SID, "a.txt", new byte[]{1}));
+
+        CubeSandboxProvider.SandboxLease t1 = provider.leaseView().get(SID);
+        assertTrue(t1.lastActiveAtMillis() > t0.lastActiveAtMillis(), "write 成功 ⇒ lastActiveAt 前进");
+        assertEquals(t0.createdAtMillis(), t1.createdAtMillis(), "建账只发生在 ensure 通道 ⇒ createdAt 不变");
+    }
+
+    @Test
+    @DisplayName("touch·putIfAlive miss：返回 false 且零建账零续约（leaseView 恒空——绝不 touch）")
+    void putIfAliveMissDoesNotTouch() {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+
+        assertFalse(provider.putIfAlive(SID, "a.txt", new byte[]{1}));
+
+        assertTrue(provider.leaseView().isEmpty(), "map miss ⇒ 不 touch 也不建账");
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    @DisplayName("touch·exec 超时路径：timedOut 结果同样补续约（M-1——长命令尾段不得被 idle 清扫连箱回收）")
+    void execTimeoutStillTouchesLease() throws InterruptedException {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of("sbx-touch"));
+        when(client.exec(eq("sbx-touch"), anyString(), anyLong()))
+                .thenReturn(new CubeHttpClient.ExecResult(-1, "", "", true));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+        provider.ensure(SID, List.of());
+        CubeSandboxProvider.SandboxLease t0 = provider.leaseView().get(SID);
+        Thread.sleep(20);
+
+        var result = provider.exec(SID, "sleep 600", 1_000);
+
+        assertTrue(result.timedOut());
+        CubeSandboxProvider.SandboxLease t1 = provider.leaseView().get(SID);
+        assertTrue(t1.lastActiveAtMillis() > t0.lastActiveAtMillis(),
+                "超时路径也必须续约（M-1：exec 完成后补 touch，成功/超时均生效）");
+        assertEquals(t0.createdAtMillis(), t1.createdAtMillis(), "补 touch 不建账 ⇒ createdAt 不变");
+    }
+
+    @Test
+    @DisplayName("killLease·delete 失败：租约放回注册表（M-2——下轮清扫可重试，不产生进程内不可回收泄漏）")
+    void killLeaseRestoresLeaseOnDeleteFailure() {
+        CubeHttpClient client = mock(CubeHttpClient.class);
+        when(client.listSandboxIds("session-id", SID)).thenReturn(List.of("sbx-leak"));
+        CubeSandboxProvider provider = new CubeSandboxProvider(client,
+                mock(AdminSandboxManager.class), new CubeSandboxProperties());
+        provider.ensure(SID, List.of());
+        CubeSandboxProvider.SandboxLease before = provider.leaseView().get(SID);
+        doThrow(new ServiceException("delete 沙箱失败 HTTP 500: boom")).when(client).delete("sbx-leak");
+
+        assertThrows(ServiceException.class, () -> provider.destroy(SID));
+
+        CubeSandboxProvider.SandboxLease after = provider.leaseView().get(SID);
+        assertTrue(after != null, "delete 失败 ⇒ 租约必须放回（否则清扫轮下轮看不到该箱，无人再回收）");
+        assertEquals(before.sandboxId(), after.sandboxId(), "放回的是被逐出的原租约");
+        assertEquals(before.createdAtMillis(), after.createdAtMillis(), "放回不改 createdAt");
     }
 
     // ---------------------------------------------------------------- 装配形状（确保 Provider 实现端口）

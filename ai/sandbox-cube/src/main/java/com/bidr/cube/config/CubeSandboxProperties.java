@@ -68,4 +68,34 @@ public class CubeSandboxProperties {
      * 命令执行缺省超时（秒；exec 单次调用可覆盖）
      */
     private int timeout = 1800;
+
+    /**
+     * 沙箱所有权身份键：随 create body 的 {@code metadata.owner} 下发（业务/管理沙箱同源）；
+     * 对账/清扫只回收 owner 等于本值的沙箱——平台共租户下防误杀他方沙箱的判据
+     * （清扫/对账层消费）。多环境共用同一 CubeMaster 时建议各环境配不同 owner-id
+     * （如 epc-ai-pre / epc-ai-dev）。
+     */
+    private String ownerId = "epc-ai";
+
+    /**
+     * 空闲回收阈值（秒）：会话沙箱最后活跃距今超过该值即判定空闲可回收（清扫循环消费）。
+     */
+    private long idleTimeout = 600;
+
+    /**
+     * 绝对寿命封顶（秒）：从创建起算的最大存活时长，到期无论活跃与否一律回收——防长会话
+     * 僵尸沙箱无限占用宿主资源（清扫循环消费）。
+     */
+    private long maxLifetime = 21600;
+
+    /**
+     * 清扫循环间隔（秒）：孤儿/过期沙箱对账的轮询周期（清扫循环消费）。
+     */
+    private long cleanupInterval = 60;
+
+    /**
+     * 启动孤儿对账开关：进程启动时对账一遍平台沙箱列表，回收 owner 匹配但无会话归属的
+     * 遗留沙箱（上次进程异常退出留下的孤儿）；关闭即跳过启动对账（清扫/对账层消费）。
+     */
+    private boolean orphanCleanupEnabled = true;
 }
