@@ -5,6 +5,7 @@ import com.bidr.cube.SandboxJanitor;
 import com.bidr.cube.admin.AdminSandboxManager;
 import com.bidr.cube.client.CubeHttpClient;
 import com.bidr.llm.agent.sandbox.AgentSandbox;
+import com.bidr.llm.agent.session.AgentSessionStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -90,6 +91,7 @@ public class CubeSandboxAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(SandboxJanitor.class)
     public SandboxJanitor sandboxJanitor(ObjectProvider<AgentSandbox> agentSandbox,
+                                         ObjectProvider<AgentSessionStore> sessionStores,
                                          CubeHttpClient client,
                                          CubeSandboxProperties properties) {
         if (!properties.isOrphanCleanupEnabled()) {
@@ -103,7 +105,8 @@ public class CubeSandboxAutoConfiguration {
         log.info("Cube 沙箱清扫器装配: interval=" + properties.getCleanupInterval() + "s"
                 + " idle-timeout=" + properties.getIdleTimeout() + "s"
                 + " max-lifetime=" + properties.getMaxLifetime() + "s"
-                + " owner=" + properties.getOwnerId());
-        return new SandboxJanitor(provider, client, properties);
+                + " owner=" + properties.getOwnerId()
+                + " 会话活跃豁免idle=on");
+        return new SandboxJanitor(provider, client, properties, sessionStores);
     }
 }

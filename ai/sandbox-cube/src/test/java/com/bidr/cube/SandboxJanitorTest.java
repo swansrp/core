@@ -4,9 +4,12 @@ import com.bidr.cube.admin.AdminSandboxManager;
 import com.bidr.cube.client.CubeHttpClient;
 import com.bidr.cube.config.CubeSandboxProperties;
 import com.bidr.kernel.exception.ServiceException;
+import com.bidr.llm.agent.session.AgentSessionState;
+import com.bidr.llm.agent.session.AgentSessionStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
 import java.util.Map;
@@ -31,7 +34,8 @@ import static org.mockito.Mockito.when;
  *       （🔴 宁可漏杀不可误杀）；owner 匹配但 session-id 缺失保守跳过；只有
  *       owner＋session-id 双全的本系统孤儿才 delete；单条 delete 失败 warn 继续；</li>
  *   <li><b>清扫双判据</b>（时间注入）：idle 超时杀／寿命超限杀（idle 未超也杀）／未超不杀；
- *       回收后注册表逐出（leaseView 断言）；</li>
+ *       <b>会话活跃豁免</b>：会话 RUNNING/PAUSED 时 idle 超时不清、终态照清、寿命超限不豁免、
+ *       判活异常按不活跃保守处理；回收后注册表逐出（leaseView 断言）；</li>
  *   <li><b>单轮异常隔离</b>：一条 killLease 抛异常不中断其余条目；</li>
  *   <li><b>SmartLifecycle 生命周期自查（静态闸门 R-2）</b>：start＝先跑启动对账（对账失败
  *       吞掉不影响启动）再起调度；stop＝isRunning 落 false＋调度线程池终止。</li>
@@ -75,6 +79,23 @@ class SandboxJanitorTest {
 
     private SandboxJanitor janitor(CubeSandboxProvider provider, AtomicLong now) {
         return new SandboxJanitor(provider, client, properties, now::get);
+    }
+
+    /** 注入会话存储（ObjectProvider 形态，与自动配置同口径）：活性豁免用例共用 */
+    @SuppressWarnings("unchecked")
+    private SandboxJanitor janitorWithStore(CubeSandboxProvider provider, AtomicLong now,
+                                            AgentSessionStore store) {
+        ObjectProvider<AgentSessionStore> stores = mock(ObjectProvider.class);
+        when(stores.getIfAvailable()).thenReturn(store);
+        return new SandboxJanitor(provider, client, properties, stores, now::get);
+    }
+
+    /** 会话状态桩（只关心 status：RUNNING/PAUSED＝活跃，终态＝可清） */
+    private static AgentSessionState state(String sessionId, String status) {
+        AgentSessionState state = new AgentSessionState();
+        state.setSessionId(sessionId);
+        state.setStatus(status);
+        return state;
     }
 
     /** list 全量条目便捷构造（state 对对账判定无影响，固定 running） */
@@ -236,6 +257,71 @@ class SandboxJanitorTest {
 
         verify(client, never()).delete(anyString());
         assertTrue(provider.leaseView().containsKey("s-fresh"), "未过期租约必须保留");
+    }
+
+    @Test
+    @DisplayName("会话活跃豁免：RUNNING/PAUSED 期间 idle 超时也不清（长思考不碰沙箱≠会话已死）")
+    void cleanupSkipsIdleWhenSessionActive() {
+        long base = System.currentTimeMillis();
+        CubeSandboxProvider provider = leasedProvider("s-run", "sbx-run", base);
+        when(client.listSandboxIds("session-id", "s-pause")).thenReturn(List.of("sbx-pause"));
+        provider.ensure("s-pause", List.of());
+        AgentSessionStore store = mock(AgentSessionStore.class);
+        when(store.getState("s-run")).thenReturn(state("s-run", AgentSessionState.RUNNING));
+        when(store.getState("s-pause")).thenReturn(state("s-pause", AgentSessionState.PAUSED));
+        AtomicLong now = new AtomicLong(base + 10_000 + 600 * 1000);   // idle 判据已超
+
+        janitorWithStore(provider, now, store).cleanupExpired();
+
+        verify(client, never()).delete(anyString());
+        assertTrue(provider.leaseView().containsKey("s-run"), "RUNNING 会话的箱必须保留");
+        assertTrue(provider.leaseView().containsKey("s-pause"), "PAUSED 会话的箱必须保留");
+    }
+
+    @Test
+    @DisplayName("豁免不覆盖终态：会话 FINISHED 时 idle 超时照常回收")
+    void cleanupKillsIdleWhenSessionTerminal() {
+        long base = System.currentTimeMillis();
+        CubeSandboxProvider provider = leasedProvider("s-done", "sbx-done", base);
+        AgentSessionStore store = mock(AgentSessionStore.class);
+        when(store.getState("s-done")).thenReturn(state("s-done", AgentSessionState.FINISHED));
+        AtomicLong now = new AtomicLong(base + 10_000 + 600 * 1000);
+
+        janitorWithStore(provider, now, store).cleanupExpired();
+
+        verify(client).delete("sbx-done");
+        assertFalse(provider.leaseView().containsKey("s-done"));
+    }
+
+    @Test
+    @DisplayName("豁免不覆盖寿命硬上限：RUNNING 会话寿命超限仍回收（防僵死会话无限占箱）")
+    void cleanupKillsLifetimeExpiredEvenIfSessionActive() {
+        long base = System.currentTimeMillis();
+        properties.setMaxLifetime(1);
+        properties.setIdleTimeout(600);
+        CubeSandboxProvider provider = leasedProvider("s-run2", "sbx-run2", base);
+        AgentSessionStore store = mock(AgentSessionStore.class);
+        when(store.getState("s-run2")).thenReturn(state("s-run2", AgentSessionState.RUNNING));
+        AtomicLong now = new AtomicLong(base + 2_000);
+
+        janitorWithStore(provider, now, store).cleanupExpired();
+
+        verify(client).delete("sbx-run2");
+        assertFalse(provider.leaseView().containsKey("s-run2"));
+    }
+
+    @Test
+    @DisplayName("判活异常保守处理：store 查询抛错按不活跃处理，idle 超时照常回收")
+    void cleanupKillsWhenSessionLookupFails() {
+        long base = System.currentTimeMillis();
+        CubeSandboxProvider provider = leasedProvider("s-err", "sbx-err", base);
+        AgentSessionStore store = mock(AgentSessionStore.class);
+        when(store.getState("s-err")).thenThrow(new ServiceException("redis down"));
+        AtomicLong now = new AtomicLong(base + 10_000 + 600 * 1000);
+
+        assertDoesNotThrow(() -> janitorWithStore(provider, now, store).cleanupExpired());
+
+        verify(client).delete("sbx-err");
     }
 
     @Test

@@ -2,7 +2,10 @@ package com.bidr.cube;
 
 import com.bidr.cube.client.CubeHttpClient;
 import com.bidr.cube.config.CubeSandboxProperties;
+import com.bidr.llm.agent.session.AgentSessionState;
+import com.bidr.llm.agent.session.AgentSessionStore;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.SmartLifecycle;
 
 import java.util.List;
@@ -31,8 +34,12 @@ import java.util.function.LongSupplier;
  *   <li><b>清扫轮</b>：守护线程单线程 {@link ScheduledExecutorService}（间隔＝
  *       cleanupInterval 秒），遍历 {@code provider.leaseView()}，双判据任一命中即 killLease
  *       ＋逐出——① 空闲超时 {@code now − lastActiveAt > idleTimeout×1000} ② 寿命超限
- *       {@code now − createdAt > maxLifetime×1000}。逐条 try/catch（单条失败 warn 继续），
- *       整轮再兜一层 try/catch（warn 后等下一轮）＝单轮异常隔离。</li>
+ *       {@code now − createdAt > maxLifetime×1000}。<b>会话活跃豁免</b>（2026-11-17 追加）：
+ *       idle 判据命中时先查会话状态，<b>RUNNING/PAUSED 一律不清</b>——沙箱触碰只发生在
+ *       exec/fetch/put，模型长思考（>idleTimeout 不碰沙箱）时箱会被误回收、未 fetch 的
+ *       中间产物丢失；寿命超限判据<b>不豁免</b>（硬上限，防僵死会话无限占箱）。
+ *       逐条 try/catch（单条失败 warn 继续），整轮再兜一层 try/catch（warn 后等下一轮）
+ *       ＝单轮异常隔离。</li>
  *   <li><b>停止</b>：shutdown 调度器＋短超时 awaitTermination（超时 shutdownNow 补刀），
  *       {@link #isRunning()} 落 false。</li>
  * </ul>
@@ -68,20 +75,39 @@ public class SandboxJanitor implements SmartLifecycle {
     /** 毫秒时钟（清扫双判据共用）；生产 System::currentTimeMillis，测试注入快进时钟 */
     private final LongSupplier clock;
 
+    /**
+     * 会话存储（可选，相位安全懒取）：清扫轮判「会话仍活跃」用——RUNNING/PAUSED 豁免 idle 回收。
+     * 为 null（独立装配/单测）时退回纯时间判据，行为与旧版一致。
+     */
+    private final ObjectProvider<AgentSessionStore> sessionStores;
+
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private volatile ScheduledExecutorService scheduler;
 
     public SandboxJanitor(CubeSandboxProvider provider, CubeHttpClient client,
                           CubeSandboxProperties properties) {
-        this(provider, client, properties, System::currentTimeMillis);
+        this(provider, client, properties, null, System::currentTimeMillis);
+    }
+
+    public SandboxJanitor(CubeSandboxProvider provider, CubeHttpClient client,
+                          CubeSandboxProperties properties,
+                          ObjectProvider<AgentSessionStore> sessionStores) {
+        this(provider, client, properties, sessionStores, System::currentTimeMillis);
     }
 
     SandboxJanitor(CubeSandboxProvider provider, CubeHttpClient client,
                    CubeSandboxProperties properties, LongSupplier clock) {
+        this(provider, client, properties, null, clock);
+    }
+
+    SandboxJanitor(CubeSandboxProvider provider, CubeHttpClient client,
+                   CubeSandboxProperties properties,
+                   ObjectProvider<AgentSessionStore> sessionStores, LongSupplier clock) {
         this.provider = provider;
         this.client = client;
         this.properties = properties;
+        this.sessionStores = sessionStores;
         this.clock = clock;
     }
 
@@ -152,11 +178,12 @@ public class SandboxJanitor implements SmartLifecycle {
     // ---------------------------------------------------------------- 清扫轮
 
     /**
-     * 清扫轮（单轮）：遍历活跃租约快照，双判据任一命中即 {@code killLease}（内部＝注册表
-     * 逐出＋delete，404 幂等）——① 空闲超时（now−lastActiveAt＞idleTimeout）② 寿命超限
-     * （now−createdAt＞maxLifetime）。逐条 try/catch：单条 kill 失败 warn 后继续其余条目
-     * （注册表已先逐出，下轮对账寻址兜底）；整轮再兜一层 try/catch：快照遍历自身异常
-     * warn 后直接返回，等下一轮——「单轮异常隔离」语义。
+     * 清扫轮（单轮）：遍历活跃租约快照，判据命中即 {@code killLease}（内部＝注册表
+     * 逐出＋delete，404 幂等）——① 寿命超限（now−createdAt＞maxLifetime，硬上限不豁免）
+     * ② 空闲超时（now−lastActiveAt＞idleTimeout）且<b>会话不活跃</b>——RUNNING/PAUSED
+     * 期间豁免 idle（模型长思考不碰沙箱 ≠ 会话已死，清掉会丢未 fetch 的中间产物）。
+     * 逐条 try/catch：单条 kill 失败 warn 后继续其余条目（注册表已先逐出，下轮对账寻址兜底）；
+     * 整轮再兜一层 try/catch：快照遍历自身异常 warn 后直接返回，等下一轮——「单轮异常隔离」语义。
      */
     void cleanupExpired() {
         try {
@@ -167,15 +194,21 @@ public class SandboxJanitor implements SmartLifecycle {
                     : provider.leaseView().entrySet()) {
                 String sessionId = entry.getKey();
                 CubeSandboxProvider.SandboxLease lease = entry.getValue();
-                boolean idleExpired = now - lease.lastActiveAtMillis() > idleTimeoutMs;
                 boolean lifetimeExpired = now - lease.createdAtMillis() > maxLifetimeMs;
+                boolean idleExpired = now - lease.lastActiveAtMillis() > idleTimeoutMs;
                 if (!idleExpired && !lifetimeExpired) {
+                    continue;
+                }
+                // 会话活跃豁免：只挡 idle 判据（寿命是硬上限，长跑会话也不能无限占箱）
+                if (idleExpired && !lifetimeExpired && sessionActive(sessionId)) {
+                    log.debug("Cube 沙箱 idle 已超但会话仍活跃，跳过本轮回收: session={} sandbox={} idle={}s",
+                            sessionId, lease.sandboxId(), (now - lease.lastActiveAtMillis()) / 1000);
                     continue;
                 }
                 try {
                     provider.killLease(sessionId);
                     log.info("Cube 沙箱清扫回收: session={} sandbox={} 原因={}",
-                            sessionId, lease.sandboxId(), idleExpired ? "idle超时" : "寿命超限");
+                            sessionId, lease.sandboxId(), lifetimeExpired ? "寿命超限" : "idle超时");
                 } catch (RuntimeException e) {
                     log.warn("Cube 沙箱清扫回收失败（租约已放回注册表，下轮清扫重试；进程重启对账亦可兜底）"
                             + ": session={} err={}", sessionId, e.getMessage());
@@ -183,6 +216,34 @@ public class SandboxJanitor implements SmartLifecycle {
             }
         } catch (RuntimeException e) {
             log.warn("Cube 沙箱清扫轮异常（本轮放弃，等待下一轮）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 会话是否仍活跃（RUNNING/PAUSED）：true＝idle 判据豁免。
+     * 缺省保守口径——session store 缺席/查不到/查询异常一律按<b>不活跃</b>处理（照常清扫），
+     * 避免一次存储抖动就让沙箱永久滞留；真正的长跑保护由寿命上限兜底。
+     */
+    private boolean sessionActive(String sessionId) {
+        ObjectProvider<AgentSessionStore> stores = this.sessionStores;
+        if (stores == null) {
+            return false;
+        }
+        try {
+            AgentSessionStore store = stores.getIfAvailable();
+            if (store == null) {
+                return false;
+            }
+            AgentSessionState state = store.getState(sessionId);
+            if (state == null || state.getStatus() == null) {
+                return false;
+            }
+            String status = state.getStatus();
+            return AgentSessionState.RUNNING.equals(status) || AgentSessionState.PAUSED.equals(status);
+        } catch (RuntimeException e) {
+            log.warn("Cube 沙箱清扫判活失败（按不活跃处理，本轮照常清扫）: session={} err={}",
+                    sessionId, e.getMessage());
+            return false;
         }
     }
 
