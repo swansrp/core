@@ -76,6 +76,43 @@ public class AgentSessionStartPausedTest {
                         .anyMatch(e -> AgentEvent.FILE_ATTACHED.equals(e.getType())));
     }
 
+    /** 预解析通过后登记：payload 带 parse_chars（前端文件卡据此从「已上传」点亮为「已解析」） */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void attachFileCarriesParseCharsWhenPreParsed() throws Exception {
+        AgentSessionService service = service();
+        AgentSessionState state = service.start(AGENT_KEY, payload(), "alice",
+                DetachPolicy.KEEP_RUNNING, true);
+
+        service.attachFile(state.getSessionId(),
+                new FileRef("f-2", "台账.xlsx", 8L, null, null), 1234);
+
+        Map<String, Object> attached = store.events(state.getSessionId(), 0).stream()
+                .filter(e -> AgentEvent.FILE_ATTACHED.equals(e.getType()))
+                .map(e -> (Map<String, Object>) e.getPayload())
+                .findFirst().orElseThrow(AssertionError::new);
+        assertEquals("预解析通过＝事件带正文字符数", 1234, attached.get("parse_chars"));
+        assertEquals("既有键口径不漂移", "f-2", attached.get("file_id"));
+    }
+
+    /** 运行期直传（未经预解析）：不声明 parse_chars，payload 仍是纯引用四键 */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void attachFileWithoutParseKeepsPayloadMinimal() throws Exception {
+        AgentSessionService service = service();
+        AgentSessionState state = service.start(AGENT_KEY, payload(), "alice",
+                DetachPolicy.KEEP_RUNNING, true);
+
+        service.attachFile(state.getSessionId(),
+                new FileRef("f-3", "现场照片.jpg", 9L, "image/jpeg", null));
+
+        Map<String, Object> attached = store.events(state.getSessionId(), 0).stream()
+                .filter(e -> AgentEvent.FILE_ATTACHED.equals(e.getType()))
+                .map(e -> (Map<String, Object>) e.getPayload())
+                .findFirst().orElseThrow(AssertionError::new);
+        assertFalse("未经预解析不得声明已解析", attached.containsKey("parse_chars"));
+    }
+
     @Test
     public void stopBeforeResumeFinalizesStopped() throws Exception {
         AgentSessionService service = service();

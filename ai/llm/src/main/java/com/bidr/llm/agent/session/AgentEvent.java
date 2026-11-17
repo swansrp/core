@@ -107,6 +107,21 @@ public class AgentEvent implements Serializable {
      * file_id/name/size/mime；key 是存储实现私有字段，不进事件流
      */
     public static Map<String, Object> fileAttachedPayload(FileRef ref) {
-        return ref.toEventPayload();
+        return fileAttachedPayload(ref, null);
+    }
+
+    /**
+     * 同上，并携带<b>预解析</b>结论：{@code parse_chars}（预解析正文 Markdown 字符数）。
+     * <p>
+     * 只在「发起前素材」链路出现：附件登记时后端已按 {@code read_attachment} 同一条腿解析过，
+     * 沙箱里也放了 {@code parsed/<名>.md}——模型读的是解析正文，不会再调 {@code read_attachment}。
+     * 前端据此把文件卡从「已上传」点亮为「已解析可读」；键缺席＝未经预解析（运行期直传）。
+     */
+    public static Map<String, Object> fileAttachedPayload(FileRef ref, Integer parseChars) {
+        Map<String, Object> payload = ref.toEventPayload();
+        if (parseChars != null && parseChars > 0) {
+            payload.put("parse_chars", parseChars);
+        }
+        return payload;
     }
 }

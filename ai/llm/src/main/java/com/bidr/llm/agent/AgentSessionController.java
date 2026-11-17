@@ -429,7 +429,7 @@ public class AgentSessionController {
         if (attachmentCount(sessionId) >= maxFilesPerSession) {
             throw new ServiceException("单会话附件数量已达上限 " + maxFilesPerSession + " 个");
         }
-        long seq = agentSessionService.attachFile(sessionId, ref);
+        long seq = agentSessionService.attachFile(sessionId, ref, parsedCharsOf(sessionId, fileId));
         if (seq <= 0) {
             throw new ServiceException("附件已存储但登记失败，请重试");
         }
@@ -852,6 +852,19 @@ public class AgentSessionController {
             throw new ServiceException("附件不存在或已被清理");
         }
         return ref;
+    }
+
+    /**
+     * 预解析正文长度（只认 {@code DONE}）：发起前素材链路在登记附件时把「已解析」事实随
+     * {@code file_attached} 落事件流，前端文件卡据此点亮（文档类模型读的是沙箱
+     * {@code parsed/<名>.md}，不会再调 {@code read_attachment}，只靠工具调用探针永远点不亮）。
+     * <p>
+     * 状态缺席（运行期直传 / 服务重启后内存态丢失 / SKIPPED）返回 null＝不声明已解析。
+     */
+    private Integer parsedCharsOf(String sessionId, String fileId) {
+        AgentFileParseService.ParseView parsed = fileParseService.status(sessionId, fileId);
+        return parsed != null && AgentFileParseService.STATUS_DONE.equals(parsed.status())
+                ? parsed.chars() : null;
     }
 
     /** 批量入参骨架校验：非空、带上限、每个 fileId 过形态闸 */

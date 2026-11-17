@@ -432,11 +432,19 @@ public class AgentSessionService {
      * @return 事件 seq；&lt;=0 表示落库失败（未扩容事件流）
      */
     public long attachFile(String sessionId, FileRef file) {
+        return attachFile(sessionId, file, null);
+    }
+
+    /**
+     * 同上，附带预解析正文长度（{@code parse_chars}）：发起前素材链路在登记时把「已解析」
+     * 事实写进事件流，前端文件卡据此点亮（见 {@link AgentEvent#fileAttachedPayload(FileRef, Integer)}）。
+     */
+    public long attachFile(String sessionId, FileRef file, Integer parseChars) {
         requireState(sessionId);
         if (file == null) {
             throw new ServiceException("附件引用不能为空");
         }
-        return emitAndPublish(sessionId, AgentEvent.FILE_ATTACHED, AgentEvent.fileAttachedPayload(file));
+        return emitAndPublish(sessionId, AgentEvent.FILE_ATTACHED, AgentEvent.fileAttachedPayload(file, parseChars));
     }
 
     /**
