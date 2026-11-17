@@ -82,6 +82,14 @@ public interface AgentLoopListener {
     }
 
     /**
+     * 助手正文上报（工具轮的「边做边讲」）：模型一轮同时产出正文与工具调用时，把正文原样交出——
+     * 会话实现落 {@code AgentEvent.LLM_OUTPUT}，前端在工具组之间显示一行讲解（参考 IDE agent 流）。
+     * <b>纯结论轮不走此口</b>（其正文作为循环结果交回，避免与最终结论卡重复）。默认空实现。
+     */
+    default void onAssistantText(String text) {
+    }
+
+    /**
      * 工具面定形上报（M14 棒2）：引擎把 {@code ToolSpecifications} 采集完的**最终**工具名清单
      * 交出来——含按上下文预算条件追加的回捞工具，故与"模型实际收到什么"逐字一致，
      * 业务侧从 {@code tools(...)} 钩子重算拿不到这一份。

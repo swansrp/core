@@ -662,6 +662,14 @@ public class AgentSessionContext {
                 emit(AgentEvent.TOOL_RESULT, payload);
             }
 
+            /** 工具轮中间正文 ⇒ LLM_OUTPUT 事件（前端在工具组之间显示「边做边讲」一行） */
+            @Override
+            public void onAssistantText(String text) {
+                if (text != null && !text.trim().isEmpty()) {
+                    emit(AgentEvent.LLM_OUTPUT, text.trim());
+                }
+            }
+
             /** 工具面定形 ⇒ 转交台账（M14 棒2 装配单）；台账缺席时静默跳过 */
             @Override
             public void onToolsResolved(List<String> toolNames, String promptText) {

@@ -225,6 +225,11 @@ public class ToolAgentRunner {
                     log.info("工具循环第 {} 轮给出结论，会话结束", round);
                     return AgentLoopResult.toolLoop(ai.text(), round);
                 }
+                // 工具轮「边做边讲」：本轮既有正文又有工具调用时，把正文交监听器落 llm_output，
+                // 前端在工具组之间显示一行讲解（纯结论轮的正文走上面 return，不进此口，避免重复）
+                if (ai.text() != null && !ai.text().trim().isEmpty()) {
+                    sink.onAssistantText(ai.text());
+                }
                 // 逐个执行工具并回填结果：异常（参数解析失败/工具内部报错/工具未找到）一律转错误文本
                 // 回给 LLM 自纠，绝不让单次工具失败击穿整个会话；调用/返回各推一条过程日志（会话事件流
                 // 思考组可见）：参数/结果推全文供前端展开回看（后端转储口径由 sink 侧摘要，存储侧兜底截断）
