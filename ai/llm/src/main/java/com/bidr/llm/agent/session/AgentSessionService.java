@@ -210,10 +210,20 @@ public class AgentSessionService {
     }
 
     /** 恢复（幂等）：清除暂停键；guidance 空时注入默认指导语（让 LLM 知晓恢复事实而非凭空续跑），
-     *  非空时作为用户补充指导注入下一轮上下文。
-     *  <p>「建后未起跑」会话（startPaused）：本调用＝真正起跑——不落 guidance（首轮指令随 start
-     *  payload 组装，guidance 注入会二次叠加），起 run 线程后正常执行 */
+     *  非空时作为用户补充指导注入下一轮上下文。 */
     public void resume(String sessionId, String guidance) {
+        resume(sessionId, guidance, null);
+    }
+
+    /** 恢复（可带首轮 payload 补丁）：清除暂停键；guidance 空时注入默认指导语（让 LLM 知晓恢复事实
+     *  而非凭空续跑），非空时作为用户补充指导注入下一轮上下文。
+     *  <p>「建后未起跑」会话（startPaused）：本调用＝真正起跑——不落 guidance（首轮指令随 start
+     *  payload 组装，guidance 注入会二次叠加），起 run 线程后正常执行。
+     *  <p>{@code payloadPatch}（2026-11-17）：仅对「建后未起跑」会话生效——素材会话在用户挑素材时
+     *  就已创建（先上传＋预解析），当时指令/底稿还没落定，起跑前用补丁把最终业务参数合并进
+     *  start payload（键覆盖、null 值跳过），首轮提示词据此组装；普通暂停恢复忽略该参数（记 info）。
+     *  合并后重算 subject，保证会话列表/历史里的业务维度与首轮参数一致。 */
+    public void resume(String sessionId, String guidance, Map<String, Object> payloadPatch) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
             throw new ServiceException("会话已结束（" + state.getStatus() + "），无法恢复");
@@ -225,6 +235,15 @@ public class AgentSessionService {
                 log.info("建后未起跑会话的首轮指令走 start payload，resume guidance 不入首轮（忽略）: sessionId={}",
                         sessionId);
             }
+            Map<String, Object> firstPayload = mergePayload(deferred.payload(), payloadPatch);
+            if (payloadPatch != null && !payloadPatch.isEmpty()) {
+                try {
+                    deferred.state().setSubject(deferred.definition().sessionSubject(firstPayload));
+                } catch (Exception e) {
+                    log.warn("会话作用对象重算失败（不阻断起跑）, sessionId={}, error={}",
+                            sessionId, e.getMessage());
+                }
+            }
             // run 线程尚未创建：此快照是唯一写者，直接落 RUNNING 后起跑
             deferred.state().setStatus(AgentSessionState.RUNNING);
             deferred.state().setHeartbeat(System.currentTimeMillis());
@@ -233,8 +252,11 @@ public class AgentSessionService {
                 streamHub.publishStatus(deferred.state());
             }
             emitAndPublish(sessionId, AgentEvent.RESUMED, "素材已就绪，会话开始执行");
-            launch(deferred.definition(), deferred.state(), deferred.payload());
+            launch(deferred.definition(), deferred.state(), firstPayload);
             return;
+        }
+        if (payloadPatch != null && !payloadPatch.isEmpty()) {
+            log.info("首轮 payload 补丁只对建后未起跑会话生效，普通恢复忽略: sessionId={}", sessionId);
         }
         if (guidance == null || guidance.trim().isEmpty()) {
             guidance = "用户未补充新指导，按暂停前的既有计划与进度继续";
@@ -243,6 +265,27 @@ public class AgentSessionService {
         emitAndPublish(sessionId, AgentEvent.RESUMED,
                 guidance == null || guidance.trim().isEmpty() ? "会话已恢复" : "会话已恢复（附带用户补充指导）");
         transition(sessionId, AgentSessionState.RUNNING, null);
+    }
+
+    /**
+     * 首轮 payload 合并：补丁键覆盖、null 值跳过（前端未填的键不覆盖已有值）。
+     * 补丁为空/无有效键时原样返回 base（不复制，避免无意义对象）。
+     */
+    static Map<String, Object> mergePayload(Map<String, Object> base, Map<String, Object> patch) {
+        Map<String, Object> safeBase = base == null ? Collections.emptyMap() : base;
+        if (patch == null || patch.isEmpty()) {
+            return safeBase;
+        }
+        Map<String, Object> merged = new LinkedHashMap<>(safeBase);
+        boolean changed = false;
+        for (Map.Entry<String, Object> entry : patch.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) {
+                continue;
+            }
+            merged.put(entry.getKey(), entry.getValue());
+            changed = true;
+        }
+        return changed ? merged : safeBase;
     }
 
     /** 作答 LLM 提问：校验问题存在且 waiting，作答写入控制键（工具线程阻塞醒查中消费）；

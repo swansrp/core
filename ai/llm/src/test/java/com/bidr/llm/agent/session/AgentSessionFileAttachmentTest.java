@@ -14,6 +14,7 @@ import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
+import com.bidr.llm.agent.file.AgentFileParseService;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
 import com.bidr.llm.agent.file.SessionAttachmentReadTool;
@@ -273,7 +274,7 @@ public class AgentSessionFileAttachmentTest {
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
         ServiceException upload = assertThrows(ServiceException.class,
-                () -> controller.uploadFile(SESSION, file));
+                () -> controller.uploadFile(SESSION, file, true));
         assertTrue(upload.getMessage().contains("未登录，无法操作会话附件"));
         ServiceException list = assertThrows(ServiceException.class, () -> controller.listFiles(SESSION));
         assertTrue(list.getMessage().contains("未登录，无法操作会话附件"));
@@ -288,7 +289,7 @@ public class AgentSessionFileAttachmentTest {
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
         ServiceException upload = assertThrows(ServiceException.class,
-                () -> controller.uploadFile(SESSION, file));
+                () -> controller.uploadFile(SESSION, file, true));
         assertTrue(upload.getMessage().contains("无权操作该会话"));
         ServiceException list = assertThrows(ServiceException.class, () -> controller.listFiles(SESSION));
         assertTrue(list.getMessage().contains("无权操作该会话"));
@@ -301,7 +302,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, null, null, service(Collections.emptyList()));
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
         assertTrue(e.getMessage().contains("附件能力未启用"));
         assertTrue(controller.listFiles(SESSION).isEmpty());
     }
@@ -322,12 +323,12 @@ public class AgentSessionFileAttachmentTest {
 
         MockMultipartFile tooBig = new MockMultipartFile("file", "big.bin", "application/octet-stream",
                 new byte[1024 * 1024 + 1]);
-        ServiceException size = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, tooBig));
+        ServiceException size = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, tooBig, true));
         assertTrue(size.getMessage().contains("文件超过上限 1MB"));
 
         MockMultipartFile ok = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        assertNotNull(controller.uploadFile(SESSION, ok));
-        ServiceException count = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, ok));
+        assertNotNull(controller.uploadFile(SESSION, ok, true));
+        ServiceException count = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, ok, true));
         assertTrue(count.getMessage().contains("附件数量已达上限 1"));
     }
 
@@ -340,7 +341,7 @@ public class AgentSessionFileAttachmentTest {
                 null, service(Collections.emptyList()));
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
         assertTrue(e.getMessage().contains("会话已结束"));
         assertTrue("终态上传不得落事件", controller.listFiles(SESSION).isEmpty());
     }
@@ -358,7 +359,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, fileStore, null, mockedService);
 
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
         assertTrue(e.getMessage().contains("事件写入失败"));
     }
 
@@ -372,7 +373,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, fileStore, null, service(Collections.emptyList()));
 
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
 
         assertTrue("存储失败必须显式失败并给人话错误", e.getMessage().contains("附件保存失败"));
         assertTrue("失败不得落 file_attached 事件", controller.listFiles(SESSION).isEmpty());
@@ -389,7 +390,7 @@ public class AgentSessionFileAttachmentTest {
 
         AgentSessionController controller = controller(OWNER, fileStore, null, service(Collections.emptyList()));
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        AgentFileView returned = controller.uploadFile(SESSION, file);
+        AgentFileView returned = controller.uploadFile(SESSION, file, true);
         assertEquals(new AgentFileView("f-1", "a.txt", 2L, "text/plain"), returned);
 
         List<AgentEvent> events = store.events(SESSION, 0);
@@ -420,7 +421,7 @@ public class AgentSessionFileAttachmentTest {
                 service(Collections.emptyList()));
 
         AgentFileView returned = controller.uploadFile(SESSION,
-                new MockMultipartFile("file", "a.txt", "text/plain", bytes));
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
 
         assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
         ArgumentCaptor<byte[]> bytesCaptor = ArgumentCaptor.forClass(byte[].class);
@@ -446,7 +447,7 @@ public class AgentSessionFileAttachmentTest {
 
         long begin = System.nanoTime();
         AgentFileView returned = controller.uploadFile(SESSION,
-                new MockMultipartFile("file", "a.txt", "text/plain", bytes));
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
         long elapsedMs = (System.nanoTime() - begin) / 1_000_000;
 
         assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
@@ -470,7 +471,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, resolver, service(Collections.emptyList()));
 
         AgentFileView returned = controller.uploadFile(SESSION,
-                new MockMultipartFile("file", "a.txt", "text/plain", bytes));
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
 
         assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
     }
@@ -490,7 +491,7 @@ public class AgentSessionFileAttachmentTest {
                 service(Collections.emptyList()));
 
         AgentFileView returned = controller.uploadFile(SESSION,
-                new MockMultipartFile("file", "a.txt", "text/plain", bytes));
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
 
         assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
         verify(sandbox, Mockito.timeout(2000)).putIfAlive(eq(SESSION), eq("input/a.txt"), any(byte[].class));
@@ -974,7 +975,8 @@ public class AgentSessionFileAttachmentTest {
                 providerOf(null));
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
-                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver, healthProvider);
+                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver,
+                Mockito.mock(AgentFileParseService.class), healthProvider);
     }
 
     /** 上传即写入腿：文件工具/产物/转写腿仍缺席，只把沙箱端口按给值装配（null＝沙箱缺席） */
@@ -993,7 +995,7 @@ public class AgentSessionFileAttachmentTest {
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
                 null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver,
-                Mockito.mock(ObjectProvider.class));
+                Mockito.mock(AgentFileParseService.class), Mockito.mock(ObjectProvider.class));
     }
 
     /** 已注册 agent 占位（/agents 能力位腿只需要注册表非空） */
