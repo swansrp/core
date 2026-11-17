@@ -37,6 +37,18 @@ public class PortalTableVO extends BaseVO {
     private String tableCode;
 
     /**
+     * 报表标题(显示用, 空则回落 tableCode)
+     */
+    @ApiModelProperty(value = "报表标题")
+    private String title;
+
+    /**
+     * 报表备注
+     */
+    @ApiModelProperty(value = "报表备注")
+    private String remark;
+
+    /**
      * 左侧筛选栏的宽度
      */
     @ApiModelProperty(value = "左侧筛选栏的宽度")

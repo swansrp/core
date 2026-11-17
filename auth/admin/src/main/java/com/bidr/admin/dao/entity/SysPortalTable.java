@@ -39,6 +39,20 @@ public class SysPortalTable {
     private String tableCode;
 
     /**
+     * 报表标题(显示用, 空则回落 tableCode)
+     */
+    @TableField(value = "title")
+    @ApiModelProperty(value = "报表标题")
+    private String title;
+
+    /**
+     * 报表备注
+     */
+    @TableField(value = "remark")
+    @ApiModelProperty(value = "报表备注")
+    private String remark;
+
+    /**
      * 左侧筛选栏的宽度
      */
     @TableField(value = "filter_width")
