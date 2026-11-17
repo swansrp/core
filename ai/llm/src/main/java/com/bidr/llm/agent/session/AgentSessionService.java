@@ -178,7 +178,9 @@ public class AgentSessionService {
             deferredGuards.put(state.getSessionId(), heartbeatExecutor.scheduleAtFixedRate(
                     () -> guardDeferredStart(state.getSessionId()),
                     HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS));
-            emitAndPublish(state.getSessionId(), AgentEvent.PAUSED, "会话已创建，等待素材上传完成后开始");
+            // 「建后未起跑」是素材暂存的内部形态，不是用户暂停：不发 PAUSED 事件
+            //（流里出现「已暂停：会话已创建…」对用户是噪音；状态快照仍为 PAUSED，
+            //  前端轮询与上传/起跑链照常）；仅广播状态快照供订阅端同步
             if (streamHub != null) {
                 streamHub.publishStatus(state);
             }
