@@ -129,18 +129,20 @@ public class TextPassthroughService {
      * @param variant     键代数段（提交方给的透传值，与外部引擎轨同 key 规则）
      * @param ext         小写扩展名
      * @param anchorBytes 锚字节（裸文本＝文件本身，zip＝连带包）
+     * @param namespace   临时命名空间（空＝主命名空间键形不变；非空＝md 键挂该前缀下吃 ILM，
+     *                    内嵌图恒落 {@code image/} 主命名空间——见 {@link BlobStore#namespaced}）
      */
-    public Result passthrough(String anchorSha, int variant, String ext, byte[] anchorBytes) {
+    public Result passthrough(String anchorSha, int variant, String ext, byte[] anchorBytes, String namespace) {
         Bundle bundle = EXT_ZIP.equals(ext) ? readBundle(anchorBytes) : readPlain(anchorBytes);
         Inlined inlined = inlineImages(anchorSha, bundle.markdown, bundle.images);
         String markdown = DefaultParseArtifactWriter.rewriteImages(inlined.markdown, inlined.refs);
-        String markdownKey = BlobStore.parsedMarkdownKey(anchorSha, variant);
+        String markdownKey = BlobStore.namespaced(namespace, BlobStore.parsedMarkdownKey(anchorSha, variant));
         storage.put(markdownKey, markdown.getBytes(StandardCharsets.UTF_8),
                 BlobStore.contentTypeOf("x.md"));
         Result result = Result.of(bundle.entryName == null ? SOURCE_TEXT : SOURCE_BUNDLE, bundle.entryName,
                 markdownKey, markdown, inlined.stored, inlined.kept, inlined.unresolved);
-        log.info("直通产物已落库: 锚={} v={} 来源={} 入口={} 字符={} 内联图={} 沿用占位={} 未解析引用={}",
-                anchorSha, variant, result.getSource(), result.getEntryName(), markdown.length(),
+        log.info("直通产物已落库: 锚={} v={} ns={} 来源={} 入口={} 字符={} 内联图={} 沿用占位={} 未解析引用={}",
+                anchorSha, variant, namespace, result.getSource(), result.getEntryName(), markdown.length(),
                 result.getStoredImages(), result.getKeptPlaceholders(), result.getUnresolvedRefs());
         return result;
     }

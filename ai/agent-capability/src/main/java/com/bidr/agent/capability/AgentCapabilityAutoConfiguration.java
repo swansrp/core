@@ -97,8 +97,10 @@ public class AgentCapabilityAutoConfiguration {
     @Conditional(GotenbergBaseUrlCondition.class)
     @ConditionalOnBean(BlobStore.class)
     @ConditionalOnMissingBean(AgentArtifactGenerator.class)
-    public AgentArtifactGenerator artifactService(ConvertStep convertStep, BlobStore blobStore) {
-        return new ArtifactService(convertStep, blobStore);
+    public AgentArtifactGenerator artifactService(ConvertStep convertStep, BlobStore blobStore,
+            ObjectProvider<AgentFileStore> fileStoreProvider) {
+        // 存储端口懒解析（Supplier）：产物落盘/侧车/键形正源全部收进 AgentFileStore 实现
+        return new ArtifactService(convertStep, fileStoreProvider::getIfAvailable);
     }
 
     /**

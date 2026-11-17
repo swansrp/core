@@ -66,7 +66,7 @@ public class SessionSandboxFetchToolTest {
         when(sandbox.fetch(SESSION, "out/result.bin")).thenReturn(bytes);
         AgentFileStore fileStore = mock(AgentFileStore.class);
         FileRef ref = new FileRef("f-bin", "result.bin", bytes.length, "application/octet-stream", "k-bin");
-        when(fileStore.put(eq(SESSION), eq("result.bin"), eq("application/octet-stream"), eq(bytes)))
+        when(fileStore.putArtifact(eq(SESSION), eq("result.bin"), eq("application/octet-stream"), eq(bytes)))
                 .thenReturn(ref);
         when(fileStore.presignedUrl(eq(ref), Mockito.anyLong())).thenReturn("https://oss.example/f-bin");
 
@@ -84,7 +84,7 @@ public class SessionSandboxFetchToolTest {
         when(sandbox.fetch(SESSION, "out/big.txt")).thenReturn(bytes);
         AgentFileStore fileStore = mock(AgentFileStore.class);
         FileRef ref = new FileRef("f-big", "big.txt", bytes.length, "application/octet-stream", "k-big");
-        when(fileStore.put(eq(SESSION), eq("big.txt"), eq("application/octet-stream"), eq(bytes)))
+        when(fileStore.putArtifact(eq(SESSION), eq("big.txt"), eq("application/octet-stream"), eq(bytes)))
                 .thenReturn(ref);
         when(fileStore.presignedUrl(eq(ref), eq(3600L))).thenReturn("https://oss.example/f-big");
         AgentSessionContext ctx = ctxMock();
@@ -161,7 +161,7 @@ public class SessionSandboxFetchToolTest {
         byte[] bytes = repeat('y', 33 * 1024).getBytes(StandardCharsets.UTF_8);
         when(sandbox.fetch(SESSION, "out/x.log")).thenReturn(bytes);
         AgentFileStore fileStore = mock(AgentFileStore.class);
-        when(fileStore.put(anyString(), anyString(), anyString(), any(byte[].class)))
+        when(fileStore.putArtifact(anyString(), anyString(), anyString(), any(byte[].class)))
                 .thenThrow(new IllegalStateException("oss down"));
         AgentSessionContext ctx = ctxMock();
 
@@ -195,7 +195,7 @@ public class SessionSandboxFetchToolTest {
         when(sandbox.fetch(SESSION, "out/doc.docx")).thenReturn(bytes);
         AgentFileStore fileStore = mock(AgentFileStore.class);
         FileRef ref = new FileRef("f-blank", "doc.docx", bytes.length, "application/octet-stream", "k-blank");
-        when(fileStore.put(eq(SESSION), eq("doc.docx"), eq("application/octet-stream"), eq(bytes)))
+        when(fileStore.putArtifact(eq(SESSION), eq("doc.docx"), eq("application/octet-stream"), eq(bytes)))
                 .thenReturn(ref);
         when(fileStore.presignedUrl(eq(ref), Mockito.anyLong())).thenReturn("  ");
         AgentSessionContext ctx = ctxMock();
@@ -216,7 +216,7 @@ public class SessionSandboxFetchToolTest {
         when(sandbox.fetch(SESSION, "out/report.bin")).thenReturn(bytes);
         AgentFileStore fileStore = mock(AgentFileStore.class);
         FileRef ref = new FileRef("f-noctx", "report.bin", bytes.length, "application/octet-stream", "k-noctx");
-        when(fileStore.put(eq(SESSION), eq("report.bin"), eq("application/octet-stream"), eq(bytes)))
+        when(fileStore.putArtifact(eq(SESSION), eq("report.bin"), eq("application/octet-stream"), eq(bytes)))
                 .thenReturn(ref);
         when(fileStore.presignedUrl(eq(ref), Mockito.anyLong())).thenReturn("https://oss.example/f-noctx");
 
