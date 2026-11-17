@@ -408,7 +408,36 @@ public class CubeHttpClient {
             allowOut.forEach(allow::add);
             payload.set("network", OM.createObjectNode().set("allowOut", allow));
         }
+        // 容器级 env（探针实测线格式 envVars，camelCase）：出网代理 HTTP(S)_PROXY＋NO_PROXY，
+        // 让沙箱内脚本（parse_material.py 的 anydoc/MinerU 等）能出网；空则整键不下发
+        ObjectNode envVars = buildEnvVars();
+        if (envVars.size() > 0) {
+            payload.set("envVars", envVars);
+        }
         return serializeCreateBody(payload, metadata, mounts);
+    }
+
+    /**
+     * 容器级出网 env：proxyEnable 且 host/port 就绪时注入 HTTP_PROXY/HTTPS_PROXY（大小写双形式，
+     * 兼容读小写的工具）＋ NO_PROXY（免代理直连目的地，如内网 MinIO）。未开代理返回空节点。
+     */
+    private ObjectNode buildEnvVars() {
+        ObjectNode env = OM.createObjectNode();
+        String host = properties.getProxyHost();
+        if (properties.isProxyEnable() && host != null && !host.trim().isEmpty()
+                && properties.getProxyPort() > 0) {
+            String proxy = "http://" + host.trim() + ":" + properties.getProxyPort();
+            env.put("HTTP_PROXY", proxy);
+            env.put("HTTPS_PROXY", proxy);
+            env.put("http_proxy", proxy);
+            env.put("https_proxy", proxy);
+            String noProxy = properties.getNoProxy();
+            if (noProxy != null && !noProxy.trim().isEmpty()) {
+                env.put("NO_PROXY", noProxy.trim());
+                env.put("no_proxy", noProxy.trim());
+            }
+        }
+        return env;
     }
 
     /** 管理沙箱 create body：挂载 {hostRoot}→{hostRoot}（内外一致），metadata 带 role=cube-admin＋owner＋instance-id 标记 */

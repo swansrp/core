@@ -315,6 +315,37 @@ class CubeHttpClientTest {
     }
 
     @Test
+    @DisplayName("create 开代理 ⇒ envVars 注入 HTTP(S)_PROXY（大小写）＋NO_PROXY 免代理直连")
+    void createSendsProxyEnvVars() throws IOException {
+        properties.setProxyEnable(true);
+        properties.setProxyHost("10.3.4.230");
+        properties.setProxyPort(65535);
+        properties.setNoProxy("10.3.5.112,localhost,127.0.0.1");
+        client.create("sess-proxy");
+        JsonNode env = OM.readTree(createBodies.get(0)).path("envVars");
+        assertEquals("http://10.3.4.230:65535", env.path("HTTP_PROXY").asText());
+        assertEquals("http://10.3.4.230:65535", env.path("HTTPS_PROXY").asText());
+        assertEquals("http://10.3.4.230:65535", env.path("http_proxy").asText());
+        assertEquals("10.3.5.112,localhost,127.0.0.1", env.path("NO_PROXY").asText());
+        assertEquals("10.3.5.112,localhost,127.0.0.1", env.path("no_proxy").asText());
+    }
+
+    @Test
+    @DisplayName("create 关代理（缺省）⇒ 无 envVars 键；开代理但 noProxy 空 ⇒ 无 NO_PROXY")
+    void createProxyEnvVarsAbsentWhenDisabled() throws IOException {
+        client.create("sess-noproxy");
+        assertTrue(OM.readTree(createBodies.get(0)).path("envVars").isMissingNode(), "缺省不开代理不得下发 envVars");
+
+        properties.setProxyEnable(true);
+        properties.setProxyHost("10.3.4.230");
+        properties.setProxyPort(65535);
+        client.create("sess-proxy-nolist");
+        JsonNode env = OM.readTree(createBodies.get(1)).path("envVars");
+        assertEquals("http://10.3.4.230:65535", env.path("HTTP_PROXY").asText());
+        assertTrue(env.path("NO_PROXY").isMissingNode(), "noProxy 空不得下发 NO_PROXY");
+    }
+
+    @Test
     @DisplayName("createAdmin body：metadata 带 role=cube-admin＋owner=缺省 ownerId；host-mount={hostRoot}→{hostRoot} 内外一致")
     void createAdminShapesBody() throws IOException {
         client.createAdmin();

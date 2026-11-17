@@ -53,9 +53,28 @@ public class CubeSandboxProperties {
     private String hostRoot = "/data/sandbox";
 
     /**
-     * 沙箱放行出网域名/网段白名单（空=不额外放行）
+     * 沙箱放行出网域名/网段白名单（空=不额外放行）。CubeVS 默认 deny 私网段，内网服务须显式放行；
+     * 逗号分隔 CIDR/IP（单 IP 由平台补 /32）。如 {@code 10.0.0.0/8} 放行全部内网。
      */
     private List<String> allowOut = new ArrayList<>();
+
+    /**
+     * 沙箱出网代理开关：true＝建箱时容器级注入 HTTP(S)_PROXY（未命中 NO_PROXY 的目的地走代理），
+     * false＝不注入代理 env。与 {@link #allowOut} 配合：allowOut 放行网段，代理决定出口路径。
+     */
+    private boolean proxyEnable = false;
+
+    /** 出网代理主机（proxyEnable=true 时必填，如 10.3.4.230） */
+    private String proxyHost = "";
+
+    /** 出网代理端口（如 65535） */
+    private int proxyPort = 0;
+
+    /**
+     * 免代理目的地（逗号分隔 host/IP/CIDR）→ 注入 NO_PROXY：命中的直连不走代理。
+     * 如 MinIO {@code 10.3.5.112} 内网直连免代理，其余（MinerU/公网）走代理。
+     */
+    private String noProxy = "";
 
     /**
      * 沙箱保活 TTL（秒）：随 create body 的 {@code timeout} 字段下发（业务/管理沙箱同源，
