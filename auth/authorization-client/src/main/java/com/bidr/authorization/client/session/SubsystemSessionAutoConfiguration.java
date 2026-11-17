@@ -1,6 +1,11 @@
 package com.bidr.authorization.client.session;
 
 import com.bidr.authorization.client.AuthzCheckApi;
+import com.bidr.authorization.client.login.SubsystemLoginService;
+import com.bidr.authorization.client.login.SubsystemLoginSyncHook;
+import com.bidr.authorization.client.login.SubsystemPasswordLoginController;
+import com.bidr.authorization.client.oauth2.IdpTokenVerifier;
+import com.bidr.authorization.client.oauth2.OAuth2Client;
 import com.bidr.authorization.service.token.TokenService;
 import com.bidr.identity.mirror.dao.repository.IdmTenantMirrorService;
 import com.bidr.identity.mirror.dao.repository.IdmUserMirrorService;
@@ -9,6 +14,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -24,6 +30,10 @@ import org.springframework.context.annotation.Configuration;
  *
  * <p>bean 由本类 {@code @Bean} 方法注册、{@link SubsystemSessionService} 本身无组件注解——
  * 镜像缺席时它不会被任何扫描面加载。</p>
+ *
+ * <p>🔴 登录 service/controller 与本会话 service <b>同配置类</b>注册（U18 教训：不跨配置类赌注册序）：
+ * 方法参数直接注入 {@link SubsystemSessionService}，条件全部在扫描期可判，不依赖任何
+ * {@code @AutoConfigureAfter} 或 {@code @Bean} 登记先后。</p>
  *
  * @author Sharp
  * @since 2026-11-04
@@ -43,5 +53,22 @@ public class SubsystemSessionAutoConfiguration {
                                                            ObjectProvider<AuthzCheckApi> authzCheckApi) {
         return new SubsystemSessionService(userMirrorService, userTenantMirrorService,
                 tenantMirrorService, tokenService, authzCheckApi);
+    }
+
+    @Bean
+    @ConditionalOnMissingClass("com.bidr.authorization.controller.login.LoginController")
+    @ConditionalOnMissingBean(SubsystemLoginService.class)
+    public SubsystemLoginService subsystemLoginService(ObjectProvider<OAuth2Client> oauth2Client,
+                                                       ObjectProvider<IdpTokenVerifier> idpTokenVerifier,
+                                                       SubsystemSessionService sessionService,
+                                                       ObjectProvider<SubsystemLoginSyncHook> syncHook) {
+        return new SubsystemLoginService(oauth2Client, idpTokenVerifier, sessionService, syncHook);
+    }
+
+    @Bean
+    @ConditionalOnMissingClass("com.bidr.authorization.controller.login.LoginController")
+    @ConditionalOnMissingBean(SubsystemPasswordLoginController.class)
+    public SubsystemPasswordLoginController subsystemPasswordLoginController(SubsystemLoginService loginService) {
+        return new SubsystemPasswordLoginController(loginService);
     }
 }
