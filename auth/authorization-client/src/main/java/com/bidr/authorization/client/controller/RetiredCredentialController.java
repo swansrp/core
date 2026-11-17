@@ -2,6 +2,7 @@ package com.bidr.authorization.client.controller;
 
 import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthNone;
+import com.bidr.authorization.client.login.SubsystemLoginService;
 import com.bidr.kernel.constant.err.ErrCodeSys;
 import com.bidr.kernel.exception.ServiceException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
@@ -16,6 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
  * 接主系统（墨枢）SSO 的子系统没有自己的 ac_* 凭据面（账号归主系统，本地只落 idm_* 镜像），
  * 密码/短信/注册/代登录一族端点在页面上不可达；保留拒绝面只为让误触得到明确业务提示
  * （「统一使用主系统账号登录」）而非 404。
+ *
+ * <p>🔴 2026-11-17 起 {@code /web/login} 不在本表：账密登录已上提为 client 标准能力
+ * （{@code SubsystemPasswordLoginController}，带 {@code @CaptchaVerify} 前置，未配机器凭证时
+ * 回同一墓碑文案）；本类只接住其余 8 条无实现路径。</p>
  *
  * <p>🔴 互斥显式化（条件直接挂类上——本件与 {@code TokenController} 同款靠宿主
  * {@code @ComponentScan("com.bidr")} 扫描装配，不走 AutoConfiguration，条件挂 AutoConfig
@@ -35,11 +40,11 @@ import org.springframework.web.bind.annotation.RestController;
         havingValue = "true", matchIfMissing = true)
 public class RetiredCredentialController {
 
-    static final String RETIRED_MESSAGE = "统一使用主系统账号登录";
+    /** 与子系统登录服务同源（唯一正源：{@link SubsystemLoginService#RETIRED_MESSAGE}），防两处文案漂移 */
+    static final String RETIRED_MESSAGE = SubsystemLoginService.RETIRED_MESSAGE;
 
     @Auth(AuthNone.class)
     @RequestMapping(value = {
-            "/web/login",                    // 账号密码登录
             "/web/login/password/init",      // 初始密码
             "/web/login/password/change",    // 改密
             "/web/login/msg",                // 短信登录

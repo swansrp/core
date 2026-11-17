@@ -14,12 +14,14 @@ import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
+import com.bidr.llm.agent.file.AgentFileParseService;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
 import com.bidr.llm.agent.file.SessionAttachmentReadTool;
 import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
 import com.bidr.llm.agent.sandbox.AgentSandbox;
 import com.bidr.llm.agent.sandbox.SessionSandboxFetchTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxPutAttachmentTool;
 import com.bidr.llm.agent.sandbox.SessionSandboxRunTool;
 import com.bidr.llm.document.FileMarkdownTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +34,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.env.Environment;
@@ -48,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -57,6 +61,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -133,6 +138,7 @@ public class AgentSessionFileAttachmentTest {
                 providerOf(null), providerOf(null), providerOf(null), providerOf(null), providerOf(null));
         assertTrue("端口与工具都缺席时能力位必须为空（前端不渲染附件控件）", none.current().isEmpty());
         assertNull(none.fileStore());
+        assertNull("沙箱访问口同口径：端口缺席返回 null", none.sandbox());
     }
 
     /** I-r2-1：总开关关＝能力位整体回退（端口/工具 Bean 都在场也不报告，含 exec.sandbox）；
@@ -151,6 +157,7 @@ public class AgentSessionFileAttachmentTest {
         assertTrue("总开关关＝/agents 不得报告任何能力位（含 artifacts.doc/exec.sandbox）",
                 resolver.current().isEmpty());
         assertEquals("上传/清单端点仍可用（不属于模型可见性）", fileStore, resolver.fileStore());
+        assertEquals("总开关关不改变沙箱访问口（上传自动写入按端口在场判定）", sandbox, resolver.sandbox());
     }
 
     /** /agents 注册表条目携带能力位（autonomous 型同口径） */
@@ -267,7 +274,7 @@ public class AgentSessionFileAttachmentTest {
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
         ServiceException upload = assertThrows(ServiceException.class,
-                () -> controller.uploadFile(SESSION, file));
+                () -> controller.uploadFile(SESSION, file, true));
         assertTrue(upload.getMessage().contains("未登录，无法操作会话附件"));
         ServiceException list = assertThrows(ServiceException.class, () -> controller.listFiles(SESSION));
         assertTrue(list.getMessage().contains("未登录，无法操作会话附件"));
@@ -282,7 +289,7 @@ public class AgentSessionFileAttachmentTest {
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
         ServiceException upload = assertThrows(ServiceException.class,
-                () -> controller.uploadFile(SESSION, file));
+                () -> controller.uploadFile(SESSION, file, true));
         assertTrue(upload.getMessage().contains("无权操作该会话"));
         ServiceException list = assertThrows(ServiceException.class, () -> controller.listFiles(SESSION));
         assertTrue(list.getMessage().contains("无权操作该会话"));
@@ -295,7 +302,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, null, null, service(Collections.emptyList()));
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
         assertTrue(e.getMessage().contains("附件能力未启用"));
         assertTrue(controller.listFiles(SESSION).isEmpty());
     }
@@ -316,12 +323,12 @@ public class AgentSessionFileAttachmentTest {
 
         MockMultipartFile tooBig = new MockMultipartFile("file", "big.bin", "application/octet-stream",
                 new byte[1024 * 1024 + 1]);
-        ServiceException size = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, tooBig));
+        ServiceException size = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, tooBig, true));
         assertTrue(size.getMessage().contains("文件超过上限 1MB"));
 
         MockMultipartFile ok = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        assertNotNull(controller.uploadFile(SESSION, ok));
-        ServiceException count = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, ok));
+        assertNotNull(controller.uploadFile(SESSION, ok, true));
+        ServiceException count = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, ok, true));
         assertTrue(count.getMessage().contains("附件数量已达上限 1"));
     }
 
@@ -334,7 +341,7 @@ public class AgentSessionFileAttachmentTest {
                 null, service(Collections.emptyList()));
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
 
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
         assertTrue(e.getMessage().contains("会话已结束"));
         assertTrue("终态上传不得落事件", controller.listFiles(SESSION).isEmpty());
     }
@@ -352,7 +359,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, fileStore, null, mockedService);
 
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
         assertTrue(e.getMessage().contains("事件写入失败"));
     }
 
@@ -366,7 +373,7 @@ public class AgentSessionFileAttachmentTest {
         AgentSessionController controller = controller(OWNER, fileStore, null, service(Collections.emptyList()));
 
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file));
+        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
 
         assertTrue("存储失败必须显式失败并给人话错误", e.getMessage().contains("附件保存失败"));
         assertTrue("失败不得落 file_attached 事件", controller.listFiles(SESSION).isEmpty());
@@ -383,7 +390,7 @@ public class AgentSessionFileAttachmentTest {
 
         AgentSessionController controller = controller(OWNER, fileStore, null, service(Collections.emptyList()));
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
-        AgentFileView returned = controller.uploadFile(SESSION, file);
+        AgentFileView returned = controller.uploadFile(SESSION, file, true);
         assertEquals(new AgentFileView("f-1", "a.txt", 2L, "text/plain"), returned);
 
         List<AgentEvent> events = store.events(SESSION, 0);
@@ -396,6 +403,101 @@ public class AgentSessionFileAttachmentTest {
         String json = new ObjectMapper().writeValueAsString(returned);
         assertFalse("HTTP 响应不得回传存储 key", json.contains("agent-session/1/s/file-1/f-1.txt"));
         assertFalse("HTTP 响应不得含 key 字段", json.contains("\"key\""));
+    }
+
+    // ---------------- 上传即写入沙箱（best-effort，F-4/F-5） ----------------
+
+    /** 沙箱在场且已存在：putIfAlive 收到 {@code input/<原名>} 与上传原始字节，上传照常成功（异步，轮询等待） */
+    @Test
+    public void uploadWritesIntoExistingSandbox() {
+        seedSession(OWNER);
+        byte[] bytes = "hi".getBytes(StandardCharsets.UTF_8);
+        AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
+        FileRef stored = new FileRef("f-1", "a.txt", bytes.length, "text/plain", "k");
+        when(fileStore.put(eq(SESSION), eq("a.txt"), eq("text/plain"), any(byte[].class))).thenReturn(stored);
+        AgentSandbox sandbox = Mockito.mock(AgentSandbox.class);
+        when(sandbox.putIfAlive(eq(SESSION), eq("input/a.txt"), any(byte[].class))).thenReturn(true);
+        AgentSessionController controller = controllerWithSandbox(OWNER, fileStore, sandbox,
+                service(Collections.emptyList()));
+
+        AgentFileView returned = controller.uploadFile(SESSION,
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
+
+        assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
+        ArgumentCaptor<byte[]> bytesCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(sandbox, Mockito.timeout(2000)).putIfAlive(eq(SESSION), eq("input/a.txt"), bytesCaptor.capture());
+        assertArrayEquals("上传原始字节必须原样写入沙箱", bytes, bytesCaptor.getValue());
+    }
+
+    /** 异步化（R1-I2）：沙箱写入阻塞 3 秒也不得阻塞上传响应（< 1.5 秒返回），且任务最终真的执行 */
+    @Test
+    public void uploadDoesNotBlockOnSlowSandboxWrite() {
+        seedSession(OWNER);
+        byte[] bytes = "hi".getBytes(StandardCharsets.UTF_8);
+        AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
+        FileRef stored = new FileRef("f-1", "a.txt", bytes.length, "text/plain", "k");
+        when(fileStore.put(anyString(), anyString(), any(), any(byte[].class))).thenReturn(stored);
+        AgentSandbox sandbox = Mockito.mock(AgentSandbox.class);
+        when(sandbox.putIfAlive(eq(SESSION), eq("input/a.txt"), any(byte[].class))).thenAnswer(invocation -> {
+            Thread.sleep(3000);
+            return true;
+        });
+        AgentSessionController controller = controllerWithSandbox(OWNER, fileStore, sandbox,
+                service(Collections.emptyList()));
+
+        long begin = System.nanoTime();
+        AgentFileView returned = controller.uploadFile(SESSION,
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
+        long elapsedMs = (System.nanoTime() - begin) / 1_000_000;
+
+        assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
+        assertTrue("上传响应不得等待沙箱写入（实测 " + elapsedMs + "ms，应 < 1500ms）",
+                elapsedMs < 1500);
+        verify(sandbox, Mockito.timeout(6000)).putIfAlive(eq(SESSION), eq("input/a.txt"), any(byte[].class));
+    }
+
+    /** 沙箱缺席（providerOf(null)）：resolver.sandbox() 为 null＝上传腿早退，上传照常成功（R1-S8：有效断言） */
+    @Test
+    public void uploadSkipsSandboxWriteWhenSandboxAbsent() {
+        seedSession(OWNER);
+        byte[] bytes = "hi".getBytes(StandardCharsets.UTF_8);
+        AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
+        FileRef stored = new FileRef("f-1", "a.txt", bytes.length, "text/plain", "k");
+        when(fileStore.put(anyString(), anyString(), any(), any(byte[].class))).thenReturn(stored);
+        AgentFileCapabilityResolver resolver = new AgentFileCapabilityResolver(
+                providerOf(fileStore), providerOf(null), providerOf(null), providerOf(null), providerOf(null));
+        assertNull("沙箱端口缺席时 resolver 的访问口必须为 null（上传腿按此早退，不提交任务）",
+                resolver.sandbox());
+        AgentSessionController controller = controller(OWNER, resolver, service(Collections.emptyList()));
+
+        AgentFileView returned = controller.uploadFile(SESSION,
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
+
+        assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
+    }
+
+    /** 自动写入抛异常只 warn：上传仍返回成功视图，file_attached 事件照常落（异步任务内异常被收口） */
+    @Test
+    public void uploadSurvivesSandboxWriteFailure() {
+        seedSession(OWNER);
+        byte[] bytes = "hi".getBytes(StandardCharsets.UTF_8);
+        AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
+        FileRef stored = new FileRef("f-1", "a.txt", bytes.length, "text/plain", "k");
+        when(fileStore.put(anyString(), anyString(), any(), any(byte[].class))).thenReturn(stored);
+        AgentSandbox sandbox = Mockito.mock(AgentSandbox.class);
+        when(sandbox.putIfAlive(anyString(), anyString(), any(byte[].class)))
+                .thenThrow(new IllegalStateException("sandbox down"));
+        AgentSessionController controller = controllerWithSandbox(OWNER, fileStore, sandbox,
+                service(Collections.emptyList()));
+
+        AgentFileView returned = controller.uploadFile(SESSION,
+                new MockMultipartFile("file", "a.txt", "text/plain", bytes), true);
+
+        assertEquals(new AgentFileView("f-1", "a.txt", bytes.length, "text/plain"), returned);
+        verify(sandbox, Mockito.timeout(2000)).putIfAlive(eq(SESSION), eq("input/a.txt"), any(byte[].class));
+        List<AgentEvent> events = store.events(SESSION, 0);
+        assertEquals("上传必须照常落 file_attached 事件", AgentEvent.FILE_ATTACHED,
+                events.get(events.size() - 1).getType());
     }
 
     // ---------------- 模型可见上下文（AbstractToolLoopAgent 附件前置注入） ----------------
@@ -588,9 +690,9 @@ public class AgentSessionFileAttachmentTest {
         assertNull("存储端口缺席返回 null", ctx.pendingUserText());
     }
 
-    /** 框架工具面收窄（C-1/P2a/棒3a）：默认只挂四只会话受限工具——read_attachment＋
-     *  generate_artifact＋sandbox_run＋sandbox_fetch，不再挂 raw read_file；
-     *  总开关关＝空（sandbox 两只同退，与 disabledSwitchKeepsPromptByteIdentical… 的
+    /** 框架工具面收窄（C-1/P2a/棒3a）：默认只挂五只会话受限工具——read_attachment＋
+     *  generate_artifact＋sandbox_run＋sandbox_put_attachment＋sandbox_fetch，不再挂 raw read_file；
+     *  总开关关＝空（sandbox 三只同退，与 disabledSwitchKeepsPromptByteIdentical… 的
      *  「工具面集合为空」断言同键同口径） */
     @Test
     public void frameworkToolsExposeSessionScopedReadAttachmentOnly() {
@@ -599,26 +701,25 @@ public class AgentSessionFileAttachmentTest {
         PromptCapturingAgent agent = new PromptCapturingAgent(new RecordingModel(), "业务提示词");
 
         List<Object> enabled = agent.frameworkToolsForTest(ctx);
-        assertEquals("默认框架工具面应为附件读取＋产物生成＋沙箱两只共四只", 4, enabled.size());
+        assertEquals("默认框架工具面应为附件读取＋产物生成＋沙箱三只共五只", 5, enabled.size());
         assertTrue("第一只框架工具必须是 SessionAttachmentReadTool",
                 enabled.get(0) instanceof SessionAttachmentReadTool);
         assertTrue("第二只框架工具必须是 SessionArtifactGenerateTool（P2a）",
                 enabled.get(1) instanceof SessionArtifactGenerateTool);
         assertTrue("第三只框架工具必须是 SessionSandboxRunTool（棒3a）",
                 enabled.get(2) instanceof SessionSandboxRunTool);
-        assertTrue("第四只框架工具必须是 SessionSandboxFetchTool（棒3a）",
-                enabled.get(3) instanceof SessionSandboxFetchTool);
+        assertTrue("第四只框架工具必须是 SessionSandboxPutAttachmentTool（原件通道）",
+                enabled.get(3) instanceof SessionSandboxPutAttachmentTool);
+        assertTrue("第五只框架工具必须是 SessionSandboxFetchTool（棒3a）",
+                enabled.get(4) instanceof SessionSandboxFetchTool);
         for (Object tool : enabled) {
             assertFalse("raw read_file 不得默认并入（C-1）", tool instanceof FileMarkdownTool);
         }
 
         ReflectionTestUtils.setField(agent, "fileToolsEnabled", false);
         List<Object> disabled = agent.frameworkToolsForTest(ctx);
-        assertTrue("总开关关闭时框架工具面必须为空（含 sandbox 两只同退）", disabled.isEmpty());
-        for (Object tool : disabled) {
-            assertFalse("开关关后不得残留 sandbox_run", tool instanceof SessionSandboxRunTool);
-            assertFalse("开关关后不得残留 sandbox_fetch", tool instanceof SessionSandboxFetchTool);
-        }
+        // R2-S4：isEmpty 已是更强断言（含 sandbox 三只同退），不再对空集合做恒真循环
+        assertTrue("总开关关闭时框架工具面必须为空（含 sandbox 三只同退）", disabled.isEmpty());
     }
 
     /** 引擎接线：会话 listener 必须把 pendingUserText 委派给上下文实现（漏接＝逐轮注入整体失效，
@@ -874,7 +975,27 @@ public class AgentSessionFileAttachmentTest {
                 providerOf(null));
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
-                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver, healthProvider);
+                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver,
+                Mockito.mock(AgentFileParseService.class), healthProvider);
+    }
+
+    /** 上传即写入腿：文件工具/产物/转写腿仍缺席，只把沙箱端口按给值装配（null＝沙箱缺席） */
+    private AgentSessionController controllerWithSandbox(String operator, AgentFileStore fileStore,
+                                                         AgentSandbox sandbox,
+                                                         AgentSessionService service) {
+        AgentFileCapabilityResolver resolver = new AgentFileCapabilityResolver(
+                providerOf(fileStore), providerOf(null), providerOf(null), providerOf(null),
+                providerOf(sandbox));
+        return controller(operator, resolver, service);
+    }
+
+    /** 直给 resolver 的装配（R1-S8：沙箱缺席腿需要断言 resolver.sandbox() 本身，而不是未入测的 mock） */
+    private AgentSessionController controller(String operator, AgentFileCapabilityResolver resolver,
+                                              AgentSessionService service) {
+        ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
+        return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
+                null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver,
+                Mockito.mock(AgentFileParseService.class), Mockito.mock(ObjectProvider.class));
     }
 
     /** 已注册 agent 占位（/agents 能力位腿只需要注册表非空） */

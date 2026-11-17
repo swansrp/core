@@ -4,40 +4,40 @@ import com.bidr.blob.BlobStore;
 import com.bidr.document.spi.ConvertStep;
 import com.bidr.llm.agent.file.AgentArtifact;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
+import com.bidr.llm.agent.file.AgentFileStore;
+import com.bidr.llm.agent.file.FileRef;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Title: ArtifactService
- * Description: {@link AgentArtifactGenerator} 的 gotenberg＋BlobStore 实现（P2a）——
+ * Description: {@link AgentArtifactGenerator} 的 gotenberg＋AgentFileStore 实现（P2a）——
  * 链路：Markdown → {@link MarkdownDocxRenderer} 出 docx 字节 →（format=pdf 时）
- * {@link ConvertStep#convertToPdf} 走 gotenberg LibreOffice 通道转 PDF → BlobStore 落
- * {@code agent-artifact/{sessionId}/{fileId}.{format}} → 现签预签名读址 → {@link AgentArtifact}。
+ * {@link ConvertStep#convertToPdf} 走 gotenberg LibreOffice 通道转 PDF →
+ * {@link AgentFileStore#putArtifact} 落 {@code agent-artifact/{sessionId}/{fileId}.{format}} →
+ * 现签预签名读址 → {@link AgentArtifact}。
  * <p>
  * <b>为什么 PDF 走 docx 中转而不是 Markdown→HTML→chromium</b>：tool/gotenberg 的
  * {@code GotenbergConvertClient} 契约只有 office→PDF 一条腿（{@code /forms/libreoffice/convert}，
  * 输入白名单 doc/docx/xls/xlsx/ppt/pptx、按魔数自证 PDF），HTML 不在其认领面；且 PDF 与 docx
  * 共用同一渲染源，两边版式一致（监理日志表格在两个格式里长得一样）。
  * <p>
- * 存储口径：不走 {@code AgentFileStore}（附件语义：run 线程无租户上下文，归属段会退化成
- * anonymous；且产物不是模型可读附件）——直用 BlobStore 按确定性键落 {@code agent-artifact/}
- * 独立命名空间，fileId 为 32 位 hex（满足 FileRef 同款 {@code [A-Za-z0-9_-]{1,128}} 字符集契约），
- * 事件流 payload 即元数据正源，键可按 file_id+format 重构（无需侧车）。
- * 预签名有效期沿用 BlobStore 固定口径（1 小时），过期由模型重新 generate_artifact 出新件。
+ * 存储口径（2026-11-17 修订）：经 {@link AgentFileStore#putArtifact} 落 {@code agent-artifact/}
+ * 独立命名空间（产物=耐用件，不进 temp/ 吃 ILM）——键形正源收在 BlobStore 实现一处；
+ * <b>侧车照写</b>：业务行 file_url 的现签读址走 {@code AgentFileStore.get(sessionId, fileId)}，
+ * 旧版「键可按 file_id+format 重构（无需侧车）」在 get() 回查口径下不成立（2026-11-17 实锤，
+ * 本次一并修）。预签名有效期沿用存储实现固定口径（1 小时），过期由模型重新 generate_artifact 出新件。
  *
  * @author Sharp
  * @since 2026/11/13
  */
 @Slf4j
 public class ArtifactService implements AgentArtifactGenerator {
-
-    /** 产物对象键前缀（agent-session 之外的新命名空间：产物不是附件，读写面/清单位都不同） */
-    public static final String KEY_PREFIX = "agent-artifact/";
 
     /** 支持的产物格式（小写） */
     public static final Set<String> SUPPORTED_FORMATS = Set.of("docx", "pdf");
@@ -47,11 +47,12 @@ public class ArtifactService implements AgentArtifactGenerator {
 
     private final ConvertStep convertStep;
 
-    private final BlobStore blobStore;
+    /** 产物存储端口（懒解析：装配相位与 run 时点解耦，缺席在 generate 时报人话错误） */
+    private final Supplier<AgentFileStore> fileStore;
 
-    public ArtifactService(ConvertStep convertStep, BlobStore blobStore) {
+    public ArtifactService(ConvertStep convertStep, Supplier<AgentFileStore> fileStore) {
         this.convertStep = convertStep;
-        this.blobStore = blobStore;
+        this.fileStore = fileStore;
     }
 
     @Override
@@ -66,6 +67,10 @@ public class ArtifactService implements AgentArtifactGenerator {
         if (!SUPPORTED_FORMATS.contains(fmt)) {
             throw new IllegalArgumentException("暂不支持的产物格式：" + format + "（支持 docx/pdf）");
         }
+        AgentFileStore store = fileStore == null ? null : fileStore.get();
+        if (store == null) {
+            throw new IllegalStateException("产物存储端口缺席（AgentFileStore 未装配），无法落产物");
+        }
         try {
             byte[] docx = MarkdownDocxRenderer.render(markdown);
             byte[] bytes = "pdf".equals(fmt) ? convertStep.convertToPdf("artifact.docx", docx) : docx;
@@ -73,12 +78,11 @@ public class ArtifactService implements AgentArtifactGenerator {
             String mime = "pdf".equals(fmt)
                     ? "application/pdf"
                     : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            String fileId = UUID.randomUUID().toString().replace("-", "");
-            String key = KEY_PREFIX + safeSegment(sessionId.trim()) + "/" + fileId + "." + fmt;
-            blobStore.put(key, bytes, mime);
-            String url = blobStore.presign(key);
-            log.info("会话产物已生成: session={}, format={}, name={}B, key={}", sessionId, fmt, bytes.length, key);
-            return new AgentArtifact(fileId, name, bytes.length, mime, fmt, url);
+            FileRef ref = store.putArtifact(sessionId, name, mime, bytes);
+            String url = store.presignedUrl(ref, BlobStore.DEFAULT_EXPIRE_SECONDS);
+            log.info("会话产物已生成: session={}, format={}, name={}B, key={}", sessionId, fmt, bytes.length,
+                    ref.key());
+            return new AgentArtifact(ref.fileId(), ref.name(), ref.size(), ref.mime(), fmt, url);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
@@ -111,10 +115,5 @@ public class ArtifactService implements AgentArtifactGenerator {
             base = base.substring(0, MAX_TITLE_LENGTH);
         }
         return base + "." + fmt;
-    }
-
-    /** 对象键段清洗：只留安全字符（与 BlobStoreAgentFileStore#safeSegment 同口径） */
-    private static String safeSegment(String value) {
-        return value.replaceAll("[^A-Za-z0-9._\\-]", "_");
     }
 }

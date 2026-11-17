@@ -73,7 +73,7 @@ public class AgentLiveModelsTest {
 
         Consumer<String> sink = capturedSink();
         sink.accept("【LLM 思考归档】45 字\n全部思考");
-        sink.accept("LLM 第 2 轮请求已发出（携带 6 条上下文消息）");
+        sink.accept("②");
         Mockito.verify(ctx, Mockito.times(2)).log(Mockito.anyString());
         Mockito.verify(ctx, Mockito.never()).pushLive(Mockito.anyString());
     }
@@ -92,7 +92,7 @@ public class AgentLiveModelsTest {
         Assert.assertFalse(StreamingProgressChatModel.isLiveStatusLine(null));
         Assert.assertFalse("归档行走事件流，不是 live 状态行",
                 StreamingProgressChatModel.isLiveStatusLine("【LLM 思考归档】5 字"));
-        Assert.assertFalse(StreamingProgressChatModel.isLiveStatusLine("LLM 第 1 轮请求已发出"));
+        Assert.assertFalse(StreamingProgressChatModel.isLiveStatusLine("①"));
         Assert.assertTrue(StreamingProgressChatModel.isLiveStatusLine("思考中·已思 1 字"));
         Assert.assertTrue(StreamingProgressChatModel.isLiveStatusLine("应答中·已收 0 字…"));
         Assert.assertTrue(StreamingProgressChatModel.isLiveStatusLine("等待 LLM 流式响应…"));

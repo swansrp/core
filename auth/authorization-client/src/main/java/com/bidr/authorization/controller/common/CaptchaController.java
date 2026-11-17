@@ -8,7 +8,6 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,7 +53,7 @@ public class CaptchaController {
             BufferedImage image;
             image = captchaService.generateCaptcha(token, captchaType);
             ImageIO.write(image, "png", stream);
-        } catch (ClientAbortException e) {
+        } catch (IOException e) {
             log.error("获取图形验证码失败{}", e.getMessage());
         } catch (Exception e) {
             log.error("获取图形验证码失败", e);

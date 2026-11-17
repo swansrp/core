@@ -25,7 +25,8 @@ import java.util.List;
  *     点名装配增强转写腿，当前唯一实现＝mineru 腿）＝照片/扫描件可经外部 OCR 转写（声明级：
  *     只声明「腿在装」，服务在线与否由探活件观测，不影响本能力位）；</li>
  *     <li>{@link #EXEC_SANDBOX}：{@link AgentSandbox} 端口在场（能力模块装配沙箱底座，棒3b 实现落位）
- *     ＝模型可在会话沙箱里执行命令（{@code sandbox_run}）并取回产出文件（{@code sandbox_fetch}）。</li>
+ *     ＝模型可在会话沙箱里执行命令（{@code sandbox_run}）、取回产出文件（{@code sandbox_fetch}）
+ *     并放入原件（{@code sandbox_put_attachment}）。</li>
  * </ul>
  * 全部缺席时返回空列表：前端不渲染附件控件、上传端点报"未启用"，既有页面行为与改造前一致。
  * 统一注册中心（{@code /registry}）与会话控制面（{@code /agents}）共用本口径，避免两处漂移。
@@ -56,7 +57,7 @@ public class AgentFileCapabilityResolver {
     /** 能力位：照片/扫描件可 OCR 转写（TranscribeStep 增强转写腿在场＝声明级，探活只观测不改本位） */
     public static final String OCR = "ocr";
 
-    /** 能力位：模型可在会话沙箱执行命令并取回产出文件（AgentSandbox 端口在场＝sandbox 两只工具可用） */
+    /** 能力位：模型可在会话沙箱执行命令、取回产出文件并放入原件（AgentSandbox 端口在场＝sandbox 三只工具可用） */
     public static final String EXEC_SANDBOX = "exec.sandbox";
 
     private final ObjectProvider<AgentFileStore> fileStoreProvider;
@@ -114,5 +115,12 @@ public class AgentFileCapabilityResolver {
      *  总开关关不改变本口：上传端点仍可用，但注入面已整体关闭（见类注释） */
     public AgentFileStore fileStore() {
         return fileStoreProvider.getIfUnique();
+    }
+
+    /** 沙箱端口（上传端点的"沙箱已存在则上传即写入"用；缺席/多候选取值不唯一返回 null
+     *  ＝能力未装配）。与 {@link #fileStore()} 同口径：总开关关不改变本口——上传仍是宿主
+     *  管理面动作，模型侧工具面已由 {@code AbstractToolLoopAgent} 同键整体回退 */
+    public AgentSandbox sandbox() {
+        return sandboxProvider.getIfUnique();
     }
 }

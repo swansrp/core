@@ -74,5 +74,35 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- 2026-11-17 验证码上提引入 JUnit5 用例；本模块既有 14 个 JUnit4 测试类（92 用例）照跑：
+             SB 2.7 starter-test 不含 vintage 引擎，显式补上（配合下面 platform provider）。 -->
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 传递依赖含 JUnit4 时 surefire 会选错 provider，表现为 Tests run: 0（必须显式指定）——
+                 与 ai/agent-capability 等模块同款；JUnit4 用例由 vintage 引擎继续执行。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>2.22.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
 </project>

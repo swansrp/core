@@ -35,6 +35,11 @@ import org.springframework.stereotype.Service;
  * 🔴 行为逐字不变（M16 棒 1 判据①）：8 个前缀方法自旧 {@code BlobStorageService}
  * 原样迁入＋{@link #renderKey} 收编渲染侧自拼前缀，同输入产出 key 串逐字相等（golden 对照腿钉住）。</p>
  *
+ * <p><b>生命周期命名空间（2026-11-17 定案）</b>：桶内靠前缀分「临时／耐用」——临时件挂
+ * {@code temp/}（材料轨 {@code temp/material/…}、会话附件 {@code temp/agent-session/…}，
+ * 桶侧对 {@code temp/} 配 ILM 自动过期）；会话交付产物用独立前缀 {@code agent-artifact/…}
+ * （file_url 持久引用，不过期）。既有 8 前缀不经 {@link #namespaced} 包装时行为逐字节不变。</p>
+ *
  * @author sharp
  */
 @Slf4j
@@ -134,6 +139,23 @@ public class BlobStore {
      */
     public static String renderKey(String sha256, String format) {
         return "render/" + sha256 + "." + format;
+    }
+
+    /**
+     * 命名空间包装（2026-11-17「单桶＋temp/ 前缀」定案配套）：把既有 key 规则整体挂到一段
+     * 前缀下——{@code namespace} 空＝原样返回（键逐字节不变，golden 兜底）；非空＝
+     * {@code namespace + "/" + key}，段间以 {@code /} 相接、每段过安全字符校验（调用方负责）。
+     *
+     * <p>用途＝同桶内的<b>生命周期分家</b>：临时件（材料轨 {@code temp/material/…}、会话附件
+     * {@code temp/agent-session/…}）与耐用件共住一个桶，靠 {@code temp/} 前缀吃桶级 ILM 过期；
+     * 内嵌图（{@code image/…}）是跨文档耐用资产，<b>不参与</b>包装——即便整条解析跑在临时
+     * 命名空间里，图的键仍落主命名空间（编辑正文可能长期引用，进 temp 一年后图就裂了）。</p>
+     */
+    public static String namespaced(String namespace, String key) {
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return key;
+        }
+        return namespace.trim() + "/" + key;
     }
 
     /**

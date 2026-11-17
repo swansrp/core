@@ -9,6 +9,7 @@ import com.bidr.llm.agent.AgentPlanTools;
 import com.bidr.llm.agent.AgentToolRecall;
 import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
 import com.bidr.llm.agent.sandbox.SessionSandboxFetchTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxPutAttachmentTool;
 import com.bidr.llm.agent.sandbox.SessionSandboxRunTool;
 import com.bidr.llm.agent.tools.ExternalRuntimeTools;
 import com.bidr.llm.agent.tools.RunFlowTools;
@@ -36,11 +37,12 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class LlmCapabilityPackageConfigTest {
 
-    /** 被登记的 llm 工具类（14 只的宿主；第 15 只 readFile 的宿主在 tool/document，见类注释） */
+    /** 被登记的 llm 工具类（15 只的宿主；第 16 只 readFile 的宿主在 tool/document，见类注释） */
     private static final List<Class<?>> TOOL_CLASSES = Arrays.asList(
             AgentPlanTools.class, AgentAskUserTool.class, AgentToolRecall.class,
             ExternalRuntimeTools.class, RunFlowTools.class, SessionArtifactGenerateTool.class,
-            SessionSandboxRunTool.class, SessionSandboxFetchTool.class);
+            SessionSandboxRunTool.class, SessionSandboxFetchTool.class,
+            SessionSandboxPutAttachmentTool.class);
 
     /** 宿主类不在 llm 族的登记工具名（反射对账时显式摘出，不静默漏） */
     private static final Set<String> DECLARED_OUTSIDE_LLM_FAMILY =
@@ -69,7 +71,7 @@ class LlmCapabilityPackageConfigTest {
     }
 
     @Test
-    @DisplayName("登记的 15 只工具名对账：14 只与反射真名双向相等，1 只（readFile）宿主外族须显式点名")
+    @DisplayName("登记的 16 只工具名对账：15 只与反射真名双向相等，1 只（readFile）宿主外族须显式点名")
     void declaredToolNamesMatchRuntimeRegistration() {
         Set<String> declaredNames = new TreeSet<>();
         Map<String, String> ownerByTool = new LinkedHashMap<>();
@@ -92,8 +94,8 @@ class LlmCapabilityPackageConfigTest {
         assertEquals(reflectedNames, declaredInLlm,
                 "登记清单与 @Tool 实际注册名不一致（左=真名，右=登记值）");
         assertEquals(DECLARED_OUTSIDE_LLM_FAMILY.size() + reflectedNames.size(), declaredNames.size(),
-                "llm 侧通用工具＝反射对账到的 14 只＋外族宿主 1 只（readFile）＝15");
-        assertEquals(15, ownerByTool.size());
+                "llm 侧通用工具＝反射对账到的 15 只＋外族宿主 1 只（readFile）＝16");
+        assertEquals(16, ownerByTool.size());
     }
 
     @Test

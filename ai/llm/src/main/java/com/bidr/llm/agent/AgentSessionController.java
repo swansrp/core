@@ -3,8 +3,10 @@ package com.bidr.llm.agent;
 import com.bidr.kernel.exception.ServiceException;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
+import com.bidr.llm.agent.file.AgentFileParseService;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
+import com.bidr.llm.agent.sandbox.AgentSandbox;
 import com.bidr.llm.agent.session.AgentEvent;
 import com.bidr.llm.agent.session.AgentSessionService;
 import com.bidr.llm.agent.session.AgentSessionState;
@@ -37,6 +39,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Title: AgentSessionController
@@ -68,6 +74,10 @@ public class AgentSessionController {
     /** 轨迹列表默认条数上限（新→旧截断） */
     private static final int DEFAULT_TRACE_LIMIT = 50;
 
+    /** fileId 形态闸（与 read_attachment 的入参闸同口径：[A-Za-z0-9_-]{1,128}） */
+    private static final java.util.regex.Pattern SAFE_FILE_ID =
+            java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
+
     private final AgentSessionService agentSessionService;
 
     private final FlowManagerService flowManagerService;
@@ -91,6 +101,9 @@ public class AgentSessionController {
     /** 附件能力位与存储端口（能力模块/文档模块缺席时降级为空，不影响既有端点） */
     private final AgentFileCapabilityResolver fileCapabilityResolver;
 
+    /** 附件预解析（发起前素材校验：上传即解析、前端轮询进度；文档模块缺席时状态置 SKIPPED） */
+    private final AgentFileParseService fileParseService;
+
     /** 能力位运行级健康快照端口（探活件实现；缺席＝health 字段不输出＝旧前端全亮兼容） */
     private final ObjectProvider<AgentCapabilityHealthProvider> healthProvider;
 
@@ -107,6 +120,61 @@ public class AgentSessionController {
 
     /** 评价快照保留天数缺省（业务有 {@link AgentRatingListener} 承接时以其 retentionDays 为准） */
     private static final int RATING_RETENTION_DAYS = 30;
+
+    /**
+     * 上传自动写入沙箱的守护线程池（2 线程＋有界队列 8）：fire-and-forget，上传响应不等待
+     * 沙箱写入（沙箱半死/慢时最坏分钟级，不能把 best-effort 拖成用户可见上传失败）；
+     * 队列满时记 warn 丢弃本次写入（对象存储仍是正源，模型可用工具补拉）。
+     * <p>
+     * 容量按<b>任务数</b>限界（R2-I1）：每个排队任务捕获一份上传字节，单文件上限
+     * {@code llm.agent.files.max-size-mb} 缺省 20MB；峰值＝2 个在跑＋8 个排队 ≈200MB
+     * （按缺省 20MB 估算；调大单文件上限需同步评估队列容量），落在本服务 1GB 堆
+     * （{@code -Xmx1024m}）内的可控区间（原 256 容量最坏 ≈5.1GB，排队几十个即可能 OOM）。
+     * 池为 static daemon、线程随 JVM 生命周期结束，故不注册 shutdown 钩子；全部任务 best-effort，
+     * 进程退出时直接丢弃安全。拒绝处理器带 sessionId/文件名，被丢弃的写入可归因。
+     */
+    private static final ExecutorService SANDBOX_WRITE_EXECUTOR = new ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(8),
+            runnable -> {
+                Thread thread = new Thread(runnable, "agent-sandbox-upload-write");
+                thread.setDaemon(true);
+                return thread;
+            },
+            (runnable, executor) -> {
+                if (runnable instanceof SandboxWriteTask) {
+                    SandboxWriteTask task = (SandboxWriteTask) runnable;
+                    log.warn("附件自动写入沙箱任务队列已满（上限 8），本次跳过（不影响上传结果）: "
+                                    + "sessionId={}, name={}",
+                            task.sessionId, task.ref == null ? null : task.ref.name());
+                } else {
+                    log.warn("附件自动写入沙箱任务队列已满（上限 8），本次跳过（不影响上传结果）");
+                }
+            });
+
+    /** 上传自动写入沙箱任务：携带 sessionId/文件名，被拒绝时供拒绝处理器归因（R2-I1） */
+    private static final class SandboxWriteTask implements Runnable {
+
+        private final AgentSessionController owner;
+
+        private final String sessionId;
+
+        private final FileRef ref;
+
+        private final byte[] bytes;
+
+        private SandboxWriteTask(AgentSessionController owner, String sessionId, FileRef ref, byte[] bytes) {
+            this.owner = owner;
+            this.sessionId = sessionId;
+            this.ref = ref;
+            this.bytes = bytes;
+        }
+
+        @Override
+        public void run() {
+            owner.doWriteUploadToSandbox(sessionId, ref, bytes);
+        }
+    }
 
     // ==================== agent 注册表与会话控制 ====================
 
@@ -154,7 +222,9 @@ public class AgentSessionController {
 
     /**
      * 发起自主 agent 会话：立即返回状态快照（sessionId 供控制与轮询），业务执行体在 run 线程内进行。
-     * 断开策略由发起方定义（同一 agent 不同页面场景需求不同）：传则覆盖、不传回落定义层默认
+     * 断开策略由发起方定义（同一 agent 不同页面场景需求不同）：传则覆盖、不传回落定义层默认。
+     * <p>{@code startPaused=true}＝只建会话不起 run 线程（状态快照 PAUSED），供发起方先上传
+     * 素材附件再 {@code /session/{id}/resume} 起跑：首轮提示词由 resume 时组装，附件天然入首轮。
      */
     @PostMapping("/session/start")
     public AgentSessionState start(@RequestBody SessionStartReq req) {
@@ -169,7 +239,8 @@ public class AgentSessionController {
                 throw new ServiceException("detachPolicy 取值非法：" + req.getDetachPolicy());
             }
         }
-        return agentSessionService.start(req.getAgentKey().trim(), req.getPayload(), operator(), detachPolicy);
+        return agentSessionService.start(req.getAgentKey().trim(), req.getPayload(), operator(),
+                detachPolicy, Boolean.TRUE.equals(req.getStartPaused()));
     }
 
     /**
@@ -182,12 +253,14 @@ public class AgentSessionController {
     }
 
     /**
-     * 恢复会话（body 可带补充指导语，注入下一轮上下文）
+     * 恢复会话（body 可带补充指导语，注入下一轮上下文；「建后未起跑」会话可带 payload 补丁
+     * 覆盖首轮业务参数——素材会话先建后补指令的场景，见 {@link ControlReq#getPayload()}）
      */
     @PostMapping("/session/{sessionId}/resume")
     public void resume(@PathVariable("sessionId") String sessionId,
                        @RequestBody(required = false) ControlReq req) {
-        agentSessionService.resume(sessionId, req == null ? null : req.getGuidance());
+        agentSessionService.resume(sessionId, req == null ? null : req.getGuidance(),
+                req == null ? null : req.getPayload());
     }
 
     /**
@@ -271,10 +344,22 @@ public class AgentSessionController {
      * 响应为 {@link AgentFileView}（m-r2-7：不回传存储 key）；存储写失败（含元数据侧车失败）同样
      * 由端点转人话错误，不会出现"上传 200 但模型读不到"。
      * 能力未装配（无 {@link AgentFileStore} Bean）时明确拒绝——前端按 {@code /agents} 能力位不渲染入口。
+     * <p>
+     * 上传即写入（best-effort，异步）：事件落库后提交守护线程池，若会话沙箱<b>已存在</b>，把原件
+     * 原始字节写到 {@code input/<原文件名>}（同名<b>覆盖为最新字节</b>；{@link AgentSandbox#putIfAlive}
+     * 不创建沙箱）。<b>上传响应不等待沙箱写入</b>；任何失败（含 Bean 解析/任务提交被拒）只 warn，
+     * 不改变上传成功语义（对象存储仍是正源，模型可用 {@code sandbox_put_attachment} 补拉）。
+     * <p>
+     * <b>暂存上传（{@code attach=false}，2026-11-17）</b>：只落存储不追加 file_attached 事件——
+     * 供「发起前素材」先上传＋预解析（{@link AgentFileParseService}），解析通过后由
+     * {@link #attachFile(String, String)} 在起跑前登记，模型上下文因此只含用户确认过的附件；
+     * 删除暂存件走 {@link #deleteStagedFile(String, String)}。数量上限只约束已登记附件，
+     * 暂存件在登记时再核（避免文件夹批量上传被半路截断）。
      */
     @PostMapping("/session/{sessionId}/files")
     public AgentFileView uploadFile(@PathVariable("sessionId") String sessionId,
-                                    @RequestPart("file") MultipartFile file) {
+                                    @RequestPart("file") MultipartFile file,
+                                    @RequestParam(name = "attach", defaultValue = "true") boolean attach) {
         AgentSessionState state = requireSessionOwner(sessionId);
         if (state.isTerminal()) {
             // m-3：run 线程已结束，附件事件不会再被注入；直接拒绝避免"上传成功但模型永远读不到"
@@ -290,7 +375,7 @@ public class AgentSessionController {
         if (file.getSize() > maxFileSizeMb * 1024L * 1024L) {
             throw new ServiceException("文件超过上限 " + maxFileSizeMb + "MB：" + file.getOriginalFilename());
         }
-        if (attachmentCount(sessionId) >= maxFilesPerSession) {
+        if (attach && attachmentCount(sessionId) >= maxFilesPerSession) {
             throw new ServiceException("单会话附件数量已达上限 " + maxFilesPerSession + " 个");
         }
         byte[] bytes;
@@ -311,12 +396,117 @@ public class AgentSessionController {
                     sessionId, safeFilename(file.getOriginalFilename()), e.getMessage());
             throw new ServiceException("附件保存失败，请重试");
         }
-        long seq = agentSessionService.attachFile(sessionId, ref);
-        if (seq <= 0) {
-            // I-2：事件流是模型附件可见性的唯一正源；写入失败不能静默返回 200
-            throw new ServiceException("附件已存储但事件写入失败，请重试");
+        if (attach) {
+            long seq = agentSessionService.attachFile(sessionId, ref);
+            if (seq <= 0) {
+                // I-2：事件流是模型附件可见性的唯一正源；写入失败不能静默返回 200
+                throw new ServiceException("附件已存储但事件写入失败，请重试");
+            }
         }
+        // 沙箱已存在时上传即写入（best-effort 异步）：对象存储仍是正源，失败只 warn，绝不拖慢/改变上传结果
+        writeUploadToSandbox(sessionId, ref, bytes);
         return AgentFileView.of(ref);
+    }
+
+    /**
+     * 登记暂存附件（{@code attach=false} 上传的素材在起跑前逐件登记）：追加
+     * {@link AgentEvent#FILE_ATTACHED}，此后该附件进入模型上下文/文件卡；已登记幂等返回。
+     * <p>
+     * 数量上限在此核（暂存阶段不核）：超限回人话，调用方（前端）应把该件标失败并让用户处理。
+     * 终态会话拒绝登记（事件不会再被 run 线程注入）。
+     */
+    @PostMapping("/session/{sessionId}/files/{fileId}/attach")
+    public AgentFileView attachFile(@PathVariable("sessionId") String sessionId,
+                                    @PathVariable("fileId") String fileId) {
+        AgentSessionState state = requireSessionOwner(sessionId);
+        if (state.isTerminal()) {
+            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法登记附件");
+        }
+        FileRef ref = requireStoredFile(sessionId, fileId);
+        if (isAttached(sessionId, fileId)) {
+            return AgentFileView.of(ref);
+        }
+        if (attachmentCount(sessionId) >= maxFilesPerSession) {
+            throw new ServiceException("单会话附件数量已达上限 " + maxFilesPerSession + " 个");
+        }
+        long seq = agentSessionService.attachFile(sessionId, ref, parsedCharsOf(sessionId, fileId));
+        if (seq <= 0) {
+            throw new ServiceException("附件已存储但登记失败，请重试");
+        }
+        log.info("暂存附件已登记: sessionId={}, fileId={}, name={}", sessionId, fileId, ref.name());
+        return AgentFileView.of(ref);
+    }
+
+    /**
+     * 删除暂存附件（仅限尚未登记的附件）：前端移除素材 chip 时调用，清对象存储＋解析状态。
+     * 已登记（进入会话上下文）的附件不允许删除——模型侧可见性由事件流决定，本端点不做撤回；
+     * 幂等：附件不存在直接返回成功。
+     */
+    @PostMapping("/session/{sessionId}/files/{fileId}/delete")
+    public void deleteStagedFile(@PathVariable("sessionId") String sessionId,
+                                 @PathVariable("fileId") String fileId) {
+        requireSessionOwner(sessionId);
+        if (isAttached(sessionId, fileId)) {
+            throw new ServiceException("附件已进入会话上下文，不能删除");
+        }
+        AgentFileStore fileStore = fileCapabilityResolver.fileStore();
+        if (fileStore == null) {
+            return;
+        }
+        FileRef ref = fileStore.get(sessionId, fileId);
+        if (ref == null) {
+            return;
+        }
+        fileParseService.forget(sessionId, fileId);
+        try {
+            fileStore.delete(ref);
+        } catch (Exception e) {
+            // 存储实现可能不支持删除（端口默认 no-op/实现抛错）：不影响前端移除素材
+            log.warn("暂存附件删除失败（不影响前端移除）: sessionId={}, fileId={}, error={}",
+                    sessionId, fileId, e.getMessage());
+        }
+    }
+
+    /**
+     * 发起前素材<b>预解析</b>（批量受理，幂等）：上传成功后前端立即调用，把解析结果提前暴露；
+     * 解析线程池/状态见 {@link AgentFileParseService}。终态会话拒绝（解析后也无处登记）。
+     */
+    @PostMapping("/session/{sessionId}/files/parse")
+    public List<AgentFileParseService.ParseView> startParse(
+            @PathVariable("sessionId") String sessionId,
+            @RequestBody(required = false) FileIdsReq req) {
+        AgentSessionState state = requireSessionOwner(sessionId);
+        if (state.isTerminal()) {
+            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法解析附件");
+        }
+        List<String> fileIds = requireFileIds(req);
+        List<AgentFileParseService.ParseView> result = new ArrayList<>();
+        for (String fileId : fileIds) {
+            result.add(fileParseService.start(sessionId, fileId));
+        }
+        return result;
+    }
+
+    /**
+     * 预解析状态（批量轮询）：未知条目（进程重启/记录淘汰）按失败回，前端提示重试。
+     */
+    @GetMapping("/session/{sessionId}/files/parse")
+    public List<AgentFileParseService.ParseView> parseStatus(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam(name = "fileIds") List<String> fileIds) {
+        requireSessionOwner(sessionId);
+        if (fileIds == null || fileIds.isEmpty()) {
+            throw new ServiceException("fileIds 不能为空");
+        }
+        if (fileIds.size() > AgentFileParseService.MAX_BATCH) {
+            throw new ServiceException("单次最多查询 " + AgentFileParseService.MAX_BATCH + " 个附件");
+        }
+        List<AgentFileParseService.ParseView> result = new ArrayList<>();
+        for (String fileId : fileIds) {
+            AgentFileParseService.ParseView view = fileParseService.status(sessionId, requireFileId(fileId));
+            result.add(view == null ? AgentFileParseService.ParseView.missing(fileId) : view);
+        }
+        return result;
     }
 
     /**
@@ -637,6 +827,123 @@ public class AgentSessionController {
         return count;
     }
 
+    /** 该附件是否已登记（事件流正源；登记幂等与暂存件删除闸共用） */
+    private boolean isAttached(String sessionId, String fileId) {
+        for (AgentEvent event : agentSessionService.events(sessionId, 0)) {
+            if (!AgentEvent.FILE_ATTACHED.equals(event.getType()) || !(event.getPayload() instanceof Map)) {
+                continue;
+            }
+            FileRef rebuilt = FileRef.fromEventPayload((Map<?, ?>) event.getPayload());
+            if (rebuilt != null && fileId.equals(rebuilt.fileId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 取存储侧完整引用（登记/删除暂存件共用）：能力未装配与附件不存在都回人话 */
+    private FileRef requireStoredFile(String sessionId, String fileId) {
+        AgentFileStore fileStore = fileCapabilityResolver.fileStore();
+        if (fileStore == null) {
+            throw new ServiceException("附件能力未启用（对象存储或能力模块未装配）");
+        }
+        FileRef ref = fileStore.get(sessionId, requireFileId(fileId));
+        if (ref == null) {
+            throw new ServiceException("附件不存在或已被清理");
+        }
+        return ref;
+    }
+
+    /**
+     * 预解析正文长度（只认 {@code DONE}）：发起前素材链路在登记附件时把「已解析」事实随
+     * {@code file_attached} 落事件流，前端文件卡据此点亮（文档类模型读的是沙箱
+     * {@code parsed/<名>.md}，不会再调 {@code read_attachment}，只靠工具调用探针永远点不亮）。
+     * <p>
+     * 状态缺席（运行期直传 / 服务重启后内存态丢失 / SKIPPED）返回 null＝不声明已解析。
+     */
+    private Integer parsedCharsOf(String sessionId, String fileId) {
+        AgentFileParseService.ParseView parsed = fileParseService.status(sessionId, fileId);
+        return parsed != null && AgentFileParseService.STATUS_DONE.equals(parsed.status())
+                ? parsed.chars() : null;
+    }
+
+    /** 批量入参骨架校验：非空、带上限、每个 fileId 过形态闸 */
+    private static List<String> requireFileIds(FileIdsReq req) {
+        if (req == null || req.getFileIds() == null || req.getFileIds().isEmpty()) {
+            throw new ServiceException("fileIds 不能为空");
+        }
+        if (req.getFileIds().size() > AgentFileParseService.MAX_BATCH) {
+            throw new ServiceException("单次最多处理 " + AgentFileParseService.MAX_BATCH + " 个附件");
+        }
+        List<String> result = new ArrayList<>(req.getFileIds().size());
+        for (String fileId : req.getFileIds()) {
+            result.add(requireFileId(fileId));
+        }
+        return result;
+    }
+
+    /** fileId 形态闸（与 read_attachment 同一契约）：防带路径分隔符/控制字符的伪 id 进存储键 */
+    private static String requireFileId(String fileId) {
+        if (fileId == null || !SAFE_FILE_ID.matcher(fileId).matches()) {
+            throw new ServiceException("附件标识非法");
+        }
+        return fileId;
+    }
+
+    /**
+     * 上传即写入沙箱（best-effort，F-4/F-5/I-2）：<b>异步</b>提交守护线程池，上传响应不等待
+     * 沙箱写入（底座半死/慢时最坏分钟级，同步执行会把 best-effort 变成用户可见上传失败）。
+     * 任务内仅当会话沙箱<b>已存在</b>时把原始字节写到 {@code input/<原文件名>}——同名<b>覆盖为
+     * 最新字节</b>（沙箱＝当前素材工作副本）；沙箱尚未创建则不起容器
+     * （{@link AgentSandbox#putIfAlive} 契约：不创建返回 false），留待模型调用
+     * {@code sandbox_put_attachment} 时从对象存储补拉。
+     * <p>
+     * 任何异常（含 Bean 解析 R1-S5、文件名清洗、任务提交被拒）只记 warn，<b>绝不改变上传端点结果</b>
+     * ——对象存储与 file_attached 事件已落，沙箱侧写入只是优化项。
+     * <p>
+     * <b>非原子</b>（R2-S1，登记不修）：同一会话并发上传同名文件时两个任务可能被两个 worker 并发执行，
+     * 最终沙箱内容是「完成更晚者」而非「上传更晚者」——极端情况下旧字节可能后到并覆盖新字节；对象存储
+     * 始终为正源，模型可用 {@code sandbox_put_attachment} 补拉最新版。
+     */
+    private void writeUploadToSandbox(String sessionId, FileRef ref, byte[] bytes) {
+        try {
+            SANDBOX_WRITE_EXECUTOR.execute(new SandboxWriteTask(this, sessionId, ref, bytes));
+        } catch (Exception e) {
+            log.warn("附件自动写入沙箱任务提交失败（不影响上传结果）: sessionId={}, error={}",
+                    sessionId, e.getMessage());
+        }
+    }
+
+    /**
+     * 线程池任务体（非原子：同会话极端并发下旧字节可能后落，对象存储为正源；R2-S1）：
+     * 所有异常必须在任务内收口（守护线程上的未捕获异常不会回传给上传请求）
+     */
+    private void doWriteUploadToSandbox(String sessionId, FileRef ref, byte[] bytes) {
+        try {
+            AgentSandbox sandbox = fileCapabilityResolver.sandbox();
+            if (sandbox == null) {
+                return;
+            }
+            String name = safeFilename(ref == null ? null : ref.name());
+            String targetPath = "input/" + name;
+            boolean written = sandbox.putIfAlive(sessionId, targetPath, bytes);
+            if (written) {
+                // putIfAlive 同名覆盖为最新字节：targetPath 即实际落点（无改名语义）
+                log.info("附件已随上传写入/覆盖会话沙箱: sessionId={}, name={}, path={}",
+                        sessionId, name, targetPath);
+            } else {
+                // R2-S2：false 含两种来源——①沙箱尚未创建（正常且常见：Cube 内存表 miss /
+                // OpenHands 会话缺失）②路径被底座折算或实例状态竞态。debug 仅留痕、不区分；
+                // 级别压在 debug，正常路径不会污染日志
+                log.debug("附件未写入会话沙箱（端口返回 false）: sessionId={}, name={}, path={}",
+                        sessionId, name, targetPath);
+            }
+        } catch (Exception e) {
+            log.warn("附件上传后写入沙箱失败（不影响上传结果）: sessionId={}, name={}, error={}",
+                    sessionId, ref == null ? null : ref.name(), e.getMessage());
+        }
+    }
+
     /** 上传文件名清洗：取路径末段（兼容旧客户端带全路径），空名回落 file */
     private static String safeFilename(String originalFilename) {
         String name = originalFilename == null ? "" : originalFilename.trim();
@@ -678,6 +985,10 @@ public class AgentSessionController {
         /** 可选：断开策略覆盖（STOP_ON_DETACH 断开即停 / KEEP_RUNNING 后台继续可重连）；
          *  不传回落定义层默认——策略随页面场景定，由发起方定义 */
         private String detachPolicy;
+
+        /** 可选：建后未起跑（缺省 false）——只建会话不启 run 线程，先传附件再 resume 起跑；
+         *  见 {@link com.bidr.llm.agent.session.AgentSessionService#start} */
+        private Boolean startPaused;
     }
 
     /**
@@ -691,6 +1002,23 @@ public class AgentSessionController {
 
         /** 恢复指导语（注入下一轮上下文，「补 2 句继续」） */
         private String guidance;
+
+        /**
+         * 首轮 payload 补丁（仅「建后未起跑」会话生效，2026-11-17）：素材会话在上传前创建时
+         * 用户指令/底稿还没落定，resume 时用本字段合并进 start payload 再组装首轮提示词
+         * （键覆盖语义；普通暂停恢复忽略本字段）
+         */
+        private Map<String, Object> payload;
+    }
+
+    /**
+     * 批量附件标识入参（暂存件登记/预解析端点用）
+     */
+    @Data
+    public static class FileIdsReq {
+
+        /** 会话内附件标识清单 */
+        private List<String> fileIds;
     }
 
     /**

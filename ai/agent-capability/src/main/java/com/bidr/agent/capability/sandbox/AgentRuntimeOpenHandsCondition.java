@@ -11,7 +11,10 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
  * {@code my.agent.runtime.enabled=true}（显式 true，与 {@code AgentRuntimeAutoConfiguration} 的
  * {@code @ConditionalOnProperty(havingValue="true")} 同口径、无 matchIfMissing）且
  * {@code my.agent.runtime.provider} 缺省/空/{@code openhands}（与 openHandsClient Bean 的
- * {@code matchIfMissing=true} 条件同键同值域）。
+ * {@code matchIfMissing=true} 条件同键同值域）；此外 {@code my.agent.sandbox.provider} 字面
+ * {@code cube}（equalsIgnoreCase）时确定性退避（return false）——与 Cube 沙箱腿
+ * {@code CubeSandboxAutoConfiguration} 的 provider=cube 装配条件同键同值域互斥，
+ * 双侧都是属性条件（相位无关），{@code AgentSandbox} 装配面恰好一侧在场。
  * <p>
  * 🔴 <b>刻意不用 {@code @ConditionalOnBean(OpenHandsClient/OpenHandsProvider.class)}</b>：
  * 本模块的自动配置在扫描根含 {@code com.bidr} 的宿主（epc 形态）里会被<b>组件扫描</b>提前求值，
@@ -30,6 +33,14 @@ public class AgentRuntimeOpenHandsCondition implements Condition {
         // 的 equalsIgnoreCase 语义，trim/relaxed（on/yes/1）都不放行
         String enabled = context.getEnvironment().getProperty("my.agent.runtime.enabled");
         if (enabled == null || !"true".equalsIgnoreCase(enabled)) {
+            return false;
+        }
+        // Cube 沙箱腿互斥退避（棒1）：宿主点名 provider=cube 时 OpenHands 腿确定性让位——与
+        // CubeSandboxAutoConfiguration 的 @ConditionalOnProperty(name="my.agent.sandbox.provider",
+        // havingValue="cube") 同键同值域，双侧都是属性条件（与相位无关，P2a 口径），
+        // AgentSandbox 装配面恰好一侧在场，不会双腿同时装配
+        String sandboxProvider = context.getEnvironment().getProperty("my.agent.sandbox.provider");
+        if ("cube".equalsIgnoreCase(sandboxProvider)) {
             return false;
         }
         String provider = context.getEnvironment().getProperty("my.agent.runtime.provider");

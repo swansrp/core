@@ -63,5 +63,12 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         // 透视总计行(最底汇总行)显示控制: 空=跟随所绑 Portal 配置的 summary 开关(默认), 1=显示, 0=隐藏
         setUpgradeDDL(12, "ALTER TABLE `sys_portal_table`\n" +
                 "\tADD COLUMN `pivot_summary_show` CHAR(1) NOT NULL DEFAULT '' COMMENT '透视总计行: 空=跟随Portal配置 1=显示 0=隐藏' AFTER `pivot_total_pos`;\n");
+        // 报表可读标识: 一个 portal 下多张透视报表靠 title/remark 辨认(列表展示/搜索/钻取候选), tableCode 仍是机器键
+        setUpgradeDDL(13, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `title` VARCHAR(100) NULL DEFAULT NULL COMMENT '报表标题(显示用,空则回落tableCode)' AFTER `table_code`,\n" +
+                "\tADD COLUMN `remark` VARCHAR(500) NULL DEFAULT NULL COMMENT '报表备注' AFTER `title`;\n");
+        // 整表钻取目标: 点本表任意单元格打开该编码的透视报表并叠加本格条件, 空=本表明细行; 存编码保证导入导出跨环境可移植
+        setUpgradeDDL(14, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `drill_table_code` VARCHAR(100) NULL DEFAULT NULL COMMENT '整表钻取目标表格编码(空=点单元格打开本表明细行)' AFTER `remark`;\n");
     }
 }

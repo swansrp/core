@@ -35,6 +35,24 @@ public interface AgentFileStore {
     FileRef put(String sessionId, String filename, String mime, byte[] bytes);
 
     /**
+     * 写入一份会话<b>产物</b>（2026-11-17 附件/产物分家）：交付性产物（沙箱取回的交付件、
+     * 业务行 file_url 持久引用的实体）与临时附件生命周期不同——附件落 {@code temp/} 前缀吃
+     * 桶级 ILM 过期，产物是耐用件、落主命名空间。参数与返回口径与 {@link #put} 完全同形，
+     * {@link #get(String, String)} 对两类 fileId 统一回查。
+     * <p>
+     * 默认退化为 {@link #put}（自定义实现不分家时行为与旧版逐字节一致）。
+     *
+     * @param sessionId 会话标识（对象键隔离维度）
+     * @param filename  原始文件名（实现从中取扩展名；可含路径，实现负责清洗）
+     * @param mime      内容类型（空则实现按扩展名推断）
+     * @param bytes     文件字节
+     * @return 完整产物引用（fileId/name/size/mime/key）；fileId 契约与 {@link #put} 同尺
+     */
+    default FileRef putArtifact(String sessionId, String filename, String mime, byte[] bytes) {
+        return put(sessionId, filename, mime, bytes);
+    }
+
+    /**
      * 按会话内附件标识取回完整引用
      *
      * @param sessionId 会话标识

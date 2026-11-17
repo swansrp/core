@@ -16,10 +16,15 @@ import java.util.UUID;
  * Description: {@link AgentFileStore} 的对象存储实现——会话附件字节经 core/store/blob 的
  * {@link BlobStore} 落盘（走 {@code oss.*} 选型路由，MinIO/火山 TOS 由装机参数决定）：
  * <ul>
- *     <li>对象键：{@code agent-session/{tenantOrOp}/{sessionId}/{fileId}.{ext}}——会话前缀隔离，
- *     跨会话猜 fileId 也读不到别人的对象；tenantOrOp 取当前租户，无租户上下文回落操作人，
- *     两者都无（内部任务/异步链路）回落 anonymous。</li>
- *     <li>元数据侧车：内容对象之外另写 {@code agent-session/{sessionId}/{fileId}.meta.json}
+ *     <li>对象键（2026-11-17 附件/产物分家＋temp 前缀定案）：
+ *     附件 {@code temp/agent-session/{tenantOrOp}/{sessionId}/{fileId}.{ext}}——挂 {@code temp/}
+ *     下吃桶级 ILM 自动过期；产物 {@code agent-artifact/{sessionId}/{fileId}.{ext}}——交付件
+ *     是耐用件（业务行 file_url 持久引用），不过期。两类都会话前缀隔离，跨会话猜 fileId
+ *     也读不到别人的对象；附件键的 tenantOrOp 取当前租户，无租户上下文回落操作人，
+ *     两者都无（内部任务/异步链路）回落 anonymous。旧版 {@code agent-session/…} 存量键由
+ *     {@link #get(String, String)} 与删除路径回查兼容，新写不再产生。</li>
+ *     <li>元数据侧车：内容对象之外另写 {@code temp/agent-session/{sessionId}/{fileId}.meta.json}
+ *     （产物为 {@code agent-artifact/{sessionId}/{fileId}.meta.json}）
  *     （FileRef 全字段）——<b>侧车键不带归属段</b>：上传发生在 HTTP 请求线程（租户/操作人上下文
  *     在场，内容键落 {@code agent-session/{tenantOrOp}/...}），而模型读附件发生在 run 线程
  *     （无租户上下文，归属段会退化成 anonymous）——侧车若跟着内容键走，run 线程就永远找不到，
@@ -37,8 +42,17 @@ import java.util.UUID;
 @Slf4j
 public class BlobStoreAgentFileStore implements AgentFileStore {
 
-    /** 会话附件对象键前缀（8 个业务前缀之外的新命名空间，blob 侧无同类前缀） */
-    private static final String KEY_PREFIX = "agent-session/";
+    /**
+     * 会话附件对象键前缀（2026-11-17 起挂 {@code temp/} 下——对话临时附件吃桶级 ILM 自动过期；
+     * 8 个业务前缀之外的命名空间，blob 侧无同类前缀）
+     */
+    private static final String KEY_PREFIX = "temp/agent-session/";
+
+    /** 旧版附件前缀（2026-11-17 前落盘的存量键）：get/delete 回查兼容，新写不再产生 */
+    private static final String LEGACY_KEY_PREFIX = "agent-session/";
+
+    /** 会话产物前缀（附件/产物分家）：交付件是耐用件（业务行 file_url 持久引用），不过期 */
+    private static final String ARTIFACT_KEY_PREFIX = "agent-artifact/";
 
     /** 扩展名清洗后的最大长度（防御超长伪扩展名撑大对象键） */
     private static final int MAX_EXT_LENGTH = 16;
@@ -83,19 +97,56 @@ public class BlobStoreAgentFileStore implements AgentFileStore {
         return ref;
     }
 
+    /**
+     * 会话产物写入（附件/产物分家）：内容与侧车都落 {@code agent-artifact/{sessionId}/…}
+     * （无归属段——产物不面向 run 线程重建，侧车带会话段即可定位）；侧车写失败回滚内容对象，
+     * 失败语义与 {@link #put} 同款（file_url 持久引用要能 {@link #get} 回查，侧车缺席＝引用失效）。
+     */
+    @Override
+    public FileRef putArtifact(String sessionId, String filename, String mime, byte[] bytes) {
+        requireText(sessionId, "sessionId");
+        if (bytes == null) {
+            throw new IllegalArgumentException("产物字节不能为空");
+        }
+        String name = safeFilename(filename);
+        String ext = extOf(name);
+        String fileId = UUID.randomUUID().toString().replace("-", "");
+        String key = ARTIFACT_KEY_PREFIX + safeSegment(sessionId) + "/" + fileId
+                + (ext.isEmpty() ? "" : "." + ext);
+        String contentType = isBlank(mime) ? BlobStore.contentTypeOf(name) : mime;
+        blobStore.put(key, bytes, contentType);
+        FileRef ref = new FileRef(fileId, name, bytes.length, contentType, key);
+        try {
+            blobStore.put(artifactMetaKey(sessionId, fileId), objectMapper.writeValueAsBytes(ref),
+                    "application/json; charset=utf-8");
+        } catch (Exception e) {
+            log.warn("产物元数据侧车写入失败，回滚内容对象: key={} {}", key, e.getMessage());
+            blobStore.remove(key);
+            throw new IllegalStateException("产物元数据写入失败，生成未完成，请重试", e);
+        }
+        return ref;
+    }
+
     @Override
     public FileRef get(String sessionId, String fileId) {
         if (isBlank(sessionId) || isBlank(fileId)) {
             return null;
         }
-        try {
-            byte[] meta = blobStore.get(metaKey(sessionId, fileId));
-            return meta == null ? null : objectMapper.readValue(meta, FileRef.class);
-        } catch (Exception e) {
-            // 对象不存在/存储未配置/侧车损坏：读取口按"没有该附件"处理，不上抛（清单端点不因一条坏附件 500）
-            log.warn("附件元数据读取失败（按不存在处理）: session={} fileId={} {}", sessionId, fileId, e.getMessage());
-            return null;
+        // 附件（temp）→ 产物（agent-artifact）→ 旧版附件（agent-session）三前缀依次回查：
+        // file_id 两类共用同一契约（[A-Za-z0-9_-]），调用方不区分；某前缀损坏/缺席继续下一前缀
+        for (String candidate : new String[]{metaKey(sessionId, fileId), artifactMetaKey(sessionId, fileId),
+                legacyMetaKey(sessionId, fileId)}) {
+            try {
+                byte[] meta = blobStore.get(candidate);
+                if (meta != null) {
+                    return objectMapper.readValue(meta, FileRef.class);
+                }
+            } catch (Exception e) {
+                // 对象不存在/存储未配置/侧车损坏：按"该前缀下没有"处理继续查，不上抛（清单端点不因一条坏件 500）
+                log.warn("附件/产物元数据读取失败（继续下一前缀）: key={} {}", candidate, e.getMessage());
+            }
         }
+        return null;
     }
 
     @Override
@@ -140,13 +191,35 @@ public class BlobStoreAgentFileStore implements AgentFileStore {
         return KEY_PREFIX + safeSegment(sessionId) + "/" + safeSegment(fileId) + META_SUFFIX;
     }
 
-    /** 由内容键推侧车键：内容键形如 agent-session/{owner}/{sessionId}/{fileId}.{ext}，
-     *  侧车恒为 agent-session/{sessionId}/{fileId}.meta.json（删除路径不依赖线程上下文） */
+    /** 产物侧车键：agent-artifact/{sessionId}/{fileId}.meta.json（产物键无归属段，侧车同形） */
+    private static String artifactMetaKey(String sessionId, String fileId) {
+        return ARTIFACT_KEY_PREFIX + safeSegment(sessionId) + "/" + safeSegment(fileId) + META_SUFFIX;
+    }
+
+    /** 旧版附件侧车键（2026-11-17 前落盘的存量键回查/删除用） */
+    private static String legacyMetaKey(String sessionId, String fileId) {
+        return LEGACY_KEY_PREFIX + safeSegment(sessionId) + "/" + safeSegment(fileId) + META_SUFFIX;
+    }
+
+    /**
+     * 由内容键推侧车键（删除路径不依赖线程上下文）。按前缀分派三种形态：
+     * <ul>
+     *     <li>产物：{@code agent-artifact/{sessionId}/{fileId}.{ext}} → 产物侧车</li>
+     *     <li>附件（现行）：{@code temp/agent-session/{owner}/{sessionId}/{fileId}.{ext}} → 附件侧车（去归属段）</li>
+     *     <li>附件（旧版）：{@code agent-session/{owner}/{sessionId}/{fileId}.{ext}} → 旧版侧车</li>
+     * </ul>
+     */
     private static String metaKeyFromContentKey(FileRef ref) {
         String key = ref.key();
         String[] parts = key.split("/");
-        if (parts.length >= 4) {
-            return KEY_PREFIX + parts[2] + "/" + safeSegment(ref.fileId()) + META_SUFFIX;
+        if (key.startsWith(ARTIFACT_KEY_PREFIX) && parts.length >= 3) {
+            return artifactMetaKey(parts[1], ref.fileId());
+        }
+        if (key.startsWith(KEY_PREFIX) && parts.length >= 5) {
+            return metaKey(parts[3], ref.fileId());
+        }
+        if (key.startsWith(LEGACY_KEY_PREFIX) && parts.length >= 4) {
+            return legacyMetaKey(parts[2], ref.fileId());
         }
         return KEY_PREFIX + safeSegment(ref.fileId()) + META_SUFFIX;
     }

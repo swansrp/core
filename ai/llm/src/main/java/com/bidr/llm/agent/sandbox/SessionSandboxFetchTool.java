@@ -114,7 +114,7 @@ public class SessionSandboxFetchTool {
         return viaArtifact(relPath, bytes);
     }
 
-    /** 大文件/二进制路线：转存 AgentFileStore → 预签名读址 → ARTIFACT 事件 → 回链接文本 */
+    /** 大文件/二进制路线：转存 AgentFileStore（产物口——交付件不过期，区别于临时附件）→ 预签名读址 → ARTIFACT 事件 → 回链接文本 */
     private String viaArtifact(String relPath, byte[] bytes) {
         if (fileStore == null) {
             return "沙箱取件未启用：当前宿主未装配文件存储（大文件/二进制需要转存为产物）";
@@ -123,7 +123,7 @@ public class SessionSandboxFetchTool {
         FileRef ref;
         String url;
         try {
-            ref = fileStore.put(sessionId, filename, "application/octet-stream", bytes);
+            ref = fileStore.putArtifact(sessionId, filename, "application/octet-stream", bytes);
             url = fileStore.presignedUrl(ref, AttachmentContextAssembler.URL_TTL_SECONDS);
         } catch (Exception e) {
             log.warn("沙箱取件转存失败, sessionId={}, name={}, error={}", sessionId, filename, e.getMessage());
