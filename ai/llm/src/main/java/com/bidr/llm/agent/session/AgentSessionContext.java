@@ -109,6 +109,33 @@ public class AgentSessionContext {
         return payload;
     }
 
+    /**
+     * 取某格式最近产物的下载地址（通用查询，业务侧按需消费，如落库自动带 Word 地址）。
+     * <p>不另设旁路缓存：产物以 {@link AgentEvent#ARTIFACT} 事件流为唯一正源
+     * （generate_artifact / sandbox_fetch 生成时已 emit），此处按 seq 升序扫描取同格式最后一条的 url。
+     * 无匹配返回 null。format 大小写不敏感。
+     */
+    public String latestArtifactUrl(String format) {
+        if (format == null || format.trim().isEmpty()) {
+            return null;
+        }
+        String want = format.trim().toLowerCase();
+        String latest = null;
+        for (AgentEvent ev : store.events(getSessionId(), 0)) {
+            if (!AgentEvent.ARTIFACT.equals(ev.getType()) || !(ev.getPayload() instanceof Map)) {
+                continue;
+            }
+            Map<?, ?> payload = (Map<?, ?>) ev.getPayload();
+            Object fmt = payload.get("format");
+            Object url = payload.get("url");
+            if (fmt != null && want.equals(String.valueOf(fmt).toLowerCase())
+                    && url != null && !String.valueOf(url).trim().isEmpty()) {
+                latest = String.valueOf(url);
+            }
+        }
+        return latest;
+    }
+
     /** 结论摘要（FINISHED 时前端展示；多次调用以最后一次为准） */
     public void setSummary(String text) {
         summary.set(text);
