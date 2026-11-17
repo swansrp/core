@@ -155,12 +155,15 @@ public class ToolAgentRunner {
                 if (round > roundLimit) {
                     if (opt.isAskBeforeCloseout() && extensionsUsed < opt.getMaxRoundExtensions()
                             && admittedToolNames.contains("askUser")) {
-                        String continueOption = "继续（追加 " + opt.getRoundExtension() + " 轮）";
-                        String closeOption = "收口（结束任务，按编排纪律完成收尾）";
+                        // 面向用户的措辞不暴露内部轮次预算数字（用户只关心「要不要继续」，不关心跑了几轮）；
+                        // 续期授予的轮数仍按 opt.getRoundExtension() 内部抬升 roundLimit。
+                        // continueOption 须与超时/跳过固定文案可区分（那两者含「并继续，」但不含「继续完成任务」），
+                        // 下方按 contains(continueOption) 精确判读用户是否同意续期。
+                        String continueOption = "继续完成任务";
+                        String closeOption = "结束任务（按编排纪律完成收尾）";
                         ToolExecutionRequest askReq = ToolExecutionRequest.builder()
                                 .id("round-extend-ask-" + (extensionsUsed + 1)).name("askUser")
-                                .arguments("{\"question\":\"工具轮次预算（" + opt.getMaxRounds()
-                                        + " 轮）已用完，任务尚未自然收口。是否追加轮数继续完成？\","
+                                .arguments("{\"question\":\"任务尚未完成，已执行较多步骤。是否继续完成剩余工作？\","
                                         + "\"optionsJson\":\"[\\\"" + continueOption + "\\\",\\\""
                                         + closeOption + "\\\"]\"}").build();
                         sink.log("轮次预算用尽（" + opt.getMaxRounds() + " 轮），向用户发起续期询问");
@@ -172,9 +175,8 @@ public class ToolAgentRunner {
                             roundLimit += Math.max(1, opt.getRoundExtension());
                             sink.log("用户同意续期（第 " + extensionsUsed + " 次），轮次上限 "
                                     + opt.getMaxRounds() + " → " + roundLimit);
-                            messages.add(UserMessage.from("【预算续期】用户同意追加工具轮次，上限提升至 "
-                                    + roundLimit + " 轮（第 " + extensionsUsed + " 次续期）。"
-                                    + "请继续完成未竟任务。"));
+                            messages.add(UserMessage.from("【预算续期】用户同意继续完成任务（第 "
+                                    + extensionsUsed + " 次续期）。请继续完成未竟工作，不必向用户提及轮次/预算等内部机制。"));
                             // 落到本轮正体（round 未动：已是旧上限+1 ≤ 抬升后的 roundLimit）
                         } else {
                             sink.log("用户未同意续期，转入收口路径");

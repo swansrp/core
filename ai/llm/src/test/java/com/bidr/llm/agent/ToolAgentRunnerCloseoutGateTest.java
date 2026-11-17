@@ -189,7 +189,7 @@ public class ToolAgentRunnerCloseoutGateTest {
         AgentLoopResult r = new ToolAgentRunner().run(model, "系统", "任务",
                 Arrays.<Object>asList(new CloseoutProbeTools(),
                         new ToolAgentRunnerOffloadTest.FakeAskUserTool(
-                                "用户选择：继续（追加 2 轮）\n（该答复即口径依据，须落实到对应资产的 description/notes）")),
+                                "用户选择：继续完成任务\n（该答复即口径依据，须落实到对应资产的 description/notes）")),
                 opt, listener);
         Assert.assertEquals("续期后任务应跑完并走终止短路", "终局：任务完成总结", r.getText());
         Assert.assertTrue("续期询问应作为合成 askUser 事件上报（前端决策卡复用同通道）",
@@ -217,7 +217,7 @@ public class ToolAgentRunnerCloseoutGateTest {
         AgentLoopResult r = new ToolAgentRunner().run(model, "系统", "任务",
                 Arrays.<Object>asList(new CloseoutProbeTools(),
                         new ToolAgentRunnerOffloadTest.FakeAskUserTool(
-                                "用户选择：收口（结束任务，按编排纪律完成收尾）\n（该答复即口径依据）")),
+                                "用户选择：结束任务（按编排纪律完成收尾）\n（该答复即口径依据）")),
                 opt, listener);
         Assert.assertEquals("拒绝续期＝走收口直出", "已按用户要求收口", r.getText());
         Assert.assertFalse("拒绝路径不得注入续期通知", lastUserText(model.views.get(1).messages).contains("【预算续期】"));
@@ -283,7 +283,7 @@ public class ToolAgentRunnerCloseoutGateTest {
         AgentLoopResult r = new ToolAgentRunner().run(model, "系统", "任务",
                 Arrays.<Object>asList(new CloseoutProbeTools(),
                         new ToolAgentRunnerOffloadTest.FakeAskUserTool(
-                                "用户选择：收口（结束任务，按编排纪律完成收尾）")),
+                                "用户选择：结束任务（按编排纪律完成收尾）")),
                 new AgentLoopOptions(1, 30), listener);
         Assert.assertEquals("默认闸命中（拒绝）→收口直出", "默认闸拒绝后收口", r.getText());
         Assert.assertTrue("默认闸应已发起合成询问", listener.toolCalls.contains("askUser#round-extend-ask-1"));
