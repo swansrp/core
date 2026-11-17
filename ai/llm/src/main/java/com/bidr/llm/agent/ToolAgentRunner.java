@@ -1092,7 +1092,8 @@ public class ToolAgentRunner {
         }
 
         private ChatResponse logRound(List<ChatMessage> messages, Supplier<ChatResponse> call) {
-            report("LLM 第 " + round.incrementAndGet() + " 轮请求已发出（携带 " + messages.size() + " 条上下文消息）");
+            // 进度窗只显示一个带圈轮次码（①②…），不暴露 LLM/上下文条数等内部细节（2026-11-17 用户口径）
+            report(circled(round.incrementAndGet()));
             try {
                 ChatResponse resp = interruptibly(call, stopCheck);
                 TokenUsage usage = resp.tokenUsage();
@@ -1124,6 +1125,20 @@ public class ToolAgentRunner {
             if (logSink != null) {
                 logSink.accept(line);
             }
+        }
+
+        /** 轮次 → 带圈数字：①…⑳（1-20）/㉑…㉟（21-35）/㊱…㊿（36-50）；>50 无标准圈码回落 (n) */
+        private static String circled(int n) {
+            if (n >= 1 && n <= 20) {
+                return String.valueOf((char) (0x2460 + n - 1));
+            }
+            if (n >= 21 && n <= 35) {
+                return String.valueOf((char) (0x3251 + n - 21));
+            }
+            if (n >= 36 && n <= 50) {
+                return String.valueOf((char) (0x32B1 + n - 36));
+            }
+            return "(" + n + ")";
         }
 
         /** 可中断执行：子线程跑实际 HTTP 调用，调用线程分片 Future.get 等待——
