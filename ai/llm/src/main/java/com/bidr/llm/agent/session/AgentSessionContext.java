@@ -4,6 +4,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.agent.AgentLoopListener;
 import com.bidr.llm.agent.AgentToolSurfaceSink;
 import com.bidr.llm.agent.ToolSurfaceFacts;
+import com.bidr.llm.agent.file.AgentArtifact;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.AttachmentContextAssembler;
 import com.bidr.llm.agent.file.FileRef;
@@ -70,6 +71,9 @@ public class AgentSessionContext {
      *  先做廉价短路，无新增可能时连存储读都不发生 */
     private final AtomicLong attachmentScanSeq = new AtomicLong(0L);
 
+    /** 终态续跑说明（一次性，首轮注入后即清）；普通会话恒 null＝零行为变化 */
+    private final AtomicReference<String> continuationNote = new AtomicReference<>();
+
     public AgentSessionContext(AgentSessionState state, AgentSessionStore store, Map<String, Object> payload) {
         this(state, store, payload, null);
     }
@@ -132,6 +136,40 @@ public class AgentSessionContext {
                     && url != null && !String.valueOf(url).trim().isEmpty()) {
                 latest = String.valueOf(url);
             }
+        }
+        return latest;
+    }
+
+    /**
+     * 取某格式最近产物<b>引用</b>（通用查询，业务侧按需消费）：与 {@link #latestArtifactUrl}
+     * 同源（{@code ARTIFACT} 事件流，seq 升序取同格式最后一条），但返回 file_id/name 等
+     * 持久标识而不是预签名 url——业务可把 file_id 存库，用时再由
+     * {@code AgentFileStore#get + presignedUrl} 现签（签名地址有有效期，不得当永久地址存）。
+     * 无匹配返回 null。format 大小写不敏感。
+     */
+    public AgentArtifact latestArtifact(String format) {
+        if (format == null || format.trim().isEmpty()) {
+            return null;
+        }
+        String want = format.trim().toLowerCase();
+        AgentArtifact latest = null;
+        for (AgentEvent ev : store.events(getSessionId(), 0)) {
+            if (!AgentEvent.ARTIFACT.equals(ev.getType()) || !(ev.getPayload() instanceof Map)) {
+                continue;
+            }
+            Map<?, ?> payload = (Map<?, ?>) ev.getPayload();
+            Object fmt = payload.get("format");
+            Object fileId = payload.get("file_id");
+            if (fmt == null || fileId == null || !want.equals(String.valueOf(fmt).toLowerCase())) {
+                continue;
+            }
+            Object size = payload.get("size");
+            latest = new AgentArtifact(String.valueOf(fileId),
+                    payload.get("name") == null ? "" : String.valueOf(payload.get("name")),
+                    size instanceof Number ? ((Number) size).longValue() : 0L,
+                    payload.get("mime") == null ? null : String.valueOf(payload.get("mime")),
+                    String.valueOf(fmt),
+                    payload.get("url") == null ? null : String.valueOf(payload.get("url")));
         }
         return latest;
     }
@@ -224,6 +262,23 @@ public class AgentSessionContext {
      * <p>读失败只记 warn 并返回 null——附件注入是增强面，不阻断工具循环。
      */
     public String pendingUserText() {
+        String note = continuationNote.getAndSet(null);
+        String attachments = pendingAttachmentText();
+        if (note == null || note.isEmpty()) {
+            return attachments;
+        }
+        return attachments == null || attachments.isEmpty() ? note : note + "\n\n" + attachments;
+    }
+
+    /**
+     * 终态续跑的「续跑说明」（一次性）：由 {@code AgentSessionService#resumeTerminal} 在起 run
+     * 线程前挂上，引擎首轮循环头作为一条用户消息注入；消费一次即清（后续轮次不再重复）。
+     */
+    public void setContinuationNote(String note) {
+        continuationNote.set(note == null || note.trim().isEmpty() ? null : note.trim());
+    }
+
+    private String pendingAttachmentText() {
         // I-r2-1 整体回退：开关关＝逐轮附件上下文也不注入（与首轮附件前置说明同口径）
         if (!AttachmentContextAssembler.resolveFileToolsEnabled()) {
             return null;

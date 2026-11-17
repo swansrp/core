@@ -136,6 +136,64 @@ public class AgentSessionStartPausedTest {
         assertTrue("既有调用点（不带 startPaused）零行为变化", probe.started.await(3, TimeUnit.SECONDS));
     }
 
+    /**
+     * 终态续跑：STOPPED 会话 resume ⇒ 同一 sessionId 追加新 run（业务探针第二次被调用），
+     * 首轮参数快照落库（续跑重建依据），事件流追加 RESUMED。
+     */
+    @Test
+    public void resumeStoppedSessionLaunchesNewRun() throws Exception {
+        AgentSessionService service = service();
+        AgentSessionState state = service.start(AGENT_KEY, payload(), "alice", DetachPolicy.KEEP_RUNNING);
+        String id = state.getSessionId();
+        assertTrue(probe.started.await(3, TimeUnit.SECONDS));
+        assertEquals("首轮参数快照落库（续跑重建依据）", "生成今天的监理日志",
+                store.getState(id).getPayload().get("instruction"));
+
+        service.stop(id);
+        waitStatus(id, AgentSessionState.STOPPED);
+
+        service.resume(id, "继续完成剩余工作");
+
+        long deadline = System.currentTimeMillis() + 3000;
+        while (probe.calls.get() < 2 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
+        }
+        assertEquals("终态续跑应再起一个 run（执行体第二次被调用）", 2, probe.calls.get());
+        assertTrue("续跑指令应入事件流", store.events(id, 0).stream()
+                .anyMatch(e -> AgentEvent.RESUMED.equals(e.getType())));
+    }
+
+    /** 已完成（FINISHED）不走续跑：继续＝修订，应开新会话——resume 明确拒绝 */
+    @Test
+    public void resumeFinishedSessionRejected() throws Exception {
+        AgentSessionService service = service();
+        probe.release.countDown();
+        AgentSessionState state = service.start(AGENT_KEY, payload(), "alice", DetachPolicy.KEEP_RUNNING);
+        waitStatus(state.getSessionId(), AgentSessionState.FINISHED);
+
+        try {
+            service.resume(state.getSessionId(), "继续");
+            org.junit.Assert.fail("已完成会话不应允许续跑");
+        } catch (com.bidr.kernel.exception.ServiceException e) {
+            assertTrue("提示应指引开新会话: " + e.getMessage(),
+                    e.getMessage().contains("已完成") || e.getMessage().contains("新会话"));
+        }
+    }
+
+    /** 轮询等状态落定（run 线程收口异步；终态断言专用） */
+    private void waitStatus(String sessionId, String expected) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 3000;
+        while (System.currentTimeMillis() < deadline) {
+            AgentSessionState current = store.getState(sessionId);
+            if (current != null && expected.equals(current.getStatus())) {
+                return;
+            }
+            Thread.sleep(20);
+        }
+        throw new AssertionError("状态未在超时内变为 " + expected
+                + "，当前=" + (store.getState(sessionId) == null ? null : store.getState(sessionId).getStatus()));
+    }
+
     private AgentSessionService service() {
         return new AgentSessionService(store, Collections.singletonList(probe),
                 Mockito.mock(ObjectProvider.class));
@@ -151,6 +209,9 @@ public class AgentSessionStartPausedTest {
     private static class ProbeDefinition implements AutonomousAgentDefinition {
 
         private final CountDownLatch started = new CountDownLatch(1);
+        /** 执行体启动次数（终态续跑用例断言「又起了一个 run」） */
+        private final java.util.concurrent.atomic.AtomicInteger calls =
+                new java.util.concurrent.atomic.AtomicInteger();
         private final CountDownLatch release = new CountDownLatch(1);
 
         @Override
@@ -170,6 +231,7 @@ public class AgentSessionStartPausedTest {
 
         @Override
         public void start(AgentSessionContext ctx, Map<String, Object> payload) throws Exception {
+            calls.incrementAndGet();
             started.countDown();
             release.await(5, TimeUnit.SECONDS);
         }

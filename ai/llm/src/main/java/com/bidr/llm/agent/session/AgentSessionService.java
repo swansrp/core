@@ -171,6 +171,8 @@ public class AgentSessionService {
         } catch (Exception e) {
             log.warn("会话作用对象解析失败（不阻断启动）, agent={}, error={}", agentKey, e.getMessage());
         }
+        // 首轮参数快照（终态续跑据此重建 run；业务无需为「继续」另存参数）
+        state.setPayload(new HashMap<>(safePayload));
         store.saveState(state);
 
         if (startPaused) {
@@ -193,7 +195,17 @@ public class AgentSessionService {
     /** 起 run 线程（直起与「建后未起跑」resume 补起共用一处，避免两套线程装配漂移） */
     private void launch(AutonomousAgentDefinition definition, AgentSessionState state,
                         Map<String, Object> payload) {
-        Thread thread = new Thread(() -> runSession(definition, state, payload),
+        launch(definition, state, payload, null);
+    }
+
+    /**
+     * 起 run 线程（可带续跑说明）：{@code continuationNote} 非空时交给上下文，引擎在首轮循环头
+     * 作为一条用户消息注入（「上次被中断，从中断处继续」），与业务提示词组装解耦——
+     * 业务定义不需要认识「续跑」概念。
+     */
+    private void launch(AutonomousAgentDefinition definition, AgentSessionState state,
+                        Map<String, Object> payload, String continuationNote) {
+        Thread thread = new Thread(() -> runSession(definition, state, payload, continuationNote),
                 "agent-session-" + state.getSessionId());
         runThreads.put(state.getSessionId(), thread);
         thread.start();
@@ -228,7 +240,8 @@ public class AgentSessionService {
     public void resume(String sessionId, String guidance, Map<String, Object> payloadPatch) {
         AgentSessionState state = requireState(sessionId);
         if (state.isTerminal()) {
-            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法恢复");
+            resumeTerminal(state, guidance, payloadPatch);
+            return;
         }
         DeferredStart deferred = deferredStarts.remove(sessionId);
         if (deferred != null) {
@@ -267,6 +280,71 @@ public class AgentSessionService {
         emitAndPublish(sessionId, AgentEvent.RESUMED,
                 guidance == null || guidance.trim().isEmpty() ? "会话已恢复" : "会话已恢复（附带用户补充指导）");
         transition(sessionId, AgentSessionState.RUNNING, null);
+    }
+
+    /**
+     * 终态续跑（STOPPED/FAILED）：同一会话追加新 run——状态复位为 RUNNING、清掉上一轮的终态字段，
+     * 用 {@code state.payload} 快照重建执行（业务零改动），并向首轮注入一条「续跑说明」用户消息
+     * （已完成部分不要重复、中间产物可复用），避免模型从零重做。
+     * <p>FINISHED 不走此口：已完成会话的再加工属「修订」，应开新会话（避免一次会话产出两版终态）。
+     * 未注册/无 payload 快照（老会话）时明确报错，由调用方回落「重新发起」。
+     */
+    private void resumeTerminal(AgentSessionState state, String guidance,
+                                Map<String, Object> payloadPatch) {
+        String sessionId = state.getSessionId();
+        String status = state.getStatus();
+        if (!AgentSessionState.STOPPED.equals(status) && !AgentSessionState.FAILED.equals(status)) {
+            throw new ServiceException("会话已结束（" + status + "），如需再加工请发起新会话");
+        }
+        if (runThreads.containsKey(sessionId)) {
+            // 理论不可达（终态＝run 线程已收口）；双保险防同会话双 run 并发写事件流
+            throw new ServiceException("会话正在收口中，请稍后重试");
+        }
+        AutonomousAgentDefinition definition = definitions.get(state.getAgentKey());
+        if (definition == null) {
+            throw new ServiceException("会话所属 agent 未注册，无法继续: " + state.getAgentKey());
+        }
+        if (state.getPayload() == null || state.getPayload().isEmpty()) {
+            throw new ServiceException("该会话没有首轮参数快照（历史会话），请重新发起");
+        }
+        String previousError = state.getError();
+        Map<String, Object> payload = mergePayload(state.getPayload(), payloadPatch);
+        state.setPayload(payload);
+        state.setStatus(AgentSessionState.RUNNING);
+        state.setEndedAt(null);
+        state.setError(null);
+        state.setSummary(null);
+        state.setLive(null);
+        state.setHeartbeat(System.currentTimeMillis());
+        // 上一轮的阶段/计划/待答问题全部收口过，续跑重开新板（避免前端把旧阶段当本轮进行中）
+        state.getStages().clear();
+        state.getPlan().clear();
+        state.getQuestions().clear();
+        state.getConfirmations().clear();
+        store.saveState(state);
+        if (streamHub != null) {
+            streamHub.publishStatus(state);
+        }
+        String resumedText = guidance == null || guidance.trim().isEmpty()
+                ? "继续完成剩余工作" : guidance;
+        emitAndPublish(sessionId, AgentEvent.RESUMED, resumedText);
+        log.info("会话终态续跑: session={} 上轮状态={} 原因={}", sessionId, status,
+                previousError == null ? "-" : previousError);
+        launch(definition, state, payload, continuationNote(previousError, guidance));
+    }
+
+    /** 续跑说明（引擎首轮注入的用户消息）：只讲事实与要求，不暴露内部机制 */
+    private static String continuationNote(String previousError, String guidance) {
+        StringBuilder note = new StringBuilder("【续跑】本会话上一次执行被中断");
+        if (previousError != null && !previousError.trim().isEmpty()) {
+            note.append("（原因：").append(previousError.trim()).append("）");
+        }
+        note.append("。请从中断处继续完成原任务：已完成的部分不要重复劳动，")
+                .append("已有的中间产物/文件如仍在工作区可直接复用；完成后按原要求收口。");
+        if (guidance != null && !guidance.trim().isEmpty()) {
+            note.append("\n用户补充要求：").append(guidance.trim());
+        }
+        return note.toString();
     }
 
     /**
@@ -478,8 +556,14 @@ public class AgentSessionService {
 
     private void runSession(AutonomousAgentDefinition definition, AgentSessionState state,
                             Map<String, Object> payload) {
+        runSession(definition, state, payload, null);
+    }
+
+    private void runSession(AutonomousAgentDefinition definition, AgentSessionState state,
+                            Map<String, Object> payload, String continuationNote) {
         String sessionId = state.getSessionId();
         AgentSessionContext ctx = new AgentSessionContext(state, store, payload, streamHub);
+        ctx.setContinuationNote(continuationNote);
         Map<String, Object> startPayload = new HashMap<>();
         startPayload.put("agentKey", state.getAgentKey());
         startPayload.put("payload", payload);
