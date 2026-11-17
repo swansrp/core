@@ -1,5 +1,6 @@
 package com.bidr.llm.agent.sandbox;
 
+import com.bidr.llm.agent.file.AgentFileParseService;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
 import dev.langchain4j.agent.tool.P;
@@ -344,6 +345,66 @@ public class SessionSandboxPutAttachmentToolTest {
                 .putAttachment("f-docx", null);
 
         assertEquals("放入沙箱失败，请稍后重试", result);
+    }
+
+    /** 有预解析正文：原件 input/<名> ＋ 解析正文 parsed/<名>.md 一同进沙箱，返回文本两者都回显 */
+    @Test
+    public void parsedMarkdownIsPlacedAlongsideOriginal() {
+        AgentFileStore fileStore = mock(AgentFileStore.class);
+        AgentSandbox sandbox = mock(AgentSandbox.class);
+        AgentFileParseService parseService = mock(AgentFileParseService.class);
+        when(fileStore.get(SESSION, "f-docx")).thenReturn(DOCX);
+        when(fileStore.read(DOCX)).thenReturn(DOCX_BYTES);
+        when(sandbox.put(SESSION, "input/监理日志.docx", DOCX_BYTES)).thenReturn("input/监理日志.docx");
+        when(parseService.parsedMarkdown(SESSION, "f-docx")).thenReturn("# 解析正文\n内容");
+        when(sandbox.put(eq(SESSION), eq("parsed/监理日志.docx.md"), any(byte[].class)))
+                .thenReturn("parsed/监理日志.docx.md");
+
+        String result = new SessionSandboxPutAttachmentTool(SESSION, fileStore, sandbox, parseService)
+                .putAttachment("f-docx", null);
+
+        assertTrue("原件落点回显: " + result, result.contains("已放入沙箱：input/监理日志.docx"));
+        assertTrue("解析正文落点回显: " + result, result.contains("预解析正文：parsed/监理日志.docx.md"));
+        verify(sandbox).put(eq(SESSION), eq("parsed/监理日志.docx.md"), any(byte[].class));
+    }
+
+    /** 无预解析正文（未解析/失败/淘汰）：仅放原件，消息与旧口径一致 */
+    @Test
+    public void absentParsedMarkdownFallsBackToOriginalOnly() {
+        AgentFileStore fileStore = mock(AgentFileStore.class);
+        AgentSandbox sandbox = mock(AgentSandbox.class);
+        AgentFileParseService parseService = mock(AgentFileParseService.class);
+        when(fileStore.get(SESSION, "f-docx")).thenReturn(DOCX);
+        when(fileStore.read(DOCX)).thenReturn(DOCX_BYTES);
+        when(sandbox.put(SESSION, "input/监理日志.docx", DOCX_BYTES)).thenReturn("input/监理日志.docx");
+        when(parseService.parsedMarkdown(SESSION, "f-docx")).thenReturn(null);
+
+        String result = new SessionSandboxPutAttachmentTool(SESSION, fileStore, sandbox, parseService)
+                .putAttachment("f-docx", null);
+
+        assertEquals("已放入沙箱：input/监理日志.docx（4 字节）。可用 sandbox_run 直接处理（工作目录＝沙箱根）。",
+                result);
+        verify(sandbox, never()).put(eq(SESSION), eq("parsed/监理日志.docx.md"), any(byte[].class));
+    }
+
+    /** 解析正文写沙箱失败：best-effort 不影响原件放件结果（仍回显原件，不抛） */
+    @Test
+    public void parsedPutFailureDoesNotAffectOriginal() {
+        AgentFileStore fileStore = mock(AgentFileStore.class);
+        AgentSandbox sandbox = mock(AgentSandbox.class);
+        AgentFileParseService parseService = mock(AgentFileParseService.class);
+        when(fileStore.get(SESSION, "f-docx")).thenReturn(DOCX);
+        when(fileStore.read(DOCX)).thenReturn(DOCX_BYTES);
+        when(sandbox.put(SESSION, "input/监理日志.docx", DOCX_BYTES)).thenReturn("input/监理日志.docx");
+        when(parseService.parsedMarkdown(SESSION, "f-docx")).thenReturn("正文");
+        when(sandbox.put(eq(SESSION), eq("parsed/监理日志.docx.md"), any(byte[].class)))
+                .thenThrow(new IllegalStateException("disk full"));
+
+        String result = new SessionSandboxPutAttachmentTool(SESSION, fileStore, sandbox, parseService)
+                .putAttachment("f-docx", null);
+
+        assertEquals("已放入沙箱：input/监理日志.docx（4 字节）。可用 sandbox_run 直接处理（工作目录＝沙箱根）。",
+                result);
     }
 
     private static String repeat(char c, int count) {

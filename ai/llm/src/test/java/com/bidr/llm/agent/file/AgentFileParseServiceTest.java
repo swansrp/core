@@ -64,6 +64,27 @@ public class AgentFileParseServiceTest {
         assertEquals(Integer.valueOf("第一行\n第二行 正文".length()), done.chars());
         assertEquals("第一行 第二行 正文", done.preview());
         assertNull(done.error());
+        assertEquals("解析全文须保留供沙箱放件附带", "第一行\n第二行 正文",
+                parseService.parsedMarkdown(SESSION, FILE_ID));
+    }
+
+    /** parsedMarkdown：未解析/不存在 → null；解析失败 → null（不放解析正文，仅原件） */
+    @Test
+    public void parsedMarkdownNullWhenAbsentOrFailed() throws Exception {
+        FileMarkdownService service = mock(FileMarkdownService.class);
+        when(store.get(SESSION, FILE_ID)).thenReturn(ref);
+        when(store.read(ref)).thenReturn("hello".getBytes("UTF-8"));
+        when(service.isProcessable(ref.name())).thenReturn(true);
+        when(service.toMarkdown(any(InputStream.class), anyString())).thenThrow(new IOException("boom"));
+        when(markdownProvider.getIfUnique()).thenReturn(service);
+        when(resolver.fileStore()).thenReturn(store);
+
+        AgentFileParseService parseService = new AgentFileParseService(resolver, markdownProvider);
+        assertNull("未受理时取不到全文", parseService.parsedMarkdown(SESSION, FILE_ID));
+        parseService.start(SESSION, FILE_ID);
+        awaitStatus(parseService, AgentFileParseService.STATUS_FAILED);
+        assertNull("解析失败不保留全文", parseService.parsedMarkdown(SESSION, FILE_ID));
+        assertNull("不存在的 fileId 回 null", parseService.parsedMarkdown(SESSION, "no-such"));
     }
 
     @Test

@@ -73,6 +73,10 @@ public class AgentFileParseService {
     /** 预览正文上限（chips tooltip 用，不参与模型上下文） */
     private static final int PREVIEW_CHARS = 160;
 
+    /** 单件保留的预解析全文上限（字符）：供沙箱放件附带解析正文；超限不保留（放件回落仅原件），
+     *  与 {@link #MAX_STATES} 共同护内存（512 件 × 20 万字符上界可控） */
+    private static final int MAX_RETAINED_MARKDOWN_CHARS = 200_000;
+
     /**
      * 解析线程池（2 线程＋有界队列 32，daemon）：与行业包 MinerU 并发口径一致；
      * 队列满＝RejectedExecution 直接标失败（不排无限队伍，也不拖死请求线程）。
@@ -162,6 +166,18 @@ public class AgentFileParseService {
         states.remove(key(sessionId, fileId));
     }
 
+    /**
+     * 取预解析全文（供沙箱放件附带「外边解析过的」正文，与原件一同进沙箱）。
+     * 未解析/解析中/失败/跳过/条目淘汰/全文超限未保留 → 返回 null（调用方回落仅放原件）。
+     */
+    public String parsedMarkdown(String sessionId, String fileId) {
+        ParseState state = states.get(key(sessionId, fileId));
+        if (state == null || !STATUS_DONE.equals(state.getStatus())) {
+            return null;
+        }
+        return state.getMarkdown();
+    }
+
     // ==================== 解析执行 ====================
 
     private void doParse(String key, String sessionId, FileRef ref, FileMarkdownService markdownService) {
@@ -195,6 +211,10 @@ public class AgentFileParseService {
             }
             state.setChars(markdown.length());
             state.setPreview(previewOf(markdown));
+            // 保留全文供沙箱放件附带解析正文（超限不保留，放件回落仅原件）
+            if (markdown.length() <= MAX_RETAINED_MARKDOWN_CHARS) {
+                state.setMarkdown(markdown);
+            }
             state.setStatus(STATUS_DONE);
             state.setFinishedAt(System.currentTimeMillis());
             state.setSeconds((state.getFinishedAt() - startedAt) / 1000L);
@@ -285,6 +305,9 @@ public class AgentFileParseService {
         private Long seconds;
 
         private String preview;
+
+        /** 预解析全文（供沙箱放件附带；超限/未解析为 null，不入 HTTP 视图） */
+        private String markdown;
 
         private String error;
 

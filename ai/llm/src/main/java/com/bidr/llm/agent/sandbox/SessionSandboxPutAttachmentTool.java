@@ -1,6 +1,7 @@
 package com.bidr.llm.agent.sandbox;
 
 import com.bidr.kernel.utils.BeanUtil;
+import com.bidr.llm.agent.file.AgentFileParseService;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.file.FileRef;
 import com.bidr.llm.agent.session.AgentSessionContext;
@@ -9,6 +10,7 @@ import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
@@ -54,20 +56,31 @@ public class SessionSandboxPutAttachmentTool {
 
     private final AgentSandbox sandbox;
 
+    /** 预解析服务（可空）：放件时附带「外边解析过的」正文，与原件一同进沙箱 */
+    private final AgentFileParseService parseService;
+
     /**
-     * 任务作用域构造：按当前会话新建；存储/沙箱 Bean 缺席时保留 null，
+     * 任务作用域构造：按当前会话新建；存储/沙箱/预解析 Bean 缺席时保留 null，
      * 调用期回明确错误文本（不在构造期抛，避免工具面装配被一个可选能力击穿）
      */
     public SessionSandboxPutAttachmentTool(AgentSessionContext ctx) {
         this(ctx == null ? null : ctx.getSessionId(),
-                beanOrNull(AgentFileStore.class), beanOrNull(AgentSandbox.class));
+                beanOrNull(AgentFileStore.class), beanOrNull(AgentSandbox.class),
+                beanOrNull(AgentFileParseService.class));
     }
 
-    /** 可注入构造（测试/自定义装配用）：显式给出会话与依赖 */
+    /** 可注入构造（测试/自定义装配用）：显式给出会话与依赖，预解析缺席＝仅放原件 */
     SessionSandboxPutAttachmentTool(String sessionId, AgentFileStore fileStore, AgentSandbox sandbox) {
+        this(sessionId, fileStore, sandbox, null);
+    }
+
+    /** 可注入构造（含预解析服务）：放件附带解析正文 */
+    SessionSandboxPutAttachmentTool(String sessionId, AgentFileStore fileStore, AgentSandbox sandbox,
+                                    AgentFileParseService parseService) {
         this.sessionId = sessionId;
         this.fileStore = fileStore;
         this.sandbox = sandbox;
+        this.parseService = parseService;
     }
 
     /**
@@ -78,10 +91,11 @@ public class SessionSandboxPutAttachmentTool {
      * @param path   沙箱内目标相对路径（可选；{@code null}/空白＝缺省 {@code input/<原文件名>}；须相对）
      * @return 实际落点与字节数；失败回人话错误文本（不抛）
      */
-    @Tool(name = TOOL_NAME, value = "把本会话上传的附件原件（原始字节，不做文本解析）放入沙箱，"
-            + "供 sandbox_run 用脚本直接处理（如读取 docx/xlsx 原件，保留原样式与模板）；"
+    @Tool(name = TOOL_NAME, value = "把本会话上传的附件放入沙箱：原件（原始字节）落 input/<原文件名>，"
+            + "若该附件已有后端预解析正文，会一并落 parsed/<原文件名>.md（外边解析过的文本，可直接读）。"
+            + "原件供 sandbox_run 脚本处理（保留 docx/xlsx 原样式与模板）；解析正文供直接读取素材内容。"
             + "file_id 取自会话附件清单；path 可选，缺省 input/<原文件名>。"
-            + "若上传时会话已有沙箱，原件可能已在 input/<文件名>，可先 sandbox_run ls input/ 确认，"
+            + "若上传时会话已有沙箱，原件可能已在 input/<文件名>，可先 sandbox_run ls input/ parsed/ 确认，"
             + "已在则无需重复放入。"
             + "目标路径已存在时会自动改名并在返回中给出实际路径，无需自行换名")
     public String putAttachment(
@@ -143,8 +157,43 @@ public class SessionSandboxPutAttachmentTool {
         }
         log.info("[LLM工具] 会话 '{}' sandbox_put_attachment: fileId={}, size={}B, path={}",
                 sessionId, id, bytes.length, actualPath);
-        return "已放入沙箱：" + actualPath + "（" + bytes.length
-                + " 字节）。可用 sandbox_run 直接处理（工作目录＝沙箱根）。";
+        // 附带「外边解析过的」正文（best-effort）：与原件一同进沙箱，失败不影响原件放件结果
+        String parsedSuffix = putParsedMarkdown(id, ref);
+        return "已放入沙箱：" + actualPath + "（" + bytes.length + " 字节）" + parsedSuffix
+                + "。可用 sandbox_run 直接处理（工作目录＝沙箱根）。";
+    }
+
+    /**
+     * 附带预解析正文进沙箱（{@code parsed/<原文件名>.md}）：取 {@link AgentFileParseService#parsedMarkdown}，
+     * 有则写入并回显落点后缀；无（未解析/失败/淘汰/超限）或写入失败 → 返回空串（仅原件，best-effort）。
+     */
+    private String putParsedMarkdown(String fileId, FileRef ref) {
+        if (parseService == null) {
+            return "";
+        }
+        String markdown;
+        try {
+            markdown = parseService.parsedMarkdown(sessionId, fileId);
+        } catch (Exception e) {
+            log.warn("预解析正文读取失败（仅放原件）, sessionId={}, fileId={}, error={}",
+                    sessionId, fileId, e.getMessage());
+            return "";
+        }
+        if (markdown == null || markdown.trim().isEmpty()) {
+            return "";
+        }
+        String parsedPath = "parsed/" + basename(ref == null ? null : ref.name()) + ".md";
+        try {
+            String actual = sandbox.put(sessionId, parsedPath, markdown.getBytes(StandardCharsets.UTF_8));
+            String landed = (actual == null || actual.trim().isEmpty()) ? parsedPath : actual;
+            log.info("[LLM工具] 会话 '{}' 预解析正文已入沙箱: fileId={}, path={}, chars={}",
+                    sessionId, fileId, landed, markdown.length());
+            return "；预解析正文：" + landed + "（" + markdown.length() + " 字，可直接读取）";
+        } catch (Exception e) {
+            log.warn("预解析正文入沙箱失败（仅放原件）, sessionId={}, fileId={}, path={}, error={}",
+                    sessionId, fileId, parsedPath, e.getMessage());
+            return "";
+        }
     }
 
     /** 缺省落点：{@code input/<原文件名>}（name 含路径取末段；清洗后仍非法则回落 input/file） */
