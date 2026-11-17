@@ -67,5 +67,8 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         setUpgradeDDL(13, "ALTER TABLE `sys_portal_table`\n" +
                 "\tADD COLUMN `title` VARCHAR(100) NULL DEFAULT NULL COMMENT '报表标题(显示用,空则回落tableCode)' AFTER `table_code`,\n" +
                 "\tADD COLUMN `remark` VARCHAR(500) NULL DEFAULT NULL COMMENT '报表备注' AFTER `title`;\n");
+        // 整表钻取目标: 点本表任意单元格打开该编码的透视报表并叠加本格条件, 空=本表明细行; 存编码保证导入导出跨环境可移植
+        setUpgradeDDL(14, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `drill_table_code` VARCHAR(100) NULL DEFAULT NULL COMMENT '整表钻取目标表格编码(空=点单元格打开本表明细行)' AFTER `remark`;\n");
     }
 }

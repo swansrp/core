@@ -49,6 +49,12 @@ public class PortalTableVO extends BaseVO {
     private String remark;
 
     /**
+     * 整表钻取目标表格编码(空=点单元格打开本表明细行)
+     */
+    @ApiModelProperty(value = "整表钻取目标表格编码")
+    private String drillTableCode;
+
+    /**
      * 左侧筛选栏的宽度
      */
     @ApiModelProperty(value = "左侧筛选栏的宽度")
