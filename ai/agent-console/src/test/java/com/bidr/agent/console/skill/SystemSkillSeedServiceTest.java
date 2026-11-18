@@ -99,6 +99,71 @@ class SystemSkillSeedServiceTest {
         verify(store).put(eq(SYNTHETIC_KEY), any());
     }
 
+    // ---------------------------------------------------------------- seed：版本声明（2026-11-18 拍板）
+
+    /** SKILL.md 带 frontmatter version 声明的合成包 */
+    private static byte[] syntheticZipWithVersion(int version) {
+        Map<String, byte[]> files = new LinkedHashMap<>();
+        files.put(SkillPackageParser.SKILL_MD, ("---\nname: " + SYNTHETIC
+                + "\ndescription: 合成测试包\ntitle: 演示\ncategory: 通用\nversion: " + version + "\n---\n# 正文\n")
+                .getBytes(StandardCharsets.UTF_8));
+        files.put("templates/t.md", "模板".getBytes(StandardCharsets.UTF_8));
+        return SkillPackageWriter.pack(SYNTHETIC, files);
+    }
+
+    @Test
+    void declaredVersionRegistersWithDeclaredNumber() {
+        stubLookup(null);
+
+        SystemSkillSeedService.Outcome outcome = new FixedSeed(syntheticZipWithVersion(3)).seed();
+
+        assertThat(outcome.added).as("%s", outcome).isEqualTo(1);
+        SkillAsset registered = onlySaved();
+        assertThat(registered.getVersion()).as("声明版本随包注册").isEqualTo(3);
+        assertThat(registered.getPackageKey()).isEqualTo("agent-skill/" + SYNTHETIC + "/v3.zip");
+        verify(store).put(eq("agent-skill/" + SYNTHETIC + "/v3.zip"), any());
+    }
+
+    @Test
+    void versionBumpRefreshesRowAndKeyInPlace() {
+        SkillAsset builtin = asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED);
+        builtin.setId(7L);
+        builtin.setVersion(1);
+        builtin.setPackageKey(SYNTHETIC_KEY);
+        builtin.setPackageSha256(OTHER_SHA);
+        stubLookup(builtin);
+        // v2 号无人占用（mock 未桩即 null）
+        byte[] newZip = syntheticZipWithVersion(2);
+
+        SystemSkillSeedService.Outcome outcome = new FixedSeed(newZip).seed();
+
+        assertThat(outcome.refreshed).as("%s", outcome).isEqualTo(1);
+        ArgumentCaptor<SkillAsset> patch = ArgumentCaptor.forClass(SkillAsset.class);
+        verify(skillAssetService).updateAsset(patch.capture());
+        assertThat(patch.getValue().getVersion()).as("声明版本变化即涨号").isEqualTo(2);
+        assertThat(patch.getValue().getPackageKey()).isEqualTo("agent-skill/" + SYNTHETIC + "/v2.zip");
+        assertThat(patch.getValue().getId()).isEqualTo(7L);
+        assertThat(patch.getValue().getStatus()).as("状态一字不动").isNull();
+        verify(store).put(eq("agent-skill/" + SYNTHETIC + "/v2.zip"), any());
+    }
+
+    @Test
+    void declaredVersionOccupiedByAnotherRowBumpsToFreeNumber() {
+        stubLookup(null);
+        SkillAsset uploadedV2 = asset(SkillAsset.ORIGIN_UPLOADED, SkillAsset.STATUS_PUBLISHED);
+        uploadedV2.setId(9L);
+        uploadedV2.setVersion(2);
+        when(skillAssetService.findByNameAndVersion(SYNTHETIC, 2)).thenReturn(uploadedV2);
+
+        SystemSkillSeedService.Outcome outcome = new FixedSeed(syntheticZipWithVersion(2)).seed();
+
+        assertThat(outcome.added).as("%s", outcome).isEqualTo(1);
+        assertThat(outcome.notes).anyMatch(n -> n.contains("顺延"));
+        SkillAsset registered = onlySaved();
+        assertThat(registered.getVersion()).as("v2 被上传行占用 ⇒ 顺延 v3（对象永不互相覆盖）").isEqualTo(3);
+        assertThat(registered.getPackageKey()).isEqualTo("agent-skill/" + SYNTHETIC + "/v3.zip");
+    }
+
     // ---------------------------------------------------------------- seed：幂等
 
     @Test
@@ -274,8 +339,10 @@ class SystemSkillSeedServiceTest {
         SystemSkillSeedService.Outcome outcome = fixedSeed().seed();
 
         assertThat(outcome.added).as("%s", outcome).isEqualTo(1);
-        // 全部交互只有 findByName（且只被以包名调过一次）＋ saveAsset 两种
+        // 全部交互只有 findByName（且只被以包名调过一次）＋ findByNameAndVersion（版本占用点查）
+        // ＋ saveAsset 三种——三者都是按名点查/落行，绝无反扫
         verify(skillAssetService).findByName(SYNTHETIC);
+        verify(skillAssetService).findByNameAndVersion(SYNTHETIC, 1);
         verify(skillAssetService).saveAsset(any(SkillAsset.class));
         verifyNoMoreInteractions(skillAssetService);
         // 显式钉住：反扫与清理的口一个都没开（verifyNoMoreInteractions 已兜底，这里点名是防将来"合法化"某个新调用）

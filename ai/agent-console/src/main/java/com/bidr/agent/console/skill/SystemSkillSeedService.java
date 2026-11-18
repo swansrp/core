@@ -21,13 +21,14 @@ import java.util.*;
  * 技能被下线（{@code OFFLINE}）之后再重启，如果只是覆盖，等于重启把它偷偷发布回去。
  * 所以五个分支各自钉住一条裁定，顺序也不能换（先认所有权、再看墓碑、最后才比内容）：
  * <ol>
- *   <li>同名无行＝注册：{@code PUBLISHED}、{@code BUILTIN}、恒 v1；</li>
+ *   <li>同名无行＝注册：{@code PUBLISHED}、{@code BUILTIN}、版本＝frontmatter 声明号（未声明缺省 1）；</li>
  *   <li>{@code origin != BUILTIN}＝<b>让位</b>：UPLOADED 行是运行期产生的数据，不是代码的附属物，
  *       发版内容永远不许覆盖用户资产；</li>
  *   <li>{@code status == TOMBSTONE}＝<b>不复活</b>：注销是人的决策，重启不得把包装回来
  *       （charter 验收项"卸载内置包后重启不复活"）；</li>
- *   <li>sha 相同且行有效＝未变，零写（不涨版本、不碰状态、不重传对象）；</li>
- *   <li>其余＝就地覆盖<b>同一个 key、同一个 v1</b>，且 status 一字不动。</li>
+ *   <li>sha 相同且版本同且行有效＝未变，零写（不碰状态、不重传对象）；</li>
+ *   <li>其余＝就地覆盖（key 随生效版本，声明版本变化即涨号），且 status 一字不动。
+ *       生效号被同名其他行占用时顺延到空闲号（撞号＝对象互相覆盖）。</li>
  * </ol></p>
  *
  * <p><b>所有权哨兵是 {@code origin}，不是 {@code create_by}</b>：业务侧出厂器拿
@@ -209,8 +210,16 @@ public class SystemSkillSeedService {
         }
         String sha = SkillPackageWriter.sha256Hex(zip);
         SkillAsset existing = skillAssetService.findByName(pkg.getName());
+        // 生效版本解析：声明号被同名其他行占用时顺延到空闲号（撞号＝对象互相覆盖）。
+        // excludeId＝既有行自己——出厂行占着的旧版本号不算撞号（refresh 会把它挪到新号）；
+        // 让位/墓碑分支不消费版本号，此处多排除无副作用
+        int builtinVersion = effectiveVersion(pkg, existing != null ? existing.getId() : null);
+        if (pkg.getDeclaredVersion() != null && builtinVersion != pkg.getDeclaredVersion()) {
+            outcome.notes.add(pkg.getName() + " 声明版本 v" + pkg.getDeclaredVersion()
+                    + " 被同名其他行占用，顺延生效 v" + builtinVersion);
+        }
         if (existing == null) {
-            register(pkg, zip, sha);
+            register(pkg, zip, sha, builtinVersion);
             outcome.added++;
             return;
         }
@@ -227,24 +236,47 @@ public class SystemSkillSeedService {
             log.info("系统出厂技能包已被注销，跳过: name={}（注销是人的决策，重启不得把包装回来）", pkg.getName());
             return;
         }
-        if (sha.equals(existing.getPackageSha256()) && CommonConst.YES.equals(existing.getValid())) {
+        if (sha.equals(existing.getPackageSha256()) && CommonConst.YES.equals(existing.getValid())
+                && Integer.valueOf(builtinVersion).equals(existing.getVersion())) {
             outcome.unchanged++;
-            log.info("系统出厂技能包内容未变: name={} sha={}", pkg.getName(), sha);
+            log.info("系统出厂技能包内容与版本均未变: name={} v{} sha={}", pkg.getName(), builtinVersion, sha);
             return;
         }
-        refresh(pkg, zip, sha, existing);
+        refresh(pkg, zip, sha, existing, builtinVersion);
         outcome.refreshed++;
     }
 
-    private void register(SkillPackage pkg, byte[] zip, String sha) {
-        String key = SystemSkillStore.packageKey(pkg.getName(), BUILTIN_VERSION);
+    /**
+     * 出厂包生效版本（2026-11-18 版本声明拍板）：SKILL.md frontmatter 声明了 {@code version:}
+     * 就用声明号，未声明缺省 {@link #BUILTIN_VERSION}=1。声明号被同名<b>其他行</b>占用时
+     * 顺延到空闲号——package_key 是 {@code agent-skill/<name>/v<N>.zip} 命名空间，
+     * 撞号＝对象互相覆盖账-物漂移（上传行与出厂行共用该空间）；顺延在对账 note 里留痕。
+     *
+     * @param excludeId 排除的行 id（refresh 时是出厂行自己——旧版本号是它占的，不算撞号）；首注册传 null
+     */
+    private int effectiveVersion(SkillPackage pkg, Long excludeId) {
+        int declared = pkg.getDeclaredVersion() != null ? pkg.getDeclaredVersion() : BUILTIN_VERSION;
+        int candidate = declared;
+        while (candidate < declared + 500) {
+            SkillAsset occupant = skillAssetService.findByNameAndVersion(pkg.getName(), candidate);
+            if (occupant == null || (occupant.getId() != null && occupant.getId().equals(excludeId))) {
+                return candidate;
+            }
+            candidate++;
+        }
+        log.warn("系统出厂技能包版本顺延超过防御上限，回落声明号: name={} declared={}", pkg.getName(), declared);
+        return declared;
+    }
+
+    private void register(SkillPackage pkg, byte[] zip, String sha, int builtinVersion) {
+        String key = SystemSkillStore.packageKey(pkg.getName(), builtinVersion);
         store.put(key, zip);
         SkillAsset row = new SkillAsset();
         row.setSkillName(pkg.getName());
         row.setTitle(pkg.getTitle());
         row.setDescription(pkg.getDescription());
         row.setCategory(pkg.getCategory());
-        row.setVersion(BUILTIN_VERSION);
+        row.setVersion(builtinVersion);
         row.setStatus(SkillAsset.STATUS_PUBLISHED);
         // 所有权哨兵：来源档是唯一可信的所有权标记，create_by 不是（见类注释）
         row.setOrigin(SkillAsset.ORIGIN_BUILTIN);
@@ -255,26 +287,30 @@ public class SystemSkillSeedService {
         // 启动线程无登录上下文，create_by 不手写：FieldFill 填不上就是空，那是正常态不是缺陷
         skillAssetService.saveAsset(row);
         log.info("系统出厂技能包已注册: name={} v{} files={} sha={}",
-                pkg.getName(), BUILTIN_VERSION, pkg.getFiles().size(), sha);
+                pkg.getName(), builtinVersion, pkg.getFiles().size(), sha);
     }
 
-    /** 内容变了：就地覆盖同一个 key、同一个版本；status 一字不动（管理员的"下线"必须活下来） */
-    private void refresh(SkillPackage pkg, byte[] zip, String sha, SkillAsset existing) {
-        String key = SystemSkillStore.packageKey(pkg.getName(), BUILTIN_VERSION);
+    /**
+     * 内容或声明版本变了：就地覆盖（key 随生效版本，版本可涨）；status 一字不动
+     * （管理员的"下线"必须活下来）。版本声明变化但内容未变时同样走这里——
+     * 只为把台账行 version/package_key 对齐到 jar 声明（sha 相同则对象字节不变）。
+     */
+    private void refresh(SkillPackage pkg, byte[] zip, String sha, SkillAsset existing, int builtinVersion) {
+        String key = SystemSkillStore.packageKey(pkg.getName(), builtinVersion);
         store.put(key, zip);
         SkillAsset patch = new SkillAsset();
         patch.setId(existing.getId());
         patch.setTitle(pkg.getTitle());
         patch.setDescription(pkg.getDescription());
         patch.setCategory(pkg.getCategory());
-        patch.setVersion(BUILTIN_VERSION);
+        patch.setVersion(builtinVersion);
         patch.setPackageKey(key);
         patch.setPackageSha256(sha);
         patch.setFileCount(pkg.getFiles().size());
         patch.setValid(CommonConst.YES);
         // 这里不 set status/origin：空值不进 SET，patch 里没有这一列＝数据库里的原值保持不动
         skillAssetService.updateAsset(patch);
-        log.info("系统出厂技能包内容更新: name={} v{} 就地覆盖（状态保持 {}，版本不涨）",
-                pkg.getName(), BUILTIN_VERSION, existing.getStatus());
+        log.info("系统出厂技能包对账更新: name={} v{}（原 v{}）就地覆盖（状态保持 {}）",
+                pkg.getName(), builtinVersion, existing.getVersion(), existing.getStatus());
     }
 }

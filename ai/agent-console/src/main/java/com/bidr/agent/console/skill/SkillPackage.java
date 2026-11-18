@@ -31,6 +31,12 @@ public class SkillPackage {
     /** frontmatter.category（消费方分组展示用，可选；null=未提供） */
     private final String category;
 
+    /**
+     * frontmatter.version（出厂包的代码侧版本声明，可选；null=未声明）：
+     * seeder 注册出厂行时用（未声明缺省 1）；对上传链路不生效（上传恒从最近行递增）。
+     */
+    private final Integer declaredVersion;
+
     /** SKILL.md 全文（UTF-8 解码） */
     private final String skillMarkdown;
 
@@ -39,10 +45,16 @@ public class SkillPackage {
 
     public SkillPackage(String name, String title, String description, String category,
                         String skillMarkdown, SortedMap<String, byte[]> files) {
+        this(name, title, description, category, null, skillMarkdown, files);
+    }
+
+    public SkillPackage(String name, String title, String description, String category,
+                        Integer declaredVersion, String skillMarkdown, SortedMap<String, byte[]> files) {
         this.name = name;
         this.title = title;
         this.description = description;
         this.category = category;
+        this.declaredVersion = declaredVersion;
         this.skillMarkdown = skillMarkdown;
         this.files = Collections.unmodifiableSortedMap(new TreeMap<>(files));
     }

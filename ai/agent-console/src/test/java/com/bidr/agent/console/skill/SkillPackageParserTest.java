@@ -116,6 +116,49 @@ class SkillPackageParserTest {
         assertThrows(NoticeException.class, () -> SkillPackageParser.parse(zip(contents, StandardCharsets.UTF_8.name())));
     }
 
+    // ---------------------------------------------------------------- frontmatter.version（2026-11-18 版本声明）
+
+    @Test
+    void declaredVersionCarriedIntoPackage() throws IOException {
+        Map<String, String> contents = new LinkedHashMap<>();
+        contents.put("demo-skill/SKILL.md",
+                "---\nname: demo-skill\ndescription: 演示\nversion: 3\n---\n正文");
+
+        SkillPackage pkg = SkillPackageParser.parse(zip(contents, StandardCharsets.UTF_8.name()));
+
+        assertThat(pkg.getDeclaredVersion()).as("声明版本随包携带").isEqualTo(3);
+    }
+
+    @Test
+    void undeclaredVersionIsNull() throws IOException {
+        Map<String, String> contents = new LinkedHashMap<>();
+        contents.put("demo-skill/SKILL.md", String.format(SKILL_MD, "demo-skill", "演示技能"));
+
+        SkillPackage pkg = SkillPackageParser.parse(zip(contents, StandardCharsets.UTF_8.name()));
+
+        assertThat(pkg.getDeclaredVersion()).as("未声明＝null（seeder 缺省 1）").isNull();
+    }
+
+    @Test
+    void illegalDeclaredVersionRejected() throws IOException {
+        Map<String, String> contents = new LinkedHashMap<>();
+        contents.put("demo-skill/SKILL.md", "---\nname: demo-skill\ndescription: 演示\nversion: v2\n---\n正文");
+
+        NoticeException e = assertThrows(NoticeException.class,
+                () -> SkillPackageParser.parse(zip(contents, StandardCharsets.UTF_8.name())));
+        assertThat(e.getMessage()).contains("frontmatter.version");
+    }
+
+    @Test
+    void declaredVersionProbeIsTolerant() {
+        // 无侵入探测：无 frontmatter / 未声明 / 非法形态都回 null 不抛（seeder/清单回落 1）
+        assertThat(SkillPackageParser.parseDeclaredVersion(null)).isNull();
+        assertThat(SkillPackageParser.parseDeclaredVersion("# 纯正文")).isNull();
+        assertThat(SkillPackageParser.parseDeclaredVersion("---\nname: a\ndescription: x\n---\n正文")).isNull();
+        assertThat(SkillPackageParser.parseDeclaredVersion("---\nname: a\ndescription: x\nversion: abc\n---\n正文")).isNull();
+        assertThat(SkillPackageParser.parseDeclaredVersion("---\nname: a\ndescription: x\nversion: 7\n---\n正文")).isEqualTo(7);
+    }
+
     @Test
     void missingFrontmatterRejected() throws IOException {
         Map<String, String> contents = new LinkedHashMap<>();

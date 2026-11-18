@@ -105,4 +105,21 @@ public class SkillAssetService extends BaseSqlRepo<SkillAssetMapper, SkillAsset>
     public void updateAsset(SkillAsset row) {
         updateById(row);
     }
+
+    /**
+     * 同名同版占用查询（<b>不过滤 status/valid</b>）：出厂包按 frontmatter 声明版本注册时，
+     * 判断该 (name, version) 的 package_key 是否已被别的行占用——上传行与出厂行共用
+     * {@code agent-skill/<name>/v<N>.zip} 这个 key 命名空间，撞号会让对象互相覆盖
+     * （账-物漂移）。占用是行级事实：墓碑/下线行同样占着 key（对象还在），都要算。
+     */
+    public SkillAsset findByNameAndVersion(String skillName, int version) {
+        if (skillName == null || skillName.trim().isEmpty()) {
+            return null;
+        }
+        return lambdaQuery()
+                .eq(SkillAsset::getSkillName, skillName.trim())
+                .eq(SkillAsset::getVersion, version)
+                .last("limit 1")
+                .one();
+    }
 }

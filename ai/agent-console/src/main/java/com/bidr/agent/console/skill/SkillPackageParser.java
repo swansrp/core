@@ -203,10 +203,44 @@ public final class SkillPackageParser {
         for (Map.Entry<String, byte[]> e : entries.entrySet()) {
             relative.put(e.getKey().substring(root.length() + 1), e.getValue());
         }
-        return new SkillPackage(name, front[2], description.trim(), front[3], markdown, new TreeMap<>(relative));
+        Integer declaredVersion = parseDeclaredVersion(markdown);
+        if (front[4] != null && declaredVersion == null) {
+            throw new NoticeException("frontmatter.version 必须是正整数（声明了就须合法），实际: " + front[4].trim());
+        }
+        return new SkillPackage(name, front[2], description.trim(), front[3], declaredVersion, markdown, new TreeMap<>(relative));
     }
 
-    /** frontmatter：首行 --- 开、下一个 --- 闭；闭前逐行取 name/description/title/category（后两者可选，null=未提供） */
+    /**
+     * frontmatter.version（可选）宽容解析：声明了且是正整数 ⇒ 其值；未声明/形态不符 ⇒ null。
+     * 不抛异常（供 seeder/EpcSkillCatalog 对既有包做无侵入版本探测），强校验只在
+     * {@link #parse} 的包契约尺里做（声明了非法值直接拒绝上传/出厂）。
+     */
+    public static Integer parseDeclaredVersion(String markdown) {
+        if (markdown == null) {
+            return null;
+        }
+        String[] lines = markdown.split("\\r?\\n");
+        if (lines.length == 0 || !"---".equals(lines[0].trim())) {
+            return null;
+        }
+        for (int i = 1; i < lines.length; i++) {
+            String line = lines[i];
+            if ("---".equals(line.trim())) {
+                break;
+            }
+            Matcher m = FIELD.matcher(line.trim());
+            if (m.matches() && "version".equals(m.group(1))) {
+                String raw = stripQuotes(m.group(2));
+                if (raw != null && raw.trim().matches("[1-9]\\d*")) {
+                    return Integer.valueOf(raw.trim());
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /** frontmatter：首行 --- 开、下一个 --- 闭；闭前逐行取 name/description/title/category/version（后三者可选，null=未提供） */
     private static String[] parseFrontmatter(String markdown) {
         String[] lines = markdown.split("\\r?\\n");
         if (lines.length == 0 || !"---".equals(lines[0].trim())) {
@@ -216,6 +250,7 @@ public final class SkillPackageParser {
         String description = null;
         String title = null;
         String category = null;
+        String version = null;
         for (int i = 1; i < lines.length; i++) {
             String line = lines[i];
             if ("---".equals(line.trim())) {
@@ -231,6 +266,8 @@ public final class SkillPackageParser {
                     title = stripQuotes(m.group(2));
                 } else if ("category".equals(m.group(1))) {
                     category = stripQuotes(m.group(2));
+                } else if ("version".equals(m.group(1))) {
+                    version = m.group(2);
                 }
             }
         }
@@ -239,7 +276,8 @@ public final class SkillPackageParser {
         }
         return new String[]{name.trim(), description,
                 title == null || title.trim().isEmpty() ? null : title.trim(),
-                category == null || category.trim().isEmpty() ? null : category.trim()};
+                category == null || category.trim().isEmpty() ? null : category.trim(),
+                version == null || version.trim().isEmpty() ? null : version.trim()};
     }
 
     private static String stripQuotes(String value) {
