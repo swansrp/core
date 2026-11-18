@@ -78,23 +78,6 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
     /** 本会话使用的业务模型 */
     protected abstract ChatModel model(S state, AgentSessionContext ctx, Map<String, Object> payload);
 
-    /**
-     * 框架级通用纪律（所有继承本基类的 agent 自动获得，业务提示词无需重写；追加在业务 systemPrompt **之前**）。
-     * <p>
-     * 动机（2026-11-18）：思考型模型的工具轮常只回 reasoning＋tool_calls、content 为空，
-     * 用户侧看到的是 20-30 次工具往返一句话没有，像卡死。进度可见属框架级体验约束，
-     * 与具体业务无关，故统一在此注入；业务要收紧可在自己提示词里追加，重复描述则浪费上下文。
-     * </p>
-     */
-    public static final String FRAMEWORK_PROGRESS_DISCIPLINE = ""
-            + "【框架通用纪律·进度可见（对所有任务生效）】\n"
-            + "用户全程只能看到你输出的文字与工具卡；长时间不输出正文，界面看起来就是卡死。因此：\n"
-            + "· 动手前先用一两句话说明整体打算；\n"
-            + "· 每连续执行 2-3 个工具调用（含思考）后，必须用一段自然语言向用户汇报：刚做了什么、"
-            + "发现了什么、下一步做什么；\n"
-            + "· 阶段切换（如 采集→校验→修正→出件）各补一句话；**严禁连续 4 次以上工具调用不输出任何正文**；\n"
-            + "· 不要在文字里复述工具名与参数（工具卡已展示入参/返回），说人话讲目的、发现与进度即可。";
-
     /** 系统提示词（角色与约束） */
     protected abstract String systemPrompt(S state, AgentSessionContext ctx, Map<String, Object> payload);
 
@@ -236,11 +219,7 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
                 mergedTools.addAll(mergedFrameworkTools);
             }
             ChatModel model = model(state, ctx, payload);
-            // 框架通用纪律前置（进度可见，见常量注释）；业务 systemPrompt 可空，拼接后仍保留分隔
-            String businessSystemPrompt = systemPrompt(state, ctx, payload);
-            String systemPrompt = businessSystemPrompt == null || businessSystemPrompt.trim().isEmpty()
-                    ? FRAMEWORK_PROGRESS_DISCIPLINE
-                    : FRAMEWORK_PROGRESS_DISCIPLINE + "\n\n" + businessSystemPrompt;
+            String systemPrompt = systemPrompt(state, ctx, payload);
             String businessPrompt = userPrompt(state, ctx, payload);
             // 附件前置说明：业务提示词构建后、进循环前拼入（无附件/无存储端口为空串，
             // 拼接结果与改造前逐字节一致）
