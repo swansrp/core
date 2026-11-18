@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Title: AgentCapabilityHealthProbe
  * Description: agent 依赖底座的<b>能力探活件</b>（棒2，可观测层）——对 ocr(mineru)、
- * artifacts(gotenberg) 与 exec.sandbox(openhands) 三个外部底座做轻量 HTTP 探测，
+ * artifacts(gotenberg) 与 exec.sandbox（沙箱底座，按 provider 分流 cube/openhands）三个外部底座做轻量 HTTP 探测，
  * 结果三路输出：<b>状态变化日志</b>＋<b>运行级健康快照</b>（{@link AgentCapabilityHealthProvider}
  * 端口实现，经 {@code /agents} 契约上报前端徽标）＋<b>SSE 广播</b>（状态变化时经
  * {@link AgentHealthSseHub#broadcast} 推 {@code health} 事件，hub 缺席静默跳过），
@@ -32,7 +32,8 @@ import java.util.concurrent.TimeUnit;
  *     <li>探针口径：ocr(mineru) {@code GET {mineru.local.base-url}/docs}——<b>拿到任何 HTTP
  *         状态码（含 404）＝可达</b>（FastAPI 文档页有无不保证，服务在即可）；artifacts(gotenberg)
  *         {@code GET {tool.gotenberg.base-url}/health}——200＝可达，其余状态码记入原因短语；
- *         exec.sandbox(openhands) {@code GET {base}/api/agent-profiles} 带
+ *         exec.sandbox 按 provider 分流（装配处传入腿名）：cube {@code GET {cube.api-url}/health}
+ *         管理面无鉴权——仅 200＝可达，其余状态码带码入原因；openhands {@code GET {base}/api/agent-profiles} 带
  *         {@code X-Session-API-Key} 头——200＝可达、401＝不可达（密钥无效或未配置，排障方向与
  *         「服务不在」区分）、其余状态码带码入原因、连接异常＝不可达；</li>
  *     <li><b>配置空＝未配置</b>：对应探针不发包不计失败（日志/快照标「未配置」）；
@@ -64,8 +65,15 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     /** 探针名：产物转换底座（gotenberg，GET /health 200＝可达） */
     static final String KIND_GOTENBERG = "gotenberg";
 
-    /** 探针名：沙箱执行底座（openhands，GET /api/agent-profiles 带 X-Session-API-Key，200＝可达 401＝密钥无效） */
-    static final String KIND_OPENHANDS = "openhands";
+    /** 探针名：沙箱执行底座 OpenHands 腿（GET /api/agent-profiles 带 X-Session-API-Key，200＝可达 401＝密钥无效） */
+    public static final String KIND_OPENHANDS = "openhands";
+
+    /**
+     * 探针名：沙箱执行底座 Cube 腿（GET {api-url}/health 管理面无鉴权，仅 200＝可达；
+     * 2026-11-18 台账 [U60] 后续——provider=cube 时探活分流到 Cube 管理面，不再打已退避的
+     * OpenHands 端点误报 ✕。快照键恒为 exec.sandbox，探针名只影响日志/原因短语标签）
+     */
+    public static final String KIND_CUBE = "cube";
 
     /** OpenHands 探活请求头名（会话密钥随头下发，敏感值不进 URL/日志） */
     private static final String OPENHANDS_API_KEY_HEADER = "X-Session-API-Key";
@@ -76,11 +84,14 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
 
     private final String gotenbergBaseUrl;
 
-    /** OpenHands 探活基地址（装配处解析后的生效值；空＝腿未启用/未接线＝快照恒 unconfigured） */
-    private final String openhandsBaseUrl;
+    /** 沙箱探针腿名（"cube"/"openhands"，装配处按 sandbox provider 分流后传入；进日志标签与探针分支） */
+    private final String sandboxKind;
 
-    /** OpenHands 会话密钥（敏感值：只进请求头，不进日志） */
-    private final String openhandsApiKey;
+    /** 沙箱探活基地址（装配处解析后的生效值：cube＝Cube 管理面 api-url、openhands＝OH base-url；空＝腿未启用/未接线＝快照恒 unconfigured） */
+    private final String sandboxProbeUrl;
+
+    /** 沙箱探活密钥（仅 openhands 腿使用，Cube 管理面无鉴权传空串；敏感值：只进请求头，不进日志） */
+    private final String sandboxApiKey;
 
     private final long intervalSeconds;
 
@@ -104,19 +115,20 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     private volatile ScheduledExecutorService scheduler;
 
     public AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
-                                      String openhandsBaseUrl, String openhandsApiKey,
+                                      String sandboxKind, String sandboxProbeUrl, String sandboxApiKey,
                                       java.net.Proxy mineruProxy, AgentHealthSseHub healthHub) {
-        this(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds, openhandsBaseUrl, openhandsApiKey, mineruProxy,
-                healthHub, (kind, url, apiKey) -> httpProbe(kind, url, apiKey, mineruProxy));
+        this(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds, sandboxKind, sandboxProbeUrl, sandboxApiKey,
+                mineruProxy, healthHub, (kind, url, apiKey) -> httpProbe(kind, url, apiKey, mineruProxy));
     }
 
     AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
-                               String openhandsBaseUrl, String openhandsApiKey, java.net.Proxy mineruProxy,
-                               AgentHealthSseHub healthHub, ProbeFunction prober) {
+                               String sandboxKind, String sandboxProbeUrl, String sandboxApiKey,
+                               java.net.Proxy mineruProxy, AgentHealthSseHub healthHub, ProbeFunction prober) {
         this.mineruBaseUrl = trimmed(mineruBaseUrl);
         this.gotenbergBaseUrl = trimmed(gotenbergBaseUrl);
-        this.openhandsBaseUrl = trimmed(openhandsBaseUrl);
-        this.openhandsApiKey = openhandsApiKey == null ? "" : openhandsApiKey.trim();
+        this.sandboxKind = StringUtils.hasText(sandboxKind) ? sandboxKind.trim() : KIND_OPENHANDS;
+        this.sandboxProbeUrl = trimmed(sandboxProbeUrl);
+        this.sandboxApiKey = sandboxApiKey == null ? "" : sandboxApiKey.trim();
         this.mineruProxy = mineruProxy;
         this.intervalSeconds = intervalSeconds;
         this.healthHub = healthHub;
@@ -144,13 +156,16 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
                 ? prober.probe(KIND_MINERU, mineruBaseUrl + "/docs", null) : ProbeResult.notConfigured();
         ProbeResult gotenberg = StringUtils.hasText(gotenbergBaseUrl)
                 ? prober.probe(KIND_GOTENBERG, gotenbergBaseUrl + "/health", null) : ProbeResult.notConfigured();
-        // openhands：base-url 与密钥齐备才发包（缺任一＝未配置，不发包不计失败）
-        boolean openhandsConfigured = StringUtils.hasText(openhandsBaseUrl) && StringUtils.hasText(openhandsApiKey);
-        ProbeResult openhands = openhandsConfigured
-                ? prober.probe(KIND_OPENHANDS, openhandsBaseUrl + "/api/agent-profiles", openhandsApiKey)
+        // 沙箱底座按 provider 分流（2026-11-18 用户拍板「openhands 不用了」）：cube＝GET {api-url}/health
+        // 管理面无鉴权（仅 200 可达）；openhands＝GET {base}/api/agent-profiles 带会话密钥。
+        // probeUrl 空＝腿未启用/未接线＝unconfigured 不发包；OH 腿「url+key 齐备」的判定在装配处完成
+        boolean sandboxConfigured = StringUtils.hasText(sandboxProbeUrl)
+                && (!KIND_OPENHANDS.equals(sandboxKind) || StringUtils.hasText(sandboxApiKey));
+        ProbeResult sandbox = sandboxConfigured
+                ? prober.probe(sandboxKind, sandboxProbeUrl + sandboxProbePath(), sandboxApiKey)
                 : ProbeResult.notConfigured();
-        lastSnapshot = snapshotOf(mineru, gotenberg, openhands);
-        String line = describe(mineru, gotenberg, openhands);
+        lastSnapshot = snapshotOf(mineru, gotenberg, sandbox);
+        String line = describe(mineru, gotenberg, sandbox, sandboxKind);
         String previous = lastLine;
         lastLine = line;
         if (line.equals(previous)) {
@@ -189,11 +204,16 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
         }
     }
 
-    /** 一行摘要（契约格式，探活日志与测试共用同一拼装口；第三位＝exec.sandbox(openhands)） */
-    static String describe(ProbeResult mineru, ProbeResult gotenberg, ProbeResult openhands) {
+    /** 一行摘要（契约格式，探活日志与测试共用同一拼装口；第三位＝exec.sandbox(腿名)） */
+    static String describe(ProbeResult mineru, ProbeResult gotenberg, ProbeResult sandbox, String sandboxKind) {
         return "Agent 能力探活: ocr(mineru)=" + text(mineru)
                 + ", artifacts(gotenberg)=" + text(gotenberg)
-                + ", exec.sandbox(openhands)=" + text(openhands);
+                + ", exec.sandbox(" + (StringUtils.hasText(sandboxKind) ? sandboxKind : KIND_OPENHANDS) + ")=" + text(sandbox);
+    }
+
+    /** 沙箱探活路径：Cube＝管理面健康端点；openhands＝agent-profiles 列表（兼容老形态） */
+    private String sandboxProbePath() {
+        return KIND_CUBE.equals(sandboxKind) ? "/health" : "/api/agent-profiles";
     }
 
     private static String text(ProbeResult result) {
@@ -275,7 +295,7 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
             java.net.http.HttpResponse<Void> response =
                     HTTP.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.discarding(),
                             KIND_MINERU.equals(kind) ? mineruProxy : null);
-            if (KIND_GOTENBERG.equals(kind) && response.statusCode() != 200) {
+            if ((KIND_GOTENBERG.equals(kind) || KIND_CUBE.equals(kind)) && response.statusCode() != 200) {
                 return ProbeResult.unreachable("HTTP " + response.statusCode());
             }
             if (KIND_OPENHANDS.equals(kind) && response.statusCode() != 200) {

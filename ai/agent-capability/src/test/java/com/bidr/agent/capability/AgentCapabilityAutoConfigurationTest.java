@@ -171,7 +171,7 @@ class AgentCapabilityAutoConfigurationTest {
     @DisplayName("探活件：无条件装配；宿主自建同类型 Bean 时让位")
     void healthProbeAssemblesAndYieldsToHost() {
         runner.run(context -> assertThat(context).hasSingleBean(AgentCapabilityHealthProbe.class));
-        AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(null, null, 0, "", "", null, null);
+        AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(null, null, 0, "openhands", "", "", null, null);
         runner.withBean(AgentCapabilityHealthProbe.class, () -> hostProbe)
                 .run(context -> assertThat(context.getBean(AgentCapabilityHealthProbe.class))
                         .isSameAs(hostProbe));

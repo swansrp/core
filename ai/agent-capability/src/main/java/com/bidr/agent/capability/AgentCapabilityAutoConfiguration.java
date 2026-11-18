@@ -204,15 +204,21 @@ public class AgentCapabilityAutoConfiguration {
     }
 
     /**
-     * 能力探活件（棒2，可观测层）：mineru（ocr）/gotenberg（artifacts）/openhands（exec.sandbox）
+     * 能力探活件（棒2，可观测层）：mineru（ocr）/gotenberg（artifacts）/沙箱底座（exec.sandbox）
      * 三探针——启动一次＋定时（{@code llm.agent.health-probe.interval-seconds} 缺省 300，≤0 关定时）
      * 打状态变化行并维护运行级健康快照（{@code AgentCapabilityHealthProvider} 端口实现，
      * 经 /agents 契约上报前端徽标）。配置空＝未配置不计失败；探针异常吞掉不阻断启动；
      * 探活结果<b>不改能力位</b>（capabilities 仍按声明级推导）。
-     * OpenHands 探活入参在装配处解析（探活件保持纯字符串入参）：口径同
-     * {@link AgentRuntimeOpenHandsCondition}（{@code my.agent.runtime.enabled=true} 且 provider
-     * 缺省/openhands）＋生效配置判定（{@link AgentRuntimeConfigProvider#isConfigured()}＝地址与
-     * 密钥齐备）；未启用/未接线一律传空串＝探活标 unconfigured 不发包。
+     * 沙箱探活入参在装配处按 provider 分流（探活件保持纯字符串入参）：
+     * <ul>
+     *     <li>cube：{@code my.agent.sandbox.provider=cube}（与 CubeSandboxAutoConfiguration 装配
+     *         条件同键同式）＋{@code my.agent.sandbox.cube.api-url} 非空 ⇒ 探 Cube 管理面 /health
+     *         （无鉴权；2026-11-18 用户拍板 openhands 退役面，6.60/pre 实证 Janitor 在位探活却误报）；</li>
+     *     <li>openhands（其余腿）：口径同 {@link AgentRuntimeOpenHandsCondition}
+     *         （{@code my.agent.runtime.enabled=true} 且 provider 缺省/openhands）＋生效配置判定
+     *         （{@link AgentRuntimeConfigProvider#isConfigured()}＝地址与密钥齐备）；</li>
+     * </ul>
+     * 未启用/未接线一律传空串＝探活标 unconfigured 不发包。
      * 宿主自建同类型 Bean 时让位。
      */
     @Bean
@@ -226,8 +232,21 @@ public class AgentCapabilityAutoConfiguration {
             // AgentRuntimeOpenHandsCondition 的字面 true 宽，探活发包面须与沙箱腿装配条件同式
             @Value("${my.agent.runtime.enabled:false}") String runtimeEnabled,
             @Value("${my.agent.runtime.provider:openhands}") String runtimeProvider,
+            // 沙箱探活分流（2026-11-18 用户拍板「cube 能用＝沙箱能用，openhands 不用了」）：
+            // provider=cube（env MY_AGENT_SANDBOX_PROVIDER 直绑，与 CubeSandboxAutoConfiguration
+            // 装配条件同键同式）⇒ 探 Cube 管理面 {api-url}/health；其余（OH 腿启用时）照旧探 OH。
+            // ⚠ 键名即生效键——dev yml 的 my.agent.runtime.sandbox.* 段绑不到 Cube 模块，勿抄错
+            @Value("${my.agent.sandbox.provider:}") String sandboxProvider,
+            @Value("${my.agent.sandbox.cube.api-url:}") String cubeApiUrl,
             ObjectProvider<MineruProperties> mineruProperties,
             AgentHealthSseHub healthSseHub) {
+        // Cube 腿优先（互斥语义：cube 时 OH 腿已确定性退避，探活同式分流）。api-url 空＝
+        // 腿未接线＝探活 unconfigured 不发包，与「配置空＝未配置」总口径一致
+        if (AgentCapabilityHealthProbe.KIND_CUBE.equalsIgnoreCase(sandboxProvider)
+                && StringUtils.hasText(cubeApiUrl)) {
+            return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds,
+                    AgentCapabilityHealthProbe.KIND_CUBE, cubeApiUrl, "", mineruProxy(mineruProperties), healthSseHub);
+        }
         String openhandsBaseUrl = "";
         String openhandsApiKey = "";
         if ("true".equalsIgnoreCase(runtimeEnabled)
@@ -239,20 +258,25 @@ public class AgentCapabilityAutoConfiguration {
                 openhandsApiKey = config.getApiKey();
             }
         }
+        return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds,
+                AgentCapabilityHealthProbe.KIND_OPENHANDS, openhandsBaseUrl, openhandsApiKey,
+                mineruProxy(mineruProperties), healthSseHub);
+    }
+
+    /** mineru 探活代理解析（原内联段提为私有方法：cube/OH 两分支共用一份） */
+    private java.net.Proxy mineruProxy(ObjectProvider<MineruProperties> mineruProperties) {
         // mineru 探活代理：业务链 MineruLocalClient 走 mineru.proxy.*，探活同步走＝否则对外网段
         // 底座直连探测恒 timeout 误报 down（2026-11-14 pre 实锤）。判定与 MineruLocalClient.buildProxy
         // 同口径（enable+host+port 齐），buildProxy 是 mineru 包级可见故此处自写同逻辑
-        java.net.Proxy mineruProxy = null;
         MineruProperties mp = mineruProperties.getIfUnique();
         if (mp != null) {
             MineruProperties.Proxy proxy = mp.getProxy();
             if (proxy != null && proxy.isEnable()
                     && StringUtils.hasText(proxy.getHost()) && proxy.getPort() > 0) {
-                mineruProxy = new java.net.Proxy(java.net.Proxy.Type.HTTP,
+                return new java.net.Proxy(java.net.Proxy.Type.HTTP,
                         new java.net.InetSocketAddress(proxy.getHost(), proxy.getPort()));
             }
         }
-        return new AgentCapabilityHealthProbe(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds,
-                openhandsBaseUrl, openhandsApiKey, mineruProxy, healthSseHub);
+        return null;
     }
 }
