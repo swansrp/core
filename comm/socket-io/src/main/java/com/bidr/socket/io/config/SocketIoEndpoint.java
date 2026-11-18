@@ -6,7 +6,7 @@ import com.bidr.socket.io.dao.entity.ChatRoomMember;
 import com.bidr.socket.io.dao.po.msg.TopicChatMessage;
 import com.bidr.socket.io.dao.repository.mysql.ChatRoomMemberService;
 import com.bidr.socket.io.service.chat.ChatMessageHistoryService;
-import com.bidr.socket.io.service.session.ChatSessionService;
+import com.bidr.socket.io.service.session.SocketChatSessionService;
 import com.bidr.socket.io.service.socket.SendMessageService;
 import com.bidr.socket.io.utils.ClientUtil;
 import com.corundumstudio.socketio.SocketIOClient;
@@ -32,7 +32,7 @@ public class SocketIoEndpoint {
     @Resource
     private SocketIOServer socketioServer;
     @Resource
-    private ChatSessionService chatSessionService;
+    private SocketChatSessionService socketChatSessionService;
     @Resource
     private SendMessageService sendMessageService;
     @Resource
@@ -41,12 +41,12 @@ public class SocketIoEndpoint {
     private ChatRoomMemberService chatRoomMemberService;
 
     public void onConnect(SocketIOClient client) {
-        chatSessionService.login(client);
+        socketChatSessionService.login(client);
         showUndeliveredMessage(client);
     }
 
     public void onDisconnect(SocketIOClient client) {
-        chatSessionService.logoff(client);
+        socketChatSessionService.logoff(client);
     }
 
     private void showUndeliveredMessage(SocketIOClient client) {

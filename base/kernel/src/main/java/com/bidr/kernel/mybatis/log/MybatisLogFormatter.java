@@ -84,12 +84,12 @@ public class MybatisLogFormatter {
 
         for (int i = 0; i < paramsStr.length(); i++) {
             char c = paramsStr.charAt(i);
-            if (c == '(') {
+            if (c == '(' || c == '[' || c == '{') {
                 bracketDepth++;
-            } else if (c == ')') {
+            } else if (c == ')' || c == ']' || c == '}') {
                 bracketDepth--;
             } else if (c == ',' && bracketDepth == 0) {
-                // 只有在括号外层的逗号才是参数分隔符
+                // 只有在括号外层的逗号才是参数分隔符；集合值 [a, b] 内部的逗号不分割，否则后续占位符整体串位
                 params.add(paramsStr.substring(start, i).trim());
                 start = i + 1;
             }
@@ -139,6 +139,23 @@ public class MybatisLogFormatter {
         // 字符串类型加单引号
         if (type.contains("String") || type.contains("Date") || type.contains("Time")) {
             return "'" + value.replace("'", "''") + "'";
+        }
+
+        // 集合参数（IN/BETWEEN 多值）：toString 形如 [a, b]，渲染成引号字面量列表，
+        // 让 IN (?) 显示为 IN ('a', 'b') 而非方括号；String/Date/Time 已在上面提前返回，不会误入此腿
+        if (value.startsWith("[") && value.endsWith("]")) {
+            String inner = value.substring(1, value.length() - 1).trim();
+            if (inner.isEmpty()) {
+                return "NULL";
+            }
+            StringBuilder sb = new StringBuilder();
+            for (String el : inner.split(",")) {
+                if (sb.length() > 0) {
+                    sb.append(", ");
+                }
+                sb.append("'").append(el.trim().replace("'", "''")).append("'");
+            }
+            return sb.toString();
         }
 
         // 数字类型直接返回

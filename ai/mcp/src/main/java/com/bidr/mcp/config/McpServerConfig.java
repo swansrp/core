@@ -1,43 +1,47 @@
 package com.bidr.mcp.config;
 
-import com.bidr.kernel.utils.DictEnumUtil;
 import com.bidr.kernel.utils.FuncUtil;
-import com.bidr.kernel.utils.ReflectionUtil;
 import com.bidr.mcp.constant.dict.McpTypeDict;
 import com.bidr.mcp.dao.entity.SysMcp;
 import com.bidr.mcp.dao.repository.SysMcpService;
+import com.bidr.mcp.json.JacksonMcpJsonMapper;
+import com.bidr.mcp.json.PermissiveJsonSchemaValidator;
+import com.bidr.mcp.registry.McpEndpointDefinition;
+import com.bidr.mcp.registry.McpEndpointScanner;
+import com.bidr.mcp.registry.McpToolDefinition;
+import com.bidr.mcp.registry.McpToolInvoker;
+import com.bidr.mcp.transport.McpDispatcherServlet;
+import com.bidr.mcp.transport.McpSseTransportProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.server.McpServer;
+import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.Solon;
-import org.noear.solon.ai.chat.tool.FunctionTool;
-import org.noear.solon.ai.chat.tool.MethodToolProvider;
-import org.noear.solon.ai.mcp.server.McpServerEndpointProvider;
-import org.noear.solon.ai.mcp.server.annotation.McpServerEndpoint;
-import org.noear.solon.ai.mcp.server.prompt.FunctionPrompt;
-import org.noear.solon.ai.mcp.server.prompt.MethodPromptProvider;
-import org.noear.solon.ai.mcp.server.resource.FunctionResource;
-import org.noear.solon.ai.mcp.server.resource.MethodResourceProvider;
-import org.noear.solon.web.servlet.SolonServletFilter;
-import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.AnnotationUtils;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
-import java.lang.reflect.Field;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.bidr.mcp.constant.dict.McpTypeDict.TOOL;
-
 /**
  * Title: McpServerConfig
- * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
+ * Description: MCP Server 装配：收集 {@code @McpServerEndpoint} bean → 类型化注册表 →
+ * 每端点一套「javax SSE transport ＋ 官方 SDK McpServer」→ 统一挂
+ * {@link McpDispatcherServlet}（${my.mcp.path:/mcp}/*）→ sys_mcp 台账同步。
+ *
+ * <p>替代旧 Solon「第二上下文」方案：不再 {@code Solon.start()} 起副容器、不再
+ * {@code System.setProperty("server.contextPath")} 全局副作用、不再反射读框架私有
+ * 字段；HTTP 层回到宿主自己的 Servlet 容器（SB 2.7.3 / javax）。wire 形态与调用端
+ * 契约不变，正源见 docs/mcp-endpoint-替换方案.md。</p>
+ *
+ * <p>与旧实现的能力面差异：Solon 路径还支持 resource/prompt 挂载，两仓从无业务
+ * 使用，本版只装配 tool。</p>
  *
  * @author Sharp
  * @since 2025/6/5 10:55
@@ -46,174 +50,142 @@ import static com.bidr.mcp.constant.dict.McpTypeDict.TOOL;
 @Configuration
 public class McpServerConfig {
 
-    private final Map<String, McpServerEndpointProvider> map = new ConcurrentHashMap<>();
+    private final Map<String, McpEndpointDefinition> definitions = new ConcurrentHashMap<>();
+
+    private final Map<String, McpSyncServer> servers = new ConcurrentHashMap<>();
+
+    private final List<McpSseTransportProvider> providers = new ArrayList<>();
+
+    /**
+     * 共享 JSON 适配器：transport 与协议层同源（独立 ObjectMapper，不受宿主序列化配置影响）
+     */
+    private final JacksonMcpJsonMapper jsonMapper = new JacksonMcpJsonMapper(new ObjectMapper());
+
+    private final PermissiveJsonSchemaValidator schemaValidator = new PermissiveJsonSchemaValidator();
+
     @Value("${my.mcp.path:/mcp}")
     private String mcpPath;
-    @Value("${server.servlet.context-path:}")
-    private String contextPath;
+
+    /**
+     * SSE 心跳间隔秒数（注释行 ping，防网关闲置断流）；<=0 关闭
+     */
+    @Value("${my.mcp.keepalive-seconds:15}")
+    private long keepAliveSeconds;
+
     @Resource
     private SysMcpService sysMcpService;
 
-    @PostConstruct
-    public void start() {
-        System.setProperty("server.contextPath", contextPath);
-        Solon.start(McpServerConfig.class, new String[]{"--cfg=mcp-server.properties"});
+    /**
+     * 装配全部端点并注册总入口 Servlet（路径 ${my.mcp.path:/mcp}/*，与旧 SolonFilter 同前缀）
+     */
+    @Bean
+    public ServletRegistrationBean<McpDispatcherServlet> mcpDispatcherServlet(List<IMcpServerEndpoint> serverEndpoints) {
+        McpDispatcherServlet servlet = new McpDispatcherServlet();
+        for (IMcpServerEndpoint serverEndpoint : serverEndpoints) {
+            registerEndpoint(servlet, serverEndpoint);
+        }
+        ServletRegistrationBean<McpDispatcherServlet> registration =
+                new ServletRegistrationBean<>(servlet, mcpPath + "/*");
+        registration.setName("mcpDispatcher");
+        log.info("MCP server assembled: {} endpoint(s) on {}/*", providers.size(), mcpPath);
+        return registration;
+    }
+
+    private void registerEndpoint(McpDispatcherServlet servlet, IMcpServerEndpoint serverEndpoint) {
+        McpEndpointDefinition definition = McpEndpointScanner.scan(serverEndpoint);
+        if (definition == null) {
+            return;
+        }
+        if (!definition.getSseEndpoint().startsWith(mcpPath + "/")) {
+            throw new IllegalStateException("MCP 端点路径须落在 " + mcpPath + "/ 前缀下："
+                    + definition.getSseEndpoint() + "（" + definition.getEndpointClassName() + "）");
+        }
+
+        // 台账同步先行：已有描述以库为准（与旧实现同口径），再按生效描述建协议层
+        syncToDb(definition);
+
+        McpSseTransportProvider provider = new McpSseTransportProvider(jsonMapper, definition.getSseEndpoint(),
+                definition.getSseEndpoint() + "/message", keepAliveSeconds);
+
+        List<io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification> specs = new ArrayList<>();
+        for (McpToolDefinition tool : definition.getTools()) {
+            specs.add(McpToolInvoker.toSpecification(definition, tool));
+        }
+
+        McpSyncServer server = McpServer.sync(provider)
+                .serverInfo(new McpSchema.Implementation(definition.getName(), null, "1.0.0", null, null, null))
+                .capabilities(new McpSchema.ServerCapabilities(null, null, null, null, null,
+                        new McpSchema.ServerCapabilities.ToolCapabilities(false), null))
+                .jsonMapper(jsonMapper)
+                .jsonSchemaValidator(schemaValidator)
+                .validateToolInputs(false)
+                .tools(specs)
+                .build();
+
+        servlet.register(provider);
+        definitions.put(definition.getEndpointClassName(), definition);
+        servers.put(definition.getEndpointClassName(), server);
+        providers.add(provider);
+    }
+
+    /**
+     * 台账同步（类型化元数据直读，不再反射框架私有字段）：行存在→库描述回写内存；
+     * 不存在→按注解描述插行。口径与旧实现一致。
+     */
+    private void syncToDb(McpEndpointDefinition definition) {
+        for (McpToolDefinition tool : definition.getTools()) {
+            SysMcp sysMcp = sysMcpService.get(definition.getEndpointClassName(), tool.getName(),
+                    McpTypeDict.TOOL.getValue());
+            if (FuncUtil.isNotEmpty(sysMcp)) {
+                tool.setDescription(sysMcp.getDescription());
+            } else {
+                sysMcp = buildSysMcp(definition, tool);
+                sysMcpService.insert(sysMcp);
+            }
+        }
+    }
+
+    private SysMcp buildSysMcp(McpEndpointDefinition definition, McpToolDefinition tool) {
+        SysMcp sysMcp = new SysMcp();
+        sysMcp.setEndPoint(definition.getEndpointClassName());
+        sysMcp.setEndPointName(definition.getName());
+        sysMcp.setName(tool.getName());
+        sysMcp.setType(McpTypeDict.TOOL.getValue());
+        sysMcp.setDescription(tool.getDescription());
+        return sysMcp;
     }
 
     @PreDestroy
     public void stop() {
-        if (Solon.app() != null) {
-            Solon.stopBlock(false, Solon.cfg().stopDelay());
+        for (McpSseTransportProvider provider : providers) {
+            provider.closeGracefully().block();
         }
+        providers.clear();
+        definitions.clear();
+        servers.clear();
     }
 
-    @Bean
-    public McpServerConfig init(List<IMcpServerEndpoint> serverEndpoints) throws IllegalAccessException {
-        //提取实现容器里 IMcpServerEndpoint 接口的 bean ，并注册为服务端点
-        for (IMcpServerEndpoint serverEndpoint : serverEndpoints) {
-            Class<?> targetClass = AopUtils.getTargetClass(serverEndpoint);
-            McpServerEndpoint anno = AnnotationUtils.findAnnotation(targetClass, McpServerEndpoint.class);
-
-            if (anno == null) {
-                continue;
-            }
-
-            McpServerEndpointProvider serverEndpointProvider = McpServerEndpointProvider.builder()
-                    .from(targetClass, anno).build();
-
-            addTool(serverEndpoint, targetClass, serverEndpointProvider);
-            addResource(serverEndpoint, targetClass, serverEndpointProvider);
-            addPrompt(serverEndpoint, targetClass, serverEndpointProvider);
-
-            serverEndpointProvider.postStart();
-
-            map.put(targetClass.getName(), serverEndpointProvider);
+    /**
+     * 描述热更新：内存元数据改写 + 协议层重挂工具 + 台账落库（对齐旧实现的
+     * remove/add 语义；不再需要反射改框架字段）
+     */
+    public void updateDescription(SysMcp sysMcp) {
+        McpEndpointDefinition definition = definitions.get(sysMcp.getEndPoint());
+        if (definition == null) {
+            throw new IllegalStateException("MCP 端点未注册：" + sysMcp.getEndPoint());
         }
+        McpToolDefinition tool = definition.getTools().stream()
+                .filter(item -> item.getName().equals(sysMcp.getName()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("MCP 工具未注册："
+                        + sysMcp.getEndPoint() + "#" + sysMcp.getName()));
 
-        //为了能让这个 init 能正常运行
-        return this;
-    }
+        tool.setDescription(sysMcp.getDescription());
+        McpSyncServer server = servers.get(sysMcp.getEndPoint());
+        server.removeTool(tool.getName());
+        server.addTool(McpToolInvoker.toSpecification(definition, tool));
 
-    public void addTool(IMcpServerEndpoint serverEndpoint, Class<?> targetClass,
-                        McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
-        MethodToolProvider methodToolProvider = new MethodToolProvider(targetClass, serverEndpoint);
-        for (FunctionTool tool : methodToolProvider.getTools()) {
-            syncToDb(targetClass, tool, TOOL);
-        }
-        serverEndpointProvider.addTool(methodToolProvider);
-    }
-
-    private void addResource(IMcpServerEndpoint serverEndpoint, Class<?> targetClass,
-                             McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
-        MethodResourceProvider methodResourceProvider = new MethodResourceProvider(targetClass, serverEndpoint);
-        for (FunctionResource resource : methodResourceProvider.getResources()) {
-            syncToDb(targetClass, resource, McpTypeDict.RESOURCE);
-        }
-        serverEndpointProvider.addResource(methodResourceProvider);
-    }
-
-    private void addPrompt(IMcpServerEndpoint serverEndpoint, Class<?> targetClass,
-                           McpServerEndpointProvider serverEndpointProvider) throws IllegalAccessException {
-        MethodPromptProvider methodPromptProvider = new MethodPromptProvider(targetClass, serverEndpoint);
-        for (FunctionPrompt prompt : methodPromptProvider.getPrompts()) {
-            syncToDb(targetClass, prompt, McpTypeDict.PROMPT);
-        }
-        serverEndpointProvider.addPrompt(methodPromptProvider);
-    }
-
-    private void syncToDb(Class<?> targetClass, Object obj, McpTypeDict type) throws IllegalAccessException {
-        String name = getField(obj, "name");
-        SysMcp sysMcp = sysMcpService.get(targetClass.getName(), name, type.getValue());
-        if (FuncUtil.isNotEmpty(sysMcp)) {
-            setField(obj, "description", sysMcp.getDescription());
-        } else {
-            sysMcp = buildSysMcp(targetClass, obj, type);
-            sysMcpService.insert(sysMcp);
-        }
-    }
-
-    private String getField(Object obj, String fieldName) throws IllegalAccessException {
-        Field field = ReflectionUtil.getField(obj, fieldName);
-        field.setAccessible(true);
-        return (String) field.get(obj);
-    }
-
-    private SysMcp buildSysMcp(Class<?> targetClass, Object obj, McpTypeDict type) throws IllegalAccessException {
-        SysMcp sysMcp = new SysMcp();
-        sysMcp.setEndPoint(targetClass.getName());
-        sysMcp.setEndPointName(AnnotationUtils.findAnnotation(targetClass, McpServerEndpoint.class).name());
-        sysMcp.setName(getField(obj, "name"));
-        sysMcp.setType(type.getValue());
-        sysMcp.setDescription(getField(obj, "description"));
-        return sysMcp;
-    }
-
-    @Bean
-    public FilterRegistrationBean<SolonServletFilter> mcpServerFilter() {
-        FilterRegistrationBean<SolonServletFilter> filter = new FilterRegistrationBean<>();
-        filter.setName("SolonFilter");
-        String path = mcpPath + "/*";
-        filter.addUrlPatterns(path);
-        filter.setFilter(new SolonServletFilter());
-        return filter;
-    }
-
-    public McpServerEndpointProvider getMcpServerEndpointProvider(Class<?> clazz) {
-        return map.get(clazz.getName());
-    }
-
-    public void updateDescription(Class<?> clazz, String name, String type,
-                                  String description) throws IllegalAccessException {
-        updateDescription(clazz.getName(), name, DictEnumUtil.getEnumByValue(type, McpTypeDict.class), description);
-    }
-
-    public void updateDescription(String endpointClassName, String name, McpTypeDict type,
-                                  String description) throws IllegalAccessException {
-        McpServerEndpointProvider mcpServerEndpointProvider = map.get(endpointClassName);
-        switch (type) {
-            case TOOL:
-                Collection<FunctionTool> tools = mcpServerEndpointProvider.getTools();
-                FunctionTool functionTool = tools.stream().filter(tool -> tool.name().equals(name)).findFirst()
-                        .orElse(null);
-                mcpServerEndpointProvider.removeTool(name);
-                setField(functionTool, "description", description);
-                mcpServerEndpointProvider.addTool(functionTool);
-                break;
-            case RESOURCE:
-                Collection<FunctionResource> resources = mcpServerEndpointProvider.getResources();
-                FunctionResource functionResource = resources.stream().filter(resource -> resource.name().equals(name))
-                        .findFirst().orElse(null);
-                mcpServerEndpointProvider.removeResource(name);
-                setField(functionResource, "description", description);
-                mcpServerEndpointProvider.addResource(functionResource);
-                break;
-            case PROMPT:
-                Collection<FunctionPrompt> prompts = mcpServerEndpointProvider.getPrompts();
-                FunctionPrompt functionPrompt = prompts.stream().filter(prompt -> prompt.name().equals(name))
-                        .findFirst().orElse(null);
-                mcpServerEndpointProvider.removePrompt(name);
-                setField(functionPrompt, "description", description);
-                mcpServerEndpointProvider.addPrompt(functionPrompt);
-                break;
-            default:
-                break;
-        }
-        SysMcp sysMcp = new SysMcp();
-        sysMcp.setEndPoint(endpointClassName);
-        sysMcp.setName(name);
-        sysMcp.setDescription(description);
-        sysMcp.setType(type.getValue());
+        sysMcp.setType(McpTypeDict.TOOL.getValue());
         sysMcpService.updateById(sysMcp);
-    }
-
-    private void setField(Object obj, String name, Object value) throws IllegalAccessException {
-        Field field = ReflectionUtil.getField(obj, name);
-        field.setAccessible(true);
-        field.set(obj, value);
-    }
-
-    public void updateDescription(SysMcp sysMcp) throws IllegalAccessException {
-        updateDescription(sysMcp.getEndPoint(), sysMcp.getName(),
-                DictEnumUtil.getEnumByValue(sysMcp.getType(), McpTypeDict.class), sysMcp.getDescription());
     }
 }

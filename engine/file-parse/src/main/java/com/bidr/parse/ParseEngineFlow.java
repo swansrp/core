@@ -42,6 +42,11 @@ import java.util.Set;
  * 是产物键代数段（文件轨＝业务版本号、材料轨＝0，D-1——引擎不当业务版本解释）。
  * 任务类型沿用 {@code "PARSE"}（D-8：与历史行同键，零迁移）。</p>
  *
+ * <p><b>keyNamespace（2026-11-17 temp 前缀定案）</b>：payload 可带 engine-owned 闭集键
+ * {@code keyNamespace}（安全段形式，允许多段如 {@code temp/material}）——非空时 md/pagemap/
+ * convert 缓存键整体挂到该前缀下（{@link BlobStore#namespaced}），供临时轨吃桶级 ILM；
+ * 缺省 null＝主命名空间、所有键逐字节不变（golden 兜底）。内嵌图与页图恒落主命名空间。</p>
+ *
  * <p><b>输出</b>：产物键形逐字不动（{@code BlobStore} 八前缀 golden 已钉，R-2）——
  * {@code parsed/{sha}/v{n}.md}、{@code pagemap/{sha}/v{n}.json}、{@code convert/{sha}.pdf}、
  * {@code image/{sha}/{name}}、{@code thumb/{sha}/p{n}.png}。交付通道＝任务行快照
@@ -163,7 +168,7 @@ public class ParseEngineFlow {
         if (!isConvertibleExt(request.fileName)) {
             // 非 office 件锚即原件：断点在这里就能判（D-2 正向：目标键已在＝秒级复用）
             if (productsComplete(sourceSha, request.variant, requested,
-                    PageImageRenderer.looksLikePdf(source)) && enrichSatisfied(task)) {
+                    PageImageRenderer.looksLikePdf(source), request.keyNamespace) && enrichSatisfied(task)) {
                 patch.put("anchorSha", sourceSha);
                 patch.put("anchorKey", request.sourceKey);
                 mergeSnapshot(task, scope, "REUSED", patch);
@@ -197,7 +202,7 @@ public class ParseEngineFlow {
         if (!StringUtils.hasText(sourceSha)) {
             throw new ParseContractException("任务快照缺 sourceSha（INTAKE 未跑或快照被清）: " + task.getBizRef());
         }
-        String convertedKey = BlobStore.convertedPdfKey(sourceSha);
+        String convertedKey = BlobStore.namespaced(request.keyNamespace, BlobStore.convertedPdfKey(sourceSha));
         byte[] cached = peek(convertedKey);
         if (cached != null && cached.length > 0) {
             return converted(task, scope, request, sourceSha, convertedKey, Digests.sha256Hex(cached));
@@ -269,7 +274,7 @@ public class ParseEngineFlow {
         // 断点（D-2）：锚已归一，键齐即复用（office 件在这里判；直通/内置件 md 即判，
         // 页图目标只在锚可渲染时成立——见 productsComplete）
         if (productsComplete(anchorSha, request.variant, requested,
-                PageImageRenderer.looksLikePdf(peek(anchorKey))) && enrichSatisfied(task)) {
+                PageImageRenderer.looksLikePdf(peek(anchorKey)), request.keyNamespace) && enrichSatisfied(task)) {
             mergeSnapshot(task, scope, "REUSED", Collections.<String, Object>singletonMap("route", routeOf(state)));
             log.info("解析断点命中（转录秒级复用）: task={} bizRef={} anchor={} v={}",
                     task.getId(), task.getBizRef(), anchorSha, request.variant);
@@ -279,7 +284,7 @@ public class ParseEngineFlow {
             // 直通判定要在"要引擎"之前：引擎按内容嗅探不收纯文本（实测提交那一刻就 HTTP 400），
             // 把没配解析引擎这种无关状态套到它们头上只会白烧重试预算
             TextPassthroughService.Result result = passthrough.passthrough(
-                    anchorSha, request.variant, ext, readBytes(anchorKey));
+                    anchorSha, request.variant, ext, readBytes(anchorKey), request.keyNamespace);
             Map<String, Object> patch = new LinkedHashMap<>();
             patch.put("route", ROUTE_PASSTHROUGH);
             patch.put("markdownKey", result.getMarkdownKey());
@@ -318,7 +323,8 @@ public class ParseEngineFlow {
             throw new IllegalStateException("内置解析失败: " + anchorFileName(request, state)
                     + " " + e.getMessage(), e);
         }
-        ParseArtifactWriter.Written written = writer.builtin(anchorSha, request.variant, artifact.getMarkdown());
+        ParseArtifactWriter.Written written = writer.builtin(anchorSha, request.variant,
+                request.keyNamespace, artifact.getMarkdown());
         Map<String, Object> patch = new LinkedHashMap<>();
         patch.put("route", ROUTE_BUILTIN);
         patch.put("markdownKey", written.getMarkdownKey());
@@ -378,7 +384,8 @@ public class ParseEngineFlow {
             return StageOutcome.pending(POLL_BACKOFF_MS);
         }
         AsyncTranscribeLeg.Artifact artifact = leg.fetch(subRoute, externalId);
-        ParseArtifactWriter.Written written = writer.transcribe(anchorSha, request.variant, artifact);
+        ParseArtifactWriter.Written written = writer.transcribe(anchorSha, request.variant,
+                request.keyNamespace, artifact);
         Map<String, Object> done = new LinkedHashMap<>();
         done.put("route", ROUTE_EXTERNAL);
         done.put("leg", leg.legName());
@@ -461,8 +468,9 @@ public class ParseEngineFlow {
      * pagemap 不进断点判据：直通/内置件本就没有映射（判空降级的正常形态），
      * 其落库顺序先于 md（写完映射才写正文），md 在场即映射已在。
      */
-    private boolean productsComplete(String anchorSha, int variant, Set<String> requested, boolean pdfAnchor) {
-        if (peek(BlobStore.parsedMarkdownKey(anchorSha, variant)) == null) {
+    private boolean productsComplete(String anchorSha, int variant, Set<String> requested, boolean pdfAnchor,
+            String namespace) {
+        if (peek(BlobStore.namespaced(namespace, BlobStore.parsedMarkdownKey(anchorSha, variant))) == null) {
             return false;
         }
         if (pdfAnchor && requested.contains(ARTIFACT_PAGE_IMAGE) && !thumbsExist(anchorSha)) {
@@ -706,7 +714,8 @@ public class ParseEngineFlow {
 
     /** 喂给解析引擎的文件名：锚是转换 PDF 时必须带 .pdf 扩展名（引擎按扩展名分派解析器） */
     private static String anchorFileName(ParseRequest request, Map<String, Object> state) {
-        if (BlobStore.convertedPdfKey(text(state, "sourceSha")).equals(text(state, "anchorKey"))) {
+        if (BlobStore.namespaced(request.keyNamespace, BlobStore.convertedPdfKey(text(state, "sourceSha")))
+                .equals(text(state, "anchorKey"))) {
             return stripExt(request.fileName) + ".pdf";
         }
         return request.fileName;
@@ -738,8 +747,12 @@ public class ParseEngineFlow {
         return map;
     }
 
-    /** 阶段体入参（payload 解析；透传键引擎不解释） */
+    /** 阶段体入参（payload 解析；透传键引擎不解释——keyNamespace 例外：engine-owned 闭集键） */
     private static final class ParseRequest {
+
+        /** keyNamespace 每段的安全字符（多段以 / 相接，如 temp/material；防路径注入进对象键） */
+        private static final java.util.regex.Pattern NAMESPACE_SEGMENT =
+                java.util.regex.Pattern.compile("[A-Za-z0-9._-]+");
 
         private final String sourceKey;
 
@@ -749,11 +762,15 @@ public class ParseEngineFlow {
 
         private final String artifactsJson;
 
-        private ParseRequest(String sourceKey, String fileName, int variant, String artifactsJson) {
+        private final String keyNamespace;
+
+        private ParseRequest(String sourceKey, String fileName, int variant, String artifactsJson,
+                String keyNamespace) {
             this.sourceKey = sourceKey;
             this.fileName = fileName;
             this.variant = variant;
             this.artifactsJson = artifactsJson;
+            this.keyNamespace = keyNamespace;
         }
 
         static ParseRequest of(SaAsyncTask task) {
@@ -774,14 +791,31 @@ public class ParseEngineFlow {
                 int variant = variantNode.isMissingNode() || variantNode.isNull()
                         ? 0 : variantNode.asInt(0);
                 JsonNode artifacts = node.path("artifacts");
+                String keyNamespace = namespaceOf(node.path("keyNamespace").asText(null), task.getBizRef());
                 return new ParseRequest(sourceKey, fileName, variant,
-                        artifacts.isMissingNode() || artifacts.isNull() ? null : artifacts.toString());
+                        artifacts.isMissingNode() || artifacts.isNull() ? null : artifacts.toString(),
+                        keyNamespace);
             } catch (ParseContractException e) {
                 throw e;
             } catch (Exception e) {
                 throw new ParseContractException("任务 payload 解析失败: bizRef="
                         + task.getBizRef() + " " + e.getMessage());
             }
+        }
+
+        /** keyNamespace 校验（闭集语义与 artifacts 同款快败）：空＝主命名空间；非空＝安全段多段形态 */
+        private static String namespaceOf(String namespace, String bizRef) {
+            if (!StringUtils.hasText(namespace)) {
+                return null;
+            }
+            String value = namespace.trim();
+            for (String segment : value.split("/")) {
+                if (segment.isEmpty() || !NAMESPACE_SEGMENT.matcher(segment).matches()) {
+                    throw new ParseContractException("keyNamespace 含非法段（只许 [A-Za-z0-9._-] 多段）: bizRef="
+                            + bizRef + " keyNamespace=" + namespace);
+                }
+            }
+            return value;
         }
     }
 }

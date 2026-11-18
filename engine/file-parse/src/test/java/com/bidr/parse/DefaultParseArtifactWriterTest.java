@@ -96,7 +96,7 @@ class DefaultParseArtifactWriterTest {
                         + "{\"type\":\"text\",\"text\":\"图片后的正文段落。\",\"page_idx\":0}]",
                 Collections.singletonList(image("images/one.jpg", "JPEG".getBytes(StandardCharsets.UTF_8))));
 
-        ParseArtifactWriter.Written written = service.transcribe(SHA, 1, artifact);
+        ParseArtifactWriter.Written written = service.transcribe(SHA, 1, null, artifact);
 
         byte[] pageMap = storageJson(written.getPageMapKey());
         String rewritten = new String(storageJson(written.getMarkdownKey()), StandardCharsets.UTF_8);
@@ -125,7 +125,7 @@ class DefaultParseArtifactWriterTest {
                 "[{\"type\":\"text\",\"text\":\"内容\",\"page_idx\":2}]",
                 Collections.singletonList(image("images/one.png", "PNG".getBytes(StandardCharsets.UTF_8))));
 
-        ParseArtifactWriter.Written written = service.transcribe(SHA, 1, artifact);
+        ParseArtifactWriter.Written written = service.transcribe(SHA, 1, null, artifact);
 
         assertEquals("parsed/" + SHA + "/v1.md", written.getMarkdownKey());
         assertEquals("pagemap/" + SHA + "/v1.json", written.getPageMapKey());
@@ -143,9 +143,28 @@ class DefaultParseArtifactWriterTest {
         verify(storage, never()).presign(anyString());
     }
 
+    /**
+     * namespace 非 null 时（临时轨 temp/material）：md/pagemap 键整体挂前缀下，
+     * 内嵌图恒落 {@code image/} 主命名空间（跨文档耐用资产不随临时轨过期）。
+     */
+    @Test
+    void namespacePrefixesMarkdownAndPageMapButNotImages() {
+        AsyncTranscribeLeg.Artifact artifact = artifact("![图](images/one.png)\n\n内容",
+                "[{\"type\":\"text\",\"text\":\"内容\",\"page_idx\":2}]",
+                Collections.singletonList(image("images/one.png", "PNG".getBytes(StandardCharsets.UTF_8))));
+
+        ParseArtifactWriter.Written written = service.transcribe(SHA, 0, "temp/material", artifact);
+
+        assertEquals("temp/material/parsed/" + SHA + "/v0.md", written.getMarkdownKey());
+        assertEquals("temp/material/pagemap/" + SHA + "/v0.json", written.getPageMapKey());
+        verify(storage).put(eq("image/" + SHA + "/one.png"), any(), eq("image/png"));
+        verify(storage).put(eq(written.getMarkdownKey()), any(), eq("text/markdown; charset=utf-8"));
+        verify(storage).put(eq(written.getPageMapKey()), any(), eq("application/json; charset=utf-8"));
+    }
+
     @Test
     void builtinWritesMarkdownOnlyWithoutPageMap() {
-        ParseArtifactWriter.Written written = service.builtin(SHA, 3, "# 直读正文");
+        ParseArtifactWriter.Written written = service.builtin(SHA, 3, null, "# 直读正文");
         assertEquals("parsed/" + SHA + "/v3.md", written.getMarkdownKey());
         assertEquals(null, written.getPageMapKey(), "内置腿无页码映射＝引用降级无页");
         verify(storage).put(eq(written.getMarkdownKey()), any(), eq("text/markdown; charset=utf-8"));

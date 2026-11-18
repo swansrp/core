@@ -64,6 +64,17 @@ public class IdentityIdpProperties {
     private String loginPageBase = "";
 
     /**
+     * authorize 未登录回跳的 SPA 路由（拼在 loginPageBase/context-path 之后）。
+     * 默认 {@code /#/}＝front 根（受保护路由），未登录由框架登录守卫按登录形态分派：
+     * local→带 query 进登录页、SSO→自动外跳认证中心，换票后守卫按 ?redirect_uri 续驾
+     * authorize（2026-11-14 台账 #69 用户拍板「/#/ 通用，默认就别写 /#/login」；
+     * 本地登录页 /#/login 仍可达＝QA 工厂号腿）。旧值 /#/login 可显式配回＝纯本地登录页
+     * 形态的部署想绕过根路由一跳时用（普通登录部署不配也不受影响：无 authorize 消费方时
+     * 该回落点根本不会被触发）。
+     */
+    private String loginPagePath = "/#/";
+
+    /**
      * 启动期自检：钥匙缺席只 warn 不阻断上下文——IdP 是纯加法腿（SSO 出票、普通登录链不受影响），
      * 阻断启动会把"未对接形态"误升成"整站起不来"。
      */

@@ -97,15 +97,17 @@ public interface LoginService {
     String getRegisterMode();
 
     /**
-     * 租户模式闸·建号前（SSO 首登）：yml {@code my.auth.register-mode=tenant/closed} 时禁止自动创建账号。
+     * 租户模式闸·建号前（SSO 首登）。
      *
      * <p>背景（2026-10-27 子系统联调）：SSO/IdM 首登查不到账号时原实现无条件自注册一个
      * <b>零租户归属</b>账号——空租户集在 core 又被解释为「系统管理级」旁路（可切任意租户、
-     * 业务表不拼 tenant_id），形成跨租户读越权。租户模式下账号必须由管理员/主系统按租户分配后
-     * 产生，不得先把人建出来再补归属。</p>
+     * 业务表不拼 tenant_id），形成跨租户读越权。故 2026-10-27 口径＝tenant 一刀切拒。</p>
      *
-     * <p>open＝保持历史行为（自动建号、无租户归属）；tenant＝拒绝并提示由管理员创建分配；
-     * closed＝拒绝（注册面整体关闭）。</p>
+     * <p>🔴 口径更新（2026-11-11 用户拍板「SSO 登录账号默认绑定 bidr 租户」）：tenant 模式改为
+     * 按租户正源放行——identity.tenant.code 在位即允许 JIT 建号，由 createUser 漏斗按同一正源
+     * 赋籍（bindCreateUserTenant），零归属旁路在结构上不可能发生；正源不在位仍拒绝
+     * （fail-closed，10-27 防旁路语义等价保留）。closed＝拒绝（注册面整体关闭）；
+     * open＝保持历史行为（自动建号、无租户归属）。</p>
      */
     void assertSsoAutoCreateAllowed();
 

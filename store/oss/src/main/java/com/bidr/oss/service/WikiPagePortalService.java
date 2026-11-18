@@ -2,7 +2,6 @@ package com.bidr.oss.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bidr.authorization.holder.AccountContext;
-import com.bidr.authorization.service.token.TokenService;
 import com.bidr.kernel.config.response.Resp;
 import com.bidr.kernel.constant.CommonConst;
 import com.bidr.kernel.utils.FuncUtil;
@@ -32,7 +31,6 @@ public class WikiPagePortalService {
 
     private final SaWikiPageService wikiPageService;
     private final SaWikiCollaboratorService collaboratorService;
-    private final TokenService tokenService;
 
     /**
      * 获取页面树形结构

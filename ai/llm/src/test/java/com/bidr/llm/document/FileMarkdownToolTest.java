@@ -1,10 +1,14 @@
 package com.bidr.llm.document;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.bidr.document.FileMarkdownService;
 import dev.langchain4j.agent.tool.Tool;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -18,6 +22,8 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Title: FileMarkdownToolTest
@@ -63,6 +69,44 @@ public class FileMarkdownToolTest {
             sb.append(unit);
         }
         return sb.toString();
+    }
+
+    /** m-r2-1：INFO 日志不得携带完整预签名 URL（查询串＝一小时读权），只留 host+路径尾段 */
+    @Test
+    public void readFileLogMasksPresignedUrl() throws IOException {
+        FileMarkdownService service = mock(FileMarkdownService.class);
+        String url = "https://oss.example.com/bucket/agent-session/1/s/abcdefgh.docx"
+                + "?X-Amz-Signature=SECRET&OSSAccessKeyId=AK";
+        when(service.toMarkdown(url)).thenReturn("正文");
+        FileMarkdownTool maskedTool = new FileMarkdownTool(service);
+
+        Logger logger = (Logger) LoggerFactory.getLogger(FileMarkdownTool.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertEquals("正文", maskedTool.readFile(url, 0, 0));
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        StringBuilder logs = new StringBuilder();
+        for (ILoggingEvent event : appender.list) {
+            logs.append(event.getFormattedMessage()).append('\n');
+        }
+        assertFalse("签名查询串不得进日志", logs.toString().contains("SECRET"));
+        assertFalse("签名参数名不得进日志", logs.toString().contains("X-Amz"));
+        assertFalse("AccessKey 参数不得进日志", logs.toString().contains("OSSAccessKeyId"));
+        assertTrue("日志保留 host 便于排障", logs.toString().contains("oss.example.com"));
+        assertTrue("日志保留路径尾段", logs.toString().contains("pathTail="));
+    }
+
+    /** m-r2-1：本地路径日志只留文件名（不泄露目录结构） */
+    @Test
+    public void maskLocationKeepsOnlyFilenameForLocalPath() {
+        assertEquals("855.docx", FileMarkdownTool.maskLocation("C:\\data\\uploads\\855.docx"));
+        assertEquals("855.docx", FileMarkdownTool.maskLocation("/var/lib/files/855.docx"));
+        assertFalse(FileMarkdownTool.maskLocation("https://oss.example/x?Signature=SECRET").contains("SECRET"));
     }
 
     @Test

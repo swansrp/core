@@ -14,6 +14,7 @@ import com.bidr.authorization.service.oauth2.OAuth2ClientService;
 import com.bidr.authorization.service.oauth2.OAuth2TokenException;
 import com.bidr.authorization.service.oauth2.OAuth2TokenService;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.utils.SessionCookieUtil;
 import com.bidr.authorization.utils.jwt.IdpJwksUtil;
 import com.bidr.authorization.utils.jwt.IdpJwtUtil;
 import com.bidr.authorization.utils.token.AuthTokenUtil;
@@ -27,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -68,13 +68,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OAuth2IdpController {
 
-    /**
-     * SPA 登录页 hash 路由后缀（framework router 本地登录页；redirect_uri 为 Login 页约定回跳参数名）。
-     * 🔴 前缀必须随 context-path：SPA 挂在 {context-path}/ 下（6.60／zz 都是 /inkhub/），
-     * 写死 "/#/login" 会让浏览器落在站根、hash 在 302 里丢失 ⇒ 登录页根本打不开。
-     */
-    private static final String LOGIN_PAGE_HASH_SUFFIX = "/#/login";
-
     private static final String RESPONSE_TYPE_CODE = "code";
 
     private final OAuth2ClientService clientService;
@@ -84,15 +77,7 @@ public class OAuth2IdpController {
     private final AcUserService acUserService;
     private final AcUserTenantService acUserTenantService;
     private final IdentityIdpProperties idpProperties;
-
-    /**
-     * 浏览器会话 cookie 名（登录成功时由 LoginController 种下）。
-     *
-     * <p>存在的唯一理由＝authorize 是**整页导航**：浏览器无法携带 SPA 存在 localStorage 里的
-     * Authorization 头，只认头的实现会把每个已登录用户都当成未登录、302 回登录页——登录后再跳
-     * authorize 依旧无头，形成死循环。因此本端点额外接受 cookie 回退（header 优先，语义不变）。</p>
-     */
-    public static final String SESSION_COOKIE = "INKHUB_TOKEN";
+    private final SessionCookieUtil sessionCookieUtil;
 
     @Auth(AuthNone.class)
     @ApiOperation(value = "授权码签发（authorize）",
@@ -108,10 +93,10 @@ public class OAuth2IdpController {
                           @RequestParam(value = "scope", required = false) String scope,
                           HttpServletRequest request, HttpServletResponse response) throws IOException {
         // 1) 登录态先判（原 M15 出票口同款判据：手抽 token＋redis 核验，不依赖线程态）
-        //    header 优先；无头时回退会话 cookie（整页导航带不上 header，见 SESSION_COOKIE 注释）
+        //    header 优先；无头时回退会话 cookie（整页导航带不上 header，口径见 SessionCookieUtil 类注释）
         TokenInfo caller = AuthTokenUtil.extractToken(request);
         if (caller == null) {
-            caller = AuthTokenUtil.resolveToken(readSessionCookie(request));
+            caller = AuthTokenUtil.resolveToken(sessionCookieUtil.read(request));
         }
         boolean login = caller != null && tokenServiceSession.verifyToken(caller);
         if (!login) {
@@ -206,24 +191,12 @@ public class OAuth2IdpController {
         return IdpJwksUtil.buildJwks(publicKey, IdpJwtUtil.computeKid(publicKey));
     }
 
-    /** 读登录会话 cookie（无则返回 null；只在本端点用于 authorize 的整页导航回退） */
-    private static String readSessionCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return null;
-        }
-        for (Cookie cookie : cookies) {
-            if (SESSION_COOKIE.equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
-    }
-
     /**
-     * SPA 登录页回跳地址：默认 {context-path}/#/login?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）>。
+     * SPA 登录页回跳地址：{context-path}{loginPagePath}?redirect_uri=<原 authorize 地址（去前导斜杠，Login 页约定）>，
+     * loginPagePath 默认 {@code /#/}＝front 根由框架登录守卫按形态分派（2026-11-14 台账 #69
+     * 用户拍板）；显式配 {@code /#/login}＝直接落本地登录页（不走根路由一跳）。
      * 配置 {@code identity.idp.login-page-base}（env MY_IDP_LOGIN_PAGE_BASE）⇒ 302 到
-     * {base}/#/login?...（绝对地址）——供「SPA 不与后端同源挂载」的本地 dev 拓扑用（run-local 注入）：
+     * {base}{loginPagePath}?...（绝对地址）——供「SPA 不与后端同源挂载」的本地 dev 拓扑用（run-local 注入）：
      * pre/生产 nginx 把 SPA 挂在 {ctx}/ 下，同源相对形态即可落登录页，**不配即现行为**。
      */
     private String loginBackUrl(HttpServletRequest request) {
@@ -239,7 +212,7 @@ public class OAuth2IdpController {
         String prefix = StringUtils.isNotBlank(base)
                 ? base.replaceAll("/+$", "")
                 : request.getContextPath();
-        return prefix + LOGIN_PAGE_HASH_SUFFIX + "?redirect_uri=" + urlEncode(back);
+        return prefix + idpProperties.getLoginPagePath() + "?redirect_uri=" + urlEncode(back);
     }
 
     /** state 可选回传（RFC 6749 §4.1.1 原值透传，encodeURIComponent 等价物） */

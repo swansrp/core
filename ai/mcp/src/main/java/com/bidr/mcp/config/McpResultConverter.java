@@ -7,8 +7,6 @@ import com.bidr.mcp.anno.McpProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.noear.solon.ai.chat.tool.ToolCallResultConverter;
-import org.noear.solon.core.exception.ConvertException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -17,15 +15,16 @@ import java.util.*;
 
 /**
  * Title: McpResultConverter
- * Description: Copyright: Copyright (c) 2025 Company: Bidr Ltd.
+ * Description: MCP 工具返回值转换器：Map/对象/集合 → JSON 文本（wire 上是
+ * tools/call 的 text content）。转换语义自旧 Solon 实现原样平移，仅摘除 Solon
+ * 接口依赖；子类须保留公开无参构造（注册表懒加载实例化）。
  *
  * @author Sharp
  * @since 2025/6/9 10:43
  */
 @Slf4j
-public class McpResultConverter implements ToolCallResultConverter {
-    @Override
-    public String convert(Object result) throws ConvertException {
+public class McpResultConverter {
+    public String convert(Object result) {
         return JsonUtil.toJson(converting(result), false, false, true);
     }
 

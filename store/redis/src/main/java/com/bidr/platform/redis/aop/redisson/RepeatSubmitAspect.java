@@ -130,7 +130,10 @@ public class RepeatSubmitAspect {
 
     /**
      * 构建锁的key
-     * 格式: RepeatSubmit:类名.方法名:identity
+     * 格式: &lt;app.projectId&gt;:RepeatSubmit:类名.方法名:identity
+     * <p>
+     * 与 {@code RedisCacheConfig.getKey} 同一命名空间口径：共用 Redis 的子系统被 ACL 限制在
+     * `~&lt;projectId&gt;:*` 前缀内时必须带前缀，否则防重复锁越界 NOPERM。
      */
     private String buildLockKey(ProceedingJoinPoint pjp, String lockIdentity) {
         StringBuilder sb = new StringBuilder(REDIS_LOCK_KEY_PREFIX);
@@ -139,6 +142,6 @@ public class RepeatSubmitAspect {
           .append(pjp.getSignature().getName())
           .append(":")
           .append(lockIdentity);
-        return sb.toString();
+        return com.bidr.platform.redis.cache.RedisCacheConfig.getKey(sb.toString());
     }
 }

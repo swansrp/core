@@ -24,6 +24,18 @@ public interface AgentLoopListener {
         }
     };
 
+    /**
+     * 本轮新增附件上下文（引擎每轮循环头调用一次，暂停检查之后、发起 LLM 调用之前）：
+     * 非空返回一段说明文本，引擎把它作为一条用户消息追加到本轮上下文——
+     * 解决「会话已 start、附件后上传」时序下首轮提示词看不到新附件的问题。
+     * <p>
+     * 语义约定：实现方负责做差（同一附件只返回一次），返回 null/空白＝本轮无可追加内容，
+     * 引擎不追加任何消息（无附件路径零行为变化）。默认 null（轻链路零改动）。
+     */
+    default String pendingUserText() {
+        return null;
+    }
+
     /** 过程日志上报（每轮请求/响应/工具调用摘要，前端进度窗可见任务在干活） */
     void log(String line);
 
@@ -67,6 +79,14 @@ public interface AgentLoopListener {
      * 默认空实现，兼容性同上；会话实现落 {@code AgentEvent.TOOL_RESULT}。
      */
     default void onToolResult(String toolCallId, String toolName, String resultText) {
+    }
+
+    /**
+     * 助手正文上报（工具轮的「边做边讲」）：模型一轮同时产出正文与工具调用时，把正文原样交出——
+     * 会话实现落 {@code AgentEvent.LLM_OUTPUT}，前端在工具组之间显示一行讲解（参考 IDE agent 流）。
+     * <b>纯结论轮不走此口</b>（其正文作为循环结果交回，避免与最终结论卡重复）。默认空实现。
+     */
+    default void onAssistantText(String text) {
     }
 
     /**

@@ -4,6 +4,7 @@ import com.bidr.authorization.annotation.auth.Auth;
 import com.bidr.authorization.annotation.auth.AuthToken;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.authorization.utils.SessionCookieUtil;
 import com.bidr.kernel.utils.FuncUtil;
 import com.bidr.wechat.service.auth.WechatAuthJdkService;
 import com.bidr.wechat.service.auth.WechatAuthService;
@@ -39,6 +40,8 @@ public class WechatAuthController {
     private WechatAuthService wechatAuthService;
     @Resource
     private WechatAuthJdkService wechatAuthJdkService;
+    @Resource
+    private SessionCookieUtil sessionCookieUtil;
 
     @Autowired(required = false)
     private List<LoginFillTokenInf> fillTokenInfList;
@@ -79,6 +82,8 @@ public class WechatAuthController {
                 loginFillTokenInf.fillToken(res);
             }
         }
+        // 与 LoginController.afterLogin 同口径：登录成功即种 authorize 整页导航用的会话 cookie（Max-Age 由 SessionCookieUtil 对齐票 TTL）
+        sessionCookieUtil.write(res);
     }
 
 }

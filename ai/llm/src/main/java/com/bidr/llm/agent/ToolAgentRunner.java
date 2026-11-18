@@ -4,6 +4,7 @@ import com.bidr.kernel.utils.BeanUtil;
 import com.bidr.llm.usage.ModelCallContext;
 import com.bidr.llm.usage.ModelCallContexts;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -139,7 +140,52 @@ public class ToolAgentRunner {
             boolean budgetHit = false;
             // 预算豁免工具累计耗时（ask_user 等交互等待类）：从预算检查中扣除，等待用户归来不立即触发收口
             long exemptMs = 0L;
-            for (int round = 1; round <= opt.getMaxRounds(); round++) {
+            // 轮次上限本地化（roundLimit 可变）：续期闸（askBeforeCloseout）经用户确认后抬升它，
+            // opt.getMaxRounds() 保持初始上限原值（续期询问文案与日志引用初始值）
+            int roundLimit = opt.getMaxRounds();
+            int extensionsUsed = 0;
+            int round = 1;
+            while (true) {
+                // 轮次触顶续期闸（默认开，2026-11-14 用户拍板：轮数控制不该拦完工作，硬停止前先问人）：
+                // 引擎合成一次 askUser 问「是否追加轮数继续」——用户选继续则抬升 roundLimit 继续跑；
+                // 跳过/超时/拒绝一律回落收口路径（closeoutKeepTools 保证产出不丢）。
+                // 仅作用于轮次触顶：budgetHit 的 break 在下方体内直接出去，不走本闸（续轮救不了
+                // 时间预算）；askUser 未注册（准入名单没有）时闸自动跳过。判读按引擎自拟的选项
+                // 原文精确匹配（工具回填「用户选择：<选项原文>」，跳过/超时的固定文案不含该串）
+                if (round > roundLimit) {
+                    if (opt.isAskBeforeCloseout() && extensionsUsed < opt.getMaxRoundExtensions()
+                            && admittedToolNames.contains("askUser")) {
+                        // 面向用户的措辞不暴露内部轮次预算数字（用户只关心「要不要继续」，不关心跑了几轮）；
+                        // 续期授予的轮数仍按 opt.getRoundExtension() 内部抬升 roundLimit。
+                        // continueOption 须与超时/跳过固定文案可区分（那两者含「并继续，」但不含「继续完成任务」），
+                        // 下方按 contains(continueOption) 精确判读用户是否同意续期。
+                        String continueOption = "继续完成任务";
+                        String closeOption = "结束任务（按编排纪律完成收尾）";
+                        ToolExecutionRequest askReq = ToolExecutionRequest.builder()
+                                .id("round-extend-ask-" + (extensionsUsed + 1)).name("askUser")
+                                .arguments("{\"question\":\"任务尚未完成，已执行较多步骤。是否继续完成剩余工作？\","
+                                        + "\"optionsJson\":\"[\\\"" + continueOption + "\\\",\\\""
+                                        + closeOption + "\\\"]\"}").build();
+                        sink.log("轮次预算用尽（" + opt.getMaxRounds() + " 轮），向用户发起续期询问");
+                        sink.onToolCall(askReq.id(), askReq.name(), askReq.arguments());
+                        String askResult = executeTool(askReq, effectiveTools, admittedToolNames, functionalByName);
+                        sink.onToolResult(askReq.id(), askReq.name(), askResult);
+                        if (askResult != null && askResult.contains(continueOption)) {
+                            extensionsUsed++;
+                            roundLimit += Math.max(1, opt.getRoundExtension());
+                            sink.log("用户同意续期（第 " + extensionsUsed + " 次），轮次上限 "
+                                    + opt.getMaxRounds() + " → " + roundLimit);
+                            messages.add(UserMessage.from("【预算续期】用户同意继续完成任务（第 "
+                                    + extensionsUsed + " 次续期）。请继续完成未竟工作，不必向用户提及轮次/预算等内部机制。"));
+                            // 落到本轮正体（round 未动：已是旧上限+1 ≤ 抬升后的 roundLimit）
+                        } else {
+                            sink.log("用户未同意续期，转入收口路径");
+                            break;
+                        }
+                    } else {
+                        break;   // 闸缺席（未开/无 askUser/续期额度尽）：原触顶语义直接收口
+                    }
+                }
                 // 总时间预算检查：超预算不再发起新一轮，直接走收口路径（杜绝长跑无结论）
                 if (opt.getBudgetSeconds() > 0
                         && System.currentTimeMillis() - startMs - exemptMs >= opt.getBudgetSeconds() * 1000L) {
@@ -161,6 +207,14 @@ public class ToolAgentRunner {
                     sink.log("恢复指导语已注入：" + resumeGuidance);
                     messages.add(UserMessage.from("【用户补充指导】" + resumeGuidance.trim()));
                 }
+                // 运行期附件增量：会话 start 之后才上传的附件在本轮头变成一条用户消息追加进上下文
+                // （start 时已拼进首轮提示词的附件由会话侧记投递，这里只返回新增件；默认 null＝零行为变化）
+                String pendingUserText = pendingUserText(sink);
+                if (pendingUserText != null && !pendingUserText.trim().isEmpty()) {
+                    messages.add(UserMessage.from(pendingUserText));
+                    sink.log("附件上下文追加（第 " + round + " 轮）：新增附件说明 " + pendingUserText.length()
+                            + " 字符已作为用户消息注入本轮上下文");
+                }
                 trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
                 ChatResponse resp = logged.chat(ChatRequest.builder()
@@ -170,6 +224,11 @@ public class ToolAgentRunner {
                 if (!ai.hasToolExecutionRequests()) {
                     log.info("工具循环第 {} 轮给出结论，会话结束", round);
                     return AgentLoopResult.toolLoop(ai.text(), round);
+                }
+                // 工具轮「边做边讲」：本轮既有正文又有工具调用时，把正文交监听器落 llm_output，
+                // 前端在工具组之间显示一行讲解（纯结论轮的正文走上面 return，不进此口，避免重复）
+                if (ai.text() != null && !ai.text().trim().isEmpty()) {
+                    sink.onAssistantText(ai.text());
                 }
                 // 逐个执行工具并回填结果：异常（参数解析失败/工具内部报错/工具未找到）一律转错误文本
                 // 回给 LLM 自纠，绝不让单次工具失败击穿整个会话；调用/返回各推一条过程日志（会话事件流
@@ -234,46 +293,106 @@ public class ToolAgentRunner {
                     log.info("工具循环第 {} 轮收到业务终止信号，短路收口", round);
                     return AgentLoopResult.toolLoop(terminal == null ? "" : terminal, round);
                 }
+                // 自管轮次推进（原 for-increment；ceremonyOnly 的 round-- 在上方保持「本轮免费」语义）
+                round++;
             }
-            // 触顶/超预算收口：除 askUser 外不再携带工具定义，追加收口指令强制产出结论。
+            // 触顶/超预算收口：默认除 askUser 外不再携带工具定义，追加收口指令强制产出结论。
             // askUser 例外通道：链路注册了 askUser 时保留其规格并留例外口子——避免“已判真歧义
-            // Must ask 但收口禁工具”被迫瞎猜（模型坚持问则执行一次拿到口径，随后无工具直出）
-            sink.log(budgetHit
-                    ? "会话总耗时达预算（" + opt.getBudgetSeconds() + "s），收口指令已发出，要求直接输出最终结果"
-                    : "工具探索达上限（" + opt.getMaxRounds() + " 轮），收口指令已发出，要求直接输出最终结果");
-            messages.add(UserMessage.from("探索预算已用完，禁止再调用任何工具。唯一例外：仍存在影响结论口径"
-                    + "且无法自决的真歧义时，可调用 askUser 向用户确认后立即输出最终结论。"
-                    + "请基于已有信息立即输出最终结论。"));
-            trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
-            logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
+            // Must ask 但收口禁工具”被迫瞎猜（模型坚持问则执行一次拿到口径，随后无工具直出）。
+            // closeoutKeepTools 扩面（2026-11-14 真机实锤驱动）：收尾动作本身就是工具的链路
+            // （监理日志 save_supervision_log→finish）在旧口径下触顶即产出必丢库——收口轮保留
+            // 登记集并把收口指令改口径为「先完成收尾工具再输出最终结论」；未登记链路工具面、
+            // 指令文本与流程保持与旧实现逐字符/逐步一致（零行为变化）
+            Set<String> keepNames = opt.getCloseoutKeepTools() == null
+                    ? Collections.<String>emptySet() : opt.getCloseoutKeepTools();
+            boolean keepClosing = !keepNames.isEmpty();
             List<ToolSpecification> closingSpecs = new ArrayList<>();
+            Set<String> closingAllowed = new HashSet<>(keepNames);
+            closingAllowed.add("askUser");
             for (ToolSpecification s : specs) {
-                if ("askUser".equals(s.name())) {
+                if (closingAllowed.contains(s.name())) {
                     closingSpecs.add(s);
                 }
             }
-            ChatResponse last = logged.chat(closingSpecs.isEmpty()
-                    ? ChatRequest.builder().messages(messages).build()
-                    : ChatRequest.builder().messages(messages).toolSpecifications(closingSpecs).build());
-            if (last.aiMessage().hasToolExecutionRequests()) {
-                // 收口例外命中（模型坚持 askUser=真歧义）：执行拿到用户口径后无工具直出
+            sink.log(budgetHit
+                    ? (keepClosing
+                            ? "会话总耗时达预算（" + opt.getBudgetSeconds() + "s），收口指令已发出，"
+                                    + "先用收口保留工具完成收尾再输出最终结果"
+                            : "会话总耗时达预算（" + opt.getBudgetSeconds() + "s），收口指令已发出，要求直接输出最终结果")
+                    : (keepClosing
+                            ? "工具探索达上限（" + opt.getMaxRounds() + " 轮），收口指令已发出，"
+                                    + "先用收口保留工具完成收尾再输出最终结果"
+                            : "工具探索达上限（" + opt.getMaxRounds() + " 轮），收口指令已发出，要求直接输出最终结果"));
+            if (keepClosing) {
+                StringBuilder keepList = new StringBuilder();
+                for (ToolSpecification s : closingSpecs) {
+                    if (keepList.length() > 0) {
+                        keepList.append('、');
+                    }
+                    keepList.append(s.name());
+                }
+                messages.add(UserMessage.from("探索预算已用完，禁止再调用探索类工具。收口保留工具（" + keepList
+                        + "）仍可使用：产出尚未落库/收尾的，先完成收尾动作（先存后收），再输出最终结论；"
+                        + "仍存在影响结论口径且无法自决的真歧义时，可调用 askUser 向用户确认。"
+                        + "请基于已有信息尽快输出最终结论。"));
+            } else {
+                messages.add(UserMessage.from("探索预算已用完，禁止再调用任何工具。唯一例外：仍存在影响结论口径"
+                        + "且无法自决的真歧义时，可调用 askUser 向用户确认后立即输出最终结论。"
+                        + "请基于已有信息立即输出最终结论。"));
+            }
+            trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
+            logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
+            int closingLimit = Math.max(1, opt.getCloseoutMaxRounds());
+            int closingRounds = 0;
+            boolean executed = false;   // last 当前响应的工具请求是否已执行回填（防双执行/漏执行的真源标记）
+            ChatResponse last = closingChat(logged, messages, closingSpecs);
+            while (true) {
+                if (!last.aiMessage().hasToolExecutionRequests() || executed) {
+                    break;
+                }
+                if (closingRounds >= closingLimit) {
+                    break;   // 上限尽：这批未执行请求交下方溢出块（执行完强制直出）
+                }
+                closingRounds++;
+                executed = true;
                 messages.add(last.aiMessage());
-                for (ToolExecutionRequest req : last.aiMessage().toolExecutionRequests()) {
-                    sink.log("收口例外：执行 " + req.name() + " 后无工具直出");
-                    sink.onToolCall(req.id(), req.name(), req.arguments());
-                    String closingResult = executeTool(req, effectiveTools, admittedToolNames, functionalByName);
-                    sink.onToolResult(req.id(), req.name(), closingResult);
-                    // I10 收口路径不卸载：最后一次 generate 之前追加的消息一律原文
-                    // （此时省 token 已无意义，丢信息代价最大；allowOffload=false 双保险）
-                    appendToolResultMessage(messages, req, closingResult, neverOffload,
-                            offloadChars, previewChars, false, stats);
+                executeClosingBatch(last.aiMessage(), messages, sink, effectiveTools,
+                        admittedToolNames, functionalByName, neverOffload, offloadChars, previewChars, stats);
+                if (sink.shouldTerminate()) {
+                    // 业务终止短路：finish 类终结信号在收口轮确认即以终文本收口（不空烧告别轮）
+                    String terminal = sink.terminalText();
+                    sink.log("收口轮确认业务终止信号（第 " + closingRounds + " 批收口工具），短路收口");
+                    log.info("工具循环收口段第 {} 批收到业务终止信号，短路收口", closingRounds);
+                    return AgentLoopResult.toolLoop(terminal == null ? "" : terminal, opt.getMaxRounds());
+                }
+                if (closingRounds < closingLimit) {
+                    // 保留链仍带收口工具面（save→finish 可连）；未登记链旧口径＝执行一次后无工具直出
+                    last = keepClosing
+                            ? closingChat(logged, messages, closingSpecs)
+                            : logged.chat(ChatRequest.builder().messages(messages).build());
+                } else {
+                    last = logged.chat(ChatRequest.builder().messages(messages).build());
+                }
+                executed = false;
+            }
+            if (!executed && last.aiMessage().hasToolExecutionRequests()) {
+                // 收口轮内模型坚持交工具调用（旧收口例外同形态）：执行这最后一批防丢终结信号，随后无工具直出
+                executed = true;
+                messages.add(last.aiMessage());
+                executeClosingBatch(last.aiMessage(), messages, sink, effectiveTools,
+                        admittedToolNames, functionalByName, neverOffload, offloadChars, previewChars, stats);
+                if (sink.shouldTerminate()) {
+                    String terminal = sink.terminalText();
+                    sink.log("收口末批确认业务终止信号，短路收口");
+                    return AgentLoopResult.toolLoop(terminal == null ? "" : terminal, opt.getMaxRounds());
                 }
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
                 last = logged.chat(ChatRequest.builder().messages(messages).build());
             }
-            log.info("工具循环收口完成（上限 {} 轮 / 预算 {}s，超预算={}）",
-                    opt.getMaxRounds(), opt.getBudgetSeconds(), budgetHit);
-            return AgentLoopResult.toolLoop(last.aiMessage().text(), opt.getMaxRounds());
+            log.info("工具循环收口完成（上限 {} 轮 / 预算 {}s，超预算={}，收口工具批={}）",
+                    opt.getMaxRounds(), opt.getBudgetSeconds(), budgetHit, closingRounds);
+            String closingText = last.aiMessage().text();
+            return AgentLoopResult.toolLoop(closingText == null ? "" : closingText, opt.getMaxRounds());
         } catch (UnsupportedOperationException e) {
             log.warn("模型委托不支持工具调用，回落直连生成: {}", e.getMessage());
             sink.log("模型不支持工具调用，回落直连生成");
@@ -332,6 +451,34 @@ public class ToolAgentRunner {
         }
         String one = s.replaceAll("\\s+", " ").trim();
         return one.length() > max ? one.substring(0, max) + "..." : one;
+    }
+
+    /** 收口段发起一次 generate：收口保留工具面非空时带上（模型可持续收尾 save→finish），
+     *  空则纯文本直出——与旧收口「closingSpecs 空＝不带 specs」形态逐字符一致 */
+    private ChatResponse closingChat(ChatModel model, List<ChatMessage> messages,
+                                     List<ToolSpecification> closingSpecs) {
+        ChatRequest.Builder builder = ChatRequest.builder().messages(messages);
+        if (!closingSpecs.isEmpty()) {
+            builder.toolSpecifications(closingSpecs);
+        }
+        return model.chat(builder.build());
+    }
+
+    /** 收口段执行一批工具请求并回填消息（I10：结果一律原文追加不卸载——收口段省 token 已无意义，
+     *  丢信息代价最大；allowOffload=false 双保险，口径同旧收口例外通道） */
+    private void executeClosingBatch(AiMessage ai, List<ChatMessage> messages, AgentLoopListener sink,
+                                     List<Object> effectiveTools, Set<String> admittedToolNames,
+                                     Map<String, FunctionalTool> functionalByName, Set<String> neverOffload,
+                                     int offloadChars, int previewChars, RunStats stats) {
+        for (ToolExecutionRequest req : ai.toolExecutionRequests()) {
+            sink.log("收口工具执行：" + req.name() + "(" + fullText(req.arguments()) + ")");
+            sink.onToolCall(req.id(), req.name(), req.arguments());
+            String closingResult = executeTool(req, effectiveTools, admittedToolNames, functionalByName);
+            sink.log("收口工具 " + req.name() + " 返回：" + fullText(closingResult));
+            sink.onToolResult(req.id(), req.name(), closingResult);
+            appendToolResultMessage(messages, req, closingResult, neverOffload,
+                    offloadChars, previewChars, false, stats);
+        }
     }
 
     /** 执行单次工具调用：自反射调用 @Tool 方法，所有异常（参数 JSON 解析失败、工具不存在、
@@ -518,6 +665,17 @@ public class ToolAgentRunner {
         return new ArrayList<>(restricted);
     }
 
+    /** 运行期附件上下文取数：listener 默认 null（无附件路径零行为），实现方抛错也吞在这里——
+     *  附件注入是增强面，绝不因为一次存储读失败击穿整个工具循环 */
+    private static String pendingUserText(AgentLoopListener sink) {
+        try {
+            return sink.pendingUserText();
+        } catch (Exception e) {
+            log.warn("运行期附件上下文读取失败（本轮跳过附件追加）: error={}", e.getMessage());
+            return null;
+        }
+    }
+
     /** 工具面定形上报：listener 默认空实现（无台账即零行为），实现方抛错也吞在这里——
      *  台账是复盘链路，绝不改写会话结局也不中断循环 */
     private static void notifyToolSurfaceResolved(List<ToolSpecification> specs, String systemPrompt,
@@ -529,8 +687,14 @@ public class ToolAgentRunner {
         }
     }
 
-    /** 解析工具参数 JSON：按方法参数名（@Tool 生成 schema 即参数名）逐个取值并转目标类型；
-     *  空/缺省参数传 null，由工具方法自行处理 */
+    /**
+     * 解析工具参数 JSON：按<b>发给模型的参数名</b>逐个取值并转目标类型。
+     * <p>参数名口径必须与 schema 同源：langchain4j 生成 schema 时优先取 {@code @P(name=...)}，
+     * 未声明才回落 Java 参数名；执行期若只认 Java 参数名，任何 snake_case 声明（如
+     * {@code read_attachment} 的 file_id/max_chars）都会被解析成 null，基本类型参数随后在
+     * {@code Method.invoke} 抛 {@code IllegalArgumentException}。故这里同口径优先 {@code @P.name}。
+     * <p>空/缺省参数传 null，由工具方法自行处理。
+     */
     private static Object[] parseToolArgs(Method method, String argumentsJson) throws Exception {
         Parameter[] params = method.getParameters();
         if (params.length == 0) {
@@ -540,7 +704,10 @@ public class ToolAgentRunner {
         com.fasterxml.jackson.databind.JsonNode node = ARG_OM.readTree(json);
         Object[] args = new Object[params.length];
         for (int i = 0; i < params.length; i++) {
-            com.fasterxml.jackson.databind.JsonNode v = node.path(params[i].getName());
+            P p = params[i].getAnnotation(P.class);
+            String key = p != null && p.name() != null && !p.name().trim().isEmpty()
+                    ? p.name().trim() : params[i].getName();
+            com.fasterxml.jackson.databind.JsonNode v = node.path(key);
             args[i] = v.isMissingNode() || v.isNull() ? null : ARG_OM.convertValue(v, params[i].getType());
         }
         return args;
@@ -930,7 +1097,8 @@ public class ToolAgentRunner {
         }
 
         private ChatResponse logRound(List<ChatMessage> messages, Supplier<ChatResponse> call) {
-            report("LLM 第 " + round.incrementAndGet() + " 轮请求已发出（携带 " + messages.size() + " 条上下文消息）");
+            // 进度窗只显示一个带圈轮次码（①②…），不暴露 LLM/上下文条数等内部细节（2026-11-17 用户口径）
+            report(circled(round.incrementAndGet()));
             try {
                 ChatResponse resp = interruptibly(call, stopCheck);
                 TokenUsage usage = resp.tokenUsage();
@@ -962,6 +1130,20 @@ public class ToolAgentRunner {
             if (logSink != null) {
                 logSink.accept(line);
             }
+        }
+
+        /** 轮次 → 带圈数字：①…⑳（1-20）/㉑…㉟（21-35）/㊱…㊿（36-50）；>50 无标准圈码回落 (n) */
+        private static String circled(int n) {
+            if (n >= 1 && n <= 20) {
+                return String.valueOf((char) (0x2460 + n - 1));
+            }
+            if (n >= 21 && n <= 35) {
+                return String.valueOf((char) (0x3251 + n - 21));
+            }
+            if (n >= 36 && n <= 50) {
+                return String.valueOf((char) (0x32B1 + n - 36));
+            }
+            return "(" + n + ")";
         }
 
         /** 可中断执行：子线程跑实际 HTTP 调用，调用线程分片 Future.get 等待——

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
+import java.net.URI;
 
 /**
  * Title: FileMarkdownTool
@@ -66,7 +67,7 @@ public class FileMarkdownTool {
         try {
             markdown = snapshotOf(location);
         } catch (IOException | RuntimeException e) {
-            log.warn("[LLM工具] read_file 读取失败: {} 原因: {}", location, e.getMessage());
+            log.warn("[LLM工具] read_file 读取失败: {} 原因: {}", maskLocation(location), e.getMessage());
             return "读取失败：" + e.getMessage()
                     + "。请核对地址可访问、文件存在且格式支持，修正后重试；仍不可用请改用其他途径获取该内容";
         }
@@ -82,7 +83,9 @@ public class FileMarkdownTool {
         int limit = PagedText.limit(maxChars, DEFAULT_MAX_CHARS, HARD_MAX_CHARS);
         int to = Math.min(from + limit, total);
         String window = markdown.substring(from, to);
-        log.info("[LLM工具] read_file: {} offset={}..{} / 共 {} 字", location, from, to, total);
+        // m-r2-1：日志只打 host(:port)+路径尾段/文件名——预签名 URL 的查询串（X-Amz-Signature 等）
+        // 等价于一小时读权，不能写进 INFO 日志
+        log.info("[LLM工具] read_file: {} offset={}..{} / 共 {} 字", maskLocation(location), from, to, total);
         if (to == total) {
             releaseSnapshot();
         }
@@ -112,6 +115,31 @@ public class FileMarkdownTool {
             snapshotRef = new SoftReference<>(new Snapshot(location, markdown));
         }
         return markdown;
+    }
+
+    /**
+     * 日志用地址掩码（m-r2-1）：http(s) URL 只留 host(:port) 与路径尾 8 位（丢弃 query/fragment）；
+     * 本地路径只留文件名（丢弃目录）。包内可见供测试直接断言。
+     */
+    static String maskLocation(String location) {
+        if (location == null || location.trim().isEmpty()) {
+            return "";
+        }
+        String value = location.trim();
+        if (value.contains("://")) {
+            try {
+                URI uri = URI.create(value);
+                String host = uri.getHost() == null ? "unknown-host" : uri.getHost();
+                String path = uri.getPath() == null ? "" : uri.getPath();
+                String tail = path.length() <= 8 ? path : path.substring(path.length() - 8);
+                return host + (uri.getPort() > 0 ? ":" + uri.getPort() : "") + " pathTail=" + tail;
+            } catch (Exception e) {
+                return "unparsable-url";
+            }
+        }
+        String normalized = value.replace('\\', '/');
+        int slash = normalized.lastIndexOf('/');
+        return slash >= 0 ? normalized.substring(slash + 1) : normalized;
     }
 
     /** 读完（到末尾/空文件）即弃快照：不留大正文在堆里 */

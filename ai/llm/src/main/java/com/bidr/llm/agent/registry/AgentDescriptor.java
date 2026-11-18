@@ -3,6 +3,7 @@ package com.bidr.llm.agent.registry;
 import lombok.Data;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,6 +42,12 @@ public class AgentDescriptor {
 
     /** 来源模块标识（如 insight；静态定义为 Bean 所在模块约定值） */
     private String module;
+
+    /**
+     * 附件能力位（与会话控制面 {@code /agents} 的 AgentSummary.capabilities 同口径）：
+     * {@code files.upload}/{@code files.read}，空列表＝附件能力不启用
+     */
+    private List<String> capabilities;
 
     /** 业务扩展（如动态 agent 的原始业务 code；前端按需消费） */
     private Map<String, Object> meta = new HashMap<>();

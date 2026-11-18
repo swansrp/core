@@ -97,6 +97,12 @@ public class AgentSessionState implements Serializable {
     private String runtimeSessionId;
 
     /**
+     * 启动参数快照（start 时落库）：<b>终态续跑</b>（STOPPED/FAILED 后 resume）据此重建 run——
+     * 业务无需为「继续」另存参数。可能含长文本（底稿/指令），按会话占一份 Redis 快照体积。
+     */
+    private java.util.Map<String, Object> payload;
+
+    /**
      * 结论摘要（业务经 AgentSessionContext#setSummary 写入，FINISHED 时展示）
      */
     private String summary;

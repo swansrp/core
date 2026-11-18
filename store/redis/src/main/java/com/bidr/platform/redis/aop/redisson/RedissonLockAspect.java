@@ -1,6 +1,7 @@
 package com.bidr.platform.redis.aop.redisson;
 
 import com.bidr.kernel.exception.NoticeException;
+import com.bidr.platform.redis.cache.RedisCacheConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
@@ -99,7 +100,10 @@ public class RedissonLockAspect {
         if (StringUtils.isNoneEmpty(dynamicKey)) {
             synKeyBuffer.append(".").append(dynamicKey);
         }
-        return synKeyBuffer.toString();
+        // 🔴 锁键纳入本应用键命名空间（与缓存/RedisService 同一口径 RedisCacheConfig.getKey）：
+        // 共用 Redis 的子系统常被 ACL 限制在 `~<projectId>:*` 前缀内，裸 `Redisson:*` 会 NOPERM
+        // 导致锁腿恒失败（epc-ai 登录后同步项目即此症状）；带前缀后多应用同名锁也互不干扰。
+        return RedisCacheConfig.getKey(synKeyBuffer.toString());
     }
 
     /**

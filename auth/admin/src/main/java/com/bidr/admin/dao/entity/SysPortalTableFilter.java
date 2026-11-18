@@ -39,6 +39,13 @@ public class SysPortalTableFilter {
     private String filterType;
 
     /**
+     * 日期值格式（日期类筛选项下发后端的值格式，空=YYYY-MM-DD）
+     */
+    @TableField(value = "value_format")
+    @ApiModelProperty(value = "日期值格式（空=YYYY-MM-DD）")
+    private String valueFormat;
+
+    /**
      * 筛选条目编码
      */
     @TableField(value = "code")

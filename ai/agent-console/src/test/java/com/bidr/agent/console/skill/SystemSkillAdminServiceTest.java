@@ -35,7 +35,8 @@ import static org.mockito.Mockito.*;
  *   <li>落库字节必须是确定性重打包产物：非归一入参 zip（带目录条目+乱序）与 store 收到的字节不相等，
  *       sha 按归一化字节算——这是设计不是缺陷；</li>
  *   <li>同名再传＝新版本新行（save 不 update、key 递增到 v2.zip）；</li>
- *   <li>同名撞 BUILTIN＝拒绝（出厂包名是保留名），且<b>先查后写</b>：存储与表零写；</li>
+ *   <li>同名撞 BUILTIN（2026-11-18 热更拍板翻转旧「保留名拒绝」口径）＝版本递增落 v2 新行，
+ *       jar 的 v1.zip 对象零覆盖、出厂行零 update；</li>
  *   <li>坏包（缺 frontmatter / 非 zip 字节）＝契约尺拦下，存储与表零写；</li>
  *   <li><b>六种拒绝一律 {@link ServiceException}</b>：框架把 NoticeException 渲染成 {@code code=0}＋
  *       "SUCCESS"，拒绝若走 notice 就等于对调用方报成功（真机探针 10-13 就是这么抓出第一版写法的）；
@@ -129,18 +130,29 @@ class SystemSkillAdminServiceTest {
         verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
     }
 
-    // ---------------------------------------------------------------- 上传：撞出厂名
+    // ---------------------------------------------------------------- 上传：同名 BUILTIN＝版本递增热更（2026-11-18 拍板）
 
+    /**
+     * 旧口径「出厂包名保留、上传拒绝」已翻转：同名 BUILTIN 上传＝从 v1 递增落 v2 新行，
+     * package_key 落 v2.zip 永不撞 jar 种入的 v1.zip 对象；发布后读侧按同名最新已发布行热顶。
+     */
     @Test
-    void uploadClobberingBuiltinNameIsRejectedBeforeAnyWrite() {
-        stubLookup(asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED));
+    void uploadOverBuiltinNameLandsVersionTwoRowWithoutTouchingFactoryV1Object() {
+        SkillAsset builtin = asset(SkillAsset.ORIGIN_BUILTIN, SkillAsset.STATUS_PUBLISHED);
+        builtin.setVersion(1);
+        stubLookup(builtin);
 
-        assertThatThrownBy(() -> openGate().upload(syntheticZip()))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining(SYNTHETIC);
+        SkillAsset row = openGate().upload(syntheticZip());
 
-        verify(store, never()).put(anyString(), any());
-        verify(skillAssetService, never()).saveAsset(any(SkillAsset.class));
+        assertThat(row.getVersion()).as("出厂行 v1 在账，上传递增＝v2").isEqualTo(2);
+        assertThat(row.getOrigin()).as("上传的行来源一律 UPLOADED").isEqualTo(SkillAsset.ORIGIN_UPLOADED);
+        assertThat(row.getStatus()).as("上传 ≠ 可见：必须等显式发布").isEqualTo(SkillAsset.STATUS_UNPUBLISHED);
+        assertThat(row.getPackageKey()).as("新 key 只落 v2，jar 的 v1.zip 对象不被覆盖")
+                .isEqualTo("agent-skill/" + SYNTHETIC + "/v2.zip");
+        verify(store).put(eq("agent-skill/" + SYNTHETIC + "/v2.zip"), any());
+        verify(store, never()).put(eq(SYNTHETIC_KEY), any());
+        verify(skillAssetService).saveAsset(any(SkillAsset.class));
+        verify(skillAssetService, never()).updateAsset(any(SkillAsset.class));
     }
 
     // ---------------------------------------------------------------- 上传：契约尺

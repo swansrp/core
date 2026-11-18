@@ -505,7 +505,7 @@ VITE_ssoLoginUrl = 'http://10.3.6.60/inkhub/web/oauth2/authorize?response_type=c
 
 要点：
 
-1. **整页跳转**（`window.location.href = url + '&state=' + state`），不要用 XHR/fetch——authorize 依赖浏览器的主系统登录态（`INKHUB_TOKEN` cookie 是整页导航的回退腿）。
+1. **整页跳转**（`window.location.href = url + '&state=' + state`），不要用 XHR/fetch——authorize 依赖浏览器的主系统登录态（会话 cookie 是整页导航的回退腿；cookie 名由主系统项目名派生＝`my.project.name` 大写＋`_TOKEN`，InkHub＝`INKHUB_TOKEN`）。
 2. `response_type` 必须是 `code`；传别的值会 302 回 `redirect_uri` 带 `error=unsupported_response_type`。
 3. 未登录时主系统 302 到 `{context-path}/#/login?redirect_uri=<去掉前导斜杠的 authorize 路径+query>`（登录页前缀跟随主系统 context-path，如 `http://10.3.6.60/inkhub/#/login`）；在主系统登录页登录成功后自动回到 authorize，无需子系统干预。
 4. 回调页从 URL 取 `code`/`state`，调后端 `/exchange`，成功后清掉 URL 上的 code（`history.replaceState`），再进业务首页。
@@ -544,7 +544,7 @@ VITE_ssoLoginUrl = 'http://10.3.6.60/inkhub/web/oauth2/authorize?response_type=c
 
 | 现象 | 最可能原因 | 处理 |
 |------|-----------|------|
-| authorize 反复 302 到主系统登录页 | 浏览器没有 `INKHUB_TOKEN` cookie，或登录态已过期 | 先在主系统登录；确认是整页导航（不是 XHR） |
+| authorize 反复 302 到主系统登录页 | 浏览器没有会话 cookie（名＝主系统项目名派生，InkHub＝`INKHUB_TOKEN`），或登录态已过期 | 先在主系统登录（登录响应会种 cookie；已登录会话的任意鉴权请求也会自愈补种）；确认是整页导航（不是 XHR） |
 | `400 client_id 未登记` | `ac_partner` 无该 `app_key`；拼错；清库后种子未跑 | 查种子是否加载、重启主系统；SQL 核对 |
 | `400 redirect_uri 未登记`（authorize） | 与白名单不是全串相等（本地/内网 host 有免登记豁免，不走此闸） | 用浏览器地址栏里的**原始串**逐字符对比（端口/尾斜杠/大小写/编码） |
 | token `invalid_client` | secret 不匹配；yml 种子回写了新 secret；环境变量为空 | 对齐 `ac_partner.app_secret` 与子系统配置；检查 `*_CLIENT_SECRET` |

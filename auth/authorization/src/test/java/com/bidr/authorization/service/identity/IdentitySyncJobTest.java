@@ -83,4 +83,19 @@ public class IdentitySyncJobTest {
 
         Mockito.verify(applier, Mockito.never()).apply(Mockito.any());
     }
+
+    /**
+     * 启动腿失败不阻断启动（2026-11-11 pre/prod 开同步前补的护栏）：ApplicationReadyEvent
+     * 监听器抛异常会经 SpringApplication.run 上浮导致进程启动失败（外部身份源临时不可达
+     * ⇒ crash-loop）。组织同步失败只记日志，等 cron 周期重试。
+     */
+    @Test
+    public void startupFailureDoesNotPropagate() {
+        Mockito.when(bridgeProvider.getIfAvailable()).thenReturn(bridge);
+        Mockito.when(bridge.syncOrg()).thenThrow(new IllegalStateException("MDM 不可达"));
+
+        job.onStartup();
+
+        Mockito.verify(applier, Mockito.never()).apply(Mockito.any());
+    }
 }

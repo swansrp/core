@@ -7,6 +7,10 @@ import com.bidr.agent.console.capability.CapabilityTag;
 import com.bidr.llm.agent.AgentAskUserTool;
 import com.bidr.llm.agent.AgentPlanTools;
 import com.bidr.llm.agent.AgentToolRecall;
+import com.bidr.llm.agent.file.SessionArtifactGenerateTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxFetchTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxPutAttachmentTool;
+import com.bidr.llm.agent.sandbox.SessionSandboxRunTool;
 import com.bidr.llm.agent.tools.ExternalRuntimeTools;
 import com.bidr.llm.agent.tools.RunFlowTools;
 import dev.langchain4j.agent.tool.Tool;
@@ -33,10 +37,12 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class LlmCapabilityPackageConfigTest {
 
-    /** 被登记的 llm 工具类（11 只的宿主；第 12 只 readFile 的宿主在 tool/document，见类注释） */
+    /** 被登记的 llm 工具类（15 只的宿主；第 16 只 readFile 的宿主在 tool/document，见类注释） */
     private static final List<Class<?>> TOOL_CLASSES = Arrays.asList(
             AgentPlanTools.class, AgentAskUserTool.class, AgentToolRecall.class,
-            ExternalRuntimeTools.class, RunFlowTools.class);
+            ExternalRuntimeTools.class, RunFlowTools.class, SessionArtifactGenerateTool.class,
+            SessionSandboxRunTool.class, SessionSandboxFetchTool.class,
+            SessionSandboxPutAttachmentTool.class);
 
     /** 宿主类不在 llm 族的登记工具名（反射对账时显式摘出，不静默漏） */
     private static final Set<String> DECLARED_OUTSIDE_LLM_FAMILY =
@@ -47,7 +53,8 @@ class LlmCapabilityPackageConfigTest {
     private List<AgentCapabilityPackage> declared() {
         return Arrays.asList(config.planCapabilityPackage(), config.askUserCapabilityPackage(),
                 config.toolRecallCapabilityPackage(), config.externalTaskCapabilityPackage(),
-                config.runFlowCapabilityPackage(), config.fileReadCapabilityPackage());
+                config.runFlowCapabilityPackage(), config.fileReadCapabilityPackage(),
+                config.artifactCapabilityPackage(), config.sandboxCapabilityPackage());
     }
 
     /** 反射取实际注册名：@Tool(name=...) 非空取 name，否则取 camelCase 方法名 */
@@ -64,7 +71,7 @@ class LlmCapabilityPackageConfigTest {
     }
 
     @Test
-    @DisplayName("登记的 12 只工具名对账：11 只与反射真名双向相等，1 只（readFile）宿主外族须显式点名")
+    @DisplayName("登记的 16 只工具名对账：15 只与反射真名双向相等，1 只（readFile）宿主外族须显式点名")
     void declaredToolNamesMatchRuntimeRegistration() {
         Set<String> declaredNames = new TreeSet<>();
         Map<String, String> ownerByTool = new LinkedHashMap<>();
@@ -87,16 +94,16 @@ class LlmCapabilityPackageConfigTest {
         assertEquals(reflectedNames, declaredInLlm,
                 "登记清单与 @Tool 实际注册名不一致（左=真名，右=登记值）");
         assertEquals(DECLARED_OUTSIDE_LLM_FAMILY.size() + reflectedNames.size(), declaredNames.size(),
-                "llm 侧通用工具＝反射对账到的 11 只＋外族宿主 1 只（readFile）＝12");
-        assertEquals(12, ownerByTool.size());
+                "llm 侧通用工具＝反射对账到的 15 只＋外族宿主 1 只（readFile）＝16");
+        assertEquals(16, ownerByTool.size());
     }
 
     @Test
-    @DisplayName("六个能力包齐备且副作用档明确（外部效应不能标成只读）")
+    @DisplayName("八个能力包齐备且副作用档明确（外部效应不能标成只读）")
     void packagesAndTags() {
         AgentCapabilityPackageRegistry registry = new AgentCapabilityPackageRegistry(declared());
         List<CapabilityPackageDescriptor> all = registry.all();
-        assertEquals(6, all.size());
+        assertEquals(8, all.size());
 
         Map<String, Set<String>> tagsByName = new LinkedHashMap<>();
         for (CapabilityPackageDescriptor descriptor : all) {
@@ -106,7 +113,8 @@ class LlmCapabilityPackageConfigTest {
         }
 
         assertEquals(new TreeSet<>(Arrays.asList("plan", "ask-user", "tool-recall",
-                "external-task", "run-flow", "file-read")), new TreeSet<>(tagsByName.keySet()));
+                "external-task", "run-flow", "file-read", "artifact", "sandbox")),
+                new TreeSet<>(tagsByName.keySet()));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.SESSION.name())), tagsByName.get("plan"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.SESSION.name())), tagsByName.get("ask-user"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.READ.name())), tagsByName.get("tool-recall"));
@@ -115,6 +123,9 @@ class LlmCapabilityPackageConfigTest {
                 tagsByName.get("external-task"));
         assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.EXTERNAL_EFFECT.name())),
                 tagsByName.get("run-flow"));
+        assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.SESSION.name())), tagsByName.get("artifact"));
+        assertEquals(new TreeSet<>(Arrays.asList(CapabilityTag.EXTERNAL_EFFECT.name())),
+                tagsByName.get("sandbox"), "沙箱执行副作用圈在会话沙箱内（跑命令），按外部效应档登记");
     }
 
     @Test

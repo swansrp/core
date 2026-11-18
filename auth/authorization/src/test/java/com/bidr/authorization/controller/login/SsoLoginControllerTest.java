@@ -1,9 +1,12 @@
 package com.bidr.authorization.controller.login;
 
+import com.bidr.authorization.constants.param.AccountParam;
 import com.bidr.authorization.service.login.LoginFillTokenInf;
 import com.bidr.authorization.service.login.impl.SsoLoginServiceImpl;
 import com.bidr.authorization.service.token.TokenService;
+import com.bidr.authorization.utils.SessionCookieUtil;
 import com.bidr.authorization.vo.login.LoginRes;
+import com.bidr.platform.service.cache.SysConfigCacheService;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +44,14 @@ public class SsoLoginControllerTest {
         controller = new SsoLoginController();
         ReflectionTestUtils.setField(controller, "ssoLoginService", ssoLoginService);
         ReflectionTestUtils.setField(controller, "tokenService", tokenService);
+        // afterLogin 收尾链含会话 cookie（台账 #71）：mock res 无 accessToken ⇒ write 静默跳过，
+        // 但两个依赖必须装配，否则 NPE 会把本测试的 fillToken 等价性断言淹掉
+        SysConfigCacheService sysConfigCacheService = Mockito.mock(SysConfigCacheService.class);
+        Mockito.when(sysConfigCacheService.getParamInt(AccountParam.WEB_ACCESS_TOKEN_EXPIRED)).thenReturn(86400);
+        SessionCookieUtil sessionCookieUtil = new SessionCookieUtil();
+        ReflectionTestUtils.setField(sessionCookieUtil, "projectName", "inkhub");
+        ReflectionTestUtils.setField(sessionCookieUtil, "sysConfigCacheService", sysConfigCacheService);
+        ReflectionTestUtils.setField(controller, "sessionCookieUtil", sessionCookieUtil);
         Mockito.when(tokenService.getTokenValue()).thenReturn(new HashMap<String, Object>());
     }
 

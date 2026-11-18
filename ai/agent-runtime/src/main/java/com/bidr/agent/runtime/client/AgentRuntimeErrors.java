@@ -58,6 +58,16 @@ public final class AgentRuntimeErrors {
     }
 
     /**
+     * SDK 直连通路（引擎 A）专用变体：键位独立（AGENT_SDK_*），错误指引不得指向 OpenHands
+     * 键位——现场照旧键位填了也报未配置，还污染 AGENT_RUNTIME_*（review I-1，2026-11-14）。
+     * only AgentSdkBootstrapController 消费；OpenHands 路径仍用 {@link #notConfigured()}。
+     */
+    public static ServiceException sdkNotConfigured() {
+        return new ServiceException(ErrCodeSys.SYS_CONFIG_NOT_EXIST,
+                "SDK直连平台地址或密钥（系统参数 AGENT_SDK_BASE_URL / AGENT_SDK_API_KEY 或应用配置 my.agent.runtime.sdk.*）");
+    }
+
+    /**
      * 平台 401（密钥缺失/无效/停用）→ 内部错误 + 配置指引。
      * <p>
      * 注意：POST 带请求体时 JDK {@code HttpURLConnection} 遇 401 会抛
@@ -69,6 +79,17 @@ public final class AgentRuntimeErrors {
         return new ServiceException(ErrCodeSys.SYS_ERR_MSG,
                 "Agent平台密钥无效或已停用（HTTP 401）" + text
                         + "：请核对系统参数 AGENT_RUNTIME_API_KEY 或应用配置 my.agent.runtime.api-key");
+    }
+
+    /**
+     * SDK 直连通路（引擎 A）401 专用变体：指引指 AGENT_SDK_API_KEY 键位（同 {@link
+     * #sdkNotConfigured()} 的键位分离理由）。
+     */
+    public static ServiceException sdkKeyRejected(String detail) {
+        String text = detail == null || detail.isEmpty() ? "" : "（" + detail + "）";
+        return new ServiceException(ErrCodeSys.SYS_ERR_MSG,
+                "SDK直连平台密钥无效或已停用（HTTP 401）" + text
+                        + "：请核对系统参数 AGENT_SDK_API_KEY 或应用配置 my.agent.runtime.sdk.api-key");
     }
 
     /**

@@ -146,6 +146,11 @@
                 <module>ai/mcp</module>
                 <module>ai/agent-runtime</module>
                 <module>ai/agent-console</module>
+                <!-- 能力装配层（P0a）：llm 协议端口 → store/blob 实现；无 blob 时自动配置整体不装配 -->
+                <module>ai/agent-capability</module>
+                <!-- Cube 沙箱腿：provider=cube 时装配 AgentSandbox=CubeSandboxProvider，与
+                     agent-capability 的 OpenHands 沙箱腿按 my.agent.sandbox.provider 属性互斥退避 -->
+                <module>ai/sandbox-cube</module>
                 <module>lowcode/insight</module>
             </modules>
         </profile>

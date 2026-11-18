@@ -57,7 +57,7 @@ public class DefaultParseArtifactWriter implements ParseArtifactWriter {
 
     /** 外部转录腿产物固化：图片入库+改写 → 块偏移重定位 → 正文与页码映射落库 */
     @Override
-    public Written transcribe(String anchorSha, int variant, AsyncTranscribeLeg.Artifact artifact) {
+    public Written transcribe(String anchorSha, int variant, String namespace, AsyncTranscribeLeg.Artifact artifact) {
         List<PageBlock> blocks = ContentListCodec.normalize(artifact.getMarkdown(), artifact.getContentList());
         Map<String, String> urls = storeImages(anchorSha, imagesOf(artifact));
         String markdown = rewriteImages(artifact.getMarkdown(), urls);
@@ -66,23 +66,24 @@ public class DefaultParseArtifactWriter implements ParseArtifactWriter {
         // 不重定位则图片引用之后的块全部漂移——2026-09-20 回归测试钉死）
         relocateOffsets(blocks, markdown, urls);
 
-        String markdownKey = BlobStore.parsedMarkdownKey(anchorSha, variant);
-        String pageMapKey = BlobStore.pageMapKey(anchorSha, variant);
+        // namespace 只包 md/pagemap（临时轨吃 ILM）；内嵌图已在 storeImages 落 image/ 主命名空间
+        String markdownKey = BlobStore.namespaced(namespace, BlobStore.parsedMarkdownKey(anchorSha, variant));
+        String pageMapKey = BlobStore.namespaced(namespace, BlobStore.pageMapKey(anchorSha, variant));
         String pageMap = pageMapJson(blocks);
         // 🔴 落库顺序：pagemap 先于 md——断点判据以 md 在场为准（md 在＝映射必已写），
         // 反序会在两写之间崩溃时留下「有正文无映射」的静默降级产物
         storage.put(pageMapKey, bytes(pageMap), BlobStore.contentTypeOf("x.json"));
         storage.put(markdownKey, bytes(markdown), BlobStore.contentTypeOf("x.md"));
-        log.info("解析产物已落库: sha={} v={} 块={} 页={} 图={} 正文={} 字节",
-                anchorSha, variant, ordered(blocks).size(), pageCount(blocks),
+        log.info("解析产物已落库: sha={} v={} ns={} 块={} 页={} 图={} 正文={} 字节",
+                anchorSha, variant, namespace, ordered(blocks).size(), pageCount(blocks),
                 urls.size(), markdown.length());
         return new Written(markdownKey, pageMapKey, pageCount(blocks), ordered(blocks).size(), urls.size());
     }
 
     /** 内置直读腿产物固化：markdown 落 key（无页码映射，引用降级无页） */
     @Override
-    public Written builtin(String anchorSha, int variant, String markdown) {
-        String markdownKey = BlobStore.parsedMarkdownKey(anchorSha, variant);
+    public Written builtin(String anchorSha, int variant, String namespace, String markdown) {
+        String markdownKey = BlobStore.namespaced(namespace, BlobStore.parsedMarkdownKey(anchorSha, variant));
         storage.put(markdownKey, bytes(markdown), BlobStore.contentTypeOf("x.md"));
         return new Written(markdownKey, null, 0, 0, 0);
     }

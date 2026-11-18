@@ -46,7 +46,7 @@
         </dependency>
         <!-- 页图渲染（PageImageRenderer 的 PDFBox）：本模块直依件必须显式声明（A13——
            此前只靠 document 传递，fat jar 闭包里没有它＝NoClassDefFoundError 运行时爆）。
-           版本对齐 document 的 POI 4.1.2 兼容口径 -->
+           版本对齐 document 的 POI 5.2.2 口径（与平台 jxls-poi 2.14.0 带入的 POI 同版） -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>

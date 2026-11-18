@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <li>模块源码零项目引用（不得出现 com.bidr.epc）；</li>
  * <li>装配以 AutoConfiguration 形式注册（imports 文件可加载到）；</li>
  * <li>配置键前缀恒为 my.agent.runtime（下沉后 yml 键零改）；</li>
- * <li>系统参数键名一律带 AGENT_RUNTIME_ 前缀（sys_config 的 key 即枚举名，跨模块需全局唯一）。</li>
+ * <li>系统参数键名一律带受控前缀（AGENT_RUNTIME_ 或 AGENT_SDK_，2026-11-14 引擎 A 键位独立）（sys_config 的 key 即枚举名，跨模块需全局唯一）。</li>
  * </ol>
  *
  * @author sharp
@@ -91,11 +91,11 @@ class AgentRuntimeModuleGuardTest {
     }
 
     @Test
-    @DisplayName("系统参数键名一律带 AGENT_RUNTIME_ 前缀")
+    @DisplayName("系统参数键名一律带 AGENT_RUNTIME_ 或 AGENT_SDK_ 前缀")
     void paramKeysArePrefixed() {
         for (AgentRuntimeParam param : AgentRuntimeParam.values()) {
-            assertTrue(param.name().startsWith("AGENT_RUNTIME_"),
-                    "系统参数键名必须带 AGENT_RUNTIME_ 前缀（sys_config 的 key 即枚举名）：" + param.name());
+            assertTrue(param.name().startsWith("AGENT_RUNTIME_") || param.name().startsWith("AGENT_SDK_"),
+                    "系统参数键名必须带 AGENT_RUNTIME_ / AGENT_SDK_ 前缀（sys_config 的 key 即枚举名）：" + param.name());
         }
     }
 

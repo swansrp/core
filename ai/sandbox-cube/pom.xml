@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.swansrp</groupId>
+        <artifactId>core</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <version>${jarVersion}</version>
+    </parent>
+
+    <artifactId>sandbox-cube</artifactId>
+    <name>sandbox-cube</name>
+    <version>${jarVersion}</version>
+    <packaging>jar</packaging>
+    <description>Cube 沙箱腿（my.agent.sandbox.provider=cube）：把 llm 协议端口 AgentSandbox 落到
+        CubeSandbox 底座（会话级容器沙箱）。依赖方向＝本模块 → llm 单向（实现认端口，端口不知实现）；
+        🔴 红线：不得依赖装配层/运行时模块——与既有 OpenHands 沙箱腿按 my.agent.sandbox.provider
+        属性互斥退避，双侧都是属性条件（相位无关）。骨架棒交付可编译桩＋自动配置＋装配用例，
+        执行面实现由后续棒填实。</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>17</java.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 协议端口宿主：AgentSandbox/SandboxExecResult/SandboxSeedFile 定义在 llm（本模块只做实现） -->
+        <dependency>
+            <groupId>io.github.swansrp</groupId>
+            <artifactId>llm</artifactId>
+            <version>${llm.version}</version>
+        </dependency>
+        <!-- 元数据侧车对象（棒2 HTTP 面序列化用）：Jackson 全平台既有件，版本由
+             spring-boot-starter-parent 管理 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- @AutoConfiguration/@Bean/@ConditionalOn* 的宿主（Spring Boot 基座，平台既有件） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 传递依赖含 JUnit4 时 surefire 会选错 provider，表现为 Tests run: 0（必须显式指定） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>2.22.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

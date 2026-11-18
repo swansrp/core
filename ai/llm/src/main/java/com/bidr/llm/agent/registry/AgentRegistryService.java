@@ -1,6 +1,7 @@
 package com.bidr.llm.agent.registry;
 
 import com.bidr.llm.agent.AutonomousAgentDefinition;
+import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.session.AgentSessionService;
 import com.bidr.llm.flow.FlowDefinitionProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -38,12 +39,17 @@ public class AgentRegistryService {
 
     private final List<DynamicAgentProvider> dynamicProviders;
 
+    /** 附件能力位（与会话控制面 /agents 同口径；两类入口不漂移） */
+    private final AgentFileCapabilityResolver fileCapabilityResolver;
+
     public AgentRegistryService(AgentSessionService agentSessionService,
                                 List<FlowDefinitionProvider> flowProviders,
-                                List<DynamicAgentProvider> dynamicProviders) {
+                                List<DynamicAgentProvider> dynamicProviders,
+                                AgentFileCapabilityResolver fileCapabilityResolver) {
         this.agentSessionService = agentSessionService;
         this.flowProviders = flowProviders;
         this.dynamicProviders = dynamicProviders;
+        this.fileCapabilityResolver = fileCapabilityResolver;
         validateStaticDefinitions();
     }
 
@@ -82,6 +88,7 @@ public class AgentRegistryService {
      * 保持 flow → autonomous → dynamic 的展示序
      */
     public List<AgentDescriptor> all() {
+        List<String> capabilities = fileCapabilityResolver.current();
         Map<String, AgentDescriptor> indexed = new LinkedHashMap<>();
         for (FlowDefinitionProvider provider : flowProviders) {
             AgentDescriptor descriptor = new AgentDescriptor();
@@ -90,6 +97,7 @@ public class AgentRegistryService {
             descriptor.setKind(AgentKind.FLOW);
             descriptor.setSkillCode(provider.skillCode());
             descriptor.setModule("llm-flow");
+            descriptor.setCapabilities(capabilities);
             indexed.put(descriptor.getAgentCode(), descriptor);
         }
         for (AutonomousAgentDefinition definition : agentSessionService.registeredAgents()) {
@@ -99,6 +107,7 @@ public class AgentRegistryService {
             descriptor.setKind(AgentKind.AUTONOMOUS);
             descriptor.setSkillCode(definition.skillCode());
             descriptor.setModule("llm-agent");
+            descriptor.setCapabilities(capabilities);
             indexed.put(descriptor.getAgentCode(), descriptor);
         }
         for (DynamicAgentProvider provider : dynamicProviders) {
@@ -132,6 +141,7 @@ public class AgentRegistryService {
                 if (!StringUtils.hasText(item.getModule())) {
                     item.setModule(provider.module());
                 }
+                item.setCapabilities(capabilities);
                 indexed.put(agentCode, item);
             }
         }

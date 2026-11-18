@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -210,6 +211,75 @@ class ParseEngineFlowTest {
         Map<String, Object> snapshot = snapshotOfCurrent();
         assertEquals(ParseEngineFlow.ROUTE_BUILTIN, text(snapshot, "route"));
         assertNull(text(snapshot, "pageMapKey"), "内置腿无页码映射（引用降级无页）");
+    }
+
+    // ==================== keyNamespace（temp/ 临时轨，2026-11-17） ====================
+
+    /** 直通件带 keyNamespace：md 落前缀键；同内容断点回查也在前缀键上命中（不走主命名空间） */
+    @Test
+    void namespacedTextFileWritesPrefixedMarkdownAndBreakpointReusesThere() throws Exception {
+        byte[] source = "# 临时材料".getBytes(StandardCharsets.UTF_8);
+        String sha = com.bidr.blob.Digests.sha256Hex(source);
+        task("INTAKE", null, "{\"sourceKey\":\"" + RAW_KEY + "\",\"fileName\":\"note.md\",\"variant\":0,"
+                + "\"keyNamespace\":\"temp/material\"}");
+        when(storage.get(RAW_KEY)).thenReturn(source);
+        when(storage.get(BlobStore.namespaced("temp/material", BlobStore.parsedMarkdownKey(sha, 0))))
+                .thenReturn(null);
+
+        flow.intake(currentTask, scope());
+        StageOutcome transcribe = flow.transcribe(currentTask, scope());
+        assertEquals(StageOutcome.Kind.ADVANCE, transcribe.getKind());
+        ArgumentCaptor<String> keys = ArgumentCaptor.forClass(String.class);
+        verify(storage, atLeastOnce()).put(keys.capture(), any(), anyString());
+        assertTrue(keys.getAllValues().contains("temp/material/parsed/" + sha + "/v0.md"),
+                "直通 md 键须挂 namespace 前缀");
+        boolean touchedMain = keys.getAllValues().stream().anyMatch(k -> k.startsWith("parsed/"));
+        assertFalse(touchedMain, "主命名空间不得出现同名键（KB 键空间零污染）");
+
+        // 断点腿：namespaced md 已在 ⇒ INTAKE 秒级复用（peek 在前缀键上命中）
+        task("INTAKE", null, "{\"sourceKey\":\"" + RAW_KEY + "\",\"fileName\":\"note.md\",\"variant\":0,"
+                + "\"keyNamespace\":\"temp/material\"}");
+        when(storage.get(BlobStore.namespaced("temp/material", BlobStore.parsedMarkdownKey(sha, 0))))
+                .thenReturn(source);
+        StageOutcome reuse = flow.intake(currentTask, scope());
+        assertTrue(reuse.getKind() == StageOutcome.Kind.DONE, "前缀键在＝秒级复用");
+        assertEquals("REUSED", currentTask.getExternalStatus());
+    }
+
+    /** office 件带 keyNamespace：convert 缓存落前缀键（temp 轨随材料清理，不污染主命名空间缓存） */
+    @Test
+    void namespacedOfficeConvertCachesUnderPrefix() throws Exception {
+        byte[] docx = "PK-fake-docx".getBytes(StandardCharsets.UTF_8);
+        byte[] pdf = "%PDF-1.4 converted".getBytes(StandardCharsets.UTF_8);
+        String sourceSha = com.bidr.blob.Digests.sha256Hex(docx);
+        String pdfSha = com.bidr.blob.Digests.sha256Hex(pdf);
+        String sourceKey = "temp/material/raw/" + sourceSha + ".docx";
+        ConvertStep step = mock(ConvertStep.class);
+        when(step.isConvertible("material.docx")).thenReturn(true);
+        when(step.convertToPdf(eq("material.docx"), any(byte[].class))).thenReturn(pdf);
+        when(convertStep.getIfAvailable()).thenReturn(step);
+        task("INTAKE", null, "{\"sourceKey\":\"" + sourceKey + "\",\"fileName\":\"material.docx\","
+                + "\"variant\":0,\"keyNamespace\":\"temp/material\"}");
+        when(storage.get(sourceKey)).thenReturn(docx);
+        when(storage.get(BlobStore.namespaced("temp/material", BlobStore.convertedPdfKey(sourceSha))))
+                .thenReturn(null);
+
+        flow.intake(currentTask, scope());
+        StageOutcome convert = flow.convert(currentTask, scope());
+        assertEquals(StageOutcome.Kind.ADVANCE, convert.getKind());
+        verify(storage).put(eq("temp/material/convert/" + sourceSha + ".pdf"), eq(pdf), anyString());
+        Map<String, Object> snapshot = snapshotOfCurrent();
+        assertEquals("temp/material/convert/" + sourceSha + ".pdf", text(snapshot, "anchorKey"),
+                "锚键须为前缀形（后续 anchorFileName 比较同形才对得上）");
+        assertEquals(pdfSha, text(snapshot, "anchorSha"));
+    }
+
+    /** keyNamespace 非法段（路径注入尝试）在受理口快败，不进跑批 */
+    @Test
+    void keyNamespaceRejectsUnsafeSegment() {
+        task("INTAKE", null, "{\"sourceKey\":\"raw/x.md\",\"fileName\":\"x.md\",\"variant\":0,"
+                + "\"keyNamespace\":\"temp/../etc\"}");
+        assertThrows(ParseContractException.class, () -> flow.intake(currentTask, scope()));
     }
 
     // ==================== 伪异步腿（submit/poll/fetch 三拍） ====================
