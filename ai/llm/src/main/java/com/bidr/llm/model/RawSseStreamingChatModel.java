@@ -306,9 +306,14 @@ public class RawSseStreamingChatModel {
                         .arguments(acc.arguments.toString())
                         .build());
             }
-            // 工具轮同样落一行：一次模型调用一行是计量的粒度，按形态分流的只有 token 栏
+            // 工具轮同样落一行：一次模型调用一行是计量的粒度，按形态分流的只有 token 栏。
+            // 正文随 AiMessage 一起带回（「边说边调工具」的同一轮 content）：丢弃会让 ToolAgentRunner
+            // 的 ai.text() 恒空 ⇒ llm_output 进度事件永不发射，用户侧只剩工具卡；请求侧回填本就支持
+            // assistant 消息同时带 content 与 tool_calls（见 messageNode）
             reportUsage(usageScope, usage, reqs.size(), finish);
-            sink.onComplete(ChatResponse.builder().aiMessage(AiMessage.from(reqs)).tokenUsage(tokenUsage).build());
+            sink.onComplete(ChatResponse.builder()
+                    .aiMessage(AiMessage.from(content.length() > 0 ? content.toString() : null, reqs))
+                    .tokenUsage(tokenUsage).build());
             return;
         }
         if (content.length() > 0 || doneSeen) {

@@ -216,9 +216,12 @@ public class RawSyncChatModel implements ChatModel {
         if (toolCalls.isEmpty() && !hasText(text)) {
             throw new IllegalStateException("LLM 返回空 content（思考型模型可能被思考耗尽 token）: " + usage);
         }
-        // 工具轮取工具调用，模型前言文本经 trace 留存（循环协议要求 ai 消息携带 tool_calls 才能回填结果；
-        // 正文与工具调用分离产出，与 0.33 时代的 AiMessage 构造约束保持同一行为）
-        AiMessage ai = toolCalls.isEmpty() ? AiMessage.from(text) : AiMessage.from(toolCalls);
+        // 工具轮正文随 AiMessage 一起带回：思考型模型会在同一轮「先说一句、再调工具」（实测
+        // content+tool_calls 同回），ToolAgentRunner 靠 ai.text() 落 llm_output 事件给用户看进度；
+        // 这里若只取 toolCalls 会把模型说的话整段吃掉，用户侧就只剩工具卡。
+        // 回填兼容：请求侧序列化器本就支持 assistant 消息同时带 content 与 tool_calls（见 messageNode）
+        AiMessage ai = toolCalls.isEmpty() ? AiMessage.from(text)
+                : AiMessage.from(hasText(text) ? text : null, toolCalls);
         return ChatResponse.builder()
                 .aiMessage(ai)
                 .tokenUsage(tokenUsageOf(usage))

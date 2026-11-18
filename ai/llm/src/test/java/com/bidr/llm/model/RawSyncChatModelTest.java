@@ -235,6 +235,49 @@ public class RawSyncChatModelTest {
         Assert.assertTrue("trace 须带工具数", trace.get(0).contains("工具=1"));
     }
 
+    /** 工具轮正文必须保留：思考型模型会「先说一句再调工具」（content+tool_calls 同回）。
+     *  丢正文会让执行器 ai.text() 恒空 ⇒ llm_output 进度事件永不发射，用户侧只剩工具卡
+     *  （2026-11-18「模型不说话」实锤根因）。text=null 的既有工具轮由上一个用例覆盖。 */
+    @Test
+    public void toolCallRoundKeepsPreambleText() throws Exception {
+        List<String> requests = new CopyOnWriteArrayList<>();
+        int port = startServer(200, "{\"choices\":[{\"message\":{\"role\":\"assistant\","
+                + "\"content\":\"我先看一下当前范围。\","
+                + "\"tool_calls\":[{\"id\":\"call_p\",\"type\":\"function\",\"function\":"
+                + "{\"name\":\"currentScope\",\"arguments\":\"{\\\"space\\\":\\\"IT空间\\\"}\"}}]}}],"
+                + "\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":30,\"total_tokens\":42}}", requests);
+
+        RawSyncChatModel model = new RawSyncChatModel(
+                stubProvider("http://127.0.0.1:" + port + "/v1", "test-key"), "AGENT", null,
+                null, 512, 1, null);
+        ChatResponse resp = model.chat(ChatRequest.builder()
+                .messages(Collections.singletonList(UserMessage.from("当前范围？")))
+                .toolSpecifications(ToolSpecifications.toolSpecificationsFrom(new ScopeTools()))
+                .build());
+
+        Assert.assertTrue("模型须返回工具调用", resp.aiMessage().hasToolExecutionRequests());
+        Assert.assertEquals("工具轮前言正文不得丢弃（进度可见依赖 ai.text()）", "我先看一下当前范围。",
+                resp.aiMessage().text());
+    }
+
+    /** 回填轮：assistant 消息同时带正文与 tool_calls 时两个字段都要发出——
+     *  保留前言正文后，下一轮请求会把这条 assistant 消息原样回传，缺 content 会造成上下文断裂 */
+    @Test
+    public void assistantTextWithToolCallsIsSentBack() throws Exception {
+        ToolExecutionRequest call = ToolExecutionRequest.builder()
+                .id("call_p").name("currentScope").arguments("{\"space\":\"IT空间\"}").build();
+        List<ChatMessage> messages = Arrays.asList(
+                UserMessage.from("当前范围？"),
+                AiMessage.from("我先看一下当前范围。", Collections.singletonList(call)));
+
+        JsonNode body = bodyOf(null, null, messages);
+
+        Assert.assertEquals("assistant 正文须回传", "我先看一下当前范围。",
+                body.path("messages").path(1).path("content").asText());
+        Assert.assertEquals("tool_calls 须同发", "call_p",
+                body.path("messages").path(1).path("tool_calls").path(0).path("id").asText());
+    }
+
     /** 5xx 可重试：退避后重试，最终抛错须带网关原始响应体（不静默、不被库层包装吞掉） */
     @Test
     public void serverErrorRetriedThenThrownWithGatewayBody() throws Exception {
