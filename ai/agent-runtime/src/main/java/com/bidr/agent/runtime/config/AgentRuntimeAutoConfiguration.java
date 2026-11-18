@@ -132,6 +132,19 @@ public class AgentRuntimeAutoConfiguration {
         return new OpenHandsClient(config);
     }
 
+    /**
+     * OpenHands 沙箱腿健康自报（2026-11-18 探活架构化——各腿自报、中央只收集）：与
+     * {@link OpenHandsClient} bean 同条件（provider=openhands 缺省生效）——provider=cube 时
+     * 本 bean 不装＝收集自然缺席（由 Cube 腿的 contributor 顶上，两腿互斥）；接线判定
+     * （地址与密钥齐备）由实现内聚判 NOT_CONFIGURED
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",
+            havingValue = PROVIDER_OPENHANDS, matchIfMissing = true)
+    public com.bidr.document.spi.AgentHealthContributor openHandsHealthContributor(AgentRuntimeConfigProvider config) {
+        return new OpenHandsHealthContributor(config);
+    }
+
     @Bean
     @ConditionalOnMissingBean(AgentRuntimeProvider.class)
     @ConditionalOnProperty(prefix = "my.agent.runtime", name = "provider",

@@ -1,15 +1,16 @@
 package com.bidr.agent.capability.health;
 
+import com.bidr.document.spi.AgentHealthContributor;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
-import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.util.StringUtils;
 
-import java.net.URI;
-import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -17,41 +18,27 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Title: AgentCapabilityHealthProbe
- * Description: agent 依赖底座的<b>能力探活件</b>（棒2，可观测层）——对 ocr(mineru)、
- * artifacts(gotenberg) 与 exec.sandbox（沙箱底座，按 provider 分流 cube/openhands）三个外部底座做轻量 HTTP 探测，
- * 结果三路输出：<b>状态变化日志</b>＋<b>运行级健康快照</b>（{@link AgentCapabilityHealthProvider}
- * 端口实现，经 {@code /agents} 契约上报前端徽标）＋<b>SSE 广播</b>（状态变化时经
- * {@link AgentHealthSseHub#broadcast} 推 {@code health} 事件，hub 缺席静默跳过），
- * 不改任何能力位：
+ * Description: agent 依赖底座的<b>能力探活聚合器</b>（2026-11-18 探活架构化重写——用户拍板
+ * 「每个子模块自己探自己的，中央只收集；没有这个子模块就不收集」）：探测细节全部下沉到各腿的
+ * {@link AgentHealthContributor} 实现（mineru/gotenberg/cube/openhands 各自内聚——地址/路径/
+ * 鉴权/代理/可达判定与真实客户端同模块同源，消灭 11-14 版「中央手抄客户端调用方式」的双轨漂移；
+ * 那版恒探 OpenHands 而 11-16 才有 Cube 腿 ⇒ 6.60 误报 exec.sandbox ✕ 即漂移实证），本类只做
+ * 四件事：
  * <ul>
- *     <li><b>不改能力位</b>：{@code /agents} 契约的 capabilities 仍按声明级推导
- *         （{@code AgentFileCapabilityResolver#current()}），探活失败只进健康快照与日志
- *         （徽标变灰），能力位与相关工具面不受影响；</li>
- *     <li><b>不阻断启动</b>：探针异常一律吞掉记日志（ApplicationRunner 内全兜底），
- *         探活件坏了不拖垮宿主；</li>
- *     <li>探针口径：ocr(mineru) {@code GET {mineru.local.base-url}/docs}——<b>拿到任何 HTTP
- *         状态码（含 404）＝可达</b>（FastAPI 文档页有无不保证，服务在即可）；artifacts(gotenberg)
- *         {@code GET {tool.gotenberg.base-url}/health}——200＝可达，其余状态码记入原因短语；
- *         exec.sandbox 按 provider 分流（装配处传入腿名）：cube {@code GET {cube.api-url}/health}
- *         管理面无鉴权——仅 200＝可达，其余状态码带码入原因；openhands {@code GET {base}/api/agent-profiles} 带
- *         {@code X-Session-API-Key} 头——200＝可达、401＝不可达（密钥无效或未配置，排障方向与
- *         「服务不在」区分）、其余状态码带码入原因、连接异常＝不可达；</li>
- *     <li><b>配置空＝未配置</b>：对应探针不发包不计失败（日志/快照标「未配置」）；
- *         openhands 腿 base-url 与密钥<b>齐备</b>才发包（装配处经 {@code AgentRuntimeConfigProvider
- *         #isConfigured()} 判定后解析传入，探活件保持纯字符串入参的可测形态）；</li>
- *     <li>触发：启动一次（独立 ApplicationRunner，不塞既有 reporter）＋daemon 定时刷新
- *         （周期 {@code llm.agent.health-probe.interval-seconds} 缺省 300，≤0 关定时只留启动一次）；</li>
- *     <li><b>只在状态变化时打日志</b>（一行摘要 {@code Agent 能力探活: ocr(mineru)=…,
- *         artifacts(gotenberg)=…, exec.sandbox(openhands)=…}；含「不可达」用 WARN＝降级，
- *         其余 INFO＝恢复/首行），不刷屏；</li>
- *     <li><b>健康快照</b>（端口 {@link AgentCapabilityHealthProvider#snapshot()}）：能力位名→
- *         up/down/unconfigured 小写值，探测前初始化为全 unconfigured，每轮探测后整体替换；
- *         {@code snapshot()} 返回不可变副本。⚠ openhands 密钥是敏感值：只进请求头，
- *         日志/原因短语/异常链路均不得出现。</li>
+ *     <li><b>聚合</b>：按注入的 contributor 列表（Spring {@code @Order} 稳序）逐个 {@code probe()}
+ *         （单腿异常兜底转 UNREACHABLE 不影响其它腿），聚合成健康快照＋一行摘要；</li>
+ *     <li><b>调度</b>：启动一次＋daemon 定时刷新（周期 {@code llm.agent.health-probe.interval-seconds}
+ *         缺省 300，≤0 关定时只留启动一次）；</li>
+ *     <li><b>日志</b>：只在状态变化时打一行（{@code Agent 能力探活: ocr(mineru)=…, …}；含
+ *         「不可达」用 WARN＝降级，其余 INFO＝恢复/首行），不刷屏；</li>
+ *     <li><b>上报</b>：运行级健康快照（{@link AgentCapabilityHealthProvider} 端口实现，经
+ *         {@code /agents} 契约给前端徽标）＋状态变化即 SSE 广播（{@link AgentHealthSseHub}，
+ *         hub 缺席静默跳过）。</li>
  * </ul>
- * 可测性：探针函数以 {@link ProbeFunction}（入参＝探针名＋完整 URL＋会话密钥，出参 {@link ProbeResult}）
- * 构造器注入，单测打桩不打真网；缺省实现 {@link #httpProbe(String, String, String)} 纯 JDK
- * {@code java.net.http.HttpClient}（超时 3s），零新依赖。
+ * <b>不改能力位</b>：{@code /agents} 契约的 capabilities 仍按声明级推导，探活失败只进健康快照
+ * 与日志（徽标变灰），能力位与相关工具面不受影响；<b>不阻断启动</b>：探针异常一律吞掉
+ * （ApplicationRunner 内全兜底）。快照键＝contributor 的 {@code capability()}——模块不在场＝
+ * bean 不存在＝该键自然缺席（前端缺键＝按可用处理，历史兼容），「没这个子模块就不收集」。
  *
  * @author Sharp
  * @since 2026/11/14
@@ -59,49 +46,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoCloseable, AgentCapabilityHealthProvider {
 
-    /** 探针名：OCR 转写底座（mineru，GET /docs 任意状态码＝可达） */
-    static final String KIND_MINERU = "mineru";
-
-    /** 探针名：产物转换底座（gotenberg，GET /health 200＝可达） */
-    static final String KIND_GOTENBERG = "gotenberg";
-
-    /** 探针名：沙箱执行底座 OpenHands 腿（GET /api/agent-profiles 带 X-Session-API-Key，200＝可达 401＝密钥无效） */
-    public static final String KIND_OPENHANDS = "openhands";
-
-    /**
-     * 探针名：沙箱执行底座 Cube 腿（GET {api-url}/health 管理面无鉴权，仅 200＝可达；
-     * 2026-11-18 台账 [U60] 后续——provider=cube 时探活分流到 Cube 管理面，不再打已退避的
-     * OpenHands 端点误报 ✕。快照键恒为 exec.sandbox，探针名只影响日志/原因短语标签）
-     */
-    public static final String KIND_CUBE = "cube";
-
-    /** OpenHands 探活请求头名（会话密钥随头下发，敏感值不进 URL/日志） */
-    private static final String OPENHANDS_API_KEY_HEADER = "X-Session-API-Key";
-
-    private static final HttpClientShim HTTP = new HttpClientShim();
-
-    private final String mineruBaseUrl;
-
-    private final String gotenbergBaseUrl;
-
-    /** 沙箱探针腿名（"cube"/"openhands"，装配处按 sandbox provider 分流后传入；进日志标签与探针分支） */
-    private final String sandboxKind;
-
-    /** 沙箱探活基地址（装配处解析后的生效值：cube＝Cube 管理面 api-url、openhands＝OH base-url；空＝腿未启用/未接线＝快照恒 unconfigured） */
-    private final String sandboxProbeUrl;
-
-    /** 沙箱探活密钥（仅 openhands 腿使用，Cube 管理面无鉴权传空串；敏感值：只进请求头，不进日志） */
-    private final String sandboxApiKey;
+    private final List<AgentHealthContributor> contributors;
 
     private final long intervalSeconds;
-
-    /** mineru 探活专用 HTTP 代理：外围件带代理场景的镜像口径——业务链 {@code MineruLocalClient}
-     *  走 {@code mineru.proxy.*}，探活不同步走＝直连探测对外网段底座恒 timeout 误报 down
-     *  （2026-11-14 pre 实锤：pre 机直连 5.103 不通、代理 200，探活误报）。null＝直连 */
-    private final java.net.Proxy mineruProxy;
-
-    /** 探针函数（可注入替身）：入参（探针名, 完整 URL, 会话密钥——仅 openhands 腿使用）→ 探测结果 */
-    private final ProbeFunction prober;
 
     /** 健康度 SSE 广播口（可 null＝未装配静默跳过）：状态变化时把最新快照推全员 */
     private final AgentHealthSseHub healthHub;
@@ -109,30 +56,23 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
     /** 上次探测的一行摘要（null＝尚未探测过）；与本次相同＝状态未变不打日志 */
     private volatile String lastLine;
 
-    /** 运行级健康快照（探测前初始化为全 unconfigured；每轮探测后整体替换） */
-    private volatile Map<String, String> lastSnapshot = initialSnapshot();
+    /** 运行级健康快照（探测前初始化为空＝收集面未知；每轮探测后整体替换） */
+    private volatile Map<String, String> lastSnapshot = Collections.emptyMap();
 
     private volatile ScheduledExecutorService scheduler;
 
-    public AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
-                                      String sandboxKind, String sandboxProbeUrl, String sandboxApiKey,
-                                      java.net.Proxy mineruProxy, AgentHealthSseHub healthHub) {
-        this(mineruBaseUrl, gotenbergBaseUrl, intervalSeconds, sandboxKind, sandboxProbeUrl, sandboxApiKey,
-                mineruProxy, healthHub, (kind, url, apiKey) -> httpProbe(kind, url, apiKey, mineruProxy));
-    }
-
-    AgentCapabilityHealthProbe(String mineruBaseUrl, String gotenbergBaseUrl, long intervalSeconds,
-                               String sandboxKind, String sandboxProbeUrl, String sandboxApiKey,
-                               java.net.Proxy mineruProxy, AgentHealthSseHub healthHub, ProbeFunction prober) {
-        this.mineruBaseUrl = trimmed(mineruBaseUrl);
-        this.gotenbergBaseUrl = trimmed(gotenbergBaseUrl);
-        this.sandboxKind = StringUtils.hasText(sandboxKind) ? sandboxKind.trim() : KIND_OPENHANDS;
-        this.sandboxProbeUrl = trimmed(sandboxProbeUrl);
-        this.sandboxApiKey = sandboxApiKey == null ? "" : sandboxApiKey.trim();
-        this.mineruProxy = mineruProxy;
+    public AgentCapabilityHealthProbe(List<AgentHealthContributor> contributors, long intervalSeconds,
+                                      AgentHealthSseHub healthHub) {
+        this.contributors = contributors == null ? List.of() : sortContributors(contributors);
         this.intervalSeconds = intervalSeconds;
         this.healthHub = healthHub;
-        this.prober = prober;
+    }
+
+    /** 按 contributor 自报 order 稳序（Spring 注入 List 已按 @Order 排过，此处兜底 order() 口径） */
+    private static List<AgentHealthContributor> sortContributors(List<AgentHealthContributor> contributors) {
+        List<AgentHealthContributor> sorted = new ArrayList<>(contributors);
+        sorted.sort(java.util.Comparator.comparingInt(AgentHealthContributor::order));
+        return Collections.unmodifiableList(sorted);
     }
 
     /** 启动一次＋（interval-seconds&gt;0 时）daemon 定时刷新；任何异常吞掉不阻断启动 */
@@ -152,20 +92,22 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
 
     /** 探测一轮：算出一行摘要，与上次相同不打（返回 false＝状态未变）；变化打一行（含「不可达」WARN） */
     boolean probeOnce() {
-        ProbeResult mineru = StringUtils.hasText(mineruBaseUrl)
-                ? prober.probe(KIND_MINERU, mineruBaseUrl + "/docs", null) : ProbeResult.notConfigured();
-        ProbeResult gotenberg = StringUtils.hasText(gotenbergBaseUrl)
-                ? prober.probe(KIND_GOTENBERG, gotenbergBaseUrl + "/health", null) : ProbeResult.notConfigured();
-        // 沙箱底座按 provider 分流（2026-11-18 用户拍板「openhands 不用了」）：cube＝GET {api-url}/health
-        // 管理面无鉴权（仅 200 可达）；openhands＝GET {base}/api/agent-profiles 带会话密钥。
-        // probeUrl 空＝腿未启用/未接线＝unconfigured 不发包；OH 腿「url+key 齐备」的判定在装配处完成
-        boolean sandboxConfigured = StringUtils.hasText(sandboxProbeUrl)
-                && (!KIND_OPENHANDS.equals(sandboxKind) || StringUtils.hasText(sandboxApiKey));
-        ProbeResult sandbox = sandboxConfigured
-                ? prober.probe(sandboxKind, sandboxProbeUrl + sandboxProbePath(), sandboxApiKey)
-                : ProbeResult.notConfigured();
-        lastSnapshot = snapshotOf(mineru, gotenberg, sandbox);
-        String line = describe(mineru, gotenberg, sandbox, sandboxKind);
+        List<String> segments = new ArrayList<>();
+        Map<String, String> snapshot = new LinkedHashMap<>();
+        for (AgentHealthContributor contributor : contributors) {
+            AgentHealthContributor.HealthReport report;
+            try {
+                report = contributor.probe();
+            } catch (Exception e) {
+                // 单腿异常兜底：探针实现坏了只降自己那一位，不拖累其它腿与聚合轮
+                report = AgentHealthContributor.HealthReport.unreachable(
+                        "探针异常(" + e.getClass().getSimpleName() + ")");
+            }
+            segments.add(capabilitySegment(contributor, report));
+            snapshot.merge(capabilityKey(contributor), healthValue(report), (oldValue, newValue) -> newValue);
+        }
+        lastSnapshot = Collections.unmodifiableMap(snapshot);
+        String line = "Agent 能力探活: " + String.join(", ", segments);
         String previous = lastLine;
         lastLine = line;
         if (line.equals(previous)) {
@@ -188,6 +130,40 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
         return true;
     }
 
+    /** 日志行段：capability(probeName)=状态（如 ocr(mineru)=可达） */
+    private static String capabilitySegment(AgentHealthContributor contributor,
+                                            AgentHealthContributor.HealthReport report) {
+        return capabilityKey(contributor) + "(" + contributor.probeName() + ")=" + text(report);
+    }
+
+    /** 快照键：capability() 空白时按 probeName 兜底（实现错误防御，不炸聚合轮） */
+    private static String capabilityKey(AgentHealthContributor contributor) {
+        String capability = contributor.capability();
+        return StringUtils.hasText(capability) ? capability.trim() : contributor.probeName();
+    }
+
+    private static String text(AgentHealthContributor.HealthReport report) {
+        switch (report.getStatus()) {
+            case REACHABLE:
+                return "可达";
+            case NOT_CONFIGURED:
+                return "未配置";
+            default:
+                return "不可达(" + (StringUtils.hasText(report.getReason()) ? report.getReason() : "原因未知") + ")";
+        }
+    }
+
+    private static String healthValue(AgentHealthContributor.HealthReport report) {
+        switch (report.getStatus()) {
+            case REACHABLE:
+                return AgentCapabilityHealthProvider.UP;
+            case NOT_CONFIGURED:
+                return AgentCapabilityHealthProvider.UNCONFIGURED;
+            default:
+                return AgentCapabilityHealthProvider.DOWN;
+        }
+    }
+
     private void safeProbe(String phase) {
         try {
             probeOnce();
@@ -204,119 +180,10 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
         }
     }
 
-    /** 一行摘要（契约格式，探活日志与测试共用同一拼装口；第三位＝exec.sandbox(腿名)） */
-    static String describe(ProbeResult mineru, ProbeResult gotenberg, ProbeResult sandbox, String sandboxKind) {
-        return "Agent 能力探活: ocr(mineru)=" + text(mineru)
-                + ", artifacts(gotenberg)=" + text(gotenberg)
-                + ", exec.sandbox(" + (StringUtils.hasText(sandboxKind) ? sandboxKind : KIND_OPENHANDS) + ")=" + text(sandbox);
-    }
-
-    /** 沙箱探活路径：Cube＝管理面健康端点；openhands＝agent-profiles 列表（兼容老形态） */
-    private String sandboxProbePath() {
-        return KIND_CUBE.equals(sandboxKind) ? "/health" : "/api/agent-profiles";
-    }
-
-    private static String text(ProbeResult result) {
-        switch (result.status()) {
-            case REACHABLE:
-                return "可达";
-            case NOT_CONFIGURED:
-                return "未配置";
-            default:
-                return "不可达(" + (StringUtils.hasText(result.reason()) ? result.reason() : "原因未知") + ")";
-        }
-    }
-
-    /** 探测结果→健康快照（能力位名→up/down/unconfigured；映射：mineru→ocr、gotenberg→artifacts.doc、openhands→exec.sandbox） */
-    private static Map<String, String> snapshotOf(ProbeResult mineru, ProbeResult gotenberg, ProbeResult openhands) {
-        Map<String, String> snapshot = new LinkedHashMap<>();
-        snapshot.put(AgentFileCapabilityResolver.OCR, healthValue(mineru));
-        snapshot.put(AgentFileCapabilityResolver.ARTIFACTS_DOC, healthValue(gotenberg));
-        snapshot.put(AgentFileCapabilityResolver.EXEC_SANDBOX, healthValue(openhands));
-        return snapshot;
-    }
-
-    /** 探测结果三态→健康值小写常量（REACHABLE=up / NOT_CONFIGURED=unconfigured / UNREACHABLE=down） */
-    private static String healthValue(ProbeResult result) {
-        switch (result.status()) {
-            case REACHABLE:
-                return AgentCapabilityHealthProvider.UP;
-            case NOT_CONFIGURED:
-                return AgentCapabilityHealthProvider.UNCONFIGURED;
-            default:
-                return AgentCapabilityHealthProvider.DOWN;
-        }
-    }
-
-    /** 探测前初始快照：三位全 unconfigured（未探测＝未知＝按未配置上报，前端灰态提示） */
-    private static Map<String, String> initialSnapshot() {
-        Map<String, String> snapshot = new LinkedHashMap<>();
-        snapshot.put(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UNCONFIGURED);
-        snapshot.put(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.UNCONFIGURED);
-        snapshot.put(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UNCONFIGURED);
-        return snapshot;
-    }
-
-    /** 健康快照（端口实现）：不可变副本，读侧共享安全 */
+    /** 健康快照（端口实现）：不可变副本，读侧共享安全；键集＝在场 contributor 的能力位 */
     @Override
     public Map<String, String> snapshot() {
         return Map.copyOf(lastSnapshot);
-    }
-
-    private static String trimmed(String baseUrl) {
-        if (!StringUtils.hasText(baseUrl)) {
-            return null;
-        }
-        String value = baseUrl.trim();
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
-    }
-
-    /**
-     * 缺省探针（纯 JDK HttpClient，超时 3s）：mineru＝任意 HTTP 状态码（含 404）即服务在＝可达；
-     * gotenberg＝仅 200 可达，其余状态码入原因短语；openhands＝200 可达、401＝不可达
-     * （密钥无效或未配置）、其余状态码带码入原因；连接异常/超时＝不可达（异常短语入行）。
-     * ⚠ 密钥只进请求头：异常消息可能带 URL（不含密钥），原因短语不含密钥。
-     */
-    static ProbeResult httpProbe(String kind, String url, String apiKey, java.net.Proxy mineruProxy) {
-        try {
-            java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(3))
-                    .GET();
-            if (KIND_OPENHANDS.equals(kind)) {
-                try {
-                    builder.header(OPENHANDS_API_KEY_HEADER, apiKey);
-                } catch (IllegalArgumentException e) {
-                    // 🔴 header 值非法（控制字符/非 Latin-1，如粘贴进全角空格）时 JDK 的异常
-                    // 消息含密钥原文（HttpRequestBuilderImpl 直接拼 value）——必须原地转固定
-                    // 短语，原消息不得进入 reasonOf/日志（review I-1 泄漏窄路径，2026-11-14）
-                    return ProbeResult.unreachable("密钥格式非法（含控制字符或非 ASCII 字符）");
-                }
-            }
-            java.net.http.HttpResponse<Void> response =
-                    HTTP.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.discarding(),
-                            KIND_MINERU.equals(kind) ? mineruProxy : null);
-            if ((KIND_GOTENBERG.equals(kind) || KIND_CUBE.equals(kind)) && response.statusCode() != 200) {
-                return ProbeResult.unreachable("HTTP " + response.statusCode());
-            }
-            if (KIND_OPENHANDS.equals(kind) && response.statusCode() != 200) {
-                return ProbeResult.unreachable(response.statusCode() == 401
-                        ? "密钥无效或未配置" : "HTTP " + response.statusCode());
-            }
-            return ProbeResult.reachable();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return ProbeResult.unreachable(reasonOf(e));
-        } catch (Exception e) {
-            return ProbeResult.unreachable(reasonOf(e));
-        }
-    }
-
-    /** 原因短语：异常简单名＋首段消息，截到 80 字符（只进日志，不做机器消费） */
-    private static String reasonOf(Exception e) {
-        String message = e.getMessage();
-        String reason = e.getClass().getSimpleName()
-                + (StringUtils.hasText(message) ? ": " + message.split("\n")[0].trim() : "");
-        return reason.length() > 80 ? reason.substring(0, 80) : reason;
     }
 
     /** 上次探测的一行摘要（测试口；null＝尚未探测） */
@@ -339,73 +206,7 @@ public class AgentCapabilityHealthProbe implements ApplicationRunner, AutoClosea
         ScheduledExecutorService executor = scheduler;
         if (executor != null) {
             executor.shutdownNow();
-        }
-    }
-
-    /** HttpClient 惰性持有壳（build 一次复用连接池；静态直建会让单测类加载即起网络栈，壳可延迟） */
-    private static final class HttpClientShim {
-        private volatile java.net.http.HttpClient client;
-
-        /** 代理专用 client 缓存（key=proxy 地址串；探活频率低，数量小，不做淘汰） */
-        private final java.util.concurrent.ConcurrentHashMap<String, java.net.http.HttpClient> proxyClients =
-                new java.util.concurrent.ConcurrentHashMap<>();
-
-        java.net.http.HttpResponse<Void> send(java.net.http.HttpRequest request,
-                                              java.net.http.HttpResponse.BodyHandler<Void> bodyHandler,
-                                              java.net.Proxy proxy) throws Exception {
-            java.net.http.HttpClient current;
-            if (proxy == null) {
-                current = sharedClient();
-            } else {
-                // 代理专用 client 按 host:port 缓存（探活频率低，避免每次重建连接池）
-                current = proxyClients.computeIfAbsent(proxy.address().toString(), k ->
-                        java.net.http.HttpClient.newBuilder()
-                                .connectTimeout(Duration.ofSeconds(3))
-                                .proxy(java.net.ProxySelector.of((java.net.InetSocketAddress) proxy.address()))
-                                .build());
-            }
-            return current.send(request, bodyHandler);
-        }
-
-        private java.net.http.HttpClient sharedClient() {
-            java.net.http.HttpClient current = client;
-            if (current == null) {
-                synchronized (this) {
-                    current = client;
-                    if (current == null) {
-                        current = java.net.http.HttpClient.newBuilder()
-                                .connectTimeout(Duration.ofSeconds(3))
-                                .build();
-                        client = current;
-                    }
-                }
-            }
-            return current;
-        }
-    }
-
-    /** 探针函数契约（可注入替身）：入参（探针名, 完整 URL, 会话密钥——仅 openhands 腿携带）→ 探测结果 */
-    @FunctionalInterface
-    interface ProbeFunction {
-
-        ProbeResult probe(String kind, String url, String apiKey);
-    }
-
-    /** 探测结果三态值对象：可达 / 未配置 / 不可达（带原因短语，日志用） */
-    public record ProbeResult(Status status, String reason) {
-
-        public enum Status {REACHABLE, NOT_CONFIGURED, UNREACHABLE}
-
-        static ProbeResult reachable() {
-            return new ProbeResult(Status.REACHABLE, null);
-        }
-
-        static ProbeResult notConfigured() {
-            return new ProbeResult(Status.NOT_CONFIGURED, null);
-        }
-
-        static ProbeResult unreachable(String reason) {
-            return new ProbeResult(Status.UNREACHABLE, reason);
+            scheduler = null;
         }
     }
 }

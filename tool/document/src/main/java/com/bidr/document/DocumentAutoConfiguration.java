@@ -1,6 +1,7 @@
 package com.bidr.document;
 
 import com.bidr.document.builtin.MineruAsyncTranscribeLeg;
+import com.bidr.document.builtin.MineruHealthContributor;
 import com.bidr.document.builtin.MineruTranscribeLeg;
 import com.bidr.document.builtin.NoopVisionTranscriber;
 import com.bidr.document.spi.ArtifactStep;
@@ -124,6 +125,17 @@ public class DocumentAutoConfiguration {
     @ConditionalOnProperty(name = "mineru.enabled", havingValue = "true", matchIfMissing = true)
     @EnableConfigurationProperties(MineruProperties.class)
     static class MineruLegConfiguration {
+
+        /**
+         * MinerU 健康自报腿（2026-11-18 探活架构化——各腿自报、中央只收集）：与转录腿同条件
+         * （transcriber=mineru 且无自建 TranscribeStep）——腿在探活才在，没选这条腿＝探活缺席；
+         * base-url 空缺由实现内聚判 NOT_CONFIGURED（腿装了但本地服务没接线是部署形态非故障）
+         */
+        @Bean
+        @ConditionalOnProperty(name = "tool.document.transcriber", havingValue = MineruTranscribeLeg.LEG_NAME)
+        public com.bidr.document.spi.AgentHealthContributor mineruHealthContributor(MineruProperties properties) {
+            return new MineruHealthContributor(properties);
+        }
 
         @Bean
         @ConditionalOnProperty(name = "tool.document.transcriber", havingValue = MineruTranscribeLeg.LEG_NAME)

@@ -128,7 +128,8 @@ public class MineruLocalClient {
         return base + path;
     }
 
-    static Proxy buildProxy(MineruProperties.Proxy config) {
+    /** 代理装配（enable+host+port 齐才生效；2026-11-18 健康自报腿共用——探活与业务链同代理口径） */
+    public static Proxy buildProxy(MineruProperties.Proxy config) {
         if (config == null || !config.isEnable() || !StringUtils.hasText(config.getHost()) || config.getPort() <= 0) {
             return null;
         }

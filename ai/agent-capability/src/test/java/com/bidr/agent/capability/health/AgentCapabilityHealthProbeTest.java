@@ -1,18 +1,15 @@
 package com.bidr.agent.capability.health;
 
+import com.bidr.document.spi.AgentHealthContributor;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
-import com.sun.net.httpserver.HttpServer;
-import org.junit.jupiter.api.AfterEach;
-import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -27,115 +24,144 @@ import static org.mockito.Mockito.verify;
 
 /**
  * Title: AgentCapabilityHealthProbeTest
- * Description: 探活件契约钉桩（探针注入替身，不打外网）：
+ * Description: 探活聚合器契约钉桩（contributor 打桩，不打外网）：
  * <ul>
- *     <li>未配置三态：base-url 空＝不发包（替身零调用）不计失败，日志位标「未配置」；</li>
- *     <li>URL 拼装：base 去尾斜杠后拼 {@code /docs}（mineru）、{@code /health}（gotenberg）、
- *         {@code /api/agent-profiles}（openhands）；openhands base-url 或密钥缺任一＝不发包；</li>
- *     <li>状态变化：首轮必出一行，后续同状态不出（probeOnce 返回 false），变化再出一行；</li>
- *     <li>触发面：interval-seconds≤0 不建定时器只留启动一次；&gt;0 建 daemon 定时器，close() 即关；</li>
- *     <li>缺省探针语义（本地回环 {@link HttpServer}，非外网）：mineru 任意状态码（404 实证）＝可达、
- *         gotenberg 仅 200＝可达（503＝不可达且原因短语入行）、openhands 200＝可达（密钥经
- *         X-Session-API-Key 头下发且不入原因短语）、401＝不可达（密钥无效或未配置）、
- *         连接拒绝＝不可达；</li>
- *     <li>健康快照：探测前三位全 unconfigured，探测后按腿映射刷新（key=能力位名，value 小写），</li>
- *     <li>snapshot() 不可变副本（put 抛 UnsupportedOperationException），</li>
- *     <li>SSE 广播：状态变化即 {@code broadcast("health", 最新快照)}（同状态不广播；
- *     hub 缺席静默＝既有用例以 null hub 覆盖）。</li>
+ *     <li>聚合：按 contributor 自报 order 稳序逐个探，行＝capability(probeName)=状态；
+ *         快照键=capability、值小写三态；</li>
+ *     <li>缺席即缺项：contributor 不在场＝该能力位不进行与快照（「没这个子模块就不收集」）；</li>
+ *     <li>兜底：单腿 probe() 抛异常＝该位 UNREACHABLE(探针异常)，其余腿不受影响；</li>
+ *     <li>状态变化：首轮必出一行，同状态不出（probeOnce 返回 false），变化再出一行；
+ *         含「不可达」用 WARN 级（行内容判定）；</li>
+ *     <li>SSE 广播：状态变化即 broadcast("health", 最新快照)；同状态不广播；</li>
+ *     <li>触发面：interval-seconds≤0 不建定时器只留启动一次；&gt;0 建 daemon 定时器，close() 即关。</li>
  * </ul>
+ * 各腿探测语义（HTTP 状态码判定/鉴权头/代理）已下沉到各腿模块自己的测试——这里只钉聚合行为。
  *
  * @author Sharp
  * @since 2026/11/14
  */
 class AgentCapabilityHealthProbeTest {
 
-    /** 探针替身：按探针名返回固定结果并记录调用（入参=探针名+完整 URL+会话密钥） */
-    private static final class StubProber implements AgentCapabilityHealthProbe.ProbeFunction {
-        private final List<String> calls = new ArrayList<>();
-        private AgentCapabilityHealthProbe.ProbeResult mineru = AgentCapabilityHealthProbe.ProbeResult.reachable();
-        private AgentCapabilityHealthProbe.ProbeResult gotenberg = AgentCapabilityHealthProbe.ProbeResult.reachable();
-        private AgentCapabilityHealthProbe.ProbeResult openhands = AgentCapabilityHealthProbe.ProbeResult.reachable();
-        private AgentCapabilityHealthProbe.ProbeResult cube = AgentCapabilityHealthProbe.ProbeResult.reachable();
+    /** 固定结果打桩腿：capability/probeName/order 可定制，probe 返回预置 HealthReport */
+    private static final class StubLeg implements AgentHealthContributor {
+        private final String capability;
+        private final String probeName;
+        private final int order;
+        private AgentHealthContributor.HealthReport report =
+                AgentHealthContributor.HealthReport.reachable();
+        private boolean throwOnProbe = false;
+        private int calls;
+
+        StubLeg(String capability, String probeName, int order) {
+            this.capability = capability;
+            this.probeName = probeName;
+            this.order = order;
+        }
 
         @Override
-        public AgentCapabilityHealthProbe.ProbeResult probe(String kind, String url, String apiKey) {
-            calls.add(kind + " " + url);
-            if (AgentCapabilityHealthProbe.KIND_GOTENBERG.equals(kind)) {
-                return gotenberg;
+        public String capability() {
+            return capability;
+        }
+
+        @Override
+        public String probeName() {
+            return probeName;
+        }
+
+        @Override
+        public int order() {
+            return order;
+        }
+
+        @Override
+        public AgentHealthContributor.HealthReport probe() {
+            calls++;
+            if (throwOnProbe) {
+                throw new IllegalStateException("腿内部炸了");
             }
-            if (AgentCapabilityHealthProbe.KIND_OPENHANDS.equals(kind)) {
-                return openhands;
-            }
-            if (AgentCapabilityHealthProbe.KIND_CUBE.equals(kind)) {
-                return cube;
-            }
-            return mineru;
+            return report;
         }
     }
 
-    private HttpServer server;
-
-    /** 最近一轮被靶机抓到的 X-Session-API-Key 头值（openhands 腿密钥下发断言用；建靶机时重置） */
-    private List<String> capturedKeys = new ArrayList<>();
-
-    @AfterEach
-    void stopServer() {
-        if (server != null) {
-            server.stop(0);
-        }
-    }
-
     @Test
-    @DisplayName("未配置三态：base-url 空＝替身零调用，三位标「未配置」")
-    void blankConfigMeansNotConfiguredWithoutProbing() {
-        StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("  ", null, 0, "openhands", "", "", null, null, stub);
-        assertThat(probe.probeOnce()).isTrue();
-        assertThat(probe.lastLoggedLine())
-                .isEqualTo("Agent 能力探活: ocr(mineru)=未配置, artifacts(gotenberg)=未配置, exec.sandbox(openhands)=未配置");
-        assertThat(stub.calls).isEmpty();
-    }
-
-    @Test
-    @DisplayName("URL 拼装：base 去尾斜杠＋路径（/docs、/health）传入探针；openhands 缺密钥＝不发包")
-    void probeUrlsAppendPathOnTrimmedBase() {
-        StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("http://m:9100/",
-                "http://g:13000", 0, "openhands", "", "", null, null, stub);
-        probe.probeOnce();
-        assertThat(stub.calls).containsExactly("mineru http://m:9100/docs", "gotenberg http://g:13000/health");
-
-        // openhands：base-url 在而密钥空＝同样不发包（齐备才探测）
-        StubProber keyed = new StubProber();
-        AgentCapabilityHealthProbe halfConfigured = new AgentCapabilityHealthProbe(null, null, 0,
-                "openhands", "http://o:8080", "  ", null, null, keyed);
-        halfConfigured.probeOnce();
-        assertThat(keyed.calls).as("密钥空＝不发包").isEmpty();
-        assertThat(halfConfigured.snapshot()).containsEntry("exec.sandbox", "unconfigured");
-    }
-
-    @Test
-    @DisplayName("状态变化：首轮出一行，同状态不出，降级/再变化各出一行（行内容含原因短语，第三位 exec.sandbox）")
-    void logsOnlyOnStateChange() {
-        StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("http://m", "http://g", 0,
-                "openhands", "http://o", "sk", null, null, stub);
-
+    @DisplayName("聚合与排序：按 order 稳序逐个探，行=capability(probeName)=状态，快照键=capability")
+    void aggregatesInOrderAndBuildsSnapshot() {
+        StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
+        StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
+                Arrays.asList(sandbox, ocr), 0, null);
+        // 故意倒序传入（sandbox 在前）——聚合应按 order 恢复 mineru→sandbox 稳序
         assertThat(probe.probeOnce()).as("首轮必出一行").isTrue();
         assertThat(probe.lastLoggedLine())
-                .isEqualTo("Agent 能力探活: ocr(mineru)=可达, artifacts(gotenberg)=可达, exec.sandbox(openhands)=可达");
-        assertThat(probe.probeOnce()).as("同状态不出").isFalse();
+                .isEqualTo("Agent 能力探活: ocr(mineru)=可达, exec.sandbox(cube)=可达");
+        assertThat(ocr.calls).as("两腿各探一次").isEqualTo(1);
+        assertThat(sandbox.calls).isEqualTo(1);
+        assertThat(probe.snapshot())
+                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UP)
+                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
+    }
 
-        stub.gotenberg = AgentCapabilityHealthProbe.ProbeResult.unreachable("HTTP 503");
+    @Test
+    @DisplayName("缺席即缺项：contributor 不在场＝该能力位不进行与快照（没这个子模块就不收集）")
+    void absentLegIsAbsentFromLineAndSnapshot() {
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
+                Collections.singletonList(new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100)),
+                0, null);
+        probe.probeOnce();
+        assertThat(probe.lastLoggedLine())
+                .doesNotContain("exec.sandbox")
+                .doesNotContain("artifacts.doc");
+        assertThat(probe.snapshot()).containsOnlyKeys(AgentFileCapabilityResolver.OCR);
+    }
+
+    @Test
+    @DisplayName("三态映射：REACHABLE=up / NOT_CONFIGURED=unconfigured / UNREACHABLE=down(原因入行)")
+    void mapsThreeStatesToHealthValues() {
+        StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
+        StubLeg artifacts = new StubLeg(AgentFileCapabilityResolver.ARTIFACTS_DOC, "gotenberg", 200);
+        StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
+        artifacts.report = AgentHealthContributor.HealthReport.notConfigured();
+        sandbox.report = AgentHealthContributor.HealthReport.unreachable("HTTP 503");
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(Arrays.asList(ocr, artifacts, sandbox), 0, null);
+        probe.probeOnce();
+        assertThat(probe.snapshot())
+                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UP)
+                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.UNCONFIGURED)
+                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.DOWN);
+        assertThat(probe.lastLoggedLine())
+                .isEqualTo("Agent 能力探活: ocr(mineru)=可达, artifacts.doc(gotenberg)=未配置,"
+                        + " exec.sandbox(cube)=不可达(HTTP 503)");
+    }
+
+    @Test
+    @DisplayName("兜底：单腿 probe() 抛异常＝该位不可达(探针异常)，其余腿不受影响")
+    void singleLegFailureIsolated() {
+        StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
+        StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
+        sandbox.throwOnProbe = true;
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(Arrays.asList(ocr, sandbox), 0, null);
+        assertThat(probe.probeOnce()).isTrue();
+        assertThat(ocr.calls).as("其它腿照常探").isEqualTo(1);
+        assertThat(probe.snapshot())
+                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UP)
+                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.DOWN);
+        assertThat(probe.lastLoggedLine()).contains("exec.sandbox(cube)=不可达(探针异常(IllegalStateException))");
+    }
+
+    @Test
+    @DisplayName("状态变化：首轮出一行，同状态不出，变化再出一行；不可达行走 WARN（内容判定）")
+    void logsOnlyOnStateChange() {
+        StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
+                Collections.singletonList(ocr), 0, null);
+        assertThat(probe.probeOnce()).as("首轮必出一行").isTrue();
+        assertThat(probe.probeOnce()).as("同状态不出").isFalse();
+        ocr.report = AgentHealthContributor.HealthReport.unreachable("ConnectException");
         assertThat(probe.probeOnce()).as("降级出一行").isTrue();
         assertThat(probe.lastLoggedLine())
-                .isEqualTo("Agent 能力探活: ocr(mineru)=可达, artifacts(gotenberg)=不可达(HTTP 503), exec.sandbox(openhands)=可达");
+                .contains("ocr(mineru)=不可达(ConnectException)")
+                .as("含「不可达」＝降级行");
         assertThat(probe.probeOnce()).as("同状态仍不出").isFalse();
-
-        stub.gotenberg = AgentCapabilityHealthProbe.ProbeResult.reachable();
-        assertThat(probe.probeOnce()).as("恢复出一行").isTrue();
-        assertThat(probe.lastLoggedLine())
-                .isEqualTo("Agent 能力探活: ocr(mineru)=可达, artifacts(gotenberg)=可达, exec.sandbox(openhands)=可达");
     }
 
     @Test
@@ -143,231 +169,74 @@ class AgentCapabilityHealthProbeTest {
     @SuppressWarnings("unchecked")
     void stateChangeBroadcastsSnapshotToHub() {
         AgentHealthSseHub hub = mock(AgentHealthSseHub.class);
-        StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe("http://m", "http://g", 0,
-                "openhands", "http://o", "sk", null, hub, stub);
+        StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
+        StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
+        sandbox.report = AgentHealthContributor.HealthReport.notConfigured();
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(Arrays.asList(ocr, sandbox), 0, hub);
 
         assertThat(probe.probeOnce()).as("首轮状态变化").isTrue();
         ArgumentCaptor<Map<String, String>> first = ArgumentCaptor.forClass(Map.class);
         verify(hub, times(1)).broadcast(eq("health"), first.capture());
         assertThat(first.getValue())
-                .as("首轮广播带上报快照原样（key=能力位名，value 小写）")
                 .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UP)
-                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.UP)
-                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
+                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UNCONFIGURED);
 
         probe.probeOnce();
         verify(hub, times(1)).broadcast(anyString(), any());
 
-        stub.gotenberg = AgentCapabilityHealthProbe.ProbeResult.unreachable("HTTP 503");
+        ocr.report = AgentHealthContributor.HealthReport.unreachable("HTTP 503");
         assertThat(probe.probeOnce()).as("降级即变化").isTrue();
         ArgumentCaptor<Map<String, String>> second = ArgumentCaptor.forClass(Map.class);
         verify(hub, times(2)).broadcast(eq("health"), second.capture());
         assertThat(second.getValue())
-                .as("降级后的快照同步广播")
-                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.DOWN);
+                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.DOWN);
     }
 
     @Test
     @DisplayName("interval-seconds≤0：只留启动探测不建定时器；>0 建 daemon 定时器，close() 即关")
     void schedulerFollowsIntervalConfig() {
-        AgentCapabilityHealthProbe noSchedule = new AgentCapabilityHealthProbe(null, null, 0, "openhands", "", "", null, null, new StubProber());
+        AgentCapabilityHealthProbe noSchedule = new AgentCapabilityHealthProbe(
+                Collections.<AgentHealthContributor>emptyList(), 0, null);
         noSchedule.run(null);
         assertThat(noSchedule.scheduler()).isNull();
 
-        AgentCapabilityHealthProbe scheduled = new AgentCapabilityHealthProbe(null, null, 1, "openhands", "", "", null, null, new StubProber());
+        AgentCapabilityHealthProbe scheduled = new AgentCapabilityHealthProbe(
+                Collections.<AgentHealthContributor>emptyList(), 1, null);
         scheduled.run(null);
         assertThat(scheduled.scheduler()).isNotNull();
         assertThat(scheduled.scheduler().isShutdown()).isFalse();
         scheduled.close();
-        assertThat(scheduled.scheduler().isShutdown()).isTrue();
+        assertThat(scheduled.scheduler()).isNull();
     }
 
     @Test
-    @DisplayName("快照：探测前全 unconfigured；探测后按腿映射刷新；snapshot() 不可变副本")
+    @DisplayName("快照：探测前为空集（收集面未知）；探测后刷新；snapshot() 不可变副本；capability 空白＝probeName 兜底键")
     void snapshotLifecycleAndImmutability() {
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(null, null, 0, "openhands", "", "", null, null, new StubProber());
-
-        Map<String, String> initial = probe.snapshot();
-        assertThat(initial)
-                .as("探测前三位全 unconfigured")
-                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UNCONFIGURED)
-                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.UNCONFIGURED)
-                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UNCONFIGURED);
-        assertThatThrownBy(() -> initial.put("ocr", "up"))
-                .as("snapshot() 必须是不可变副本")
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
+                Collections.<AgentHealthContributor>emptyList(), 0, null);
+        assertThat(probe.snapshot()).isEmpty();
+        assertThatThrownBy(() -> probe.snapshot().putIfAbsent("x", "up"))
                 .isInstanceOf(UnsupportedOperationException.class);
 
-        StubProber stub = new StubProber();
-        stub.gotenberg = AgentCapabilityHealthProbe.ProbeResult.unreachable("HTTP 503");
-        AgentCapabilityHealthProbe probed = new AgentCapabilityHealthProbe("http://m", "http://g", 0,
-                "openhands", "http://o", "sk", null, null, stub);
+        StubLeg weird = new StubLeg("  ", "weird-leg", 400);
+        weird.report = AgentHealthContributor.HealthReport.unreachable("boom");
+        AgentCapabilityHealthProbe probed = new AgentCapabilityHealthProbe(
+                Collections.<AgentHealthContributor>singletonList(weird), 0, null);
         probed.probeOnce();
-
-        Map<String, String> snapshot = probed.snapshot();
-        assertThat(snapshot)
-                .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.UP)
-                .containsEntry(AgentFileCapabilityResolver.ARTIFACTS_DOC, AgentCapabilityHealthProvider.DOWN)
-                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
-        assertThatThrownBy(() -> snapshot.put("ocr", "down"))
-                .as("探测后的快照同样不可变")
-                .isInstanceOf(UnsupportedOperationException.class);
+        assertThat(probed.snapshot()).as("capability 空白＝probeName 兜底（实现错误不炸聚合轮）")
+                .containsEntry("weird-leg", AgentCapabilityHealthProvider.DOWN);
+        assertThat(probed.lastLoggedLine()).contains("weird-leg(weird-leg)=不可达(boom)");
     }
 
     @Test
-    @DisplayName("缺省探针语义：mineru 404=可达、gotenberg 200=可达/503=不可达(HTTP 503)、连接拒绝=不可达")
-    void defaultHttpProbeSemantics() throws Exception {
-        server = openhandsCaptureServer();
-        String base = "http://127.0.0.1:" + server.getAddress().getPort();
-
-        assertThat(AgentCapabilityHealthProbe.httpProbe(AgentCapabilityHealthProbe.KIND_MINERU, base + "/docs", null, null))
-                .as("mineru：任意 HTTP 状态码（含 404）＝服务在＝可达")
-                .satisfies(result -> assertThat(result.status())
-                        .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.REACHABLE));
-        assertThat(AgentCapabilityHealthProbe.httpProbe(AgentCapabilityHealthProbe.KIND_GOTENBERG, base + "/health", null, null))
-                .satisfies(result -> assertThat(result.status())
-                        .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.REACHABLE));
-        assertThat(AgentCapabilityHealthProbe.httpProbe(AgentCapabilityHealthProbe.KIND_GOTENBERG, base + "/sick", null, null))
-                .as("gotenberg：非 200＝不可达且状态码入原因短语")
-                .satisfies(result -> {
-                    assertThat(result.status())
-                            .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.UNREACHABLE);
-                    assertThat(result.reason()).isEqualTo("HTTP 503");
-                });
-
-        int closedPort = closedPort();
-        AgentCapabilityHealthProbe.ProbeResult refused = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_MINERU, "http://127.0.0.1:" + closedPort + "/docs", null, null);
-        assertThat(refused.status())
-                .as("连接拒绝＝不可达（原因短语入行）")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.UNREACHABLE);
-        assertThat(refused.reason()).isNotBlank();
-    }
-
-    @Test
-    @DisplayName("openhands 腿缺省探针：200=可达（密钥经 X-Session-API-Key 头）、401=不可达（密钥无效或未配置，key 不入原因）")
-    void openhandsLegDefaultProbeSemantics() throws Exception {
-        server = openhandsCaptureServer();
-        String base = "http://127.0.0.1:" + server.getAddress().getPort();
-
-        AgentCapabilityHealthProbe.ProbeResult ok = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_OPENHANDS, base + "/api/agent-profiles", "sk-secret-1", null);
-        assertThat(ok.status())
-                .as("200＝可达")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.REACHABLE);
-        assertThat(capturedKeys).as("密钥经 X-Session-API-Key 头下发").containsExactly("sk-secret-1");
-
-        AgentCapabilityHealthProbe.ProbeResult unauthorized = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_OPENHANDS, base + "/unauthorized", "sk-secret-2", null);
-        assertThat(unauthorized.status())
-                .as("401＝不可达（排障方向与「服务不在」区分）")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.UNREACHABLE);
-        assertThat(unauthorized.reason()).isEqualTo("密钥无效或未配置");
-        assertThat(String.valueOf(unauthorized.reason()))
-                .as("⚠ 密钥不得进原因短语/日志链路")
-                .doesNotContain("sk-secret-2");
-
-        AgentCapabilityHealthProbe.ProbeResult unexpected = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_OPENHANDS, base + "/sick", "sk-secret-3", null);
-        assertThat(unexpected.status())
-                .as("其余非 200 状态码＝不可达且带码入原因")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.UNREACHABLE);
-        assertThat(unexpected.reason()).isEqualTo("HTTP 503");
-
-        // review I-1（2026-11-14）：坏 key（含非 Latin-1 字符）触发 JDK header 校验异常——
-        // 其异常消息含密钥原文，必须原地转固定短语，原消息不得进入原因短语/日志链路
-        String badKey = "sk-\u3000bad-key\u3000"; // 全角空格＝非法头值，httpProbe 在发包前即抛
-        AgentCapabilityHealthProbe.ProbeResult malformed = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_OPENHANDS, base + "/api/agent-profiles", badKey, null);
-        assertThat(malformed.status())
-                .as("密钥格式非法＝不可达（不发包）")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.UNREACHABLE);
-        assertThat(malformed.reason()).isEqualTo("密钥格式非法（含控制字符或非 ASCII 字符）");
-        assertThat(String.valueOf(malformed.reason()))
-                .as("⚠ 原消息（含密钥原文）不得进入原因短语")
-                .doesNotContain("bad-key");
-    }
-
-    @Test
-    @DisplayName("openhands 腿在位：齐备才发包，URL 拼装 /api/agent-profiles；快照同步三位")
-    void openhandsLegProbesWhenFullyConfigured() {
-        StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(null, null, 0,
-                "openhands", "http://o:8080/", "sk-x", null, null, stub);
-        assertThat(probe.probeOnce()).isTrue();
-        assertThat(stub.calls).contains("openhands http://o:8080/api/agent-profiles");
-        assertThat(probe.snapshot()).containsEntry(
-                AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
-    }
-
-    @Test
-    @DisplayName("cube 腿在位（2026-11-18 provider 分流）：URL 拼装 {api-url}/health、行标签 exec.sandbox(cube)；快照键仍 exec.sandbox")
-    void cubeLegProbesHealthWhenConfigured() {
-        StubProber stub = new StubProber();
-        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(null, null, 0,
-                AgentCapabilityHealthProbe.KIND_CUBE, "http://10.3.6.31:3000/", "", null, null, stub);
-        assertThat(probe.probeOnce()).isTrue();
-        assertThat(stub.calls).as("cube 腿拼管理面健康端点（无鉴权不入密钥参数）")
-                .contains("cube http://10.3.6.31:3000/health");
-        assertThat(probe.lastLoggedLine())
-                .as("日志标签随腿名（不再恒 openhands 误报）")
-                .isEqualTo("Agent 能力探活: ocr(mineru)=未配置, artifacts(gotenberg)=未配置, exec.sandbox(cube)=可达");
-        assertThat(probe.snapshot()).as("快照键恒为能力位名（前端契约不变）")
-                .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
-
-        stub.cube = AgentCapabilityHealthProbe.ProbeResult.unreachable("HTTP 503");
-        probe.probeOnce();
-        assertThat(probe.snapshot()).containsEntry(
-                AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.DOWN);
-    }
-
-    @Test
-    @DisplayName("cube 腿缺省探针：/health 200=可达（不带鉴权头）、非 200=不可达(HTTP 码)")
-    void cubeLegDefaultProbeSemantics() throws Exception {
-        server = openhandsCaptureServer();
-        String base = "http://127.0.0.1:" + server.getAddress().getPort();
-
-        AgentCapabilityHealthProbe.ProbeResult ok = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_CUBE, base + "/health", "", null);
-        assertThat(ok.status())
-                .as("200＝可达")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.REACHABLE);
-        assertThat(capturedKeys).as("cube 管理面无鉴权＝不带 X-Session-API-Key 头").isEmpty();
-
-        AgentCapabilityHealthProbe.ProbeResult sick = AgentCapabilityHealthProbe.httpProbe(
-                AgentCapabilityHealthProbe.KIND_CUBE, base + "/sick", "", null);
-        assertThat(sick.status())
-                .as("非 200＝不可达且状态码入原因（与 gotenberg 同式，与 mineru「任意码可达」区分）")
-                .isEqualTo(AgentCapabilityHealthProbe.ProbeResult.Status.UNREACHABLE);
-        assertThat(sick.reason()).isEqualTo("HTTP 503");
-    }
-
-    /** 本地回环探针靶机：/health=200、/sick=503、/unauthorized=401、其余 404；
-     *  openhands 类路径（/api/agent-profiles、/unauthorized）抓取 X-Session-API-Key 供断言 */
-    private HttpServer openhandsCaptureServer() throws Exception {
-        capturedKeys = new ArrayList<>();
-        HttpServer created = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        created.createContext("/", exchange -> {
-            String path = exchange.getRequestURI().getPath();
-            int status = "/health".equals(path) || "/api/agent-profiles".equals(path) ? 200
-                    : "/sick".equals(path) ? 503 : "/unauthorized".equals(path) ? 401 : 404;
-            if ("/api/agent-profiles".equals(path) || "/unauthorized".equals(path)) {
-                capturedKeys.add(exchange.getRequestHeaders().getFirst("X-Session-API-Key"));
-            }
-            byte[] body = "probe".getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(status, body.length);
-            try (OutputStream out = exchange.getResponseBody()) {
-                out.write(body);
-            }
-        });
-        created.start();
-        return created;
-    }
-
-    /** 取一个已释放的本机端口（连接即拒绝），避免写死端口撞环境 */
-    private static int closedPort() throws Exception {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return socket.getLocalPort();
-        }
+    @DisplayName("启动接线：run(null) 即刻探一轮（ApplicationRunner 语义）")
+    void runProbesOnceImmediately() {
+        StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
+        AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
+                Collections.<AgentHealthContributor>singletonList(ocr), 0, null);
+        probe.run(null);
+        assertThat(ocr.calls).isEqualTo(1);
+        assertThat(probe.lastLoggedLine()).isNotNull();
+        assertThat(new ArrayList<>(probe.snapshot().keySet())).containsExactly(AgentFileCapabilityResolver.OCR);
     }
 }

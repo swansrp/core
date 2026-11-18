@@ -28,4 +28,13 @@ public class GotenbergAutoConfiguration {
     public ConvertStep gotenbergConvertStep(GotenbergProperties properties) {
         return new GotenbergConvertClient(properties);
     }
+
+    /**
+     * Gotenberg 健康自报腿（2026-11-18 探活架构化——各腿自报、中央只收集）：类级
+     * GotenbergBaseUrlCondition 保证到场即有 base-url（没接线＝本 bean 不存在＝收集自然缺席）
+     */
+    @Bean
+    public GotenbergHealthContributor gotenbergHealthContributor(GotenbergProperties properties) {
+        return new GotenbergHealthContributor(properties);
+    }
 }

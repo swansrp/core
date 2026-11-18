@@ -59,6 +59,17 @@ public class CubeSandboxAutoConfiguration {
     }
 
     /**
+     * Cube 管理面健康自报腿（2026-11-18 探活架构化——各腿自报、中央只收集）：类级
+     * {@code my.agent.sandbox.provider=cube} 条件保证「Cube 腿在位才收集」，与 OpenHands 腿
+     * contributor（provider=openhands）互斥；三件套没配齐由实现内聚判 NOT_CONFIGURED
+     * （腿选了但没接线是部署形态非故障）。探测＝GET {apiUrl}/health 管理面无鉴权仅 200
+     */
+    @Bean
+    public CubeHealthContributor cubeHealthContributor(CubeSandboxProperties properties) {
+        return new CubeHealthContributor(properties);
+    }
+
+    /**
      * Cube 沙箱腿：{@link AgentSandbox} 落到 CubeSandbox（会话级容器沙箱）。配置齐备才装配
      * （缺任一必填项视为未接线，打行让位——照 OpenHands 腿「装配/未装配各一行」口径）；
      * 宿主自建 {@link AgentSandbox} Bean 时让位。
