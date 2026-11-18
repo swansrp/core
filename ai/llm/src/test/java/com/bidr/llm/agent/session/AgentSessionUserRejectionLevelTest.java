@@ -52,6 +52,7 @@ public class AgentSessionUserRejectionLevelTest {
                 Mockito.mock(ObjectProvider.class), Collections.emptyList(),
                 Mockito.mock(AgentFileCapabilityResolver.class),
                 Mockito.mock(AgentFileParseService.class),
+                Mockito.mock(ObjectProvider.class),
                 Mockito.mock(ObjectProvider.class));
     }
 

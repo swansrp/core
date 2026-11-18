@@ -976,7 +976,8 @@ public class AgentSessionFileAttachmentTest {
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
                 null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver,
-                Mockito.mock(AgentFileParseService.class), healthProvider);
+                Mockito.mock(AgentFileParseService.class), healthProvider,
+                Mockito.mock(ObjectProvider.class));
     }
 
     /** 上传即写入腿：文件工具/产物/转写腿仍缺席，只把沙箱端口按给值装配（null＝沙箱缺席） */
@@ -995,7 +996,8 @@ public class AgentSessionFileAttachmentTest {
         ObjectProvider<OperatorResolver> operatorProvider = providerOf(() -> operator);
         return new AgentSessionController(service, null, null, Collections.emptyList(), operatorProvider,
                 null, Mockito.mock(ObjectProvider.class), Collections.emptyList(), resolver,
-                Mockito.mock(AgentFileParseService.class), Mockito.mock(ObjectProvider.class));
+                Mockito.mock(AgentFileParseService.class), Mockito.mock(ObjectProvider.class),
+                Mockito.mock(ObjectProvider.class));
     }
 
     /** 已注册 agent 占位（/agents 能力位腿只需要注册表非空） */
