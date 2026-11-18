@@ -223,6 +223,28 @@ public class AgentSessionService {
         transition(sessionId, AgentSessionState.PAUSED, null);
     }
 
+    /**
+     * 运行期插话（2026-11-18 排队/插话功能）：文本写控制键，run 线程<b>下一轮循环头</b>取走
+     * 作为一条用户消息（【用户插话】前缀）注入上下文；GUIDANCE 事件即时发布——前端在对话流里
+     * 立刻看到这颗气泡（右蓝），不必等模型消化。仅 RUNNING 可插（PAUSED 走 resume 指导语，
+     * 终态无意义）；多次插话 \nn 排队，同一轮一起注入。
+     *
+     * @param sessionId 会话 id
+     * @param text      插话文本（非空）
+     */
+    public void interject(String sessionId, String text) {
+        if (text == null || text.trim().isEmpty()) {
+            throw new ServiceException("插话内容不能为空");
+        }
+        AgentSessionState state = requireState(sessionId);
+        if (!AgentSessionState.RUNNING.equals(state.getStatus())) {
+            throw new ServiceException("会话不在执行中，无法插话（暂停会话请用恢复并附带指导语）");
+        }
+        store.interject(sessionId, text.trim());
+        emitAndPublish(sessionId, AgentEvent.GUIDANCE, text.trim());
+        log.info("运行期插话已排队: sessionId={}, len={}", sessionId, text.trim().length());
+    }
+
     /** 恢复（幂等）：清除暂停键；guidance 空时注入默认指导语（让 LLM 知晓恢复事实而非凭空续跑），
      *  非空时作为用户补充指导注入下一轮上下文。 */
     public void resume(String sessionId, String guidance) {

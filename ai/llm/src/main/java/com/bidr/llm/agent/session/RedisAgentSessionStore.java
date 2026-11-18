@@ -224,6 +224,28 @@ public class RedisAgentSessionStore implements AgentSessionStore {
     }
 
     @Override
+    public void interject(String sessionId, String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+        // 排队语义：多次插话 \n 追加（get-modify-set 非原子，但插话为单用户低频操作，可接受）
+        String existing = redisService.get(interjectKey(sessionId), String.class);
+        String merged = existing == null || existing.trim().isEmpty()
+                ? text.trim() : existing + "\n" + text.trim();
+        redisService.set(interjectKey(sessionId), ttlSeconds(), merged);
+    }
+
+    @Override
+    public String consumeInterjection(String sessionId) {
+        String key = interjectKey(sessionId);
+        String text = redisService.get(key, String.class);
+        if (text != null) {
+            redisService.delete(key);
+        }
+        return text;
+    }
+
+    @Override
     public String consumeAnswer(String sessionId) {
         String key = answerKey(sessionId);
         String answer = redisService.get(key, String.class);
@@ -251,6 +273,7 @@ public class RedisAgentSessionStore implements AgentSessionStore {
         redisService.delete(stopKey(sessionId));
         redisService.delete(viewKey(sessionId));
         redisService.delete(runKey(sessionId));
+        redisService.delete(interjectKey(sessionId));
     }
 
     // ---- 序列化与键 ----
@@ -279,6 +302,10 @@ public class RedisAgentSessionStore implements AgentSessionStore {
 
     private String eventsKey(String sessionId) {
         return keyPrefix + sessionId + ":events";
+    }
+
+    private String interjectKey(String sessionId) {
+        return keyPrefix + sessionId + ":interject";
     }
 
     private String runKey(String sessionId) {

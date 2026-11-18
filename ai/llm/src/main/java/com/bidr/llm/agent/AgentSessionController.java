@@ -272,6 +272,18 @@ public class AgentSessionController {
     }
 
     /**
+     * 运行期插话（排队/插话功能，2026-11-18）：文本写入控制键，run 线程下一轮循环头作为
+     * 一条用户消息（【用户插话】前缀）注入；GUIDANCE 事件即时发布，前端对话流立刻可见。
+     * 仅 RUNNING 可插；多次插话排队（
+ 追加），同一轮一起注入。
+     */
+    @PostMapping("/session/{sessionId}/interject")
+    public void interject(@PathVariable("sessionId") String sessionId,
+                          @RequestBody(required = false) ControlReq req) {
+        agentSessionService.interject(sessionId, req == null ? null : req.getText());
+    }
+
+    /**
      * 作答 LLM 提问（ask_user 阻塞等待中）：answer 与 skipped 至少其一；
      * 作答写入控制键由工具线程消费，问题状态随 status 轮询刷新
      */
@@ -1033,6 +1045,9 @@ public class AgentSessionController {
 
         /** 恢复指导语（注入下一轮上下文，「补 2 句继续」） */
         private String guidance;
+
+        /** 运行期插话文本（排队/插话功能，注入下一轮上下文） */
+        private String text;
 
         /**
          * 首轮 payload 补丁（仅「建后未起跑」会话生效，2026-11-17）：素材会话在上传前创建时

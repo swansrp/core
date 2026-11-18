@@ -67,6 +67,16 @@ public interface AgentSessionStore {
     /** 提交用户作答（answerJson 含 questionId/answer/skipped，等待侧按 id 匹配防串答） */
     void submitAnswer(String sessionId, String answerJson);
 
+    /**
+     * 运行期插话（2026-11-18 排队/插话功能）：文本写入控制键，引擎<b>下一轮循环头</b>取走
+     * 注入上下文；多次插话按 
+ 追加排队。不改变会话状态（运行中照常跑）。
+     */
+    void interject(String sessionId, String text);
+
+    /** 取出并清除插话（一次性消费；无插话返回 null） */
+    String consumeInterjection(String sessionId);
+
     /** 取出并清除作答（一次性消费；无作答返回 null） */
     String consumeAnswer(String sessionId);
 

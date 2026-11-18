@@ -22,6 +22,7 @@ public class InMemoryAgentSessionStore implements AgentSessionStore {
         final List<AgentEvent> events = new ArrayList<>();
         String pauseNote;
         String resumeGuidance;
+        String interjectText;
         String answerJson;
         boolean stopRequested;
         long lastViewAt;
@@ -139,6 +140,27 @@ public class InMemoryAgentSessionStore implements AgentSessionStore {
     }
 
     @Override
+    public void interject(String sessionId, String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+        SessionBox box = box(sessionId);
+        box.interjectText = box.interjectText == null || box.interjectText.trim().isEmpty()
+                ? text.trim() : box.interjectText + "\n" + text.trim();
+    }
+
+    @Override
+    public String consumeInterjection(String sessionId) {
+        SessionBox box = sessions.get(sessionId);
+        if (box == null) {
+            return null;
+        }
+        String text = box.interjectText;
+        box.interjectText = null;
+        return text;
+    }
+
+    @Override
     public String consumeAnswer(String sessionId) {
         SessionBox box = sessions.get(sessionId);
         if (box == null) {
@@ -170,6 +192,7 @@ public class InMemoryAgentSessionStore implements AgentSessionStore {
             box.stopRequested = false;
             box.lastViewAt = 0;
         }
+            box.interjectText = null;
     }
 
     private SessionBox box(String sessionId) {

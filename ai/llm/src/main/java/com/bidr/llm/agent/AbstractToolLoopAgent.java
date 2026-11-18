@@ -99,7 +99,10 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
     }
 
     /**
-     * 框架工具钩子：默认并入五只<b>会话受限</b>工具——附件读取 {@link SessionAttachmentReadTool}
+     * 框架工具钩子：默认并入<b>身份工具</b> {@link SessionCurrentUserTool}
+     * （{@code current_user}，无参数，报会话发起人姓名/所属部门，数据来源
+     * {@link OperatorProfileResolver} SPI，缺席时回落发起人原文）与五只<b>会话受限</b>工具——
+     * 附件读取 {@link SessionAttachmentReadTool}
      * （{@code read_attachment}，参数只有 file_id/max_chars/offset）、产物生成
      * {@link SessionArtifactGenerateTool}（P2a，{@code generate_artifact}，参数 content/format/title）、
      * 沙箱执行 {@link SessionSandboxRunTool}（棒3a，{@code sandbox_run}，参数 command/timeout_seconds）、
@@ -111,17 +114,23 @@ public abstract class AbstractToolLoopAgent<S> implements AutonomousAgentDefinit
      * 它接受服务器本地路径与任意 http(s) URL，会把任意文件读取/SSRF 能力默认发给所有 agent。
      * 业务若确有"读任意地址"的明确需求，在 {@link #tools} 里自行挂载 {@code FileMarkdownTool}。
      * <p>
-     * 关闭方式两档：宿主总开关 {@code llm.agent.file-tools.enabled=false}（缺省 true，整体回退：
-     * 工具面（附件读取＋产物生成＋沙箱三只）、附件上下文注入、能力位一起关闭）；单个 agent
-     * 不要某只框架工具时覆写本方法返回所需子集（per-agent 让位，仅工具面；附件上下文注入是否
-     * 随之关闭由业务覆写 {@link #attachmentContext} 决定）。存储/文档/产物/沙箱端口缺席时工具
-     * 仍返回（调用期回明确错误文本），不阻断工具面装配。
+     * 关闭方式两档：宿主总开关 {@code llm.agent.file-tools.enabled=false}（缺省 true）只关
+     * <b>文件/沙箱五只</b>（附件读取＋产物生成＋沙箱三只）、附件上下文注入、能力位一起关闭；
+     * 身份工具只读无存储依赖，不受该开关影响；单个 agent 不要某只框架工具时覆写本方法返回
+     * 所需子集（per-agent 让位，仅工具面；附件上下文注入是否随之关闭由业务覆写
+     * {@link #attachmentContext} 决定）。存储/文档/产物/沙箱端口缺席时工具仍返回（调用期回
+     * 明确错误文本），不阻断工具面装配。
      */
     protected List<Object> frameworkTools(S state, AgentSessionContext ctx, Map<String, Object> payload) {
-        if (!fileToolsEnabled || ctx == null) {
+        if (ctx == null) {
             return Collections.emptyList();
         }
-        List<Object> tools = new ArrayList<>(5);
+        List<Object> tools = new ArrayList<>(6);
+        // 身份工具先装（只读、无副作用、无存储依赖）：文件能力总开关关掉时仍在
+        tools.add(new SessionCurrentUserTool(ctx.getState().getOperator()));
+        if (!fileToolsEnabled) {
+            return tools;
+        }
         tools.add(new SessionAttachmentReadTool(ctx));
         tools.add(new SessionArtifactGenerateTool(ctx));
         tools.add(new SessionSandboxRunTool(ctx, sandboxSeedFiles()));
