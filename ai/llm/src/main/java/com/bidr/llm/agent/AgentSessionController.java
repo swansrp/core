@@ -14,6 +14,8 @@ import com.bidr.llm.agent.session.AgentSessionStreamHub;
 import com.bidr.llm.flow.*;
 import com.bidr.llm.flow.trace.FlowTrace;
 import com.bidr.llm.flow.trace.FlowTraceRecorder;
+import com.bidr.llm.provider.DbAwareModelConfigProvider;
+import com.bidr.llm.provider.ModelConfigProvider;
 import com.bidr.llm.skill.*;
 import com.bidr.platform.config.anno.ApiTrace;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -106,6 +108,12 @@ public class AgentSessionController {
 
     /** 能力位运行级健康快照端口（探活件实现；缺席＝health 字段不输出＝旧前端全亮兼容） */
     private final ObjectProvider<AgentCapabilityHealthProvider> healthProvider;
+
+    /**
+     * 模型配置提供者（框架级通用能力：前端输入条显示「当前用的模型」）。
+     * 用 ObjectProvider 注入——llm 模块裁剪部署时缺席也不影响其他端点。
+     */
+    private final ObjectProvider<ModelConfigProvider> modelConfigProvider;
 
     /** 单文件大小上限（MB）：llm.agent.files.max-size-mb，缺省 20 */
     @Value("${llm.agent.files.max-size-mb:20}")
@@ -313,6 +321,29 @@ public class AgentSessionController {
     public List<AgentSessionState> activeSessions(@RequestParam(name = "agentKey", required = false) String agentKey) {
         return agentSessionService.activeSessions(operator(),
                 StringUtils.hasText(agentKey) ? agentKey.trim() : null);
+    }
+
+    /**
+     * 当前生效模型名（框架级通用能力；前端输入条展示「这次跑的是哪个模型」）。
+     * <p>
+     * 按 {@link DbAwareModelConfigProvider#PURPOSE_AGENT} 用途取**实际生效**值
+     * （sys_config 参数 → llm.* yaml → 默认配置逐级回落后的结果，不做二次猜测）。
+     * 提供者缺席或读值异常一律回空串：展示项不阻断页面。
+     * </p>
+     */
+    @ApiTrace(log = false)
+    @GetMapping("/model")
+    public Map<String, Object> modelName() {
+        String model = "";
+        ModelConfigProvider provider = modelConfigProvider.getIfAvailable();
+        if (provider != null) {
+            try {
+                model = provider.getModelName(DbAwareModelConfigProvider.PURPOSE_AGENT);
+            } catch (Exception e) {
+                model = "";
+            }
+        }
+        return Collections.singletonMap("model", model == null ? "" : model);
     }
 
     /**

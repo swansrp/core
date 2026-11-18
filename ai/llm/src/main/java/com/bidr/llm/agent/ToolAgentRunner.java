@@ -49,6 +49,13 @@ public class ToolAgentRunner {
     private static final int MEMORY_HEAD = 2;
 
     /**
+     * 进度提醒阈值（连续多少轮「只调工具、不输出正文」后，下一轮请求前注入临时提醒）。
+     * 静态提示词对思考型模型无效（工具轮 content 恒空），必须靠运行时干预把「说人话」逼出来。
+     * 取 5 轮（2026-11-18 用户拍板：比 2 轮宽松，避免频繁打断正常的连续工具节奏）。
+     */
+    private static final int SILENT_ROUNDS_THRESHOLD = 5;
+
+    /**
      * 运行一个工具循环会话
      *
      * @param model        业务模型（引擎内部包日志代理，每轮请求/响应推 listener）
@@ -144,6 +151,8 @@ public class ToolAgentRunner {
             // opt.getMaxRounds() 保持初始上限原值（续期询问文案与日志引用初始值）
             int roundLimit = opt.getMaxRounds();
             int extensionsUsed = 0;
+            // 连续「只调工具、不输出正文」的轮数（进度提醒触发依据，见循环内注释）
+            int silentToolRounds = 0;
             int round = 1;
             while (true) {
                 // 轮次触顶续期闸（默认开，2026-11-14 用户拍板：轮数控制不该拦完工作，硬停止前先问人）：
@@ -217,10 +226,34 @@ public class ToolAgentRunner {
                 }
                 trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
+                // 进度提醒（框架通用，2026-11-18）：静态提示词管不住「思考型模型工具轮 content 为空」
+                // （实测加了「边做边讲」纪律仍连续 20-30 次工具零正文）。改为运行时干预：连续
+                // SILENT_ROUNDS_THRESHOLD 轮只调工具不输出正文时，本轮请求前临时插一条提醒、请求后立刻移除
+                // （不进历史、不污染上下文、不影响事件流语义；模型被要求不提这条提醒本身）。
+                ChatMessage progressNudge = null;
+                int nudgeIndex = -1;
+                if (silentToolRounds >= SILENT_ROUNDS_THRESHOLD) {
+                    progressNudge = UserMessage.from("【进度提醒·系统自动注入】你已连续 " + silentToolRounds
+                            + " 轮只调用工具、没有向用户输出任何说明文字，用户看不到任何进展。"
+                            + "本轮请**先用一两句自然语言**汇报：刚做了什么、发现了什么、下一步准备做什么，"
+                            + "然后再继续调用工具；不要提及本条提醒本身。");
+                    messages.add(progressNudge);
+                    nudgeIndex = messages.size() - 1;
+                }
                 ChatResponse resp = logged.chat(ChatRequest.builder()
                         .messages(messages).toolSpecifications(specs).build());
+                if (nudgeIndex >= 0 && nudgeIndex < messages.size()) {
+                    messages.remove(nudgeIndex);
+                }
                 AiMessage ai = resp.aiMessage();
                 messages.add(ai);
+                // 静默轮计数：有工具调用的轮次，按是否输出正文累计；纯结论轮归零
+                if (ai.hasToolExecutionRequests()) {
+                    silentToolRounds = ai.text() != null && !ai.text().trim().isEmpty()
+                            ? 0 : silentToolRounds + 1;
+                } else {
+                    silentToolRounds = 0;
+                }
                 if (!ai.hasToolExecutionRequests()) {
                     log.info("工具循环第 {} 轮给出结论，会话结束", round);
                     return AgentLoopResult.toolLoop(ai.text(), round);
