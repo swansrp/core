@@ -14,6 +14,7 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,11 +30,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -66,6 +71,11 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @ResponseBody
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<Response<String>> errorHandler(Exception ex) {
+        if (isClientAbort(ex)) {
+            // 客户端传到一半就断开（点「停止上传」/刷新/断网）属正常客户端行为，不当服务端故障记 ERROR＋触发告警
+            log.debug("客户端中止 multipart 请求传输: {}", ex.getMessage());
+            return null;
+        }
         log.error("", ex);
         // 发布异常事件
         publishExceptionEvent(ex);
@@ -102,6 +112,28 @@ public class ResponseExceptionHandler implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(ClientAbortException.class)
     public void handleClientAbortException(ClientAbortException e) {
         // 客户端断开连接，不处理
+    }
+
+    /**
+     * multipart 解析阶段读请求体遇 EOF/连接重置＝客户端传到一半就断开，属正常客户端行为而非服务端故障。
+     * 判定仅限请求解析阶段：业务代码抛出的 EOFException（如磁盘文件损坏）仍是服务端故障，照常告警。
+     */
+    private boolean isClientAbort(Throwable ex) {
+        if (!(ex instanceof MultipartException)) {
+            return false;
+        }
+        Throwable root = NestedExceptionUtils.getMostSpecificCause(ex);
+        return root instanceof ClientAbortException
+                || root instanceof EOFException
+                || (root instanceof IOException && isAbortMessage(root.getMessage()));
+    }
+
+    private boolean isAbortMessage(String message) {
+        if (message == null) {
+            return false;
+        }
+        String lower = message.toLowerCase(Locale.ROOT);
+        return lower.contains("broken pipe") || lower.contains("connection reset");
     }
 
     @ResponseBody
