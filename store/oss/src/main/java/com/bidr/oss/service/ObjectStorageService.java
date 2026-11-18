@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -213,6 +214,19 @@ public interface ObjectStorageService {
      */
     default boolean supportsMultipart() {
         return false;
+    }
+
+    /**
+     * 批量签发分片预签名 PUT 地址（浏览器直传对象存储，字节流绕开服务器中转）
+     *
+     * @param objectName 对象名
+     * @param uploadId   分片会话id
+     * @param totalParts 总分片数
+     * @return 按 partNumber 升序的预签名地址列表（第 i 项对应 partNumber=i+1）；
+     * 空列表=不支持直传，前端降级服务器中转（chunk 通道）
+     */
+    default List<String> presignPartUploads(String objectName, String uploadId, int totalParts) {
+        return Collections.emptyList();
     }
 
     /**
