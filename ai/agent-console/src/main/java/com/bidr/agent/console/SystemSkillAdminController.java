@@ -74,8 +74,8 @@ public class SystemSkillAdminController {
      */
     @ApiOperation(value = "上传系统级技能包 zip（上传 ≠ 可见：落 UNPUBLISHED，须再调 publish）",
             notes = "包契约＝单根文件夹＋根下 SKILL.md＋frontmatter.name 等于根名＋description 非空；"
-                    + "同名撞出厂包（origin=BUILTIN）直接拒绝（出厂包名保留）；"
-                    + "同名重传＝版本递增的新行，旧行不动；入库字节是确定性重打包产物，"
+                    + "同名重传＝版本递增的新行，旧行不动（同名撞出厂包同样放行：从 v1 递增落 v2，"
+                    + "发布后热顶出厂版、下线即回落，2026-11-18 热更拍板）；入库字节是确定性重打包产物，"
                     + "sha 按归一化后的字节算（与对账器同一把尺）")
     @PostMapping("/upload")
     public SkillAssetView upload(@ApiParam(value = "skill 包 zip 文件（单根文件夹结构）", required = true)

@@ -29,9 +29,12 @@ import java.util.Set;
  * 否则同一个包两次上传（一次带目录条目、一次不带）会算出不同 sha，
  * 读侧与对账器的内容指纹尺就对不上。入参 zip 与落库字节通常不相等——这是设计，不是缺陷。</p>
  *
- * <p><b>出厂包名是保留名</b>：对账器按名认账，允许上传同名 BUILTIN 会撞
- * {@code agent-skill/<name>/v1.zip} 这个 key、把 jar 的内容覆盖掉。上传遇到同名 BUILTIN 行直接拒绝；
- * 反方向（管理员把出厂包下线/注销）是本服务的合法动作——所有权（origin）不是状态，三种状态转换都不写它。</p>
+ * <p><b>同名 BUILTIN 可上传（2026-11-18 拍板「技能上传热生效」）</b>：版本从最近一行递增落
+ * <b>新行</b>（出厂行恒 v1，上传从 v2 起 ⇒ package_key 落 {@code agent-skill/<name>/v2.zip}，
+ * 永不撞 jar 种入的 v1.zip 对象）；发布后读侧按「同名最新已发布行」尺自然热顶出厂版，
+ * 下线/删除上传行即回落出厂基线。对账器配合语义不变：同名最新行是 UPLOADED 就让位跳过
+ * （运行期数据不是代码附属物），出厂行冻结等待上传行撤销后自愈刷新。
+ * 反方向（管理员把出厂行下线/注销）仍是合法动作——所有权（origin）不是状态，三种状态转换都不写它。</p>
  *
  * <p><b>墓碑是"撤销出厂包"的唯一正确表达，不是软删</b>：棒 4-D 已钉住对账器行为——
  * {@code origin=BUILTIN} 的行若只置 {@code valid=0} 会被下次启动就地复活，
@@ -42,7 +45,7 @@ import java.util.Set;
  *
  * <p><b>拒绝一律 {@link ServiceException}，不用 {@link NoticeException}</b>：框架的异常渲染是两条路——
  * notice 落 {@code status.code=0}（"提示语义"，前端看到的就是成功），ServiceException 才落非零码。
- * 本服务的"什么都没做成"（非管理员、坏包、撞保留名、状态不允许、行不存在、墓碑想发布、删出厂包）
+ * 本服务的"什么都没做成"（非管理员、坏包、状态不允许、行不存在、墓碑想发布、删出厂包）
  * 全属拒绝，若走 notice 就等于对着管理员说"传成功了"而台账里根本没那行。
  * {@code SkillPackageParser} 是业务侧上传共用的尺（它抛 notice，改动会漂移到业务端点上），
  * 所以翻译只在本服务的边界做一次。</p>
@@ -68,8 +71,9 @@ public class SystemSkillAdminService {
     private final SystemSkillStore store;
 
     /**
-     * 上传系统级技能包：契约校验 → 确定性重打包 → 撞名检查 → 先存对象再落行。
+     * 上传系统级技能包：契约校验 → 确定性重打包 → 先存对象再落行。
      * 落库行一律 {@code origin=UPLOADED}、{@code status=UNPUBLISHED}（上传 ≠ 可见）。
+     * 同名 BUILTIN 不再拒绝（2026-11-18 热更拍板）：版本递增落新行，jar 的 v1 对象不会被覆盖。
      *
      * @param zipBytes 浏览器上传的 zip 原始字节
      * @return 新落的台账行
@@ -80,9 +84,6 @@ public class SystemSkillAdminService {
         byte[] normalized = SkillPackageWriter.pack(pkg.getName(), pkg.getFiles());
         String sha = SkillPackageWriter.sha256Hex(normalized);
         SkillAsset existing = skillAssetService.findByName(pkg.getName());
-        if (existing != null && SkillAsset.ORIGIN_BUILTIN.equals(existing.getOrigin())) {
-            throw new ServiceException("出厂包名保留，请改名或走业务侧上传: " + pkg.getName());
-        }
         int version = existing == null ? 1 : (existing.getVersion() == null ? 1 : existing.getVersion()) + 1;
         String key = SystemSkillStore.packageKey(pkg.getName(), version);
         store.put(key, normalized);
