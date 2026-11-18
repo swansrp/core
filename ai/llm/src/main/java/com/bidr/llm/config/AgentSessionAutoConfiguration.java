@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;
  * 两后端类各自隔离 RedisService 类型引用，无 redis 依赖的应用装载本链不触发 NoClassDefFoundError
  * <p>
  * 🔴 <b>寿命与失联阈值是运行期参数，不是构造期常量</b>：会话 TTL 取
- * {@link LlmParam#AGENT_SESSION_TTL_SECONDS} → {@code llm.agent-session.ttl-seconds} 地板 → core 默认 86400；
+ * {@link LlmParam#AGENT_SESSION_TTL_SECONDS} → {@code llm.agent-session.ttl-seconds} 地板 → core 默认 31536000（365 天）；
  * 失联阈值取 {@link LlmParam#AGENT_TASK_GATE_ORPHAN_MILLIS} → {@code llm.agent-task-gate.orphan-millis} 地板
  * → core 默认 90000。两侧出厂都<b>留空</b>＝"本键未启用、按 yml 来"，所以升级 core 不会顶掉任何项目
  * 显式写在 yml 里的值（共享件默认行为不许改）。传进实现的是 supplier 而非数值：参数页改完

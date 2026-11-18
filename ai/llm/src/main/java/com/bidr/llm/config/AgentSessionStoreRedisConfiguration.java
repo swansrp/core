@@ -30,7 +30,8 @@ import org.springframework.context.annotation.Bean;
  * </p>
  * <p>
  * 🔴 寿命与失联阈值是运行期参数：TTL 取 {@link LlmParam#AGENT_SESSION_TTL_SECONDS} →
- * {@code llm.agent-session.ttl-seconds} 地板 → core 默认 86400；失联阈值取
+ * {@code llm.agent-session.ttl-seconds} 地板 → core 默认 31536000（365 天；2026-11-18 拍板：
+ * 会话回放数据不能按天丢）；失联阈值取
  * {@link LlmParam#AGENT_TASK_GATE_ORPHAN_MILLIS} → {@code llm.agent-task-gate.orphan-millis}
  * 地板 → core 默认 90000。传进实现的是 supplier 而非数值，参数页改完下一次写入/判定即生效。
  * </p>
@@ -48,7 +49,7 @@ public class AgentSessionStoreRedisConfiguration {
             ObjectMapper objectMapper,
             ObjectProvider<SysConfigCacheService> sysConfigProvider,
             @Value("${llm.agent-session.key-prefix:llm:agent:session:}") String keyPrefix,
-            @Value("${llm.agent-session.ttl-seconds:86400}") int yamlTtlSeconds) {
+            @Value("${llm.agent-session.ttl-seconds:31536000}") int yamlTtlSeconds) {
         log.info("类路径含 core/redis，装配 Redis AgentSessionStore（prefix={}，ttl 地板={}s；"
                         + "运行期以系统参数「{}」为准，留空即按地板）",
                 keyPrefix, yamlTtlSeconds, LlmParam.AGENT_SESSION_TTL_SECONDS.getTitle());
