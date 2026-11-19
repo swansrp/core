@@ -36,6 +36,18 @@ public interface AgentLoopListener {
         return null;
     }
 
+    /**
+     * 运行期插话消费（引擎每轮循环头调用一次，附件追加之后、发起 LLM 调用之前）：
+     * 非空返回插话原文（多次插话已由存储侧按 \n 排队），引擎加【用户插话】前缀
+     * 作为一条用户消息注入本轮上下文——模型下一轮即看到用户运行中插入的口径；
+     * GUIDANCE 事件在插话入队时已即时上屏（前端反馈），本口只管进模型上下文。
+     * <p>语义约定：一次性消费（取走即清，实现方负责），返回 null/空白＝本轮无插话，
+     * 引擎零行为变化。默认 null（轻链路零改动）。
+     */
+    default String pendingInterjection() {
+        return null;
+    }
+
     /** 过程日志上报（每轮请求/响应/工具调用摘要，前端进度窗可见任务在干活） */
     void log(String line);
 

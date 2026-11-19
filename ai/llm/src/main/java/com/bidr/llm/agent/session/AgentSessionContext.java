@@ -698,6 +698,12 @@ public class AgentSessionContext {
                 return AgentSessionContext.this.pendingUserText();
             }
 
+            /** 运行期插话（interject 端点排队）→ 下一轮头取走（一次性消费）注入模型上下文（U81） */
+            @Override
+            public String pendingInterjection() {
+                return store.consumeInterjection(state.getSessionId());
+            }
+
             /** 结构化工具事件：payload 键位与 relay §5.7 帧对齐，两路共用一个前端视图模型 */
             @Override
             public void onToolCall(String toolCallId, String toolName, String argumentsJson) {

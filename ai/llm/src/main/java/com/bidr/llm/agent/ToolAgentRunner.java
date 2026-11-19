@@ -215,6 +215,14 @@ public class ToolAgentRunner {
                     sink.log("附件上下文追加（第 " + round + " 轮）：新增附件说明 " + pendingUserText.length()
                             + " 字符已作为用户消息注入本轮上下文");
                 }
+                // 运行期插话（U81，2026-11-19 真机缺口：入队/GUIDANCE 上屏早已通，缺的就是模型上下文注入）：
+                // 轮头一次性取走排队插话（多次按 \n 排队），带【用户插话】前缀注入本轮上下文——
+                // 模型下一轮即看到；无插话 null＝零行为变化。GUIDANCE 事件入队时已上屏，这里不再发事件
+                String interjection = sink.pendingInterjection();
+                if (interjection != null && !interjection.trim().isEmpty()) {
+                    messages.add(UserMessage.from("【用户插话】" + interjection.trim()));
+                    sink.log("插话注入（第 " + round + " 轮）：用户运行期插话已进入本轮上下文");
+                }
                 trimToolMemory(messages, opt, fixedOverheadTokens, tokenBudget, stats);
                 logContextMeter(sink, stats, messages, fixedOverheadTokens, tokenBudget, offloadOn);
                 ChatResponse resp = logged.chat(ChatRequest.builder()

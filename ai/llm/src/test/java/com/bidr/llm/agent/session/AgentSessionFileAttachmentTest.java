@@ -10,6 +10,7 @@ import com.bidr.llm.agent.AgentLoopOptions;
 import com.bidr.llm.agent.AgentSessionController;
 import com.bidr.llm.agent.AutonomousAgentDefinition;
 import com.bidr.llm.agent.OperatorResolver;
+import com.bidr.llm.agent.SessionCurrentUserTool;
 import com.bidr.llm.agent.ToolAgentRunner;
 import com.bidr.llm.agent.file.AgentArtifactGenerator;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
@@ -564,7 +565,10 @@ public class AgentSessionFileAttachmentTest {
         assertEquals("开关关：提示词必须与无附件版本逐字节相等", "【任务】原样提示词", model.firstUserText());
         assertTrue("开关关不得读取附件正文", fileStore.readCalls.isEmpty());
         assertTrue("开关关不得签发读址", fileStore.presignCalls.isEmpty());
-        assertTrue("开关关工具面必须为空", agent.frameworkToolsForTest(ctx(fileStore)).isEmpty());
+        // U80 勘正：current_user 身份工具不受文件能力总开关约束（d002a135 起恒装），
+        // 开关关工具面＝只剩身份工具一只，不再是空面
+        assertEquals("开关关工具面应只剩 current_user 身份工具一只", 1,
+                agent.frameworkToolsForTest(ctx(fileStore)).size());
     }
 
     /** I-r2-1：总开关关 ⇒ 逐轮注入返回 null（同一配置键，非 Spring 托管对象经 Environment 读取） */
@@ -701,25 +705,30 @@ public class AgentSessionFileAttachmentTest {
         PromptCapturingAgent agent = new PromptCapturingAgent(new RecordingModel(), "业务提示词");
 
         List<Object> enabled = agent.frameworkToolsForTest(ctx);
-        assertEquals("默认框架工具面应为附件读取＋产物生成＋沙箱三只共五只", 5, enabled.size());
-        assertTrue("第一只框架工具必须是 SessionAttachmentReadTool",
-                enabled.get(0) instanceof SessionAttachmentReadTool);
-        assertTrue("第二只框架工具必须是 SessionArtifactGenerateTool（P2a）",
-                enabled.get(1) instanceof SessionArtifactGenerateTool);
-        assertTrue("第三只框架工具必须是 SessionSandboxRunTool（棒3a）",
-                enabled.get(2) instanceof SessionSandboxRunTool);
-        assertTrue("第四只框架工具必须是 SessionSandboxPutAttachmentTool（原件通道）",
-                enabled.get(3) instanceof SessionSandboxPutAttachmentTool);
-        assertTrue("第五只框架工具必须是 SessionSandboxFetchTool（棒3a）",
-                enabled.get(4) instanceof SessionSandboxFetchTool);
+        // U80 勘正：d002a135 起框架工具面首装 current_user 身份工具（恒在），其后仍为原五只
+        assertEquals("默认框架工具面应为身份工具＋附件读取＋产物生成＋沙箱三只共六只", 6, enabled.size());
+        assertTrue("第一只框架工具必须是 SessionCurrentUserTool（身份，恒装）",
+                enabled.get(0) instanceof SessionCurrentUserTool);
+        assertTrue("第二只框架工具必须是 SessionAttachmentReadTool",
+                enabled.get(1) instanceof SessionAttachmentReadTool);
+        assertTrue("第三只框架工具必须是 SessionArtifactGenerateTool（P2a）",
+                enabled.get(2) instanceof SessionArtifactGenerateTool);
+        assertTrue("第四只框架工具必须是 SessionSandboxRunTool（棒3a）",
+                enabled.get(3) instanceof SessionSandboxRunTool);
+        assertTrue("第五只框架工具必须是 SessionSandboxPutAttachmentTool（原件通道）",
+                enabled.get(4) instanceof SessionSandboxPutAttachmentTool);
+        assertTrue("第六只框架工具必须是 SessionSandboxFetchTool（棒3a）",
+                enabled.get(5) instanceof SessionSandboxFetchTool);
         for (Object tool : enabled) {
             assertFalse("raw read_file 不得默认并入（C-1）", tool instanceof FileMarkdownTool);
         }
 
         ReflectionTestUtils.setField(agent, "fileToolsEnabled", false);
         List<Object> disabled = agent.frameworkToolsForTest(ctx);
-        // R2-S4：isEmpty 已是更强断言（含 sandbox 三只同退），不再对空集合做恒真循环
-        assertTrue("总开关关闭时框架工具面必须为空（含 sandbox 三只同退）", disabled.isEmpty());
+        // R2-S4 勘正（U80）：开关关后仍余 current_user 身份工具一只（sandbox 三只与附件/产物四只同退）
+        assertEquals("总开关关闭时框架工具面应只剩身份工具一只", 1, disabled.size());
+        assertTrue("开关关余留必须是 SessionCurrentUserTool",
+                disabled.get(0) instanceof SessionCurrentUserTool);
     }
 
     /** 引擎接线：会话 listener 必须把 pendingUserText 委派给上下文实现（漏接＝逐轮注入整体失效，
