@@ -70,5 +70,8 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         // 整表钻取目标: 点本表任意单元格打开该编码的透视报表并叠加本格条件, 空=本表明细行; 存编码保证导入导出跨环境可移植
         setUpgradeDDL(14, "ALTER TABLE `sys_portal_table`\n" +
                 "\tADD COLUMN `drill_table_code` VARCHAR(100) NULL DEFAULT NULL COMMENT '整表钻取目标表格编码(空=点单元格打开本表明细行)' AFTER `remark`;\n");
+        // 多字段默认排序: 数组序即优先级序, 条数放开后透视度量键(可含中文标识)拼串偏长 ⇒ JSON 字段按规范升 TEXT
+        setUpgradeDDL(15, "ALTER TABLE `sys_portal_table`\n" +
+                "\tMODIFY COLUMN `default_sort` TEXT NULL COMMENT '默认排序JSON: [{property,type}] type 0=正序 1=倒序, 数组序即优先级序';\n");
     }
 }
