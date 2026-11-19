@@ -2,15 +2,12 @@ package com.bidr.agent.capability;
 
 import com.bidr.agent.capability.artifact.ArtifactService;
 import com.bidr.agent.capability.file.BlobStoreAgentFileStore;
-import com.bidr.agent.capability.health.AgentCapabilityHealthProbe;
-import com.bidr.agent.capability.health.AgentHealthSseHub;
 import com.bidr.agent.capability.sandbox.AgentRuntimeOpenHandsCondition;
 import com.bidr.agent.capability.sandbox.OpenHandsSandboxProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeProperties;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsClient;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsProvider;
 import com.bidr.blob.BlobStore;
-import com.bidr.document.spi.AgentHealthContributor;
 import com.bidr.document.spi.ConvertStep;
 import com.bidr.document.spi.TranscribeStep;
 import com.bidr.gotenberg.GotenbergBaseUrlCondition;
@@ -54,13 +51,10 @@ import java.util.List;
  *     {@link OpenHandsSandboxProvider}——同一相位口径，同样不用 {@code @ConditionalOnBean}；
  *     llm 的 {@code exec.sandbox} 能力位随端口在场自动点亮。</li>
  *     <li>业务/宿主自建同类型端口 Bean 即让位（{@code @ConditionalOnMissingBean}）。</li>
-     *     <li>{@link AgentCapabilityHealthProbe}（棒2）：mineru/gotenberg/openhands 三探针的
-     *     <b>可观测层</b>——状态变化日志＋运行级健康快照（{@code AgentCapabilityHealthProvider} 端口，
-     *     /agents 契约的 health 字段上报）＋状态变化的 SSE 广播（{@link AgentHealthSseHub}），
-     *     不改能力位、不阻断启动（配置键见探活件类注释）。</li>
-     *     <li>{@link AgentHealthSseHub}（健康度 SSE）：探活状态变化的 broadcast 注册表
-     *     （无 receiver 维度），前端经 {@code GET /web/api/agent/health/stream} 订阅
-     *     （{@code AgentHealthStreamController} 扫描拾取），徽标实时亮/灰不靠刷新。</li>
+     *     <li>探活三件套（健康度 SSE hub/探活聚合器/SSE 流端点）P3-0 已迁 llm
+     *     {@code com.bidr.llm.agent.health}（装配＝llm {@code AgentHealthAutoConfiguration}），
+     *     {@code /web/api/agent/health/stream} 端点与 {@code /agents} health 字段随装 llm 自动在场，
+     *     本类不再装配探活件。</li>
  * </ul>
  * 缺席语义：无 BlobStore Bean ⇒ 存储腿/产物腿都不装配；gotenberg 未配置（base-url 空）⇒ 产物腿
  * 不装配——llm 的能力位/工具自然降级（{@code /agents} 不出对应能力位，{@code generate_artifact}
@@ -192,32 +186,7 @@ public class AgentCapabilityAutoConfiguration {
     }
 
     /**
-     * 健康度 SSE 广播注册表（无 receiver 维度，broadcast 全员）：探活状态变化的实时推送口，
-     * 前端经 {@code GET /web/api/agent/health/stream} 订阅（{@code AgentHealthStreamController}
-     * 扫描拾取，构造注入本 Bean）。宿主自建同类型 Bean 时让位。
+     * 健康度 SSE 广播注册表与探活聚合器的装配已随探活三件套迁往 llm
+     * （{@code AgentHealthAutoConfiguration}，P3-0）。
      */
-    @Bean
-    @ConditionalOnMissingBean(AgentHealthSseHub.class)
-    public AgentHealthSseHub agentHealthSseHub() {
-        return new AgentHealthSseHub();
-    }
-
-    /**
-     * 能力探活聚合器（2026-11-18 探活架构化——用户拍板「每个子模块自己探自己的，中央只收集；
-     * 没有这个子模块就不收集」）：探测细节已全部下沉到各腿的 {@link AgentHealthContributor}
-     * 实现（mineru/gotenberg/cube/openhands 各自模块内聚，装配条件与真实腿 bean 同源——腿在
-     * 探活才在，腿不在收集自然缺席），本装配只做收集与调度接线：启动一次＋定时（{@code
-     * llm.agent.health-probe.interval-seconds} 缺省 300，≤0 关定时）打状态变化行并维护运行级
-     * 健康快照（{@code AgentCapabilityHealthProvider} 端口实现，经 /agents 契约上报前端徽标）。
-     * 探针异常吞掉不阻断启动；探活结果<b>不改能力位</b>（capabilities 仍按声明级推导）。
-     * 宿主自建同类型 Bean 时让位。
-     */
-    @Bean
-    @ConditionalOnMissingBean(AgentCapabilityHealthProbe.class)
-    public AgentCapabilityHealthProbe agentCapabilityHealthProbe(
-            List<AgentHealthContributor> contributors,
-            @Value("${llm.agent.health-probe.interval-seconds:300}") long intervalSeconds,
-            AgentHealthSseHub healthSseHub) {
-        return new AgentCapabilityHealthProbe(contributors, intervalSeconds, healthSseHub);
-    }
 }

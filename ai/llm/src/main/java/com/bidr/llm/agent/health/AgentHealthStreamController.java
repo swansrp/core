@@ -1,4 +1,4 @@
-package com.bidr.agent.capability.health;
+package com.bidr.llm.agent.health;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * broadcast 简化版：<b>无 receiver 维度</b>（健康度全员一致，不取登录人），
  * 鉴权由 {@code /web/api/agent/**} 既有拦截链管（未登录拿不到流，照
  * {@code AgentSessionController} 同款先例——平台 /web/api 拦截链，不加注解）。
- * agent-capability 内首个 controller：@RestController 扫描拾取
+ * llm 内首个 controller（自 agent-capability 迁入）：@RestController 扫描拾取
  * （epc 扫描根 com.bidr，llm 会话 controller 同款先例）。
  *
  * @author Sharp

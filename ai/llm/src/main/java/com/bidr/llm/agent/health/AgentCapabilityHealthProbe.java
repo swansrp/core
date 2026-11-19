@@ -1,4 +1,4 @@
-package com.bidr.agent.capability.health;
+package com.bidr.llm.agent.health;
 
 import com.bidr.document.spi.AgentHealthContributor;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;

@@ -1,5 +1,5 @@
 # =============================================================================
-# core/llm 模块读取的全部 yml 键（33 把，正源＝本模块代码里的 ${llm...} 占位符）
+# core/llm 模块读取的全部 yml 键（34 把，正源＝本模块代码里的 ${llm...} 占位符）
 #   重新取证命令（改了代码就跑一次，模板必须跟着更新）：
 #     cd server/framework/core/llm && grep -rho '\${llm[^}]*}' src/main/java | sort -u
 #   机器对账腿＝LlmConfigTemplateCoverageTest（模板叶子键集合与代码 ${llm...} 占位符集合必须**完全相等**，
@@ -35,6 +35,8 @@ llm:
       max-per-session: # 【按需调整】单会话附件数量上限（按 file_attached 事件计数）。[10]  ✋
       inline-text-max-bytes: # 【按需调整】白名单文本 MIME（text/plain|text/markdown|text/csv|application/json）单件直接注入原文的字节上限；超过则改给 file_id 由 read_attachment 取回。[65536＝64KB]  ✋
       inline-total-max-bytes: # 【按需调整】单批附件内联原文的总字节上限；超出按剩余额度截断并标注「…（已截断）」。[131072＝128KB]  ✋
+    health-probe:
+      interval-seconds: # 【出厂默认即可】agent 依赖底座探活周期（秒）：启动探一次后按此周期定时刷新，状态变化打日志＋SSE 广播（/agents health 字段＋前端徽标实时翻转）；≤0＝只留启动探测不建定时器。P3-0 随探活三件套自 agent-capability 迁入 llm，配置键不变。[300]  ✋
 
   # ---------------------------------------------------------------------------
   # ② 多模态（视觉）模型：扫描件/图片转 Markdown、图注生成

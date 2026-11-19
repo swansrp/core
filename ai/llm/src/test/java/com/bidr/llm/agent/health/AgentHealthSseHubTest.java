@@ -1,8 +1,7 @@
-package com.bidr.agent.capability.health;
+package com.bidr.llm.agent.health;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -27,16 +26,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  *     <li>心跳 pingAll：comment {@code :ping} 注释帧全员保活，失败连接同样摘除；</li>
  *     <li>shutdown：心跳调度器停摆（isShutdown）＋全部在挂连接收尾。</li>
  * </ul>
+ * P3-0 随探活三件套自 agent-capability 迁入 llm；本模块测试约定＝JUnit 4（kernel 传递
+ * TestNG provider 执行），故由 jupiter 原样转换（断言仍 assertj，@DisplayName 落行注）。
  *
  * @author Sharp
  * @since 2026/11/14
  */
-class AgentHealthSseHubTest {
+public class AgentHealthSseHubTest {
 
     private AgentHealthSseHub hub;
 
-    @AfterEach
-    void shutdownHub() {
+    @After
+    public void shutdownHub() {
         if (hub != null) {
             hub.shutdown();
         }
@@ -102,9 +103,9 @@ class AgentHealthSseHubTest {
         return text.toString();
     }
 
+    /** register：立即发 connected 帧（event:connected＋data:ok）；完成回调触发即摘除 */
     @Test
-    @DisplayName("register：立即发 connected 帧（event:connected＋data:ok）；完成回调触发即摘除")
-    void registerSendsConnectedFrameAndCleansOnCompletion() {
+    public void registerSendsConnectedFrameAndCleansOnCompletion() {
         hub = new AgentHealthSseHub();
         RecordingEmitter subscriber = new RecordingEmitter(false);
         hub.register(subscriber);
@@ -121,9 +122,9 @@ class AgentHealthSseHubTest {
                 .doesNotContain("after-cleanup");
     }
 
+    /** register：异常钩子触发即摘除；首帧发送失败＝摘除不占位 */
     @Test
-    @DisplayName("register：异常钩子触发即摘除；首帧发送失败＝摘除不占位")
-    void registerCleansOnErrorAndSurvivesFirstSendFailure() {
+    public void registerCleansOnErrorAndSurvivesFirstSendFailure() {
         hub = new AgentHealthSseHub();
         RecordingEmitter subscriber = new RecordingEmitter(false);
         hub.register(subscriber);
@@ -139,9 +140,9 @@ class AgentHealthSseHubTest {
         assertThat(broken.frame).as("首帧发送失败＝已摘除，广播不再到达").isEmpty();
     }
 
+    /** broadcast：全员投递（事件名 health，载荷对象原样透传）；失败连接收尾＋摘除不影响其余 */
     @Test
-    @DisplayName("broadcast：全员投递（事件名 health，载荷对象原样透传）；失败连接收尾＋摘除不影响其余")
-    void broadcastDeliversToAllAndDropsBrokenConnections() {
+    public void broadcastDeliversToAllAndDropsBrokenConnections() {
         hub = new AgentHealthSseHub();
         RecordingEmitter good = new RecordingEmitter(false);
         RecordingEmitter broken = new RecordingEmitter(false);
@@ -178,9 +179,9 @@ class AgentHealthSseHubTest {
                 .contains("second-frame");
     }
 
+    /** 心跳 pingAll：comment :ping 全员保活；失败连接摘除 */
     @Test
-    @DisplayName("心跳 pingAll：comment :ping 全员保活；失败连接摘除")
-    void pingAllSendsCommentFrameAndDropsBrokenConnections() {
+    public void pingAllSendsCommentFrameAndDropsBrokenConnections() {
         hub = new AgentHealthSseHub();
         RecordingEmitter good = new RecordingEmitter(false);
         RecordingEmitter broken = new RecordingEmitter(false);
@@ -206,9 +207,9 @@ class AgentHealthSseHubTest {
                 .isEqualTo(brokenFrameAfterRegister);
     }
 
+    /** shutdown：心跳调度器停摆＋全部在挂连接收尾 */
     @Test
-    @DisplayName("shutdown：心跳调度器停摆＋全部在挂连接收尾")
-    void shutdownStopsHeartbeatAndCompletesSubscribers() {
+    public void shutdownStopsHeartbeatAndCompletesSubscribers() {
         hub = new AgentHealthSseHub();
         RecordingEmitter subscriber = new RecordingEmitter(false);
         hub.register(subscriber);

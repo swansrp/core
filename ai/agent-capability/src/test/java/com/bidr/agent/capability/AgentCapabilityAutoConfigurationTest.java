@@ -1,9 +1,9 @@
 package com.bidr.agent.capability;
 
 import com.bidr.agent.capability.artifact.ArtifactService;
-import com.bidr.agent.capability.health.AgentCapabilityHealthProbe;
-import com.bidr.agent.capability.health.AgentHealthSseHub;
-import com.bidr.agent.capability.health.AgentHealthStreamController;
+import com.bidr.llm.agent.health.AgentCapabilityHealthProbe;
+import com.bidr.llm.agent.health.AgentHealthSseHub;
+import com.bidr.llm.agent.health.AgentHealthStreamController;
 import com.bidr.agent.capability.sandbox.OpenHandsSandboxProvider;
 import com.bidr.agent.runtime.config.AgentRuntimeAutoConfiguration;
 import com.bidr.agent.runtime.provider.openhands.OpenHandsClient;
@@ -17,6 +17,7 @@ import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
 import com.bidr.llm.agent.file.AgentFileStore;
 import com.bidr.llm.agent.sandbox.AgentSandbox;
+import com.bidr.llm.config.AgentHealthAutoConfiguration;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,10 +55,10 @@ import static org.mockito.Mockito.mock;
  *     <li>reporter 一行志（棒2 ocr 位、棒3a exec.sandbox 位）：fallback 分支（解析器缺席，
  *     runner 形态天然如此）与 off 分支都带五位——TranscribeStep/AgentSandbox Bean 在场即 on
  *     （声明级）；</li>
-     *     <li>探活件：无条件装配 {@link AgentCapabilityHealthProbe}，宿主自建同类型 Bean 时让位。</li>
-     *     <li>健康度 SSE（{@link AgentHealthSseHub}）：无条件装配＋宿主让位＋探活件拿到同源 hub；
-     *     {@link AgentHealthStreamController}（agent-capability 内首例 controller）按扫描拾取
-     *     （@RestController 元注解 @Component，epc 扫描根 com.bidr 同款先例）＋构造注入 hub。</li>
+     *     <li>探活三件套（P3-0 迁 llm com.bidr.llm.agent.health）：llm {@link AgentHealthAutoConfiguration}
+     *     无条件装配 {@link AgentCapabilityHealthProbe}/{@link AgentHealthSseHub}，宿主自建同类型
+     *     Bean 时让位，探活件拿到同源 hub；{@link AgentHealthStreamController}（llm 首例 controller）
+     *     按扫描拾取（@RestController 元注解 @Component，epc 扫描根 com.bidr 同款先例）＋构造注入 hub。</li>
  *     <li>沙箱腿（棒3b）：{@code my.agent.runtime.enabled=true} ⇒ {@code AgentSandbox}=
  *     {@code OpenHandsSandboxProvider} 装配；{@code enabled=false}／{@code provider=agent-system}
  *     ⇒ 不装配（属性条件口径，非 OnBean）。</li>
@@ -87,6 +88,14 @@ class AgentCapabilityAutoConfigurationTest {
             .withPropertyValues("my.agent.runtime.enabled=true")
             .withBean("agentChatSessionService", AgentChatSessionService.class,
                     () -> mock(AgentChatSessionService.class));
+
+    /**
+     * 探活装配专用 runner（P3-0 探活三件套迁 llm）：基础 runner 叠加 llm 的
+     * {@link AgentHealthAutoConfiguration}——探活 hub/聚合器自此由 llm 装配提供，
+     * 按真实 auto-config 形态求值（本模块自身装配不再含探活件）。
+     */
+    private final ApplicationContextRunner healthRunner = runner.withConfiguration(
+            AutoConfigurations.of(AgentHealthAutoConfiguration.class));
 
     @Test
     @DisplayName("base-url 非空＋BlobStore 在场：ArtifactService 装配（artifacts.doc 推导前提）")
@@ -170,9 +179,9 @@ class AgentCapabilityAutoConfigurationTest {
     @Test
     @DisplayName("探活件：无条件装配；宿主自建同类型 Bean 时让位")
     void healthProbeAssemblesAndYieldsToHost() {
-        runner.run(context -> assertThat(context).hasSingleBean(AgentCapabilityHealthProbe.class));
+        healthRunner.run(context -> assertThat(context).hasSingleBean(AgentCapabilityHealthProbe.class));
         AgentCapabilityHealthProbe hostProbe = new AgentCapabilityHealthProbe(java.util.Collections.<com.bidr.document.spi.AgentHealthContributor>emptyList(), 0, null);
-        runner.withBean(AgentCapabilityHealthProbe.class, () -> hostProbe)
+        healthRunner.withBean(AgentCapabilityHealthProbe.class, () -> hostProbe)
                 .run(context -> assertThat(context.getBean(AgentCapabilityHealthProbe.class))
                         .isSameAs(hostProbe));
     }
@@ -180,14 +189,14 @@ class AgentCapabilityAutoConfigurationTest {
     @Test
     @DisplayName("健康度 SSE hub：无条件装配＋宿主自建让位；探活件拿到同源 hub（探活↔SSE 接线）")
     void healthSseHubAssemblesYieldsAndWiresProbe() {
-        runner.run(context -> {
+        healthRunner.run(context -> {
             assertThat(context).hasSingleBean(AgentHealthSseHub.class);
             assertThat(context.getBean(AgentCapabilityHealthProbe.class).healthHub())
                     .as("探活件构造注入的 hub 与容器 Bean 同源")
                     .isSameAs(context.getBean(AgentHealthSseHub.class));
         });
         AgentHealthSseHub hostHub = new AgentHealthSseHub();
-        runner.withBean(AgentHealthSseHub.class, () -> hostHub)
+        healthRunner.withBean(AgentHealthSseHub.class, () -> hostHub)
                 .run(context -> {
                     assertThat(context.getBean(AgentHealthSseHub.class)).isSameAs(hostHub);
                     assertThat(context.getBean(AgentCapabilityHealthProbe.class).healthHub()).isSameAs(hostHub);
@@ -195,7 +204,7 @@ class AgentCapabilityAutoConfigurationTest {
     }
 
     @Test
-    @DisplayName("健康度流端点（agent-capability 内首例 controller）：@RestController 扫描拾取＋构造注入 hub")
+    @DisplayName("健康度流端点（llm 内首例 controller，自 agent-capability 迁入）：@RestController 扫描拾取＋构造注入 hub")
     void healthStreamControllerPickedUpByScanAndWiredToHub() {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
         context.registerBean(AgentHealthSseHub.class);
@@ -213,7 +222,7 @@ class AgentCapabilityAutoConfigurationTest {
     /** health 包扫描桩（epc 形态的最小还原）：默认过滤器只捞 @RestController 元注解件——
      *  包内其余类（hub/探活件）无 stereotype 注解不入选，hub 以 registerBean 顶上 */
     @Configuration
-    @ComponentScan(basePackages = "com.bidr.agent.capability.health")
+    @ComponentScan(basePackages = "com.bidr.llm.agent.health")
     static class HealthScanConfig {
     }
 
@@ -261,7 +270,7 @@ class AgentCapabilityAutoConfigurationTest {
                 return com.bidr.document.spi.AgentHealthContributor.HealthReport.reachable();
             }
         };
-        runner.withBean(com.bidr.document.spi.AgentHealthContributor.class, () -> stub)
+        healthRunner.withBean(com.bidr.document.spi.AgentHealthContributor.class, () -> stub)
                 .run(context -> {
                     AgentCapabilityHealthProbe probe = context.getBean(AgentCapabilityHealthProbe.class);
                     probe.run(null);

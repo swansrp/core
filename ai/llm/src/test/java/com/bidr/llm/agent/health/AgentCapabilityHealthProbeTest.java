@@ -1,10 +1,9 @@
-package com.bidr.agent.capability.health;
+package com.bidr.llm.agent.health;
 
 import com.bidr.document.spi.AgentHealthContributor;
 import com.bidr.llm.agent.file.AgentCapabilityHealthProvider;
 import com.bidr.llm.agent.file.AgentFileCapabilityResolver;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
@@ -36,11 +35,13 @@ import static org.mockito.Mockito.verify;
  *     <li>触发面：interval-seconds≤0 不建定时器只留启动一次；&gt;0 建 daemon 定时器，close() 即关。</li>
  * </ul>
  * 各腿探测语义（HTTP 状态码判定/鉴权头/代理）已下沉到各腿模块自己的测试——这里只钉聚合行为。
+ * P3-0 随探活三件套自 agent-capability 迁入 llm；本模块测试约定＝JUnit 4（kernel 传递 TestNG
+ * provider 执行），故由 jupiter 原样转换（断言仍 assertj、打桩仍 mockito，@DisplayName 落行注）。
  *
  * @author Sharp
  * @since 2026/11/14
  */
-class AgentCapabilityHealthProbeTest {
+public class AgentCapabilityHealthProbeTest {
 
     /** 固定结果打桩腿：capability/probeName/order 可定制，probe 返回预置 HealthReport */
     private static final class StubLeg implements AgentHealthContributor {
@@ -83,9 +84,9 @@ class AgentCapabilityHealthProbeTest {
         }
     }
 
+    /** 聚合与排序：按 order 稳序逐个探，行=capability(probeName)=状态，快照键=capability */
     @Test
-    @DisplayName("聚合与排序：按 order 稳序逐个探，行=capability(probeName)=状态，快照键=capability")
-    void aggregatesInOrderAndBuildsSnapshot() {
+    public void aggregatesInOrderAndBuildsSnapshot() {
         StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
         StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
@@ -101,9 +102,9 @@ class AgentCapabilityHealthProbeTest {
                 .containsEntry(AgentFileCapabilityResolver.EXEC_SANDBOX, AgentCapabilityHealthProvider.UP);
     }
 
+    /** 缺席即缺项：contributor 不在场＝该能力位不进行与快照（没这个子模块就不收集） */
     @Test
-    @DisplayName("缺席即缺项：contributor 不在场＝该能力位不进行与快照（没这个子模块就不收集）")
-    void absentLegIsAbsentFromLineAndSnapshot() {
+    public void absentLegIsAbsentFromLineAndSnapshot() {
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
                 Collections.singletonList(new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100)),
                 0, null);
@@ -114,9 +115,9 @@ class AgentCapabilityHealthProbeTest {
         assertThat(probe.snapshot()).containsOnlyKeys(AgentFileCapabilityResolver.OCR);
     }
 
+    /** 三态映射：REACHABLE=up / NOT_CONFIGURED=unconfigured / UNREACHABLE=down(原因入行) */
     @Test
-    @DisplayName("三态映射：REACHABLE=up / NOT_CONFIGURED=unconfigured / UNREACHABLE=down(原因入行)")
-    void mapsThreeStatesToHealthValues() {
+    public void mapsThreeStatesToHealthValues() {
         StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
         StubLeg artifacts = new StubLeg(AgentFileCapabilityResolver.ARTIFACTS_DOC, "gotenberg", 200);
         StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
@@ -133,9 +134,9 @@ class AgentCapabilityHealthProbeTest {
                         + " exec.sandbox(cube)=不可达(HTTP 503)");
     }
 
+    /** 兜底：单腿 probe() 抛异常＝该位不可达(探针异常)，其余腿不受影响 */
     @Test
-    @DisplayName("兜底：单腿 probe() 抛异常＝该位不可达(探针异常)，其余腿不受影响")
-    void singleLegFailureIsolated() {
+    public void singleLegFailureIsolated() {
         StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
         StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
         sandbox.throwOnProbe = true;
@@ -148,9 +149,9 @@ class AgentCapabilityHealthProbeTest {
         assertThat(probe.lastLoggedLine()).contains("exec.sandbox(cube)=不可达(探针异常(IllegalStateException))");
     }
 
+    /** 状态变化：首轮出一行，同状态不出，变化再出一行；不可达行走 WARN（内容判定） */
     @Test
-    @DisplayName("状态变化：首轮出一行，同状态不出，变化再出一行；不可达行走 WARN（内容判定）")
-    void logsOnlyOnStateChange() {
+    public void logsOnlyOnStateChange() {
         StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
                 Collections.singletonList(ocr), 0, null);
@@ -164,10 +165,10 @@ class AgentCapabilityHealthProbeTest {
         assertThat(probe.probeOnce()).as("同状态仍不出").isFalse();
     }
 
+    /** SSE 广播：状态变化即 broadcast("health", 最新快照)；同状态不广播 */
     @Test
-    @DisplayName("SSE 广播：状态变化即 broadcast(\"health\", 最新快照)；同状态不广播")
     @SuppressWarnings("unchecked")
-    void stateChangeBroadcastsSnapshotToHub() {
+    public void stateChangeBroadcastsSnapshotToHub() {
         AgentHealthSseHub hub = mock(AgentHealthSseHub.class);
         StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
         StubLeg sandbox = new StubLeg(AgentFileCapabilityResolver.EXEC_SANDBOX, "cube", 300);
@@ -192,9 +193,9 @@ class AgentCapabilityHealthProbeTest {
                 .containsEntry(AgentFileCapabilityResolver.OCR, AgentCapabilityHealthProvider.DOWN);
     }
 
+    /** interval-seconds≤0：只留启动探测不建定时器；>0 建 daemon 定时器，close() 即关 */
     @Test
-    @DisplayName("interval-seconds≤0：只留启动探测不建定时器；>0 建 daemon 定时器，close() 即关")
-    void schedulerFollowsIntervalConfig() {
+    public void schedulerFollowsIntervalConfig() {
         AgentCapabilityHealthProbe noSchedule = new AgentCapabilityHealthProbe(
                 Collections.<AgentHealthContributor>emptyList(), 0, null);
         noSchedule.run(null);
@@ -209,9 +210,9 @@ class AgentCapabilityHealthProbeTest {
         assertThat(scheduled.scheduler()).isNull();
     }
 
+    /** 快照：探测前为空集（收集面未知）；探测后刷新；snapshot() 不可变副本；capability 空白＝probeName 兜底键 */
     @Test
-    @DisplayName("快照：探测前为空集（收集面未知）；探测后刷新；snapshot() 不可变副本；capability 空白＝probeName 兜底键")
-    void snapshotLifecycleAndImmutability() {
+    public void snapshotLifecycleAndImmutability() {
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
                 Collections.<AgentHealthContributor>emptyList(), 0, null);
         assertThat(probe.snapshot()).isEmpty();
@@ -228,9 +229,9 @@ class AgentCapabilityHealthProbeTest {
         assertThat(probed.lastLoggedLine()).contains("weird-leg(weird-leg)=不可达(boom)");
     }
 
+    /** 启动接线：run(null) 即刻探一轮（ApplicationRunner 语义） */
     @Test
-    @DisplayName("启动接线：run(null) 即刻探一轮（ApplicationRunner 语义）")
-    void runProbesOnceImmediately() {
+    public void runProbesOnceImmediately() {
         StubLeg ocr = new StubLeg(AgentFileCapabilityResolver.OCR, "mineru", 100);
         AgentCapabilityHealthProbe probe = new AgentCapabilityHealthProbe(
                 Collections.<AgentHealthContributor>singletonList(ocr), 0, null);

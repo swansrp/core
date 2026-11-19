@@ -1,4 +1,4 @@
-package com.bidr.agent.capability.health;
+package com.bidr.llm.agent.health;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  *     <li><b>多实例边界</b>：注册表在进程内存——当前部署形态（单容器）成立；上多实例时
  *     须把广播改走 Redis pub/sub（llm 会话流 StreamBus 先例），注册表仍各实例持有本机连接。</li>
  * </ul>
- * 装配：{@code AgentCapabilityAutoConfiguration} 的 {@code @Bean}（宿主自建同类型 Bean 让位），
+ * 装配：{@code com.bidr.llm.config.AgentHealthAutoConfiguration} 的 {@code @Bean}（宿主自建同类型 Bean 让位），
  * 非扫描件（区别于站内信 hub 的 {@code @Component}）。
  *
  * @author Sharp
