@@ -381,7 +381,8 @@ public class AgentSessionController {
      * 上传会话附件（P0a 附件协议）：multipart 字段名 {@code file}，落存储端口后追加
      * {@link AgentEvent#FILE_ATTACHED} 事件（前端 chips 与模型上下文的事件正源）。
      * 归属校验＝当前操作人与会话发起人一致（{@link OperatorResolver}）；<b>未登录/操作人解析不出
-     * 一律 fail-closed 拒绝</b>（I-1），终态会话拒绝上传（m-3）；大小/数量上限读配置
+     * 一律 fail-closed 拒绝</b>（I-1）；终态会话同样放行（2026-11-19 用户终裁「没有结束的概念」：
+     * 附件上下文以事件流为正源，终态期间登记的附件由下一次续跑 run 读到）；大小/数量上限读配置
      * {@code llm.agent.files.max-size-mb}（缺省 20）/ {@code llm.agent.files.max-per-session}（缺省 10）。
      * 事件写入失败（{@code attachFile} 返回 seq&lt;=0）不回 200——事件流是模型可见性的唯一正源（I-2）。
      * 响应为 {@link AgentFileView}（m-r2-7：不回传存储 key）；存储写失败（含元数据侧车失败）同样
@@ -403,11 +404,7 @@ public class AgentSessionController {
     public AgentFileView uploadFile(@PathVariable("sessionId") String sessionId,
                                     @RequestPart("file") MultipartFile file,
                                     @RequestParam(name = "attach", defaultValue = "true") boolean attach) {
-        AgentSessionState state = requireSessionOwner(sessionId);
-        if (state.isTerminal()) {
-            // m-3：run 线程已结束，附件事件不会再被注入；直接拒绝避免"上传成功但模型永远读不到"
-            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法上传附件");
-        }
+        requireSessionOwner(sessionId);
         AgentFileStore fileStore = fileCapabilityResolver.fileStore();
         if (fileStore == null) {
             throw new ServiceException("附件能力未启用（对象存储或能力模块未装配）");
@@ -456,15 +453,12 @@ public class AgentSessionController {
      * {@link AgentEvent#FILE_ATTACHED}，此后该附件进入模型上下文/文件卡；已登记幂等返回。
      * <p>
      * 数量上限在此核（暂存阶段不核）：超限回人话，调用方（前端）应把该件标失败并让用户处理。
-     * 终态会话拒绝登记（事件不会再被 run 线程注入）。
+     * 终态会话同样放行（2026-11-19 用户终裁「没有结束的概念」：登记进事件流，由下一次续跑 run 消费）。
      */
     @PostMapping("/session/{sessionId}/files/{fileId}/attach")
     public AgentFileView attachFile(@PathVariable("sessionId") String sessionId,
                                     @PathVariable("fileId") String fileId) {
-        AgentSessionState state = requireSessionOwner(sessionId);
-        if (state.isTerminal()) {
-            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法登记附件");
-        }
+        requireSessionOwner(sessionId);
         FileRef ref = requireStoredFile(sessionId, fileId);
         if (isAttached(sessionId, fileId)) {
             return AgentFileView.of(ref);
@@ -512,16 +506,13 @@ public class AgentSessionController {
 
     /**
      * 发起前素材<b>预解析</b>（批量受理，幂等）：上传成功后前端立即调用，把解析结果提前暴露；
-     * 解析线程池/状态见 {@link AgentFileParseService}。终态会话拒绝（解析后也无处登记）。
+     * 解析线程池/状态见 {@link AgentFileParseService}。终态会话同样放行（登记进事件流，由下一次续跑 run 消费）。
      */
     @PostMapping("/session/{sessionId}/files/parse")
     public List<AgentFileParseService.ParseView> startParse(
             @PathVariable("sessionId") String sessionId,
             @RequestBody(required = false) FileIdsReq req) {
-        AgentSessionState state = requireSessionOwner(sessionId);
-        if (state.isTerminal()) {
-            throw new ServiceException("会话已结束（" + state.getStatus() + "），无法解析附件");
-        }
+        requireSessionOwner(sessionId);
         List<String> fileIds = requireFileIds(req);
         List<AgentFileParseService.ParseView> result = new ArrayList<>();
         for (String fileId : fileIds) {

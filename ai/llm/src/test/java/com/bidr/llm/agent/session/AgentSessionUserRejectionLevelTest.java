@@ -112,7 +112,9 @@ public class AgentSessionUserRejectionLevelTest {
     public void terminalSessionActionRejectionsAreWarnLevel() {
         save(AgentSessionState.FINISHED, Collections.emptyList(), Collections.emptyList());
         assertWarnLeg("会话已结束", () -> service().pause(LIVE, null));
-        assertWarnLeg("会话已结束", () -> service().resume(LIVE, null));
+        // FINISHED 续跑已放开（2026-11-19 用户终裁「没有结束的概念」）：
+        // 终态 resume 的剩余拒绝点＝agent 未注册/无首轮参数快照（老会话），仍是 WARN 档
+        assertWarnLeg("会话所属 agent 未注册", () -> service().resume(LIVE, null));
         assertWarnLeg("会话已结束", () -> service().answer(LIVE, 1, "答", false));
     }
 

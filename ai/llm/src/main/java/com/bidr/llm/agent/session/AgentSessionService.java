@@ -305,19 +305,18 @@ public class AgentSessionService {
     }
 
     /**
-     * 终态续跑（STOPPED/FAILED）：同一会话追加新 run——状态复位为 RUNNING、清掉上一轮的终态字段，
-     * 用 {@code state.payload} 快照重建执行（业务零改动），并向首轮注入一条「续跑说明」用户消息
-     * （已完成部分不要重复、中间产物可复用），避免模型从零重做。
-     * <p>FINISHED 不走此口：已完成会话的再加工属「修订」，应开新会话（避免一次会话产出两版终态）。
+     * 终态续跑（FINISHED/STOPPED/FAILED）：同一会话追加新 run——状态复位为 RUNNING、清掉上一轮的
+     * 终态字段，用 {@code state.payload} 快照重建执行（业务零改动），并向首轮注入一条「续跑说明」
+     * 用户消息（已完成部分不要重复、中间产物可复用），避免模型从零重做。
+     * <p>FINISHED 一并放开（2026-11-19 用户终裁「没有结束的概念，输出完了用户也能接着用」）：
+     * 继续加工在原会话就地续跑，产出按业务侧幂等键（如 session_id 覆盖落库）更新原记录；
+     * 「另起一份」走业务显式新建入口，与会话续跑解耦。
      * 未注册/无 payload 快照（老会话）时明确报错，由调用方回落「重新发起」。
      */
     private void resumeTerminal(AgentSessionState state, String guidance,
                                 Map<String, Object> payloadPatch) {
         String sessionId = state.getSessionId();
         String status = state.getStatus();
-        if (!AgentSessionState.STOPPED.equals(status) && !AgentSessionState.FAILED.equals(status)) {
-            throw new ServiceException("会话已结束（" + status + "），如需再加工请发起新会话");
-        }
         if (runThreads.containsKey(sessionId)) {
             // 理论不可达（终态＝run 线程已收口）；双保险防同会话双 run 并发写事件流
             throw new ServiceException("会话正在收口中，请稍后重试");
@@ -347,22 +346,30 @@ public class AgentSessionService {
         if (streamHub != null) {
             streamHub.publishStatus(state);
         }
+        boolean finishedRun = AgentSessionState.FINISHED.equals(status);
         String resumedText = guidance == null || guidance.trim().isEmpty()
-                ? "继续完成剩余工作" : guidance;
+                ? (finishedRun ? "继续加工既有成果" : "继续完成剩余工作") : guidance;
         emitAndPublish(sessionId, AgentEvent.RESUMED, resumedText);
         log.info("会话终态续跑: session={} 上轮状态={} 原因={}", sessionId, status,
                 previousError == null ? "-" : previousError);
-        launch(definition, state, payload, continuationNote(previousError, guidance));
+        launch(definition, state, payload, continuationNote(status, previousError, guidance));
     }
 
-    /** 续跑说明（引擎首轮注入的用户消息）：只讲事实与要求，不暴露内部机制 */
-    private static String continuationNote(String previousError, String guidance) {
-        StringBuilder note = new StringBuilder("【续跑】本会话上一次执行被中断");
-        if (previousError != null && !previousError.trim().isEmpty()) {
-            note.append("（原因：").append(previousError.trim()).append("）");
+    /** 续跑说明（引擎首轮注入的用户消息）：只讲事实与要求，不暴露内部机制。
+     *  FINISHED＝上一轮已完整收口（非中断），按「在既有成果上继续加工」措辞；STOPPED/FAILED 沿用中断口径。 */
+    private static String continuationNote(String previousStatus, String previousError, String guidance) {
+        StringBuilder note = new StringBuilder();
+        if (AgentSessionState.FINISHED.equals(previousStatus)) {
+            note.append("【续跑】本会话上一轮任务已完成。用户要在既有成果上继续：")
+                    .append("已生成的成果不要重复生成，新补充的附件与要求优先采纳；");
+        } else {
+            note.append("【续跑】本会话上一次执行被中断");
+            if (previousError != null && !previousError.trim().isEmpty()) {
+                note.append("（原因：").append(previousError.trim()).append("）");
+            }
+            note.append("。请从中断处继续完成原任务：已完成的部分不要重复劳动，");
         }
-        note.append("。请从中断处继续完成原任务：已完成的部分不要重复劳动，")
-                .append("已有的中间产物/文件如仍在工作区可直接复用；完成后按原要求收口。");
+        note.append("已有的中间产物/文件如仍在工作区可直接复用；完成后按原要求收口。");
         if (guidance != null && !guidance.trim().isEmpty()) {
             note.append("\n用户补充要求：").append(guidance.trim());
         }

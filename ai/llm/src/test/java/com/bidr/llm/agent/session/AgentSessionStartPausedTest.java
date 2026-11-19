@@ -163,21 +163,23 @@ public class AgentSessionStartPausedTest {
                 .anyMatch(e -> AgentEvent.RESUMED.equals(e.getType())));
     }
 
-    /** 已完成（FINISHED）不走续跑：继续＝修订，应开新会话——resume 明确拒绝 */
+    /** 已完成（FINISHED）就地续跑（2026-11-19 用户终裁「没有结束的概念」）：同一 sessionId 追加新 run */
     @Test
-    public void resumeFinishedSessionRejected() throws Exception {
+    public void resumeFinishedSessionLaunchesNewRun() throws Exception {
         AgentSessionService service = service();
         probe.release.countDown();
         AgentSessionState state = service.start(AGENT_KEY, payload(), "alice", DetachPolicy.KEEP_RUNNING);
         waitStatus(state.getSessionId(), AgentSessionState.FINISHED);
 
-        try {
-            service.resume(state.getSessionId(), "继续");
-            org.junit.Assert.fail("已完成会话不应允许续跑");
-        } catch (com.bidr.kernel.exception.ServiceException e) {
-            assertTrue("提示应指引开新会话: " + e.getMessage(),
-                    e.getMessage().contains("已完成") || e.getMessage().contains("新会话"));
+        service.resume(state.getSessionId(), "继续加工既有成果");
+
+        long deadline = System.currentTimeMillis() + 3000;
+        while (probe.calls.get() < 2 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
         }
+        assertEquals("已完成会话续跑应再起一个 run（执行体第二次被调用）", 2, probe.calls.get());
+        assertTrue("续跑指令应入事件流", store.events(state.getSessionId(), 0).stream()
+                .anyMatch(e -> AgentEvent.RESUMED.equals(e.getType())));
     }
 
     /** 轮询等状态落定（run 线程收口异步；终态断言专用） */

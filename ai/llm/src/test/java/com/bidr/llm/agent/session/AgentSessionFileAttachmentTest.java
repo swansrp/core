@@ -74,7 +74,7 @@ import static org.mockito.Mockito.when;
  *     <li><b>事件</b>：{@code AgentSessionContext.attachFile} 追加 file_attached（payload 键
  *         file_id/name/size/mime，key 不入事件），{@code attachedFiles()} 由事件流重建清单；</li>
  *     <li><b>归属</b>：上传/清单先校验操作人＝会话发起人；未登录 fail-closed、非本人拒绝、
- *         能力未装拒绝、大小/数量上限按配置拦、终态会话拒绝上传、事件写失败不回 200；</li>
+ *         能力未装拒绝、大小/数量上限按配置拦、终态会话放行上传/登记/预解析（续跑消费）、事件写失败不回 200；</li>
  *     <li><b>模型可见上下文</b>：{@code AbstractToolLoopAgent.start} 把附件说明拼在业务
  *         userPrompt 之前——白名单文本给原文、非文本只给 file_id 指令（不再给任意 URL）；
  *         无附件/无存储端口时提示词逐字节不变。</li>
@@ -333,18 +333,30 @@ public class AgentSessionFileAttachmentTest {
         assertTrue(count.getMessage().contains("附件数量已达上限 1"));
     }
 
-    /** 终态会话拒绝上传（m-3）：run 线程已结束，写事件也不会再注入 */
+    /** 终态会话放行上传/登记/预解析（2026-11-19 用户终裁「没有结束的概念」）：
+     *  附件以事件流为正源登记，由下一次续跑 run 消费 */
     @Test
-    public void terminalSessionUploadIsRejected() {
+    public void terminalSessionAcceptsUploadAttachAndParse() {
         seedSession(OWNER);
         store.getState(SESSION).setStatus(AgentSessionState.FINISHED);
-        AgentSessionController controller = controller(OWNER, Mockito.mock(AgentFileStore.class),
-                null, service(Collections.emptyList()));
-        MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
+        AgentFileStore fileStore = Mockito.mock(AgentFileStore.class);
+        when(fileStore.put(anyString(), anyString(), any(), any(byte[].class)))
+                .thenAnswer(invocation -> new FileRef("f-fin", invocation.getArgument(1),
+                        ((byte[]) invocation.getArgument(3)).length, invocation.getArgument(2), "k"));
+        when(fileStore.get(anyString(), anyString()))
+                .thenReturn(new FileRef("f-staged", "b.txt", 2L, "text/plain", "k"));
 
-        ServiceException e = assertThrows(ServiceException.class, () -> controller.uploadFile(SESSION, file, true));
-        assertTrue(e.getMessage().contains("会话已结束"));
-        assertTrue("终态上传不得落事件", controller.listFiles(SESSION).isEmpty());
+        AgentSessionController controller = controller(OWNER, fileStore, null, service(Collections.emptyList()));
+
+        MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
+        assertNotNull("终态上传应放行", controller.uploadFile(SESSION, file, true));
+        assertEquals("终态上传应落事件（下次续跑 run 的附件正源）", 1, controller.listFiles(SESSION).size());
+
+        assertNotNull("终态登记应放行", controller.attachFile(SESSION, "f-staged"));
+
+        AgentSessionController.FileIdsReq req = new AgentSessionController.FileIdsReq();
+        req.setFileIds(Collections.singletonList("f-staged"));
+        assertEquals("终态预解析应放行", 1, controller.startParse(SESSION, req).size());
     }
 
     /** 事件写入失败（attachFile 返回 0）不得静默 200（I-2） */
