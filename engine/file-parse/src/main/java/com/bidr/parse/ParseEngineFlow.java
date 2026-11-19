@@ -275,9 +275,18 @@ public class ParseEngineFlow {
         // 页图目标只在锚可渲染时成立——见 productsComplete）
         if (productsComplete(anchorSha, request.variant, requested,
                 PageImageRenderer.looksLikePdf(peek(anchorKey)), request.keyNamespace) && enrichSatisfied(task)) {
-            mergeSnapshot(task, scope, "REUSED", Collections.<String, Object>singletonMap("route", routeOf(state)));
-            log.info("解析断点命中（转录秒级复用）: task={} bizRef={} anchor={} v={}",
-                    task.getId(), task.getBizRef(), anchorSha, request.variant);
+            // 🔴 断点复用必须回填产物键：终态观察者按快照键回写业务行（ParseTerminalObserver 缺
+            //    markdownKey 即判 FAILED 且 parse_sha 不回写），而键是确定性公式
+            //    （parsed/{anchorSha}/v{variant}.md，productsComplete 刚 peek 确认对象在）——
+            //    不写＝同 sha 重复投递/转换缓存命中的复用场景必被判失败且 retry 永远复现
+            //    （2026-11-20 真机实证：同 docx 第二次投递 REUSED 后终态 FAILED、read 空正文）。
+            Map<String, Object> reused = new LinkedHashMap<>();
+            reused.put("route", routeOf(state));
+            reused.put("markdownKey", BlobStore.namespaced(request.keyNamespace,
+                    BlobStore.parsedMarkdownKey(anchorSha, request.variant)));
+            mergeSnapshot(task, scope, "REUSED", reused);
+            log.info("解析断点命中（转录秒级复用）: task={} bizRef={} anchor={} v={} md={}",
+                    task.getId(), task.getBizRef(), anchorSha, request.variant, reused.get("markdownKey"));
             return StageOutcome.to(ParseEngineStage.PERSIST);
         }
         if (TextPassthroughService.isPassthroughExt(ext)) {

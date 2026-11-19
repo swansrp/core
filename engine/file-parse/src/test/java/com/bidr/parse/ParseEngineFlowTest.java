@@ -246,6 +246,40 @@ class ParseEngineFlowTest {
         assertEquals("REUSED", currentTask.getExternalStatus());
     }
 
+    /**
+     * 🔴 断点复用回填产物键（2026-11-20 真机实证缺陷修复）：office 件 TRANSCRIBE 命中断点
+     * （parsed/pagemap 遗留对象在）时，REUSED 快照必须回填 markdownKey——终态观察者按快照键
+     * 回写业务行，缺键即判 FAILED 且 parse_sha 不回写（旧实现只写 route ⇒ 同 sha 重复投递
+     * 必判失败、retry 永远复现）。
+     */
+    @Test
+    void officeTranscribeReuseBackfillsMarkdownKey() throws Exception {
+        byte[] pdf = "%PDF-1.4 converted".getBytes(StandardCharsets.UTF_8);
+        String anchorSha = com.bidr.blob.Digests.sha256Hex(pdf);
+        String anchorKey = BlobStore.convertedPdfKey(
+                com.bidr.blob.Digests.sha256Hex("PK-fake-docx".getBytes(StandardCharsets.UTF_8)));
+        // 双源：payload＝受理参数（ParseRequest 读），external_snapshot＝状态演进（transcribe 读）
+        task("CONVERT", null, "{\"sourceKey\":\"raw/x.docx\",\"fileName\":\"doc.docx\",\"variant\":1}");
+        currentTask.setExternalSnapshot("{\"sourceKey\":\"raw/x.docx\",\"fileName\":\"doc.docx\",\"variant\":1,"
+                + "\"anchorSha\":\"" + anchorSha + "\",\"anchorKey\":\"" + anchorKey + "\"}");
+        when(storage.get(anchorKey)).thenReturn(pdf);
+        // 断点产物都在（parsed markdown 已在 blob，peek 命中）＋页图第一页在（thumbsExist 判据）
+        when(storage.get(BlobStore.parsedMarkdownKey(anchorSha, 1)))
+                .thenReturn("# 已有的解析产物".getBytes(StandardCharsets.UTF_8));
+        when(storage.get(BlobStore.thumbKey(anchorSha, 1)))
+                .thenReturn("fake-png".getBytes(StandardCharsets.UTF_8));
+
+        StageOutcome outcome = flow.transcribe(currentTask, scope());
+
+        assertEquals(StageOutcome.Kind.ADVANCE, outcome.getKind(), "断点命中＝推进 PERSIST（页图腿）");
+        assertEquals("REUSED", currentTask.getExternalStatus());
+        Map<String, Object> snapshot = snapshotOfCurrent();
+        assertEquals(BlobStore.namespaced("", BlobStore.parsedMarkdownKey(anchorSha, 1)),
+                text(snapshot, "markdownKey"), "REUSED 快照必须回填 markdownKey（终态观察者的取键口）");
+        verify(storage, never()).put(eq(BlobStore.namespaced("", BlobStore.parsedMarkdownKey(anchorSha, 1))),
+                any(), anyString());
+    }
+
     /** office 件带 keyNamespace：convert 缓存落前缀键（temp 轨随材料清理，不污染主命名空间缓存） */
     @Test
     void namespacedOfficeConvertCachesUnderPrefix() throws Exception {
