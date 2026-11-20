@@ -73,5 +73,9 @@ public class SysPortalTableSchema extends BaseMybatisSchema<SysPortalTable> {
         // 多字段默认排序: 数组序即优先级序, 条数放开后透视度量键(可含中文标识)拼串偏长 ⇒ JSON 字段按规范升 TEXT
         setUpgradeDDL(15, "ALTER TABLE `sys_portal_table`\n" +
                 "\tMODIFY COLUMN `default_sort` TEXT NULL COMMENT '默认排序JSON: [{property,type}] type 0=正序 1=倒序, 数组序即优先级序';\n");
+        // 筛选面板配置: {enabled,position,expanded,andOr,fields:[{column,label,relation,defaultValue}]}
+        // enabled 缺省=不启用(默认没有该功能); defaultValue 支持 ${var} 条件变量, 保存时 validateTokens 校验
+        setUpgradeDDL(16, "ALTER TABLE `sys_portal_table`\n" +
+                "\tADD COLUMN `filter_panel` TEXT NULL COMMENT '筛选面板配置JSON' AFTER `fixed_condition`;\n");
     }
 }

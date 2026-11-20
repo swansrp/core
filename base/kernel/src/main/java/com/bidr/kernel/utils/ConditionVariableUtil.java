@@ -56,6 +56,11 @@ public class ConditionVariableUtil {
     public static final String NEXT_MONTH = "nextMonth";
     public static final String LAST_DAY = "lastDay";
     public static final String NEXT_DAY = "nextDay";
+    /** 同期日：上月/下月/去年/明年的「今天」（日粒度对齐，月末溢出自动钳制，如 3-31 上月=2-28） */
+    public static final String LAST_MONTH_DAY = "lastMonthDay";
+    public static final String NEXT_MONTH_DAY = "nextMonthDay";
+    public static final String LAST_YEAR_DAY = "lastYearDay";
+    public static final String NEXT_YEAR_DAY = "nextYearDay";
 
     /**
      * 通用格式变量前缀：{@code ${now:pattern}}，token 以 now: 开头即走 pattern 解析
@@ -67,7 +72,8 @@ public class ConditionVariableUtil {
      */
     private static final Set<String> SUPPORTED_TOKENS = new HashSet<>(Arrays.asList(
             CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY, CURRENT_DATE_TIME,
-            LAST_YEAR, NEXT_YEAR, LAST_MONTH, NEXT_MONTH, LAST_DAY, NEXT_DAY));
+            LAST_YEAR, NEXT_YEAR, LAST_MONTH, NEXT_MONTH, LAST_DAY, NEXT_DAY,
+            LAST_MONTH_DAY, NEXT_MONTH_DAY, LAST_YEAR_DAY, NEXT_YEAR_DAY));
 
     /**
      * 主体类 token（由 authorization 层 resolveSubjectToken 解析，kernel 不做取值，
@@ -181,6 +187,14 @@ public class ConditionVariableUtil {
                 return today.minusDays(1).format(DAY_FORMAT);
             case NEXT_DAY:
                 return today.plusDays(1).format(DAY_FORMAT);
+            case LAST_MONTH_DAY:
+                return today.minusMonths(1).format(DAY_FORMAT);
+            case NEXT_MONTH_DAY:
+                return today.plusMonths(1).format(DAY_FORMAT);
+            case LAST_YEAR_DAY:
+                return today.minusYears(1).format(DAY_FORMAT);
+            case NEXT_YEAR_DAY:
+                return today.plusYears(1).format(DAY_FORMAT);
             case CURRENT_DATE_TIME:
                 return LocalDateTime.now(ZONE).format(DATE_TIME_FORMAT);
             default:
@@ -219,8 +233,61 @@ public class ConditionVariableUtil {
             Validator.assertException(ErrCodeSys.PA_PARAM_FORMAT,
                     "动态变量 " + invalidTokens + " 不合法，支持的变量：${currentYear}/${currentMonth}/${currentDay}/" +
                             "${currentDateTime}/${lastYear}/${nextYear}/${lastMonth}/${nextMonth}/${lastDay}/${nextDay}/" +
+                            "${lastMonthDay}/${nextMonthDay}/${lastYearDay}/${nextYearDay}/" +
                             "${now:pattern}/${currentCustomerNumber}/${currentDeptId}/${currentGroupId}/${currentDeptIds}/${currentGroupIds}");
         }
+    }
+
+    /**
+     * 变量清单（前端「插入变量」下拉的唯一正源）。
+     * <p>前端下拉启动时拉取本清单渲染选项，后端新增 token 前端零改动自动可见，避免前后端各维护一份漂移。
+     * 每项含：group/groupTitle（分组）、token（完整 ${...} 书写形态）、label（中文名）、hint（示例/说明）、subject（是否主体类，前端不取值）。</p>
+     * <p>注意：本清单只决定「下拉有哪些选项」；${currentYear}→2026 的取值算法前端为做实时预览仍本地持有一份（resolveDynamicVariable），与本 util 对齐。</p>
+     */
+    public static List<Map<String, Object>> catalog() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        // 时间变量
+        addVar(list, "time", "时间变量", CURRENT_YEAR, "当前年", "如 2026", false);
+        addVar(list, "time", "时间变量", CURRENT_MONTH, "当前月", "yyyyMM，如 202611", false);
+        addVar(list, "time", "时间变量", CURRENT_DAY, "当前日", "yyyy-MM-dd", false);
+        addVar(list, "time", "时间变量", CURRENT_DATE_TIME, "当前日期时间", "yyyy-MM-dd HH:mm:ss", false);
+        addVar(list, "time", "时间变量", LAST_YEAR, "上一年", "如 2025", false);
+        addVar(list, "time", "时间变量", NEXT_YEAR, "下一年", "如 2027", false);
+        addVar(list, "time", "时间变量", LAST_MONTH, "上一月", "yyyyMM", false);
+        addVar(list, "time", "时间变量", NEXT_MONTH, "下一月", "yyyyMM", false);
+        addVar(list, "time", "时间变量", LAST_DAY, "昨天", "yyyy-MM-dd", false);
+        addVar(list, "time", "时间变量", NEXT_DAY, "明天", "yyyy-MM-dd", false);
+        // 同期日（月/年粒度的「今天」）
+        addVar(list, "sameDay", "同期日（上月/下月/去年/明年今天）", LAST_MONTH_DAY, "上月今天", "yyyy-MM-dd，月末溢出自动钳制", false);
+        addVar(list, "sameDay", "同期日（上月/下月/去年/明年今天）", NEXT_MONTH_DAY, "下月今天", "yyyy-MM-dd", false);
+        addVar(list, "sameDay", "同期日（上月/下月/去年/明年今天）", LAST_YEAR_DAY, "去年今天", "yyyy-MM-dd", false);
+        addVar(list, "sameDay", "同期日（上月/下月/去年/明年今天）", NEXT_YEAR_DAY, "明年今天", "yyyy-MM-dd", false);
+        // 主体变量（authorization 层按登录人解析，前端仅登记）
+        addVar(list, "subject", "主体变量（后端解析）", "currentCustomerNumber", "当前客户编号", "后端按登录人解析", true);
+        addVar(list, "subject", "主体变量（后端解析）", "currentDeptId", "当前部门 ID", "后端按登录人解析", true);
+        addVar(list, "subject", "主体变量（后端解析）", "currentGroupId", "当前集团 ID", "后端按登录人解析", true);
+        addVar(list, "subject", "主体变量（后端解析）", "currentDeptIds", "当前部门 ID 集", "后端按登录人解析", true);
+        addVar(list, "subject", "主体变量（后端解析）", "currentGroupIds", "当前集团 ID 集", "后端按登录人解析", true);
+        // ${now:pattern} 常用预设（pattern 可自由扩展，此处仅列高频）
+        addVar(list, "now", "自定义格式 ${now:…}", "now:yyyyMMdd", "紧凑日期", "如 20261120", false);
+        addVar(list, "now", "自定义格式 ${now:…}", "now:yyyy-MM-dd", "标准日期", "如 2026-11-20", false);
+        addVar(list, "now", "自定义格式 ${now:…}", "now:yyyyMM", "年月", "如 202611", false);
+        addVar(list, "now", "自定义格式 ${now:…}", "now:yyyy", "四位年", "如 2026", false);
+        addVar(list, "now", "自定义格式 ${now:…}", "now:yyyy-MM-dd HH:mm:ss", "日期时间", "如 2026-11-20 13:55:13", false);
+        addVar(list, "now", "自定义格式 ${now:…}", "now:HH:mm:ss", "时分秒", "如 13:55:13", false);
+        return list;
+    }
+
+    private static void addVar(List<Map<String, Object>> list, String group, String groupTitle,
+                               String token, String label, String hint, boolean subject) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("group", group);
+        item.put("groupTitle", groupTitle);
+        item.put("token", PREFIX + token + SUFFIX);
+        item.put("label", label);
+        item.put("hint", hint);
+        item.put("subject", subject);
+        list.add(item);
     }
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();

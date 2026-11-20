@@ -18,11 +18,13 @@ public class SysPortalTablePortalService extends BasePortalService<SysPortalTabl
     public void beforeAdd(SysPortalTable entity) {
         super.beforeAdd(entity);
         ConditionVariableUtil.validateTokens(entity.getFixedCondition());
+        ConditionVariableUtil.validateTokens(entity.getFilterPanel());
     }
 
     @Override
     public void beforeUpdate(SysPortalTable entity) {
         super.beforeUpdate(entity);
         ConditionVariableUtil.validateTokens(entity.getFixedCondition());
+        ConditionVariableUtil.validateTokens(entity.getFilterPanel());
     }
 }
