@@ -139,6 +139,7 @@ public class PortalService {
     @Transactional(rollbackFor = Exception.class)
     public void updatePortalConfig(PortalUpdateReq req) {
         ConditionVariableUtil.validateTokens(req.getDefaultCondition());
+        ConditionVariableUtil.validateTokens(req.getFilterPanel());
         SysPortal portal = ReflectionUtil.copy(req, SysPortal.class);
         if (FuncUtil.isEmpty(req.getPidColumn())) {
             portal.setPidColumn(StringUtil.EMPTY);

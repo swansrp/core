@@ -53,6 +53,11 @@ public class SysPortalSchema extends BaseMybatisSchema<SysPortal> {
                 "ADD INDEX `idx_portal_datamode` (`data_mode`), " +
                 "ADD INDEX `idx_portal_referenceid` (`reference_id`);");
 
+        // 筛选面板配置: {enabled,position,expanded,andOr,fields:[{column,label,relation,defaultValue}]}
+        // enabled 缺省=不启用(默认没有该功能); defaultValue 支持 ${var} 条件变量, 保存时 validateTokens 校验
+        setUpgradeDDL(2, "ALTER TABLE `sys_portal` " +
+                "ADD COLUMN `filter_panel` TEXT NULL COMMENT '筛选面板配置JSON' AFTER `reference_id`;");
+
 
         // 基础 Portal 行（AcUser/AcDept/SaObjectStorage/SysConfig/SysDict/SysDictType）不再由 initData 硬编码：
         // PortalConfigService 启动扫描 @AdminPortal 时自动注册（url 从 @RequestMapping 现读，不会漂移；

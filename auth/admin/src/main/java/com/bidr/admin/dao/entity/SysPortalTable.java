@@ -159,14 +159,6 @@ public class SysPortalTable {
     private String fixedCondition;
 
     /**
-     * 筛选面板配置JSON: {enabled,position,expanded,andOr,fields:[{column,label,relation,defaultValue}]}
-     * enabled 缺省=不启用（默认没有该功能）；defaultValue 支持 ${var} 条件变量
-     */
-    @TableField(value = "filter_panel")
-    @ApiModelProperty(value = "筛选面板配置JSON")
-    private String filterPanel;
-
-    /**
      * 状态
      */
     @TableField(value = "status")

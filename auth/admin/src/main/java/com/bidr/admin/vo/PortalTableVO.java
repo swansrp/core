@@ -139,12 +139,6 @@ public class PortalTableVO extends BaseVO {
     private String fixedCondition;
 
     /**
-     * 筛选面板配置JSON: {enabled,position,expanded,andOr,fields:[{column,label,relation,defaultValue}]}
-     */
-    @ApiModelProperty(value = "筛选面板配置JSON")
-    private String filterPanel;
-
-    /**
      * 状态
      */
     @ApiModelProperty(value = "状态")

@@ -236,4 +236,12 @@ public class SysPortal {
     @ApiModelProperty(value = "关联表格ID")
     @Size(max = 100, message = "关联表格ID最大长度要小于 100")
     private String referenceId;
+
+    /**
+     * 筛选面板配置JSON: {enabled,position,expanded,andOr,fields:[{column,label,relation,defaultValue}]}
+     * enabled 缺省=不启用（默认没有该功能）；defaultValue 支持 ${var} 条件变量
+     */
+    @TableField(value = "filter_panel")
+    @ApiModelProperty(value = "筛选面板配置JSON")
+    private String filterPanel;
 }
