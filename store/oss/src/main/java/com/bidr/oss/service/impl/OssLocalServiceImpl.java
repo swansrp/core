@@ -189,7 +189,7 @@ public class OssLocalServiceImpl extends BaseOssService {
         List<PartInfo> parts = new ArrayList<>();
         Path dir = multipartDir(uploadId);
         if (!Files.exists(dir)) {
-            return parts;
+            throw new ServiceException("分片会话不存在或已失效");
         }
         try (Stream<Path> files = Files.list(dir)) {
             files.map(p -> p.getFileName().toString())

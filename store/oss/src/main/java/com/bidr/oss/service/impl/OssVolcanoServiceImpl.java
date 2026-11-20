@@ -44,6 +44,8 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     private static final int PRESIGN_EXPIRE_SECONDS = 7 * 24 * 3600;
     /** 读取预签名有效期：1 小时（每次访问实时签发，避免长期签名过期/泄露风险） */
     private static final int READ_EXPIRE_SECONDS = 3600;
+    /** 分片直传预签名有效期：24 小时（一次上传/刷新续传会话内各分片 PUT 均可用） */
+    private static final long PART_PRESIGN_EXPIRE_SECONDS = 24 * 3600L;
     /**
      * 地域解析：公网 {@code tos-cn-shanghai.volces.com} 与内网 {@code tos-cn-shanghai.ivolces.com} 同形
      */
@@ -268,6 +270,32 @@ public class OssVolcanoServiceImpl extends BaseOssService {
         return true;
     }
 
+    /**
+     * 分片直传：批量签发各分片的预签名 PUT 地址（经 {@link #signingClient()} 指向公网端点，
+     * 浏览器直连 TOS，字节流绕开服务器中转）。签名是离线计算、不校验 uploadId，
+     * 会话有效性由调用方负责（resume 前先 listUploadedParts 验活）
+     */
+    @Override
+    public List<String> presignPartUploads(String objectName, String uploadId, int totalParts) {
+        if (totalParts <= 0) {
+            return Collections.emptyList();
+        }
+        List<String> urls = new ArrayList<>(totalParts);
+        for (int partNumber = 1; partNumber <= totalParts; partNumber++) {
+            PreSignedURLInput input = new PreSignedURLInput()
+                    .setBucket(bucketName)
+                    .setKey(objectName)
+                    .setHttpMethod("PUT")
+                    .setExpires((int) PART_PRESIGN_EXPIRE_SECONDS);
+            Map<String, String> query = new HashMap<>();
+            query.put("partNumber", String.valueOf(partNumber));
+            query.put("uploadId", uploadId);
+            input.setQuery(query);
+            urls.add(signingClient().preSignedURL(input).getSignedUrl());
+        }
+        return urls;
+    }
+
     @Override
     @SneakyThrows
     public String initMultipartUpload(String objectName) {
@@ -314,7 +342,19 @@ public class OssVolcanoServiceImpl extends BaseOssService {
     @SneakyThrows
     public String completeMultipartUpload(String objectName, String uploadId, Map<Integer, String> parts,
                                           long fileSize) {
-        List<UploadedPartV2> uploaded = parts.entrySet().stream()
+        // 直传时浏览器拿不到 PUT 响应的 ETag 头（跨域不暴露），入参存在 null/空白 etag 的项时
+        // 以服务端 ListParts 的实际 etag 补齐；补齐后仍缺失则维持原行为（TOS 合并校验报错）
+        Map<Integer, String> effective = parts;
+        if (parts.values().stream().anyMatch(etag -> !StringUtils.hasText(etag))) {
+            Map<Integer, String> actualEtags = new HashMap<>();
+            for (PartInfo part : listUploadedParts(objectName, uploadId)) {
+                actualEtags.put(part.getPartNumber(), part.getEtag());
+            }
+            effective = new HashMap<>(parts);
+            effective.replaceAll((partNumber, etag) ->
+                    StringUtils.hasText(etag) ? etag : actualEtags.get(partNumber));
+        }
+        List<UploadedPartV2> uploaded = effective.entrySet().stream()
                 .map(e -> new UploadedPartV2().setPartNumber(e.getKey()).setEtag(e.getValue()))
                 .collect(Collectors.toList());
         client().completeMultipartUpload(new CompleteMultipartUploadV2Input()
