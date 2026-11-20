@@ -72,9 +72,17 @@ public class RedissonLockAspect {
             log.error("", e);
             throw e;
         } finally {
-            if (lock.isHeldByCurrentThread() && lockInfo.unlockPromptly()) {
-                log.info("释放 {} 锁", syncKey);
-                lock.unlock();
+            // 🔴 解锁失败不得反噬业务（2026-11-20 pre 实证）：Redisson unlock 走 Lua+PUBLISH，
+            // 共用 Redis 的 ACL/瞬时故障会让 unlock 抛 "Unexpected exception while processing command"；
+            // 旧实现让异常从 finally 穿出，把外层事务标记回滚（epc 项目镜像 insert 已执行却被回滚）。
+            // 锁本身有 releaseTime 租约兜底，这里只告警不抛：业务数据先落库，锁等租约自然释放。
+            try {
+                if (lock.isHeldByCurrentThread() && lockInfo.unlockPromptly()) {
+                    log.info("释放 {} 锁", syncKey);
+                    lock.unlock();
+                }
+            } catch (Exception e) {
+                log.warn("释放锁失败（不阻断业务，租约 {}ms 到期自动释放）: {}", lockInfo.releaseTime(), syncKey, e);
             }
         }
         return obj;
