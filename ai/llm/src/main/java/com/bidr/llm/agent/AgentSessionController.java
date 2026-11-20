@@ -504,6 +504,34 @@ public class AgentSessionController {
         }
     }
 
+    /** 产物读址有效期（秒）：与 BlobStore.DEFAULT_EXPIRE_SECONDS 同值（llm 不依赖 store-blob，本地对齐常量） */
+    private static final long ARTIFACT_URL_TTL_SECONDS = 3600L;
+
+    /** 产物读址续签响应：新鲜预签名地址＋有效期秒数 */
+    public record ArtifactUrlView(String url, long ttlSeconds) {
+    }
+
+    /**
+     * 会话产物读址续签（2026-11-20 真机反馈）：artifact 事件携带的预签名 URL 只有生成时刻约 1h
+     * 有效，历史回放/隔天点击必过期——前端点击产物卡先调本口取新鲜地址再跳转，失败回落事件旧址。
+     * 产物与附件同一命名空间（putArtifact 缺省复用 put），fileId 用 {@link AgentFileStore#get(String, String)}
+     * 可解；权限口径与 files 端点一致（登录＋会话属主）。
+     */
+    @GetMapping("/session/{sessionId}/artifact/{fileId}/url")
+    public ArtifactUrlView artifactUrl(@PathVariable("sessionId") String sessionId,
+                                       @PathVariable("fileId") String fileId) {
+        requireSessionOwner(sessionId);
+        AgentFileStore fileStore = fileCapabilityResolver.fileStore();
+        if (fileStore == null) {
+            throw new ServiceException("附件能力未启用（对象存储或能力模块未装配）");
+        }
+        FileRef ref = fileStore.get(sessionId, fileId);
+        if (ref == null || ref.key() == null || ref.key().isBlank()) {
+            throw new ServiceException("产物不存在或存储引用缺失（fileId=" + fileId + "）");
+        }
+        return new ArtifactUrlView(fileStore.presignedUrl(ref, ARTIFACT_URL_TTL_SECONDS), ARTIFACT_URL_TTL_SECONDS);
+    }
+
     /**
      * 发起前素材<b>预解析</b>（批量受理，幂等）：上传成功后前端立即调用，把解析结果提前暴露；
      * 解析线程池/状态见 {@link AgentFileParseService}。终态会话同样放行（登记进事件流，由下一次续跑 run 消费）。
