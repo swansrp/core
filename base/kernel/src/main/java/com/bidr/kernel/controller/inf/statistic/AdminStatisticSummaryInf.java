@@ -11,6 +11,7 @@ import com.github.yulichang.wrapper.segments.SelectString;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Title: AdminStatisticCountInf
@@ -53,8 +54,9 @@ public interface AdminStatisticSummaryInf<ENTITY, VO> extends AdminStatisticBase
 
     default Map<String, Object> summary(Query query, List<String> summaryColumns) {
         MPJLambdaWrapper<ENTITY> wrapper = new MPJLambdaWrapper<>(getEntityClass());
-        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), getPortalService().getHavingFields());
-        boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), getPortalService().getHavingFields());
+        Set<String> havingFields = FuncUtil.isNotEmpty(getPortalService()) ? getPortalService().getHavingFields() : null;
+        boolean defaultHaveHavingFields = hasHavingFields(query.getDefaultQuery(), havingFields);
+        boolean conditionHaveHavingFields = hasHavingFields(query.getCondition(), havingFields);
         if (FuncUtil.isNotEmpty(summaryColumns)) {
             if (defaultHaveHavingFields || conditionHaveHavingFields) {
                 for (String column : summaryColumns) {
