@@ -103,6 +103,14 @@ public class AgentSessionState implements Serializable {
     private java.util.Map<String, Object> payload;
 
     /**
+     * 宿主上下文快照（start 时由 {@link SessionContextContributor} 在请求线程采集，如项目/工号）：
+     * <b>必须随会话快照持久化</b>——run 线程读不到请求线程的 ThreadLocal，工具侧只能从这里取
+     * 本会话的空间/业务归属。旧快照（本字段上线前写入）缺省为 null，读取方按「无上下文」处理；
+     * 无需持久化以外的运行时语义（采集一次，不随执行推进变更）。
+     */
+    private java.util.Map<String, Object> context;
+
+    /**
      * 结论摘要（业务经 AgentSessionContext#setSummary 写入，FINISHED 时展示）
      */
     private String summary;

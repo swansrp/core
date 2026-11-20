@@ -114,6 +114,18 @@ public class AgentSessionContext {
     }
 
     /**
+     * 会话宿主上下文快照（start 的请求线程经 {@link SessionContextContributor} 采集，随快照持久化）：
+     * run 线程上的工具据此取本会话的项目/工号等归属信息。
+     * <p>
+     * 旧快照（字段上线前写入）、无贡献者、贡献者异常或返回空时统一返回<b>空 map（非 null）</b>——
+     * 调用方不必判空，缺席时按无归属处理即可。
+     */
+    public Map<String, Object> getSessionContext() {
+        Map<String, Object> context = state.getContext();
+        return context == null ? Collections.emptyMap() : context;
+    }
+
+    /**
      * 取某格式最近产物的下载地址（通用查询，业务侧按需消费，如落库自动带 Word 地址）。
      * <p>不另设旁路缓存：产物以 {@link AgentEvent#ARTIFACT} 事件流为唯一正源
      * （generate_artifact / sandbox_fetch 生成时已 emit），此处按 seq 升序扫描取同格式最后一条的 url。

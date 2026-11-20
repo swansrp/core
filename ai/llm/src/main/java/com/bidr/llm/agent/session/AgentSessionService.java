@@ -82,6 +82,10 @@ public class AgentSessionService {
     /** Agent 会话沙箱端口（Cube 清扫对齐棒3；可为空=沙箱能力未启用，终态钩子静默跳过） */
     private final AgentSandbox sandbox;
 
+    /** 会话宿主上下文贡献者（可选装配；provider 为 null/bean 缺席/多 bean 均按「无贡献」处理，
+     *  行为与改前一致）。只在 start 的请求线程消费——ThreadLocal 归属信息只在那一刻可见 */
+    private final ObjectProvider<SessionContextContributor> sessionContextContributorProvider;
+
     private final ScheduledExecutorService heartbeatExecutor =
             Executors.newSingleThreadScheduledExecutor(runnable -> {
                 Thread thread = new Thread(runnable, "agent-session-heartbeat");
@@ -91,24 +95,74 @@ public class AgentSessionService {
 
     public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
                                ObjectProvider<AgentConversationService> conversationProvider) {
-        this(store, definitionList, conversationProvider, null, null);
+        this(store, definitionList, conversationProvider, null, null, null);
+    }
+
+    /**
+     * 五参构造器（M18 棒2 既有形态）：保留给直接 new 的测试与旧装配点——
+     * 无宿主上下文贡献者，行为与改前一致，委托给六参构造器时 contributor 传 null
+     */
+    public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
+                               ObjectProvider<AgentConversationService> conversationProvider,
+                               ObjectProvider<AgentSessionStreamHub> streamHubProvider,
+                               ObjectProvider<AgentSandbox> sandboxProvider) {
+        this(store, definitionList, conversationProvider, streamHubProvider, sandboxProvider, null);
     }
 
     @Autowired
     public AgentSessionService(AgentSessionStore store, List<AutonomousAgentDefinition> definitionList,
                                ObjectProvider<AgentConversationService> conversationProvider,
                                ObjectProvider<AgentSessionStreamHub> streamHubProvider,
-                               ObjectProvider<AgentSandbox> sandboxProvider) {
+                               ObjectProvider<AgentSandbox> sandboxProvider,
+                               ObjectProvider<SessionContextContributor> sessionContextContributorProvider) {
         this.store = store;
         this.conversationProvider = conversationProvider;
         this.streamHub = streamHubProvider == null ? null : streamHubProvider.getIfAvailable();
         this.sandbox = sandboxProvider == null ? null : sandboxProvider.getIfAvailable();
+        this.sessionContextContributorProvider = sessionContextContributorProvider;
         for (AutonomousAgentDefinition definition : definitionList) {
             AutonomousAgentDefinition existed = definitions.put(definition.agentKey(), definition);
             if (existed != null) {
                 throw new IllegalStateException("agentKey 重复注册: " + definition.agentKey()
                         + "（" + existed.getClass().getName() + " 与 " + definition.getClass().getName() + "）");
             }
+        }
+    }
+
+    /**
+     * 采集会话宿主上下文（<b>必须在 start 的请求线程调用</b>）：SpaceContext/AccountContext 等
+     * 归属信息是 ThreadLocal，run 线程另起后读不到，故在会话快照落库前抓一份。
+     * <p>
+     * 容错口径＝「宿主上下文是增强信息，任何环节出问题都不阻断起会话」：
+     * 贡献者缺席（含未装配、provider 为 null）、容器内多个实现（无唯一贡献者）、
+     * {@link SessionContextContributor#contribute()} 抛异常，一律 warn 后返回空 map。
+     */
+    private Map<String, Object> resolveSessionContext() {
+        if (sessionContextContributorProvider == null) {
+            return Collections.emptyMap();
+        }
+        SessionContextContributor contributor;
+        try {
+            // getIfUnique：零个 bean 返回 null；多个 bean 抛 NoUniqueBeanDefinitionException——
+            // 在此吞掉，避免「多实现」把起会话甚至应用启动判失败
+            contributor = sessionContextContributorProvider.getIfUnique();
+        } catch (Exception e) {
+            log.warn("会话上下文贡献者不唯一或解析失败（按无上下文处理）: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+        if (contributor == null) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<String, Object> contributed = contributor.contribute();
+            if (contributed == null || contributed.isEmpty()) {
+                return Collections.emptyMap();
+            }
+            // 拷一份独立快照：贡献者可能复用可变 map，落库前与运行期解耦
+            return new LinkedHashMap<>(contributed);
+        } catch (Exception e) {
+            log.warn("会话上下文采集失败（不阻断起会话）: {}", e.getMessage());
+            return Collections.emptyMap();
         }
     }
 
@@ -173,6 +227,9 @@ public class AgentSessionService {
         }
         // 首轮参数快照（终态续跑据此重建 run；业务无需为「继续」另存参数）
         state.setPayload(new HashMap<>(safePayload));
+        // 宿主上下文快照：项目/工号等只存在于请求线程 ThreadLocal 的信息，run 线程读不到 ⇒
+        // 必须在此刻（仍在请求线程）采集并随快照落库
+        state.setContext(resolveSessionContext());
         store.saveState(state);
 
         if (startPaused) {
