@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
  * PartnerSeeder 更后——种子链 TenantSeeder → PartnerSeeder（AdminUserSeeder 已于 2026-11-02 退役：
  * 超管由 setInitData 建表即种，且不再有启动过程改写既有口令）。</p>
  *
+ * <p>D7 seed 总原则（2026-11-21 盘点登记）：本类天然合规——缺行建行、已有行幂等跳过零触碰
+ * （租户改名走管理页）；auto-create=false 的拒绝启动是装配错误硬拒，非 seed 回写。</p>
+ *
  * <p>⚠ 本类 DB 写路径不在离线单测覆盖（离线腿 mock AcTenantService 断言三态分支；
  * 建行真值交真机腿：起服务后核 ac_tenant，重启第二次应零新增）。</p>
  *
@@ -43,6 +46,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Order(Ordered.LOWEST_PRECEDENCE - 3)
 @RequiredArgsConstructor
 public class TenantSeeder implements ApplicationRunner {
+
+    /** 审计标记（D7：seed 写入与管理页写入按 update_by 可辨） */
+    static final String UPDATE_BY = "tenant-seed";
 
     private final TenantProperties tenantProperties;
     private final AcTenantService acTenantService;
@@ -74,8 +80,8 @@ public class TenantSeeder implements ApplicationRunner {
         tenant.setCode(code);
         tenant.setName(name);
         tenant.setValid(CommonConst.YES);
-        tenant.setCreateBy(AuthConstants.SYSTEM_USER);
-        tenant.setUpdateBy(AuthConstants.SYSTEM_USER);
+        tenant.setCreateBy(UPDATE_BY);
+        tenant.setUpdateBy(UPDATE_BY);
         acTenantService.insert(tenant);
         log.info("[tenant-seed] 自动建租户 code={} name={} id={}", code, name, tenant.getId());
     }

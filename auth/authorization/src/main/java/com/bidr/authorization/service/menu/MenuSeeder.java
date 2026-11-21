@@ -78,6 +78,10 @@ public class MenuSeeder implements ApplicationRunner {
      */
     @Deprecated
     public static final String SYSTEM_USER = AuthConstants.SYSTEM_USER;
+
+    /** 审计标记（D7 seed 总原则 2026-11-21 盘点：seed 写入与管理页写入按 update_by 可辨；
+     * 本类行为天然合规——命中即跳过零回写，只统一来源标记） */
+    static final String UPDATE_BY = "menu-seed";
     static final String DEFAULT_ICON = "SettingOutlined";
 
     private final AcMenuService acMenuService;
@@ -238,8 +242,8 @@ public class MenuSeeder implements ApplicationRunner {
         menu.setVisible(CommonConst.YES);
         menu.setStatus(CommonConst.YES);
         menu.setIcon(node.icon == null ? DEFAULT_ICON : node.icon);
-        menu.setCreateBy(SYSTEM_USER);
-        menu.setUpdateBy(SYSTEM_USER);
+        menu.setCreateBy(UPDATE_BY);
+        menu.setUpdateBy(UPDATE_BY);
         menu.setRemark(REMARK);
         acMenuService.insert(menu);
         menu.setKey(menu.getMenuId());

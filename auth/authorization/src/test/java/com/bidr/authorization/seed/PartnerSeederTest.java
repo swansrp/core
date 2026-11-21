@@ -16,8 +16,9 @@ import java.util.Collections;
 /**
  * Title: PartnerSeederTest
  * Description: 三方应用种子离线腿（T1.0 棒1）——mock 仓库层，不连库；
- * 覆盖「identity.clients 空 → 整体 skip」「非空 → partner 幂等 upsert＋白名单只补缺行」两态，
- * 2026-11-21 本地调试子系统棒1 加「create-partner=false → 跳过凭证面（两张表零交互）」腿。
+ * 覆盖「identity.clients 空 → 整体 skip」「非空 → partner 缺行建行＋白名单只补缺行」两态，
+ * 2026-11-21 本地调试子系统棒1 加「create-partner=false → 跳过凭证面（两张表零交互）」腿，
+ * 随 D7 盘点加「已有行密钥零触碰（yml 不顶回库值）」腿（配置回写语义退役）。
  * DB 真值腿交真机（重启第二次应零新增）。
  *
  * @author Sharp
@@ -93,5 +94,30 @@ public class PartnerSeederTest {
         new PartnerSeeder(properties, partnerService, redirectService).run(null);
 
         Mockito.verifyNoInteractions(partnerService, redirectService);
+    }
+
+    /**
+     * D7 零触碰（2026-11-21 用户拍板「已有行以管理页/SQL 为准」）：已有行且 yml 密钥与库值不同
+     * ⇒ 一律不回写（never updateById）——yml 顶回会静默打断管理页轮换的密钥（运行时
+     * AuthPartner 读库值校验 x-api-key），随密钥顶回退役一起钉死。
+     */
+    @Test
+    public void existingRowKeepsDbSecretZeroTouch() throws Exception {
+        ClientProperties properties = new ClientProperties();
+        properties.setClients(Collections.singletonList(item("k1", "s-yml-new", "u1")));
+        AcPartnerService partnerService = Mockito.mock(AcPartnerService.class);
+        AcSsoRedirectService redirectService = Mockito.mock(AcSsoRedirectService.class);
+        AcPartner existing = new AcPartner();
+        existing.setId(7L);
+        existing.setAppKey("k1");
+        existing.setAppSecret("s-db-old");
+        Mockito.when(partnerService.getByAppKey("k1")).thenReturn(existing);
+
+        new PartnerSeeder(properties, partnerService, redirectService).run(null);
+
+        Mockito.verify(partnerService, Mockito.never()).updateById(Mockito.any(AcPartner.class));
+        Assert.assertEquals("库值不被 yml 顶回", "s-db-old", existing.getAppSecret());
+        // 白名单补行仍走（缺行补行合规）：u1 未登记 → 补行
+        Mockito.verify(redirectService, Mockito.times(1)).insert(Mockito.any(AcSsoRedirect.class));
     }
 }

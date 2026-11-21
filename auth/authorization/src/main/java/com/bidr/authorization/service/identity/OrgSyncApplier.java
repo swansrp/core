@@ -26,6 +26,10 @@ import java.util.List;
  * 棒3 已接 TenantResolver——租户形态解析不到归属的身份预检跳过 fail-closed）。
  * 桥只拉数不写表（M-5），落库编排单点在此。
  *
+ * <p>🔴 D7 seed 盘点豁免类（2026-11-21 登记）：正源同步≠seed——本类是 MDM 组织数据的
+ * <b>全量替换镜像</b>（delete＋saveBatch），「已有行被覆盖」是其设计行为而非 seed 回写，
+ * 不受 D7「已存在行零触碰」约束；权威源=MDM，管理页改的组织数据会被下次同步覆盖（运维须知）。</p>
+ *
  * <p>写法沿用原 bidr 侧同步链（MdmJobService.syncMdmDept/syncMdmAccount → DeptInitService/
  * UserAccountService）的<b>全量替换</b>语义：delete＋saveBatch（部门/账号主键均为外部业务键
  * dept_id/id，重建后引用稳定），整体单事务、失败即回滚不落半截快照；两条腿各带空快照护栏

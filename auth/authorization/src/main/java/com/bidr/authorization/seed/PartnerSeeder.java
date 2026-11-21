@@ -1,7 +1,6 @@
 package com.bidr.authorization.seed;
 
 import com.bidr.authorization.config.ClientProperties;
-import com.bidr.authorization.constants.AuthConstants;
 import com.bidr.authorization.dao.entity.AcPartner;
 import com.bidr.authorization.dao.entity.AcSsoRedirect;
 import com.bidr.authorization.dao.repository.AcPartnerService;
@@ -16,7 +15,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -26,10 +24,13 @@ import java.util.List;
  * 种子链：TenantSeeder → 本类（原第二棒 AdminUserSeeder 已于 2026-11-02 退役——超管账号与角色
  * 绑定由 AcUserSchema/AcUserRoleSchema 的 setInitData 在建表那一次种下，且不再有启动过程改口令）。
  *
- * <p>幂等语义：逐 client 按 app_key 判重 upsert——缺则建（形态照现库行取证：
- * probe-seed-baseline.md，platform=''、status=1）；有则只同步 app_secret（配置是密钥正源），
- * <b>不动</b> platform/status/remark 等字段——现库行可能带人工语义（备注/平台归属），种子不得回写覆盖。
- * 回调白名单逐条按 (partner_id, redirect_uri, valid='1') 幂等补行，已登记即跳过。</p>
+ * <p>幂等语义（🔴 D7 seed 总原则，2026-11-21 用户拍板「部署直观新增；已有行以管理页/SQL 为准」）：
+ * 逐 client 按 app_key 判重——<b>缺行建行</b>（形态照现库行取证：probe-seed-baseline.md，
+ * platform=''、status=1，app_secret 取 yml 建行初值）；<b>已存在行零触碰</b>——app_secret 在内的
+ * 全部字段一律不回写（运行时校验读库值：{@code AuthPartner} 拿 ac_partner.app_secret 比对
+ * x-api-key，DB 本就是权威；yml 顶回曾会静默打断管理页轮换的密钥，2026-11-21 随 D7 盘点删除）。
+ * 密钥轮换口径＝管理页/SQL 改库（update_by=工号可审计）；yml 值仅建行初值。
+ * 回调白名单逐条按 (partner_id, redirect_uri, valid='1') 幂等补行，已登记即跳过（缺行补行，永不回删）。</p>
  *
  * <p>identity.clients 空列表 → 整体 skip 并 log.info（非对接形态语义）。</p>
  *
@@ -60,6 +61,9 @@ public class PartnerSeeder implements ApplicationRunner {
 
     /** status 落库值——照现库行形态取证（现库基线行 status=1＝有效；DDL 列默认 0 与现库形态不符，显式赋值） */
     static final int STATUS_FROM_BASELINE = 1;
+
+    /** 审计标记（D7：seed 写入与管理页写入按 update_by 可辨） */
+    static final String UPDATE_BY = "partner-seed";
 
     private final ClientProperties clientProperties;
     private final AcPartnerService acPartnerService;
@@ -98,22 +102,14 @@ public class PartnerSeeder implements ApplicationRunner {
             partner.setPlatform(PLATFORM_FROM_BASELINE);
             partner.setStatus(STATUS_FROM_BASELINE);
             partner.setRemark(REMARK);
-            partner.setCreateBy(AuthConstants.SYSTEM_USER);
-            partner.setUpdateBy(AuthConstants.SYSTEM_USER);
+            partner.setCreateBy(UPDATE_BY);
+            partner.setUpdateBy(UPDATE_BY);
             acPartnerService.insert(partner);
             log.info("[partner-seed] 新建三方应用 app_key={} id={}", appKey, partner.getId());
         } else {
-            // 幂等 upsert：只同步密钥（配置正源）；platform/status/remark 保留现库人工值不回写
-            if (partner.getAppSecret() == null || !partner.getAppSecret().equals(item.getAppSecret())) {
-                partner.setAppSecret(item.getAppSecret());
-                partner.setUpdateBy(AuthConstants.SYSTEM_USER);
-                partner.setUpdateAt(new Date());
-                acPartnerService.updateById(partner);
-                log.info("[partner-seed] 三方应用已在位 app_key={} id={}——已同步 app_secret", appKey, partner.getId());
-            } else {
-                log.info("[partner-seed] 三方应用已在位 app_key={} id={}——app_secret 一致，幂等跳过",
-                        appKey, partner.getId());
-            }
+            // 🔴 D7 零触碰：已存在行一律不改（密钥轮换走管理页/SQL；yml 顶回已退役，见类注释）
+            log.info("[partner-seed] 三方应用已在位 app_key={} id={}——零触碰幂等跳过",
+                    appKey, partner.getId());
         }
         seedRedirects(partner, item);
     }
@@ -137,8 +133,8 @@ public class PartnerSeeder implements ApplicationRunner {
             row.setRedirectUri(redirectUri);
             row.setRemark(REDIRECT_REMARK);
             row.setValid(CommonConst.YES);
-            row.setCreateBy(AuthConstants.SYSTEM_USER);
-            row.setUpdateBy(AuthConstants.SYSTEM_USER);
+            row.setCreateBy(UPDATE_BY);
+            row.setUpdateBy(UPDATE_BY);
             acSsoRedirectService.insert(row);
             log.info("[partner-seed] 补登记回调白名单 partner_id={} uri={}", partner.getId(), redirectUri);
         }
