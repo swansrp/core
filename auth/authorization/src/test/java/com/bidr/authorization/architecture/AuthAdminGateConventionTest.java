@@ -117,6 +117,7 @@ public class AuthAdminGateConventionTest {
             "com/bidr/admin/controller/statistic/AdminPortalIndicatorGroupController.java",
             "com/bidr/admin/controller/table/PortalPivotColumnPortalController.java",
             "com/bidr/admin/controller/table/PortalTableFilterPortalController.java",
+            "com/bidr/admin/controller/common/ConditionVariablePortalController.java",
             "com/bidr/admin/controller/table/PortalTablePortalController.java",
             "com/bidr/admin/manage/dept/controller/AdminDeptExcelController.java",
             "com/bidr/admin/manage/group/controller/AdminGroupController.java",
