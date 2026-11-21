@@ -33,6 +33,9 @@ import java.util.List;
  *
  * <p>identity.clients 空列表 → 整体 skip 并 log.info（非对接形态语义）。</p>
  *
+ * <p>create-partner=false 的条目跳过凭证面（不建 partner/白名单，2026-11-21 本地调试子系统棒1）——
+ * 该形态条目只出 ac_subsystem 行，由 AcSubsystemSeeder 直种（partner_id=NULL）。</p>
+ *
  * <p>⚠ 本类 DB 写路径不在离线单测覆盖（离线腿 mock 仓库层断言空/非空两态分支）。</p>
  *
  * @author Sharp
@@ -80,6 +83,11 @@ public class PartnerSeeder implements ApplicationRunner {
         String appKey = item.getAppKey() == null ? "" : item.getAppKey().trim();
         if (appKey.isEmpty()) {
             log.warn("[partner-seed] identity.clients 存在空 app-key 条目——跳过该条");
+            return;
+        }
+        // create-partner=false：跳过凭证面（不建 ac_partner/ac_sso_redirect）；子系统行由 AcSubsystemSeeder 直接种
+        if (!Boolean.TRUE.equals(item.getCreatePartner())) {
+            log.debug("[partner-seed] create-partner=false 跳过凭证面 app_key={}", appKey);
             return;
         }
         AcPartner partner = acPartnerService.getByAppKey(appKey);

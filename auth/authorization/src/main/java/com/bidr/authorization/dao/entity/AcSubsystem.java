@@ -81,6 +81,14 @@ public class AcSubsystem {
     private String entryUrl;
 
     /**
+     * 嵌入形态（NULL/none=embedded=1 壳全隐藏；nav=去身份条保留 topnav/左栏）
+     */
+    @TableField(value = "embed_chrome")
+    @ApiModelProperty(value = "嵌入形态（NULL/none=embedded=1 壳全隐藏；nav=去身份条保留 topnav/左栏）")
+    @Size(max = 32, message = "嵌入形态最大长度要小于 32")
+    private String embedChrome;
+
+    /**
      * 归属partner（ac_partner 口径 id；弱引用无 FK，uk_partner_id＝一 partner 至多挂一子系统）
      */
     @TableField(value = "partner_id")

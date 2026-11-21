@@ -7,8 +7,9 @@ import org.springframework.stereotype.Service;
 /**
  * 子系统注册表 Schema——字段平移自业务仓旧表 DDL（棒7 将删旧表），仅口径变化见 {@link AcSubsystem} 类注释。
  *
- * <p>🔴 无 upgradeDDL：新表走 CREATE IF NOT EXISTS（MybatisPlusConfig 建表链，M-1），
- * 存量库无此表名，不存在升级腿；旧表不读不迁不 DROP（§8.1 裁定，业务侧删除在棒7）。</p>
+ * <p>新表走 CREATE IF NOT EXISTS（MybatisPlusConfig 建表链，M-1），存量库无此表名；
+ * 2026-11-21 起有 upgradeDDL（embed_chrome，本地调试子系统棒1）——createDDL 冻结，列变更只走升级腿追加；
+ * 旧表不读不迁不 DROP（§8.1 裁定，业务侧删除在棒7）。</p>
  *
  * <p>🔴 {@code uk_partner_id}＝唯一键：一 partner 至多挂一子系统（注册口语义）；
  * MySQL 唯一键对多 NULL 合法 ⇒ 未绑定（partner_id=NULL）的子系统可有多行。
@@ -38,5 +39,8 @@ public class AcSubsystemSchema extends BaseMybatisSchema<AcSubsystem> {
                 "  PRIMARY KEY (`app_code`),\n" +
                 "  UNIQUE KEY `uk_partner_id` (`partner_id`)\n" +
                 ") COMMENT='子系统注册表（门户入口清单；租户是否可见另由 tenant_app 开通面判定）';");
+
+        // 2026-11-21 本地调试子系统（棒1）：追加 embed_chrome 嵌入形态列（形态照 SaBlobSchema L39 升级腿先例）
+        setUpgradeDDL(1, "ALTER TABLE `ac_subsystem` ADD COLUMN `embed_chrome` varchar(32) DEFAULT NULL COMMENT '嵌入形态（NULL/none=embedded=1 壳全隐藏；nav=去身份条保留 topnav/左栏）' AFTER `entry_url`;");
     }
 }

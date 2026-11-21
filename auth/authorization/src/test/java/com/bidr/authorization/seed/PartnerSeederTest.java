@@ -16,7 +16,8 @@ import java.util.Collections;
 /**
  * Title: PartnerSeederTest
  * Description: 三方应用种子离线腿（T1.0 棒1）——mock 仓库层，不连库；
- * 覆盖「identity.clients 空 → 整体 skip」与「非空 → partner 幂等 upsert＋白名单只补缺行」两态。
+ * 覆盖「identity.clients 空 → 整体 skip」「非空 → partner 幂等 upsert＋白名单只补缺行」两态，
+ * 2026-11-21 本地调试子系统棒1 加「create-partner=false → 跳过凭证面（两张表零交互）」腿。
  * DB 真值腿交真机（重启第二次应零新增）。
  *
  * @author Sharp
@@ -76,5 +77,21 @@ public class PartnerSeederTest {
         Assert.assertEquals(Long.valueOf(77L), redirectCaptor.getValue().getPartnerId());
         Assert.assertEquals("u2", redirectCaptor.getValue().getRedirectUri());
         Assert.assertEquals("1", redirectCaptor.getValue().getValid());
+    }
+
+    /** create-partner=false → 跳过凭证面：不查不建 partner、不碰白名单
+     *  （检查在 getByAppKey 之前；ac_subsystem 行由 AcSubsystemSeeder 直种）。 */
+    @Test
+    public void createPartnerFalseSkipsCredentialFace() throws Exception {
+        ClientProperties.ClientItem entry = item("k1", "s1", "u1");
+        entry.setCreatePartner(false);
+        ClientProperties properties = new ClientProperties();
+        properties.setClients(Collections.singletonList(entry));
+        AcPartnerService partnerService = Mockito.mock(AcPartnerService.class);
+        AcSsoRedirectService redirectService = Mockito.mock(AcSsoRedirectService.class);
+
+        new PartnerSeeder(properties, partnerService, redirectService).run(null);
+
+        Mockito.verifyNoInteractions(partnerService, redirectService);
     }
 }
