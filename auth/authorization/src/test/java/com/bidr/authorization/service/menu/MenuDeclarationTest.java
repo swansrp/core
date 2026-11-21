@@ -507,26 +507,10 @@ public class MenuDeclarationTest {
         Assert.assertNotNull("insight：智能问数（独立全宽页、点名入册）", findNode(sysNav, "ChatBiAsk"));
     }
 
-    @Test
-    public void businessDeclarationMergesWithFrameworkWithoutConflict() throws IOException {
-        File commonPom = new File("../../../inkhub-common/pom.xml");
-        Assume.assumeTrue("inkhub-common 模块不在场（core 独立构建形态）——该腿跳过，报告已注明",
-                commonPom.isFile());
-        File yml = new File("../../../inkhub-common/src/main/resources/menu-seed.yml");
-        Assert.assertTrue("模块在场则业务声明文件必须存在：" + yml.getAbsolutePath(), yml.isFile());
-        List<Node> biz = MenuDeclaration.parseTree(readAll(yml), yml.getPath());
-        validate(biz);
-        List<Node> framework = MenuDeclaration.parseAll(MenuDeclarationTest.class.getClassLoader());
-        List<Node> merged = MenuDeclaration.mergeAll(wrap(framework, biz));
-        // 与 MenuSeeder 运行序一致：先剪无宿主骨架（core 独立构建＝forge/admin 等缺席的薄形态），再校验
-        MenuDeclaration.pruneAnchorSkeletons(merged);
-        validate(merged);
-        Assert.assertEquals("框架 topnav＋墨枢 topnav", 2, merged.size());
-        Node moShu = findRootByPath(merged, "inkhub");
-        Assert.assertEquals("墨枢", moShu.title);
-        Assert.assertNotNull("EngineParams 页", findNode(moShu, "EngineParams"));
-        Assert.assertNotNull("SystemHealth 页", findNode(moShu, "SystemHealth"));
-    }
+    // 🔴 2026-11-21 用户拍板删除 businessDeclarationMergesWithFrameworkWithoutConflict：
+    // 该腿断言「框架+业务合并后根级 topnav==2」停留在 menu-seed.yml 只有墨枢一棵的年代；
+    // 11-18 起业务声明种入 epc-ai 五棵树后恒为 7，断言过时。跨仓校验待菜单治理批重立
+    // （修复方向二选一：断言改动态基线 / epc-ai appCode 树不计入根级 topnav 口径）。
 
     // ==================== helpers ====================
 
